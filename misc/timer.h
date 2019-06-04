@@ -1,0 +1,201 @@
+#pragma once
+#include "../global.h"
+
+#define PROGRESS_FORCE_OUTPUT 1
+
+/* Timer Functions */
+class Timer {
+    private:
+        // CPU time 
+        time_t  cpuTimeStarted;
+        time_t  cpuTimeEnded;
+        time_t  totalCPUTime;
+        // Wall time 
+        double  wallTimeStarted;
+        double  wallTimeEnded;
+        double  totalWallTime;
+        double  totalIterationNum;
+        // Runtime
+        bool    running;
+        double outputMod;
+        double outputLast;
+        std::string name;
+        bool addtoTotalStatistic;
+    public:
+        Timer();
+        Timer(const std::string &_name, bool _addtoTotalStatistic);
+        void start();
+        void end();
+        void iterate();
+        void add(time_t cpu, double wall);
+        double getWallTime();
+        double getWallTimeOnce();
+        double getCPUTime();
+        double getCPUTimeOnce();
+        double getAverageIterationTime();
+        double getTotalIterationNumber();
+        bool doOutput();
+        void setOutputModTime(double s);
+        std::string getName();
+        static double summary(bool output);
+        static std::string format(double in);
+};
+
+std::vector<Timer> allTimers;
+
+Timer &createTimer(std::string _name = "Generic timer", bool _addtoTotalStatistic = true) {
+    allTimers.push_back(Timer(_name,_addtoTotalStatistic));
+    logs.level2("Created timer with name '{}'{}.\n",_name, (_addtoTotalStatistic ? " which will be added to total statistics" : ""));
+    return allTimers.back();
+}
+
+// Constructor
+Timer::Timer() : Timer::Timer("Generic Timer",true) {};
+Timer::Timer(const std::string &_name, bool _addtoTotalStatistic = true) {
+    wallTimeStarted     = omp_get_wtime();
+    wallTimeEnded       = wallTimeStarted;
+    totalWallTime       = 0;
+    cpuTimeStarted      = clock();
+    cpuTimeEnded        = cpuTimeStarted;
+    totalCPUTime        = 0;
+    totalIterationNum   = 0;
+    running             = true;
+    outputMod           = 0.05; // in seconds 
+    outputLast          = 0;
+    name                = _name;
+    addtoTotalStatistic = _addtoTotalStatistic;
+    if (allTimers.size() < 10)
+        allTimers.reserve(15);
+}
+// Iterate Timer, can be used instead of using start/stop if the range of the timer includes the whole mainloop.
+void Timer::iterate() {
+    totalIterationNum++;
+}
+// Start Timer
+void Timer::start() {
+    //logs.level2("Starting timer '{}'... ",name);
+    wallTimeStarted = omp_get_wtime();
+    cpuTimeStarted  = clock();
+    running         = true;
+    //logs.level2("Done!\n");
+}
+// End Timer
+void Timer::end() {
+    //logs.level2("Ending timer '{}'... ",name);
+    wallTimeEnded   = omp_get_wtime();
+    cpuTimeEnded    = clock();
+    running         = false;
+    totalCPUTime    = getCPUTimeOnce();
+    totalWallTime   = getWallTimeOnce();
+    iterate();
+    //logs.level2("Done!\n");
+}
+// Add time
+void Timer::add(time_t cpu, double wall) {
+    totalWallTime += wall;
+    totalCPUTime += cpu;
+    iterate();
+}
+// Elapsed Wall Time between all start,end and between last start/end
+double Timer::getWallTime() {
+    return totalWallTime;
+}
+double Timer::getWallTimeOnce() {
+    if (running)
+        return omp_get_wtime()-wallTimeStarted;
+    return wallTimeEnded-wallTimeStarted;
+}
+// Elapsed CPU Time between all start,end and between last start/end
+double Timer::getCPUTime() {
+    return totalCPUTime;
+}
+double Timer::getCPUTimeOnce() {
+    if (running)
+        return (double)(clock()-cpuTimeStarted)/CLOCKS_PER_SEC;
+    return (double)(cpuTimeEnded-cpuTimeStarted)/CLOCKS_PER_SEC;
+}
+// Average Iteration Number (walltime)
+double Timer::getAverageIterationTime() {
+    if (running)
+        return getWallTimeOnce()/totalIterationNum;
+    return totalWallTime/totalIterationNum;
+}
+// Total Iterations counted
+double Timer::getTotalIterationNumber() {
+    return totalIterationNum;
+}
+
+// Output?
+bool Timer::doOutput() {
+    if (getWallTimeOnce() > outputLast+outputMod) {
+        outputLast = getWallTimeOnce();
+        return true;
+    }
+    return false;
+}
+
+void Timer::setOutputModTime(double s) {
+    if (s < 0) {
+        return;
+    }
+    outputMod = s;
+}
+
+std::string Timer::getName() {
+    return name;
+}
+
+std::string Timer::format(double in) {
+    int h  = std::floor( in/3600. );
+    int m  = std::floor( (in-3600.*h)/60 );
+    int s  = std::floor( (in-3600*h-60*m) );
+    double ms = (in-std::floor(in))*1000;
+    return fmt::format("{}{}{}{}{}{}{:.3f}{}",h>0?toStr(h):"",h>0?"h:":"", m>0?toStr(m):"",m>0?"m:":"", s>0?toStr(s):"",s>0?"s:":"", ms,"ms");
+}
+
+// returns total time taken
+double Timer::summary(bool output = true) {
+    int len = 0;
+    double totalWallTime = 0;
+    double totalCPUTime = 0;
+    for (Timer timer : allTimers) {
+        if (timer.getName().size() > len)
+            len = timer.getName().size();
+    }
+    if (output) {
+        logs.inBar("Timer");
+        for (Timer timer : allTimers) {
+            if (timer.addtoTotalStatistic) {
+                totalWallTime += timer.getWallTime();
+                totalCPUTime += timer.getCPUTime();
+            }
+            logs("{:<{}}: Walltime: {} CPUTime: {} Iterations: {} Average Time per Iteration: {}\n",timer.getName(),len, Timer::format(timer.getWallTime()), (timer.getCPUTime() != 0) ? Timer::format(timer.getCPUTime()) : "--", timer.getTotalIterationNumber(), Timer::format(timer.getAverageIterationTime()));
+        }
+        logs.bar(LOG_SIZE_FULL,LOG_LEVEL_1,LOG_BAR_1);
+        logs("{:<{}}: Walltime: {} CPUTime: {}\n","Total",len, Timer::format(totalWallTime), Timer::format(totalCPUTime));
+        logs.bar();
+    }
+    return totalWallTime;
+}
+
+void outputTimeStrings(Timer &t, const long unsigned int maxItTotal, std::string suffix = "", int final = 0) {
+    if (t.doOutput() || final) {
+        fmt::print("{0}\t{1:.2f}\n",PREFIX_PERCENT, (t.getTotalIterationNumber()/(double)maxItTotal*100.) );
+        fmt::print("{0}\t{1:.0f}\n",PREFIX_PERCENT_TIME, ((double)maxItTotal - t.getTotalIterationNumber())*t.getAverageIterationTime() );
+        fmt::print("{0}\t{1}\n",PREFIX_SUFFIX, suffix);
+    }
+}
+
+void outputProgressBar(Timer &t, ProgressBar &p, const long unsigned int maxItTotal, std::string suffix = "", int final = 0) {
+    if (t.doOutput() || final) {
+        p.print(t.getTotalIterationNumber(),fmt::format("T - {} {}{}" ,Timer::format(((double)maxItTotal - t.getTotalIterationNumber())*t.getAverageIterationTime()),suffix.size()>0?"-":"", suffix));
+    }
+}
+
+void outputProgress(int handler, Timer &t, ProgressBar &p, const long unsigned int maxItTotal, std::string suffix = "", int final = 0) { 
+    //logs.level2("Timer: {}, doOutput: {}\n",t.getName(),t.doOutput());
+    if (handler)
+        outputTimeStrings(t,maxItTotal,suffix,final);
+    else
+        outputProgressBar(t,p,maxItTotal,suffix,final);
+}
