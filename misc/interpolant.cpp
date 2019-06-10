@@ -13,26 +13,26 @@ Interpolant::Interpolant(std::vector<double> &interpolationPointsX, std::vector<
 }
 
 Interpolant::Interpolant(std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::vector<double> &interpolationPointsZ, std::string t = "linear") {
-    // TODO: veryfy inputs (length, etc)
+    // TODO: verify inputs (length, etc)
     // Interpolant
     // Generate input strings for interpolant
     X = "[";
     Y = "[";
     Z = "[";
     for (unsigned long i = 0; i < interpolationPointsX.size(); i++) {
-        X += std::to_string(interpolationPointsX.at(i)) + (i < interpolationPointsX.size()-1 ? "," : "");
-        Y += std::to_string(interpolationPointsY.at(i)) + (i < interpolationPointsX.size()-1 ? "," : "");
-        Z += std::to_string(interpolationPointsZ.at(i)) + (i < interpolationPointsX.size()-1 ? "," : "");
+        X += fmt::format("{:.15e}",interpolationPointsX.at(i)) + (i < interpolationPointsX.size()-1 ? "," : "");
+        Y += fmt::format("{:.15e}",interpolationPointsY.at(i)) + (i < interpolationPointsX.size()-1 ? "," : "");
+        Z += fmt::format("{:.15e}",interpolationPointsZ.at(i)) + (i < interpolationPointsX.size()-1 ? "," : "");
     }
     X += "]";
     Y += "]";
     Z += "]";
+    std::cout << "X = " << X << "\nY = " << Y << "\nZ = " << Z << "\nType = " << t <<"\n";
     generate(t);
 }
 
 void Interpolant::generate(std::string t = "linear") {
     type = t;
-    std::cout << "inputs:" << X << "\n" << Y << "\n" << Z << "\n" <<std::flush;
     alglib::real_1d_array x = X.c_str();
     alglib::real_1d_array y = Y.c_str();
     alglib::real_1d_array z = Z.c_str();

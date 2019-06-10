@@ -37,9 +37,9 @@ int in(char **arr, int len, char *target) {
   return -1;
 }
 
-int instr(const std::string &arr, const std::string tofind) {
+int instr(const std::string &arr, const std::string tofind, int start = 0) {
     bool found = true;
-    for (int i = 0; i < arr.size()+1-tofind.size(); i++) {
+    for (int i = start; i < arr.size()+1-tofind.size(); i++) {
         found = true;
         for (int j = 0; j < tofind.size(); j++) {
             //fmt::print("comparing {} and {}... ",arr.at(i+j),tofind.at(j));
@@ -54,6 +54,21 @@ int instr(const std::string &arr, const std::string tofind) {
         }
     }
     return -1;
+}
+
+// Converts an input string ( like e.g. [1,2,3,4] ) into a vector<string>
+std::vector<std::string> str_to_vec(std::string input) {
+    std::vector<std::string> ret;
+    int s = 1; // Starting index
+    int e = 1; // End
+    while ((e = instr(input,",",s)) != -1) {
+        ret.emplace_back( input.substr(s,e-s) );
+        s = e+1;
+    }
+    ret.emplace_back( input.substr(s,input.size()-s-1) );
+    //for (std::string el : ret)
+    //    std::cout << el << "\n";
+    return ret;
 }
 
 #define toStr(x) std::to_string(x)
@@ -149,6 +164,15 @@ T convertParam(const std::string input) {
 }
 
 template <typename T>
+std::vector<T> convertParam(const std::vector<std::string> input) {
+    std::vector<T> ret;
+    for (std::string in : input) {
+        ret.emplace_back( convertParam<T>(in) );
+    }
+    return ret;
+}
+
+template <typename T>
 T getNextInput(const std::vector<std::string> &arguments, const std::string name, int &index) {
     logs.level2("Trying to convert input named '{}' at index '{}' to '{}'...",name,index,arguments.at(index));
     return convertParam<T>(arguments.at(index++));
@@ -156,6 +180,11 @@ T getNextInput(const std::vector<std::string> &arguments, const std::string name
 std::string getNextInputString(const std::vector<std::string> &arguments, const std::string name, int &index) {
     logs.level2("Trying to convert input named '{}' at index '{}' to '{}'... done\n",name,index,arguments.at(index));
     return arguments.at(index++);
+}
+template <typename T>
+std::vector<T> getNextInputVector(const std::vector<std::string> &arguments, const std::string name, int &index) {
+    logs.level2("Trying to convert input named '{}' at index '{}' to '{}'...",name,index,arguments.at(index));
+    return convertParam<T>(str_to_vec(arguments.at(index++)));
 }
 /*template <typename T>
 std::enable_if_t<std::is_same<std::string, T>::value, std::string> getNextInput(const std::vector<std::string> &arguments, const std::string name, int &index) {

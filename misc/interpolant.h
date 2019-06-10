@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <vector>
+#include <fmt/core.h> // -DFMT_HEADER_ONLY
+#include <fmt/format.h>
 #include "ALGLIB/interpolation.h"
 
 class Interpolant {
@@ -11,6 +13,7 @@ class Interpolant {
         alglib::spline1dinterpolant p;
         std::string X,Y,Z, type;
     public:
+        Interpolant() {}
         Interpolant(std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::string t);
         Interpolant(std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::vector<double> &interpolationPointsZ, std::string t);
         void generate(std::string t);

@@ -1,6 +1,6 @@
 #include "chirp.h"
-#include "misc/spline.h"
- 
+//#include "misc/spline.h"
+
 Chirp::Chirp(Parameters &p) {
     int n = (int)( (p.t_end - p.t_start)/p.t_step*2.0 + 5 );
     chirparray.reserve(n);
@@ -10,17 +10,25 @@ Chirp::Chirp(Parameters &p) {
     //    steps = { 0, 1./5.*p.t_step, 3./10.*p.t_step, 1./2.*p.t_step, 4./5.*p.t_step, 8./9.*p.t_step };
     //else 
         steps = {0,0.5*p.t_step};
+    interpolant = Interpolant( p.chirp_t, p.chirp_y, p.chirp_ddt, p.chirp_type ); 
+    generate(p);
 }
 
 
 /* Generate array of energy-values corresponding to the chirp */
 void Chirp::generate(Parameters &p) {
     logs.level2("generating... ");
+    
+    // Array construction
+
+    // Interpolant
+    
+    // Precalculate 
     double totalChirp = 0;
     double t;
-    for (double t1 = p.t_start; t1 < p.t_end+10*p.t_step; t1 += p.t_step/2.0) { //TODO: FIX STEP
+    for (double t1 = p.t_start; t1 < p.t_end+10*p.t_step; t1 += p.t_step/2.0) {
         //for (int i = 0; i < steps.size(); i++ ) {
-            t = t1;// + steps[i];
+            /*t = t1;// + steps[i];
             long unsigned int n = 0;
             while (!(t >= inputs.chirp_start[n] && t < inputs.chirp_end[n]+inputs.chirp_onofftime[n]) && n < inputs.chirp_start.size())
                 n++;
@@ -37,9 +45,10 @@ void Chirp::generate(Parameters &p) {
                 else if (t <= inputs.chirp_end[n]+inputs.chirp_onofftime[n] && t >= inputs.chirp_end[n] ){
                     totalChirp += chirpDelta/2. * (1.+std::cos(M_PI* (t-inputs.chirp_end[n])/inputs.chirp_onofftime[n] ));
                 }
-            }
-            chirparray.push_back(totalChirp);
-            timearray.push_back(t);
+            }*/
+
+            chirparray.push_back(interpolant.evaluate(t1));
+            timearray.push_back(t1);
         //}
     }
     chirparray.shrink_to_fit();
@@ -48,8 +57,8 @@ void Chirp::generate(Parameters &p) {
     logs.level2("chirparray.size() = {}... ", size);
 }
 
-/* Create chirparray from scaled parameter chirp */
-void Chirp::generateFromInputFile(Parameters &p) {
+// Create chirparray from scaled parameter chirp
+/*void Chirp::generateFromInputFile(Parameters &p) {
     logs.level2("Creating Chirp from scaled input chirp via chirpfile '" + p.subfolder + "'... ");
     FILE *chirpfile = std::fopen((p.subfolder+"chirpfile.txt").c_str(),"r");
     if (!chirpfile) {
@@ -76,15 +85,15 @@ void Chirp::generateFromInputFile(Parameters &p) {
     }
     generate(p);
     logs.level2("done! Read %d scaled chirps.\n",n);
-}
+}*/
 
-/* Create single Chirp from parameters */
-void Chirp::generateFromParam(Parameters &p) {
+// Create single Chirp from parameters 
+/*void Chirp::generateFromParam(Parameters &p) {
     logs.level2("Creating Chirp from input parameters only... ");
     inputs = Inputs(p);
     generate(p);
     logs.level2("done!\n");
-}
+}*/
 
 /* 
     Create spline-interpolated chirp
@@ -93,7 +102,7 @@ void Chirp::generateFromParam(Parameters &p) {
         time (absolut)
         deltaw: deltaw (relative)
 */
-void Chirp::generateFromSpline(Parameters &p) {
+/*void Chirp::generateFromSpline(Parameters &p) {
     logs.level2("Creating Chirp via spline interpolation... ");
     FILE *chirpfile = std::fopen((p.subfolder+"chirpfile.txt").c_str(),"r");
     if (!chirpfile) {
@@ -151,7 +160,7 @@ void Chirp::generateFromSpline(Parameters &p) {
     size = chirparray.size();
     logs.level2("chirparray.size() = {}... ", size);
     logs.level2("done! Read {} points for chirp interpolation.\n",n);
-}
+}*/
 
 void Chirp::fileOutput(std::string filepath, Parameters &p) {
     FILE *chirpfile = std::fopen(filepath.c_str(),"w");
@@ -166,6 +175,7 @@ void Chirp::fileOutput(std::string filepath, Parameters &p) {
 }
 
 // Per index and rest is lerp delta
+// TODO: option for new evaluation instead of precalculating
 double Chirp::get(double t) const {
     int i = std::floor(t/step-1)*steps.size();
     while (timearray.at(i) < t) {

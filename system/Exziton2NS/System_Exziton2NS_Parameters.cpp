@@ -24,8 +24,11 @@ class Parameters {
         // Calculated System properties:
         double init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
         // Chirp and Pulse properties:
-        double chirp_total, chirp_start, chirp_end, chirp_delta, pulse_center, pulse_amp, pulse_freq, pulse_sigma, chirp_onofftime;
-        std::string pulsetype, chirp_type, chirp_file_type;
+        double pulse_center, pulse_amp, pulse_freq, pulse_sigma, chirp_onofftime;
+        double chirp_total, chirp_delta, chirp_start, chirp_end; // FIXME: REDUNDANCY
+        std::vector<double> chirp_t,chirp_y,chirp_ddt;
+
+        std::string pulsetype, chirp_type;
 
         // Runtime parameters and other stuff
         int maxItMainRK; 
@@ -52,26 +55,24 @@ class Parameters {
             logs.wrapInBar("Conversion of input variables",LOG_SIZE_FULL,LOG_LEVEL_2,LOG_BAR_0); logs.level2("\n");
             logs.level2("Parsing input variables... ");
             int index = 1;
-            scaling             = 1e-12;
             t_start             = 0.0;
-            t_end               = getNextInput<double>(arguments,"t_end",index)*scaling;
-            t_step              = getNextInput<double>(arguments,"t_step",index)*scaling;
-            omegaE              = getNextInput<double>(arguments,"omegaE",index)*scaling;
-            omegaC              = getNextInput<double>(arguments,"omegaC",index)*scaling;
-            g                   = getNextInput<double>(arguments,"g",index)*scaling;
-            k                   = getNextInput<double>(arguments,"k",index)*scaling;
-            gamma_pure          = getNextInput<double>(arguments,"gamma_pure",index)*scaling;
-            gamma               = getNextInput<double>(arguments,"gamma",index)*scaling;
-            chirp_total         = getNextInput<double>(arguments,"chirp_total",index)*scaling;
-            chirp_start         = getNextInput<double>(arguments,"chirp_start",index)*scaling;
-            chirp_end           = getNextInput<double>(arguments,"chirp_end",index)*scaling;
-            chirp_onofftime     = getNextInput<double>(arguments,"chirp_onofftime",index)*scaling;
+            t_end               = getNextInput<double>(arguments,"t_end",index);
+            t_step              = getNextInput<double>(arguments,"t_step",index);
+            omegaE              = getNextInput<double>(arguments,"omegaE",index);
+            omegaC              = getNextInput<double>(arguments,"omegaC",index);
+            g                   = getNextInput<double>(arguments,"g",index);
+            k                   = getNextInput<double>(arguments,"k",index);
+            gamma_pure          = getNextInput<double>(arguments,"gamma_pure",index);
+            gamma               = getNextInput<double>(arguments,"gamma",index);
+            chirp_t             = getNextInputVector<double>(arguments,"chirp_time",index); // TODO: ddt sollte optional sein
+            chirp_y             = getNextInputVector<double>(arguments,"chirp_yval",index);
+            chirp_ddt           = getNextInputVector<double>(arguments,"chirp_diff",index);
             maxPhotonNumber     = getNextInput<int>(arguments,"maxPhotonNumber",index);
             rho_0               = getNextInput<int>(arguments,"rho_0",index);
-            pulse_center        = getNextInput<double>(arguments,"pulse_center",index)*scaling;
-            pulse_amp           = getNextInput<double>(arguments,"pulse_amp",index)*scaling;
-            pulse_freq          = getNextInput<double>(arguments,"pulse_freq",index)*scaling;
-            pulse_sigma         = getNextInput<double>(arguments,"pulse_sigma",index)*scaling;
+            pulse_center        = getNextInput<double>(arguments,"pulse_center",index);
+            pulse_amp           = getNextInput<double>(arguments,"pulse_amp",index);
+            pulse_freq          = getNextInput<double>(arguments,"pulse_freq",index);
+            pulse_sigma         = getNextInput<double>(arguments,"pulse_sigma",index);
             pulsetype           = getNextInputString(arguments,"pulsetype",index);
             double rkType       = getNextInput<double>(arguments,"rungekuttatype",index);
             doSpectrum          = getNextInput<double>(arguments,"doSpectrum",index);
@@ -81,7 +82,7 @@ class Parameters {
             akf_skip_omega      = getNextInput<int>(arguments,"akf_skip_omega",index);
             doInteractionPicture= getNextInput<int>(arguments,"doInteractionPicture",index);
             doRWA               = getNextInput<int>(arguments,"doRWA",index);
-            chirp_file_type     = getNextInputString(arguments,"chirp_file_type",index);
+            chirp_type          = getNextInputString(arguments,"chirp_file_type",index);
             akf_maxThreads      = getNextInput<int>(arguments,"akf_maxThreads",index);
             advancedLogging     = getNextInput<int>(arguments,"advancedLogging",index);
             subfolder           = getNextInputString(arguments,"subfolder",index);
@@ -112,6 +113,15 @@ class Parameters {
             maxItMainRK         = (int)std::ceil((t_end-t_start)/t_step);
             orderRKT            = (int)(rkType/10); // 4 or 5
             orderRKTau          = ((int)rkType)%10; // 4 or 5
+
+            // Calculate values for chirp: (maybe)
+            chirp_total = 1;
+            chirp_start = 0;
+            chirp_end = 1E-10;
+            chirp_onofftime = 1E-10;
+            // Mandatory: rescaling chirp ddt into chirp/ps
+            for (long unsigned i = 0; i < chirp_ddt.size(); i++)
+                chirp_ddt.at(i) = chirp_ddt.at(i)*1E-12;
 
             // Initial and maximum system detuning (not taking into account custom chirps)
             init_detuning     = (omegaE - omegaC);
@@ -184,8 +194,8 @@ class Parameters {
                 logs("Chirp per Iteration w_chirp_delta = {} Hz/it -> {} mueV/it\n",chirp_delta,Hz_to_eV(chirp_delta)*1E6);
                 logs("-> Chirp per ps = {} Hz/ps -> {} mueV/ps\n",chirp_delta*1E-12/t_step,Hz_to_eV(chirp_delta*1E-12/t_step)*1E6);
                 logs("Chirp on/off time is {} s",chirp_onofftime);
-                if (chirp_file_type.compare("none") != 0) 
-                    logs("\nChirpfile of type '"+chirp_file_type+"' is used!");
+                if (chirp_type.compare("none") != 0) 
+                    logs("\nChirpfile of type '"+chirp_type+"' is used!");
             } else 
                 logs("Not using chirp");
             logs("\n\n");

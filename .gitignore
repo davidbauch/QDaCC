@@ -33,3 +33,8 @@
 
 # Visual Studio stuff
 /.vscode
+/misc/ALGLIB
+/misc/.DS_Store
+/misc/out.txt
+/misc/temp_interpolation_test.cpp
+.DS_Store
