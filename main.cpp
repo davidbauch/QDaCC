@@ -14,10 +14,12 @@
 */
 
 /* 
-    current: test pMac05062019F
+    current: test pMac05062019G
  */
 
 // TODO: RWA funktioniert wieder nicht wth
+// TODO: 11.06.2019: chirp in timetrafo! dafür beim erstellen des chirps integral ausrechnen (und derivative wenn schon dabei) und ggf mit ausgeben
+// dgl_getHamilton soll hamilton abhängig von RWA oder nicht zurückgeben (dann auch kein mist mit der timetrafo)
 
 // last 2 inputs: XY x=loglevem,y=outputhanderlstrings, Z z=workpath
 int main(int argc, char* argv[]) {

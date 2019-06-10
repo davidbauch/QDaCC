@@ -191,3 +191,7 @@ std::enable_if_t<std::is_same<std::string, T>::value, std::string> getNextInput(
     logs.level2("Trying to convert input number named '{}' at index '{}' to '{}'... ",name,index,arguments.at(index));
     return arguments.at(index++);
 }*/
+
+static bool abs_compare(int a, int b) {
+    return (std::abs(a) < std::abs(b));
+} 

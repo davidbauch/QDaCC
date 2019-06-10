@@ -64,7 +64,7 @@ class ProgressBar {
             calculate(currentIterations);
             std::string ret = "";
             if (type == 0)
-                ret = fmt::format("{0:"+sym.at(num0+1)+"<{1}}{2:"+sym.at(num0)+"<{3}}", "", num2, "", num1);
+                ret = fmt::format("{0:"+sym.at((num0+1)%sym.size())+"<{1}}{2:"+sym.at(num0)+"<{3}}", "", num2, "", num1);
             else {
                 ret = fmt::format("{0:"+sym.back()+"<{1}}{2}{3:"+sym.front()+"<{4}}", "", num0, sym.at(num1), "", num2);
             }
