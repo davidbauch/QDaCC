@@ -57,8 +57,12 @@ int instr(const std::string &arr, const std::string tofind, int start = 0) {
 }
 
 // Converts an input string ( like e.g. [1,2,3,4] ) into a vector<string>
-std::vector<std::string> str_to_vec(std::string input) {
+std::vector<std::string> str_to_vec(std::string input = "[]") {
     std::vector<std::string> ret;
+    if (input.size() < 3) {
+        ret = {"-1"};
+        return ret;
+    }
     int s = 1; // Starting index
     int e = 1; // End
     while ((e = instr(input,",",s)) != -1) {
@@ -192,6 +196,32 @@ std::enable_if_t<std::is_same<std::string, T>::value, std::string> getNextInput(
     return arguments.at(index++);
 }*/
 
-static bool abs_compare(int a, int b) {
-    return (std::abs(a) < std::abs(b));
+template <typename T>
+T vec_max(std::vector<T> input) {
+    if (input.size() == 0)
+        return (T)(0.0);
+    T ret = input.at(0);
+    for (T element : input)
+        if (element > ret)
+            ret = element;
+    return ret;
 } 
+template <typename T>
+T vec_min(std::vector<T> input) {
+    if (input.size() == 0)
+        return (T)(0.0);
+    T ret = input.at(0);
+    for (T element : input)
+        if (element < ret)
+            ret = element;
+    return ret;
+} 
+
+// finds a string in
+int vec_find_str(std::string toFind, const std::vector<std::string> &input) {
+    for (int i = 0; i < input.size(); i++) {
+        if (input.at(i).compare(toFind) == 0)
+            return i;
+    }
+    return -1;
+}

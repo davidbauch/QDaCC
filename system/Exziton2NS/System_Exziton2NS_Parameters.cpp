@@ -25,7 +25,7 @@ class Parameters {
         double init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
         // Chirp and Pulse properties:
         double pulse_center, pulse_amp, pulse_freq, pulse_sigma, chirp_onofftime;
-        double chirp_total, chirp_delta, chirp_start, chirp_end; // FIXME: REDUNDANCY
+        double chirp_total;
         std::vector<double> chirp_t,chirp_y,chirp_ddt;
 
         std::string pulsetype, chirp_type;
@@ -52,41 +52,220 @@ class Parameters {
             timer.start();
 
             // Parse parameters and convert to SI, Input parameters 
-            //TODO: inputs als --system -sys, --pulse -p, --chirp -c, --spectrum -s
             logs.wrapInBar("Conversion of input variables",LOG_SIZE_FULL,LOG_LEVEL_2,LOG_BAR_0); logs.level2("\n");
             logs.level2("Parsing input variables... ");
             int index = 1;
-            t_start             = 0.0;
-            t_end               = getNextInput<double>(arguments,"t_end",index);
-            t_step              = getNextInput<double>(arguments,"t_step",index);
-            omegaE              = getNextInput<double>(arguments,"omegaE",index);
-            omegaC              = getNextInput<double>(arguments,"omegaC",index);
-            g                   = getNextInput<double>(arguments,"g",index);
-            k                   = getNextInput<double>(arguments,"k",index);
-            gamma_pure          = getNextInput<double>(arguments,"gamma_pure",index);
-            gamma               = getNextInput<double>(arguments,"gamma",index);
-            chirp_t             = getNextInputVector<double>(arguments,"chirp_time",index); // TODO: ddt sollte optional sein
-            chirp_y             = getNextInputVector<double>(arguments,"chirp_yval",index);
-            chirp_ddt           = getNextInputVector<double>(arguments,"chirp_diff",index);
-            chirp_type          = getNextInputString(arguments,"chirp_file_type",index);
-            maxPhotonNumber     = getNextInput<int>(arguments,"maxPhotonNumber",index);
-            rho_0               = getNextInput<int>(arguments,"rho_0",index);
-            pulse_center        = getNextInput<double>(arguments,"pulse_center",index);
-            pulse_amp           = getNextInput<double>(arguments,"pulse_amp",index);
-            pulse_freq          = getNextInput<double>(arguments,"pulse_freq",index);
-            pulse_sigma         = getNextInput<double>(arguments,"pulse_sigma",index);
-            pulsetype           = getNextInputString(arguments,"pulsetype",index);
-            double rkType       = getNextInput<double>(arguments,"rungekuttatype",index);
-            doSpectrum          = getNextInput<double>(arguments,"doSpectrum",index);
-            akf_everyXIt        = getNextInput<int>(arguments,"akf_everyXIt",index);
-            akf_omega_center    = getNextInput<double>(arguments,"akf_omega_center",index);
-            akf_omega_range     = getNextInput<double>(arguments,"akf_omega_range",index);
-            akf_skip_omega      = getNextInput<int>(arguments,"akf_skip_omega",index);
-            doInteractionPicture= getNextInput<int>(arguments,"doInteractionPicture",index);
-            doRWA               = getNextInput<int>(arguments,"doRWA",index);
-            akf_maxThreads      = getNextInput<int>(arguments,"akf_maxThreads",index);
-            advancedLogging     = getNextInput<int>(arguments,"advancedLogging",index);
-            subfolder           = getNextInputString(arguments,"subfolder",index);
+            
+            // Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
+            if ( (index = vec_find_str("--time", arguments)) != -1) {
+                t_start         = 0.0;
+                t_end           = getNextInput<double>(arguments,"t_end",++index);
+                t_step          = getNextInput<double>(arguments,"t_step",index);
+            } else {
+                t_start         = 0.0;
+                t_end           = convertParam<double>("1.0ns");
+                t_step          = -1;
+            }
+             // Look for single parameter corrections
+            if ( (index = vec_find_str("--tstart", arguments)) != -1) {
+                t_start         = getNextInput<double>(arguments,"t_start single",++index);
+            }
+            if ( (index = vec_find_str("--tend", arguments)) != -1) {
+                t_end           = getNextInput<double>(arguments,"t_end single",++index);
+            }
+            if ( (index = vec_find_str("--tstep", arguments)) != -1) {
+                t_step          = getNextInput<double>(arguments,"t_step single",++index);
+            }
+
+            // Look for --system, if not found, standard system is used (g=66mueV, k=66mueV, gamma_pure = 3mueV, gamma = 1mueV)
+            if ( (index = vec_find_str("--system", arguments)) != -1) {
+                omegaE          = getNextInput<double>(arguments,"omegaE",++index);
+                omegaC          = getNextInput<double>(arguments,"omegaC",index);
+                g               = getNextInput<double>(arguments,"g",index);
+                k               = getNextInput<double>(arguments,"k",index);
+                gamma_pure      = getNextInput<double>(arguments,"gamma_pure",index);
+                gamma           = getNextInput<double>(arguments,"gamma",index);
+            } else {
+                omegaE          = convertParam<double>("1.52eV");
+                omegaC          = convertParam<double>("1.52eV");
+                g               = convertParam<double>("66mueV");
+                k               = convertParam<double>("66mueV");
+                gamma_pure      = convertParam<double>("3mueV");
+                gamma           = convertParam<double>("1mueV");
+            }
+            // Look for single parameter corrections
+            if ( (index = vec_find_str("--we", arguments)) != -1) {
+                omegaE          = getNextInput<double>(arguments,"omegaE single",++index);
+            }
+            if ( (index = vec_find_str("--wc", arguments)) != -1) {
+                omegaC          = getNextInput<double>(arguments,"omegaC single",++index);
+            }
+            if ( (index = vec_find_str("--coupling", arguments)) != -1) {
+                g               = getNextInput<double>(arguments,"g single",++index);
+            }
+            if ( (index = vec_find_str("--kappa", arguments)) != -1) {
+                k               = getNextInput<double>(arguments,"k single",++index);
+            }
+            if ( (index = vec_find_str("--gammapure", arguments)) != -1) {
+                gamma_pure      = getNextInput<double>(arguments,"gamma_pure single",++index);
+            }
+            if ( (index = vec_find_str("--gamma", arguments)) != -1) {
+                gamma           = getNextInput<double>(arguments,"gamma single",++index);
+            }
+
+            // Look for --chirp, if not found, standard system is used (no chirp, everything zero)
+            if ( (index = vec_find_str("--chirp", arguments)) != -1) {
+                chirp_t         = getNextInputVector<double>(arguments,"chirp_time",++index);
+                chirp_y         = getNextInputVector<double>(arguments,"chirp_yval",index);
+                chirp_ddt       = getNextInputVector<double>(arguments,"chirp_diff",index);
+                chirp_type      = getNextInputString(arguments,"chirp_file_type",index);    
+            } else {
+                chirp_t         = {t_start,t_end};
+                chirp_y         = {0.0,0.0};
+                chirp_ddt       = {0.0,0.0};
+                chirp_type      = "monotone";
+            }
+            // Look for single parameter corrections
+            if ( (index = vec_find_str("--chirpT", arguments)) != -1) {
+                chirp_t         = getNextInputVector<double>(arguments,"chirp_time single",++index);
+            }
+            if ( (index = vec_find_str("--chirpY", arguments)) != -1) {
+                chirp_y         = getNextInputVector<double>(arguments,"chirp_yval single",++index);
+            }
+            if ( (index = vec_find_str("--chirpDDT", arguments)) != -1) {
+                chirp_ddt       = getNextInputVector<double>(arguments,"chirp_ddt single",++index);
+            }
+            if ( (index = vec_find_str("--chirpType", arguments)) != -1) {
+                chirp_type      = getNextInputString(arguments,"chirp_type single",++index);
+            }
+            
+            // Look for --pulse, if not found, standard system is used (no pulse, everything zero)
+            if ( (index = vec_find_str("--pulse", arguments)) != -1) {
+                pulse_center    = getNextInput<double>(arguments,"pulse_center",++index);
+                pulse_amp       = getNextInput<double>(arguments,"pulse_amp",index);
+                pulse_freq      = getNextInput<double>(arguments,"pulse_freq",index);
+                pulse_sigma     = getNextInput<double>(arguments,"pulse_sigma",index);
+                pulsetype       = getNextInputString(arguments,"pulsetype",index);
+            } else {
+                pulse_center    = 0.0;
+                pulse_amp       = 0.0;
+                pulse_freq      = 0.0;
+                pulse_sigma     = 1.0;
+                pulsetype       = "cw";
+            }
+            if ( (index = vec_find_str("-pulse", arguments)) != -1) {
+                pulse_amp       = 1.0;
+                pulse_freq      = omegaE;
+                pulse_sigma     = convertParam<double>("20ps");
+                pulse_center    = 10.0*pulse_sigma;
+                pulsetype       = "gauss_pi";
+            }
+            // Look for single parameter corrections
+            if ( (index = vec_find_str("--pulseCenter", arguments)) != -1) {
+                pulse_center    = getNextInput<double>(arguments,"pulse_center single",++index);
+            }
+            if ( (index = vec_find_str("--pulseAmp", arguments)) != -1) {
+                pulse_amp       = getNextInput<double>(arguments,"pulse_amp single",++index);
+            }
+            if ( (index = vec_find_str("--pulseFreq", arguments)) != -1) {
+                pulse_freq      = getNextInput<double>(arguments,"pulse_freq single",++index);
+            }
+            if ( (index = vec_find_str("--pulseSigma", arguments)) != -1) {
+                pulse_sigma     = getNextInput<double>(arguments,"pulse_sigma single",++index);
+            }
+            if ( (index = vec_find_str("--pulseType", arguments)) != -1) {
+                pulsetype       = getNextInputString(arguments,"pulsetype single",++index);
+            }
+
+            // Look for --dimensions, if not found, standard system is used (maxphotons = 0, starting state = |g,0>)
+            if ( (index = vec_find_str("--dimensions", arguments)) != -1) {
+                maxPhotonNumber = getNextInput<int>(arguments,"maxPhotonNumber",++index);
+                rho_0           = getNextInput<int>(arguments,"rho_0",index);
+            } else {
+                maxPhotonNumber = 1;
+                rho_0           = 0;
+            }
+            // Look for single parameter corrections
+            if ( (index = vec_find_str("--maxPhotons", arguments)) != -1) {
+                maxPhotonNumber = getNextInput<int>(arguments,"maxPhotonNumber single",++index);
+            }
+            if ( (index = vec_find_str("--initState", arguments)) != -1) {
+                rho_0           = getNextInput<int>(arguments,"rho_0 single",++index);
+            }
+
+            // Look for (-RK4), -RK5, (-RK4T), (-RK4Tau), -RK5T, -RK5Tau
+            orderRKT        = 4;
+            orderRKTau      = 4;
+            if ( (index = vec_find_str("-RK5", arguments)) != -1) {
+                orderRKT        = 5;
+                orderRKTau      = 5;
+            }
+            if ( (index = vec_find_str("-RK5T", arguments)) != -1) {
+                orderRKT        = 5;
+            }   
+            if ( (index = vec_find_str("-RK5Tau", arguments)) != -1) {
+                orderRKTau      = 5;
+            }
+
+            // Look for --spectrum, if not found, no spectrum is evaluated
+            if ( (index = vec_find_str("--spectrum", arguments)) != -1) {
+                doSpectrum      = 1;
+                akf_everyXIt    = getNextInput<int>(arguments,"akf_everyXIt",++index);
+                akf_omega_center= getNextInput<double>(arguments,"akf_omega_center",index);
+                akf_omega_range = getNextInput<double>(arguments,"akf_omega_range",index);
+                akf_skip_omega  = getNextInput<int>(arguments,"akf_skip_omega",index);
+            } else {
+                doSpectrum      = 0;
+                akf_everyXIt    = 1;
+                akf_omega_center= omegaC;
+                akf_omega_range = 0.0;
+                akf_skip_omega  = 0;
+            }
+            if ( (index = vec_find_str("-spectrum", arguments)) != -1) {
+                doSpectrum      = 1;
+                akf_everyXIt    = 1;
+                akf_omega_center= omegaC;
+                akf_omega_range = (g+k+gamma+gamma_pure)*10.0;
+                akf_skip_omega  = 0;
+            }
+            // Look for single parameter corrections
+            if ( (index = vec_find_str("--specXIt", arguments)) != -1) {
+                akf_everyXIt    = getNextInput<int>(arguments,"akf_everyXIt single",++index);
+            }
+            if ( (index = vec_find_str("--specCenter", arguments)) != -1) {
+                akf_omega_center= getNextInput<double>(arguments,"akf_omega_center single",++index);
+            }
+            if ( (index = vec_find_str("--specRange", arguments)) != -1) {
+                akf_omega_range = getNextInput<double>(arguments,"akf_omega_range single",++index);
+            }
+            if ( (index = vec_find_str("--specSkip", arguments)) != -1) {
+                akf_skip_omega  = getNextInput<int>(arguments,"akf_skip_omega single",++index);
+            }
+
+            // Look for other parameters
+            if ( (index = vec_find_str("-nointeractionpic", arguments)) != -1) {
+                doInteractionPicture = 0;
+            } else {
+                doInteractionPicture = 1;
+            }
+            if ( (index = vec_find_str("-noRWA", arguments)) != -1) {
+                doRWA = 0;
+            } else {
+                doRWA = 1;
+            }
+            if ( (index = vec_find_str("--Threads", arguments)) != -1) {
+                akf_maxThreads = getNextInput<int>(arguments,"akf_maxThreads",index);
+            } else {
+                akf_maxThreads = 1;
+            }
+            if ( (index = vec_find_str("-noHandler", arguments)) != -1) {
+                outputHandlerStrings = 0;
+            } else {
+                outputHandlerStrings = 1;
+            }
+
+            subfolder           = arguments.back();
+
             logs.level2("Done! Elapsed time is {}ms.\nProcessing input variables...",timer.getWallTime()*1E3);
 
             // Calculate/Recalculate some parameters:
@@ -104,7 +283,7 @@ class Parameters {
                 if (doRWA)
                     t_step = 2./8.*M_PI/std::max(init_rabifrequenz,max_rabifrequenz);
                 if (!doRWA)
-                    t_step = 2./48.*M_PI/std::max(init_rabifrequenz,max_rabifrequenz);
+                    t_step = 2./8.*M_PI/std::max(std::max(init_rabifrequenz,max_rabifrequenz), omegaE+omegaC);
             }
 
             // Calculate the maximum dimensions for operator matrices (max states)
@@ -112,26 +291,16 @@ class Parameters {
 
             // Calculate stuff for RK
             maxItMainRK         = (int)std::ceil((t_end-t_start)/t_step);
-            orderRKT            = (int)(rkType/10); // 4 or 5
-            orderRKTau          = ((int)rkType)%10; // 4 or 5
 
-            // Calculate values for chirp: (maybe) //TODO: Redundant, //REMOVE
-            chirp_total = 1;
-            chirp_start = 0;
-            chirp_end = 1E-10;
-            chirp_onofftime = 1E-10;
-
-            // Mandatory: rescaling chirp ddt into chirp/ps
+            // Mandatory: rescale chirp ddt into chirp/ps
             for (long unsigned i = 0; i < chirp_ddt.size(); i++)
                 chirp_ddt.at(i) = chirp_ddt.at(i)*1E12;
+            // Calculate values for chirp:
+            chirp_total = vec_max(chirp_y);
 
             // Initial and maximum system detuning (not taking into account custom chirps)
             init_detuning     = (omegaE - omegaC);
             max_detuning      = (init_detuning + chirp_total > init_detuning) ? init_detuning + chirp_total : init_detuning;
-            
-            // Chirp per iteration
-            chirp_delta = chirp_ddt.at(std::distance(chirp_ddt.begin(), std::max_element(chirp_ddt.begin(), chirp_ddt.end(), abs_compare) ));
-            //chirp_delta       = //(chirp_total != 0 && (chirp_start != chirp_end)) ? (double)(chirp_total)/(chirp_end-chirp_start)*t_step : 0;
 
             // Adjust/calculate frequency range for spectrum
             akf_spec_max_w      = maxItMainRK/( (akf_everyXIt-1)*(1-akf_skip_omega) + 1 );
@@ -160,10 +329,6 @@ class Parameters {
             }
             trace.reserve(maxItMainRK+5);
 
-            // Logging and handlerstrings:
-            outputHandlerStrings=advancedLogging;
-            advancedLogging = std::floor(advancedLogging/10.);
-            outputHandlerStrings = outputHandlerStrings%10;
             // Done
             timer.end();
             logs.level2("Done! Elapsed time is {}ms\n\n",timer.getWallTime()*1E3);
@@ -191,12 +356,9 @@ class Parameters {
                 logs("Not using pulse to exite system\n\n");
             logs.wrapInBar("Energy Chirp",LOG_SIZE_HALF,LOG_LEVEL_1,LOG_BAR_1);
             if (chirp_total != 0) {
-                logs("Total Chirp w_chirp = {} Hz -> {} eV\n",chirp_total,Hz_to_eV(chirp_total));
-                logs("Chirp start t_chirp_start = {} s\n",chirp_start);
-                logs("Chirp end t_chirp_end = {} s\n",chirp_end);
-                logs("Chirp per Iteration w_chirp_delta = {} Hz/it -> {} mueV/it\n",chirp_delta,Hz_to_eV(chirp_delta)*1E6);
-                logs("-> Chirp per ps = {} Hz/ps -> {} mueV/ps\n",chirp_delta*1E-12/t_step,Hz_to_eV(chirp_delta*1E-12/t_step)*1E6);
-                logs("Chirp on/off time is {} s",chirp_onofftime);
+                for(int i = 0; i < chirp_t.size()-1; i++) {
+                    logs("Chirp between t0 = {}ps and t1 = {}ps: {}mueV -> average rate {}mueV/ps\n",chirp_t.at(i),chirp_t.at(i+1), chirp_y.at(i+1)-chirp_y.at(i), (chirp_y.at(i+1)-chirp_y.at(i))*1e12/(chirp_t.at(i+1)-chirp_t.at(i)));
+                }
                 if (chirp_type.compare("none") != 0) 
                     logs("\nChirpfile of type '"+chirp_type+"' is used!");
             } else 
@@ -230,6 +392,6 @@ class Parameters {
             logs("Used pulsetype? - "+pulsetype+"\n");
             logs("\n");
             logs.wrapInBar("Program Log:",LOG_SIZE_FULL, LOG_LEVEL_2); logs("\n");
-            logs.level2("OutputHandlerStrings: {}, advancedlogging: {}\n",outputHandlerStrings,advancedLogging);
+            logs.level2("OutputHandlerStrings: {}\n",outputHandlerStrings);
         }
 };

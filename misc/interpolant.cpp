@@ -27,7 +27,7 @@ Interpolant::Interpolant(std::vector<double> &interpolationPointsX, std::vector<
     X += "]";
     Y += "]";
     Z += "]";
-    std::cout << "X = " << X << "\nY = " << Y << "\nZ = " << Z << "\nType = " << t <<"\n";
+    //std::cout << "X = " << X << "\nY = " << Y << "\nZ = " << Z << "\nType = " << t <<"\n";
     generate(t);
 }
 

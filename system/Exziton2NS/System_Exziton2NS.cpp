@@ -42,12 +42,6 @@ class System {
             
             // Rest
             chirp = Chirp(parameters); 
-            /*if (parameters.chirp_file_type.compare("spline") == 0)
-                chirp.generateFromSpline(parameters);
-            else if (parameters.chirp_file_type.compare("chain") == 0)
-                chirp.generateFromInputFile(parameters);
-            else
-                chirp.generateFromParam(parameters); */
             if (parameters.chirp_total != 0)
                 chirp.fileOutput(parameters.subfolder + "chirp.txt", parameters);
             

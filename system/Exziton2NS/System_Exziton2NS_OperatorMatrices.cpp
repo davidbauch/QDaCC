@@ -76,7 +76,7 @@ class OperatorMatrices {
                 logs.level2("NOT using interaction picture... ");
                 H_used = H;
             }
-            logs.level2("Hamiltonoperator done!\nSetting initial rho as pure state with rho_0 = {}... ",p.rho_0);
+            logs.level2("Hamiltonoperator done! Used:\n{}\nSetting initial rho as pure state with rho_0 = {}... ",H_used,p.rho_0);
             // rho
             rho(p.rho_0,p.rho_0) = 1;
             timer.end();

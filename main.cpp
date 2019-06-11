@@ -18,13 +18,10 @@
  */
 
 // TODO: RWA funktioniert wieder nicht wth
-// TODO: 11.06.2019: chirp in timetrafo! dafür beim erstellen des chirps integral ausrechnen (und derivative wenn schon dabei) und ggf mit ausgeben
-// dgl_getHamilton soll hamilton abhängig von RWA oder nicht zurückgeben (dann auch kein mist mit der timetrafo)
 
 // last 2 inputs: XY x=loglevem,y=outputhanderlstrings, Z z=workpath
 int main(int argc, char* argv[]) {
     logs = Log(std::string(argv[argc-1]) + "logfile.log", std::string(argv[argc-2]).at(0) == '1' );
-
     // System
     System system = System(argc, argv);
     system.init();
@@ -46,7 +43,7 @@ int main(int argc, char* argv[]) {
     system.expectationValues(rho,system.parameters.t_start);
 
     int curIt = 1;
-    /* Main Time Loop */
+    // Main Time Loop
     for (double t_t=system.parameters.t_start+system.parameters.t_step; t_t<system.parameters.t_end; t_t+=system.parameters.t_step) {
         // Runge-Kutta iteration 
         rho = solver.iterate(rho,system,t_t);
