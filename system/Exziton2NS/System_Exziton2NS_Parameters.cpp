@@ -1,3 +1,15 @@
+static void help() {
+    fmt::print("--time [start] [end] [step]\n\t--tstart [start]\n\t--tend [end]\n\t--tstep [step]\n");
+    fmt::print("--system [omegaE] [omegaC] [g] [kappa] [gamma_pure] [gamma] else standard values (1.52eV,1.52eV,66mueV,66mueV,3mueV,1mueV) are used\n\t--we [omegaE]\n\t--wc [omegaC]\n\t--coupling [g]\n\t--kappa [kappa]\n\t--gamma [gamma]\n\t--gammapure [gamma_pure]\n");
+    fmt::print("--chirp ['[Array Time]'] ['[Array Y]'] ['[Array d/dt]'] [type]\n\t--chirpT ['[Array Time]']\n\t--chirpY ['[Array Y]']\n\t--chirpDDT ['[Array d/dt]']\n\t--chirpType [type] where type = monotone, hermite, linear, spline\n");
+    fmt::print("--pulse [Center] [Amplitude] [Frequency] [Sigma] [Type]\n\t-pulse for standard pulse\n\t--pulseCenter [Center]\n\t--pulseAmp [Amplitude]\n\t--pulseFreq [Frequency]\n\t--pulseSigma [Sigma]\n\t--pulseType [Type] where Type = cw, gauss, gauss_pi\n");
+    fmt::print("--dimensions [maximum Photons] [Initial state]\n\t--maxPhotons [maximum Photons]\n\t--initState [Initial state], has to be smaller than (2*n+1)\n");
+    fmt::print("--spectrum [Iteration Skips] [Center] [Range] [Omega Skips] enables spectrum\n\t-spectrum enables spectrum centered at cavity\n\t--specXIt [Iterations skips (int)]\n\t--specCenter [Center]\n\t--specRange [Range]\n\t--specSkip [0/1] True/False\n");
+    fmt::print("-RK5 enables Runge Kutta of order 5 for T and Tau direction\n\t-RK5T enables Runge Kutta of order 5 for T direction\n\t-RK5Tau enables Runge Kutta of order 5 for Tau direction\n");
+    fmt::print("-noInteractionpic disables Interaction picture - enabled by default\n-noRWA disables rotating wave approximation - enabled by default\n-noHandler disables handerl strings and enables loadbar output (for console)\n");
+    fmt::print("--Threads [number] number of threads to use for both AKF and Spectrum integral calculation\n\n");
+}
+
 class Parameters {
     public:
         // Mandatory parameters, move to parent class:
@@ -55,13 +67,57 @@ class Parameters {
             logs.wrapInBar("Conversion of input variables",LOG_SIZE_FULL,LOG_LEVEL_2,LOG_BAR_0); logs.level2("\n");
             logs.level2("Parsing input variables... ");
             int index = 1;
+            bool legacy = false;
+            // Looking for legacy input, usefull because the python handler doesnt understand named inputs :(
+            if ( (index = vec_find_str("-legacy",arguments)) != -1) {
+                t_start             = 0.0;
+                t_end               = getNextInput<double>(arguments,"t_end",++index);
+                t_step              = getNextInput<double>(arguments,"t_step",index);
+                omegaE              = getNextInput<double>(arguments,"omegaE",index);
+                omegaC              = getNextInput<double>(arguments,"omegaC",index);
+                g                   = getNextInput<double>(arguments,"g",index);
+                k                   = getNextInput<double>(arguments,"k",index);
+                gamma_pure          = getNextInput<double>(arguments,"gamma_pure",index);
+                gamma               = getNextInput<double>(arguments,"gamma",index);
+                
+                chirp_t             = getNextInputVector<double>(arguments,"chirp_time",index);
+                chirp_y             = getNextInputVector<double>(arguments,"chirp_yval",index);
+                chirp_ddt           = getNextInputVector<double>(arguments,"chirp_diff",index);
+                chirp_type          = getNextInputString(arguments,"chirp_file_type",index);
+                
+                pulse_center        = getNextInput<double>(arguments,"pulse_center",index);
+                pulse_amp           = getNextInput<double>(arguments,"pulse_amp",index);
+                pulse_freq          = getNextInput<double>(arguments,"pulse_freq",index);
+                pulse_sigma         = getNextInput<double>(arguments,"pulse_sigma",index);
+                pulsetype           = getNextInputString(arguments,"pulsetype",index);
+                
+                maxPhotonNumber     = getNextInput<int>(arguments,"maxPhotonNumber",index);
+                rho_0               = getNextInput<int>(arguments,"rho_0",index);
+                
+                doSpectrum          = getNextInput<double>(arguments,"doSpectrum",index);
+                akf_everyXIt        = getNextInput<int>(arguments,"akf_everyXIt",index);
+                akf_omega_center    = getNextInput<double>(arguments,"akf_omega_center",index);
+                akf_omega_range     = getNextInput<double>(arguments,"akf_omega_range",index);
+                akf_skip_omega      = getNextInput<int>(arguments,"akf_skip_omega",index);
+                
+                doInteractionPicture= getNextInput<int>(arguments,"doInteractionPicture",index);
+                doRWA               = getNextInput<int>(arguments,"doRWA",index);
+                akf_maxThreads      = getNextInput<int>(arguments,"akf_maxThreads",index);
+                double rkType       = getNextInput<double>(arguments,"rungekuttatype",index);
+                advancedLogging     = getNextInput<int>(arguments,"advancedLogging",index);
+                subfolder           = getNextInputString(arguments,"subfolder",index);
+                orderRKT            = (int)(rkType/10); // 4 or 5
+                orderRKTau          = ((int)rkType)%10; // 4 or 5
+                legacy              = true;
+            }
+            
             
             // Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
             if ( (index = vec_find_str("--time", arguments)) != -1) {
                 t_start         = 0.0;
                 t_end           = getNextInput<double>(arguments,"t_end",++index);
                 t_step          = getNextInput<double>(arguments,"t_step",index);
-            } else {
+            } else if(!legacy) {
                 t_start         = 0.0;
                 t_end           = convertParam<double>("1.0ns");
                 t_step          = -1;
@@ -85,7 +141,7 @@ class Parameters {
                 k               = getNextInput<double>(arguments,"k",index);
                 gamma_pure      = getNextInput<double>(arguments,"gamma_pure",index);
                 gamma           = getNextInput<double>(arguments,"gamma",index);
-            } else {
+            } else if(!legacy) {
                 omegaE          = convertParam<double>("1.52eV");
                 omegaC          = convertParam<double>("1.52eV");
                 g               = convertParam<double>("66mueV");
@@ -119,7 +175,7 @@ class Parameters {
                 chirp_y         = getNextInputVector<double>(arguments,"chirp_yval",index);
                 chirp_ddt       = getNextInputVector<double>(arguments,"chirp_diff",index);
                 chirp_type      = getNextInputString(arguments,"chirp_file_type",index);    
-            } else {
+            } else if(!legacy) {
                 chirp_t         = {t_start,t_end};
                 chirp_y         = {0.0,0.0};
                 chirp_ddt       = {0.0,0.0};
@@ -146,7 +202,7 @@ class Parameters {
                 pulse_freq      = getNextInput<double>(arguments,"pulse_freq",index);
                 pulse_sigma     = getNextInput<double>(arguments,"pulse_sigma",index);
                 pulsetype       = getNextInputString(arguments,"pulsetype",index);
-            } else {
+            } else if(!legacy) {
                 pulse_center    = 0.0;
                 pulse_amp       = 0.0;
                 pulse_freq      = 0.0;
@@ -214,7 +270,7 @@ class Parameters {
                 akf_omega_center= getNextInput<double>(arguments,"akf_omega_center",index);
                 akf_omega_range = getNextInput<double>(arguments,"akf_omega_range",index);
                 akf_skip_omega  = getNextInput<int>(arguments,"akf_skip_omega",index);
-            } else {
+            } else if(!legacy) {
                 doSpectrum      = 0;
                 akf_everyXIt    = 1;
                 akf_omega_center= omegaC;
@@ -245,17 +301,17 @@ class Parameters {
             // Look for other parameters
             if ( (index = vec_find_str("-nointeractionpic", arguments)) != -1) {
                 doInteractionPicture = 0;
-            } else {
+            } else if(!legacy) {
                 doInteractionPicture = 1;
             }
             if ( (index = vec_find_str("-noRWA", arguments)) != -1) {
                 doRWA = 0;
-            } else {
+            } else if(!legacy) {
                 doRWA = 1;
             }
             if ( (index = vec_find_str("--Threads", arguments)) != -1) {
-                akf_maxThreads = getNextInput<int>(arguments,"akf_maxThreads",index);
-            } else {
+                akf_maxThreads = getNextInput<int>(arguments,"akf_maxThreads",++index);
+            } else if(!legacy) {
                 akf_maxThreads = 1;
             }
             if ( (index = vec_find_str("-noHandler", arguments)) != -1) {
@@ -281,9 +337,9 @@ class Parameters {
             // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
             if (t_step == -1) {
                 if (doRWA)
-                    t_step = 2./8.*M_PI/std::max(init_rabifrequenz,max_rabifrequenz);
+                    t_step = std::min(2./8.*M_PI/std::max(std::max(init_rabifrequenz,max_rabifrequenz),g+k+gamma+gamma_pure),1E-12);
                 if (!doRWA)
-                    t_step = 2./8.*M_PI/std::max(std::max(init_rabifrequenz,max_rabifrequenz), omegaE+omegaC);
+                    t_step = std::min(2./8.*M_PI/std::max(std::max(init_rabifrequenz,max_rabifrequenz), omegaE+omegaC),1E-12);
             }
 
             // Calculate the maximum dimensions for operator matrices (max states)

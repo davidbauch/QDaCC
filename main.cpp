@@ -14,13 +14,18 @@
 */
 
 /* 
-    current: test pMac05062019G
+    current: test pMac13062019A
  */
-
-// TODO: RWA funktioniert wieder nicht wth
 
 // last 2 inputs: XY x=loglevem,y=outputhanderlstrings, Z z=workpath
 int main(int argc, char* argv[]) {
+    if (argc < 3 || (std::string(argv[1])).compare("--help") == 0) {
+        if (argc < 3)
+            fmt::print("Not enough input parameters!\n");
+        help();
+        exit(0);
+    }
+
     logs = Log(std::string(argv[argc-1]) + "logfile.log", std::string(argv[argc-2]).at(0) == '1' );
     // System
     System system = System(argc, argv);
@@ -74,7 +79,7 @@ int main(int argc, char* argv[]) {
     }
     
     double finalTime = Timer::summary();
-    logs("\nStartcommand: ");
+    logs("\nStartcommand: "); //TODO: kein legacy output, nur named, und dann auch nur wenn gebraucht. in parameter klasse!
     for (int ii=0;ii<argc;ii++)
         logs("{} ",std::string(argv[ii])); 
     logs("\n\n"+system.terminateMessage+"\n");
