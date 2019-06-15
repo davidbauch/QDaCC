@@ -19,14 +19,15 @@
 
 // last 2 inputs: XY x=loglevem,y=outputhanderlstrings, Z z=workpath
 int main(int argc, char* argv[]) {
-    if (argc < 3 || (std::string(argv[1])).compare("--help") == 0) {
+    std::vector<std::string> inputs = argv_to_vec(argc,argv);
+    if (argc < 3 || vec_find_str("--help",inputs) != -1 || vec_find_str("-help",inputs) != -1) {
         if (argc < 3)
             fmt::print("Not enough input parameters!\n");
         help();
         exit(0);
     }
 
-    logs = Log(std::string(argv[argc-1]) + "logfile.log", std::string(argv[argc-2]).at(0) == '1' );
+    logs = Log(std::string(argv[argc-1]) + "logfile.log", vec_find_str("-advLog",inputs) != -1 );
     // System
     System system = System(argc, argv);
     system.init();

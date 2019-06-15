@@ -21,11 +21,11 @@ class System {
         FileOutput fileoutput;
 
         System() {};
-        System(int argc, char **argv) {
-            terminateMessage = global_message_normaltermination; /* Successfull termination */
+        System(const std::vector<std:string> &input) {
+            terminateMessage = global_message_normaltermination; // Successfull termination
             //arguments(argv, argv+argc);
-            for (int i = 0; i < argc; i++)
-                arguments.push_back(std::string(argv[i]));
+            for (int i = 0; i < input.size(); i++) //FIXME: lol
+                arguments.push_back(input.at(i));
             name = "Exziton (2NS)";
             logs.level2("Creating System Class for '{}'\n",name);
             parameters = Parameters( arguments );
