@@ -226,9 +226,9 @@ int vec_find_str(std::string toFind, const std::vector<std::string> &input) {
     return -1;
 }
 
-std::vector<std::string> argc_to_vec(int argv, char **argc) {
+std::vector<std::string> argv_to_vec(int argc, char **argv) {
     std::vector<std::string> ret;
-    ret.reserve(argv);
+    ret.reserve(argc);
     for (int i = 0; i < argc; i++)
         ret.push_back(std::string(argv[i]));
     return ret;

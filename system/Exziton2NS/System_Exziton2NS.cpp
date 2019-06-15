@@ -21,7 +21,7 @@ class System {
         FileOutput fileoutput;
 
         System() {};
-        System(const std::vector<std:string> &input) {
+        System(const std::vector<std::string> &input) {
             terminateMessage = global_message_normaltermination; // Successfull termination
             //arguments(argv, argv+argc);
             for (int i = 0; i < input.size(); i++) //FIXME: lol

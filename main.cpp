@@ -14,7 +14,7 @@
 */
 
 /* 
-    current: test pMac13062019A
+    current: test pMac15062019A
  */
 
 // last 2 inputs: XY x=loglevem,y=outputhanderlstrings, Z z=workpath
@@ -26,10 +26,10 @@ int main(int argc, char* argv[]) {
         help();
         exit(0);
     }
-
     logs = Log(std::string(argv[argc-1]) + "logfile.log", vec_find_str("-advLog",inputs) != -1 );
+
     // System
-    System system = System(argc, argv);
+    System system = System(inputs);
     system.init();
     // Solver
     ODESolver solver = ODESolver(system,false);
