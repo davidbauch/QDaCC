@@ -30,7 +30,7 @@ std::string PREFIX_SUFFIX                = "@#SUFFIX#@";
 #include "misc/helperfunctions.h"
 #include "misc/timer.h"
 
-using Eigen::MatrixXcd;
+using Eigen::MatrixXcd; //REMOVE
 
 using namespace std::complex_literals;
 

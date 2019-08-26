@@ -141,17 +141,27 @@ T convertParam(const std::string input) {
             value = std::stod(input.substr(0,index));
             conversion = 1.0;
         } else {
-            logs.level2("Conversion from input '{}' from time failed!\n");
+            logs.level2("Conversion from input '{}' from time failed!\n",input);
             return (T)0.0;
         }
     } else if ( -1 != (index = instr(input,"Hz"))) {
         // Found 'Hz' as unit (Frequency)
-            logs.level2("from Hz to Hz...");
+        logs.level2("from Hz to Hz...");
         if (is_number(input.substr(index-1,1))) {
             value = std::stod(input.substr(0,index-1));
             conversion = 1.0;
         } else {
-            logs.level2("Conversion from input '{}' from frequency failed!\n");
+            logs.level2("Conversion from input '{}' from frequency failed!\n",input);
+            return (T)0.0;
+        }
+    } else if ( -1 != (index = instr(input,"pi"))) {
+        // Found 'Hz' as unit (Frequency)
+        logs.level2("from Xpi to rad...");
+        if (is_number(input.substr(index-1,1))) {
+            value = std::stod(input.substr(0,index-1));
+            conversion = 1.0;
+        } else {
+            logs.level2("Conversion from input '{}' from frequency failed!\n",input);
             return (T)0.0;
         }
     } else if (is_number(input)){ 

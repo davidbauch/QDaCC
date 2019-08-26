@@ -58,6 +58,18 @@ class System {
             logs.level2("Done! Elapsed time is {}ms\n",timer.getWallTime()*1E3);
         }
 
+        double getTimeborderStart() {
+            return parameters.t_start;
+        }
+
+        double getTimeborderEnd() {
+            return parameters.t_end;
+        }
+
+        double getTimeStep() {
+            return parameters.t_step;
+        }
+
         MatrixXcd getRho0() const {
             return operatorMatrices.rho;
         }

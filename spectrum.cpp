@@ -21,17 +21,17 @@ void Spectrum::addRho(MatrixXcd &rho, double t) {
 void Spectrum::calculateTauDirection(System &s, MatrixXcd &op_creator, MatrixXcd &op_annihilator, ODESolver &solver){
     Timer &timer = createTimer("RungeKutta-Tau-Loop");
     int totalIterations = getIterationNumberTau(s);
-    ProgressBar progressbar = ProgressBar(totalIterations, 60, 0, BAR_HORIZONTAL, true, 0.1, {"|","/","-","\\"}, {".","-","="}, "Done"); 
+    ProgressBar progressbar = ProgressBar(totalIterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ","▏","▎","▍","▌","▋","▊","▉","█"}); progressbar.strBarStart = "|"; progressbar.strBarEnd = "|";
     timer.start();
 
-    #pragma omp parallel for schedule(dynamic) shared(timer) num_threads(s.parameters.akf_maxThreads) //reduction(+:spectrum.out)
+    #pragma omp parallel for schedule(dynamic) shared(timer) num_threads(s.parameters.akf_maxThreads)
     for (int i = 0; i < getRhoDim(); i++) {
         double t_t = times.at(i);
         //logs.level2("Calculating Tau-contribution at t = {}\n",t_t);
         MatrixXcd rho_tau = s.dgl_calc_rhotau(rhos.at(i),op_annihilator,t_t);
         akf_mat(i,0) = s.dgl_expectationvalue(rho_tau, op_creator, t_t);
         int j = 1; int curIt_tau = 1;
-        for (double t_tau=t_t+s.parameters.t_step; t_tau<s.parameters.t_end; t_tau+=s.parameters.t_step) { // t + +s.parameters.t_step
+        for (double t_tau=t_t+s.getTimeStep(); t_tau<s.getTimeborderEnd(); t_tau+=s.getTimeStep()) { // t + +s.getTimeStep()
             rho_tau = solver.iterate(rho_tau,s,t_tau, DIR_TAU);
             timer.iterate();
             if (curIt_tau%s.parameters.akf_everyXIt == 0) {
@@ -41,7 +41,7 @@ void Spectrum::calculateTauDirection(System &s, MatrixXcd &op_creator, MatrixXcd
             } else {
                 curIt_tau++;
             }
-            outputProgress(s.parameters.outputHandlerStrings,timer,progressbar,totalIterations,"AKF-Tau");
+            outputProgress(s.parameters.outputHandlerStrings,timer,progressbar,totalIterations,"AKF-Tau: ");
         }
     }
     timer.end();
@@ -51,22 +51,23 @@ void Spectrum::calculateTauDirection(System &s, MatrixXcd &op_creator, MatrixXcd
 void Spectrum::calculateSpectrum(System &s){
     Timer &timer = createTimer("Spectrum-Loop");
     int totalIterations = getIterationNumberSpectrum(s);
-    ProgressBar progressbar = ProgressBar(totalIterations, 60, 0, BAR_HORIZONTAL, true, 0.1, {"|","/","-","\\"}, {".","-","="}, "Done"); 
+    ProgressBar progressbar = ProgressBar(totalIterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ","▏","▎","▍","▌","▋","▊","▉","█"}); progressbar.strBarStart = "|"; progressbar.strBarEnd = "|";
 
     timer.start();
     #pragma omp parallel for schedule(dynamic) shared(timer) num_threads(s.parameters.akf_maxThreads) //reduction(+:spectrum.out)
     for (int spec_w=0; spec_w < s.parameters.akf_spec_max_w; spec_w++){
         std::vector<std::complex<double>> expfunc; 
         expfunc.reserve(getRhoDim());
-        for(int spec_tau = 0; spec_tau < (s.parameters.t_end-s.parameters.t_start-0.0)/(s.parameters.t_step*s.parameters.akf_everyXIt); spec_tau++){
-            expfunc.emplace_back( std::exp(-1i*s.parameters.akf_spec_possiblew.at(spec_w)*(double)(spec_tau)*s.parameters.t_step*(double)(s.parameters.akf_everyXIt)) );
+        for(int spec_tau = 0; spec_tau < (s.getTimeborderEnd()-s.getTimeborderStart()-0.0)/(s.getTimeStep()*s.parameters.akf_everyXIt); spec_tau++){
+            expfunc.emplace_back( std::exp(-1i*s.parameters.akf_spec_possiblew.at(spec_w)*(double)(spec_tau)*s.getTimeStep()*(double)(s.parameters.akf_everyXIt)) );
         }
         for (int i = 0; i < getRhoDim(); i++) {
             double t_t = times.at(i);
-            for(int spec_tau = 0; spec_tau < (s.parameters.t_end-s.parameters.t_start-t_t)/(s.parameters.t_step*s.parameters.akf_everyXIt); spec_tau++){
+            for(int spec_tau = 0; spec_tau < (s.getTimeborderEnd()-s.getTimeborderStart()-t_t)/(s.getTimeStep()*s.parameters.akf_everyXIt); spec_tau++){
+            //    std::cout << "spec_tau= " << spec_tau << std::endl;
                 out.at(spec_w) += expfunc.at(spec_tau)*akf_mat(i,spec_tau);
             }
-            outputProgress(s.parameters.outputHandlerStrings,timer,progressbar,totalIterations,"AKF-Spectrum");
+            outputProgress(s.parameters.outputHandlerStrings,timer,progressbar,totalIterations,"AKF-Spectrum: ");
         }
         timer.iterate();
     }
@@ -79,7 +80,7 @@ int Spectrum::getIterationNumberTau(System &s) {
     // Tau Direction Iteration steps
     for (int i = 0; i < getRhoDim(); i++) {
         double t_t = times.at(i);
-        for (double t_tau=t_t+s.parameters.t_step; t_tau<s.parameters.t_end; t_tau+=s.parameters.t_step) { // t + +s.parameters.t_step
+        for (double t_tau=t_t+s.getTimeStep(); t_tau<s.getTimeborderEnd(); t_tau+=s.getTimeStep()) { // t + +s.getTimeStep()
             num++;
         }
     }
@@ -103,7 +104,7 @@ void Spectrum::fileOutput(System &s, std::string filepath) {
         return;
     }
     for (int spec_w=0;spec_w<s.parameters.akf_spec_max_w;spec_w++){
-        fmt::print(spectrumfile,"{0:.15e}\t{1:.15e}\n",s.parameters.akf_spec_possiblew[spec_w],real(out[spec_w]*s.parameters.t_step*s.parameters.t_step*(double)(s.parameters.akf_everyXIt*s.parameters.akf_everyXIt))); 
+        fmt::print(spectrumfile,"{0:.15e}\t{1:.15e}\n",s.parameters.akf_spec_possiblew[spec_w],real(out[spec_w]*s.getTimeStep()*s.getTimeStep()*(double)(s.parameters.akf_everyXIt*s.parameters.akf_everyXIt))); 
     }
     std::fclose(spectrumfile);  
 }
@@ -118,8 +119,8 @@ timer.start();
 for (int spec_w=0; spec_w < s.parameters.akf_spec_max_w; spec_w++){
     for (int i = 0; i < getRhoDim(); i++) {
         double t_t = times.at(i);
-        for(int spec_tau = 0; spec_tau < (s.parameters.t_end-s.parameters.t_start-t_t)/(s.parameters.t_step*s.parameters.akf_everyXIt); spec_tau++){
-            out.at(spec_w) += std::exp(-1i*s.parameters.akf_spec_possiblew.at(spec_w)*(double)(spec_tau)*s.parameters.t_step*(double)(s.parameters.akf_everyXIt))*akf_mat(i,spec_tau);
+        for(int spec_tau = 0; spec_tau < (s.getTimeborderEnd()-s.parameters.t_start-t_t)/(s.getTimeStep()*s.parameters.akf_everyXIt); spec_tau++){
+            out.at(spec_w) += std::exp(-1i*s.parameters.akf_spec_possiblew.at(spec_w)*(double)(spec_tau)*s.getTimeStep()*(double)(s.parameters.akf_everyXIt))*akf_mat(i,spec_tau);
         }
         timer.iterate();
         outputProgress(s.parameters.outputHandlerStrings,timer,progressbar,totalIterations,"AKF-Spectrum");

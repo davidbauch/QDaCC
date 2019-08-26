@@ -1,15 +1,3 @@
-static void help() {
-    fmt::print("--time [start] [end] [step]\n\t--tstart [start]\n\t--tend [end]\n\t--tstep [step]\n");
-    fmt::print("--system [omegaE] [omegaC] [g] [kappa] [gamma_pure] [gamma] else standard values (1.52eV,1.52eV,66mueV,66mueV,3mueV,1mueV) are used\n\t--we [omegaE]\n\t--wc [omegaC]\n\t--coupling [g]\n\t--kappa [kappa]\n\t--gamma [gamma]\n\t--gammapure [gamma_pure]\n");
-    fmt::print("--chirp ['[Array Time]'] ['[Array Y]'] ['[Array d/dt]'] [type]\n\t--chirpT ['[Array Time]']\n\t--chirpY ['[Array Y]']\n\t--chirpDDT ['[Array d/dt]']\n\t--chirpType [type] where type = monotone, hermite, linear, spline\n");
-    fmt::print("--pulse [Center] [Amplitude] [Frequency] [Sigma] [Type]\n\t-pulse for standard pulse\n\t--pulseCenter [Center]\n\t--pulseAmp [Amplitude]\n\t--pulseFreq [Frequency]\n\t--pulseSigma [Sigma]\n\t--pulseType [Type] where Type = cw, gauss, gauss_pi\n");
-    fmt::print("--dimensions [maximum Photons] [Initial state]\n\t--maxPhotons [maximum Photons]\n\t--initState [Initial state], has to be smaller than (2*n+1)\n");
-    fmt::print("--spectrum [Iteration Skips] [Center] [Range] [Omega Skips] enables spectrum\n\t-spectrum enables spectrum centered at cavity\n\t--specXIt [Iterations skips (int)]\n\t--specCenter [Center]\n\t--specRange [Range]\n\t--specSkip [0/1] True/False\n");
-    fmt::print("-RK5 enables Runge Kutta of order 5 for T and Tau direction\n\t-RK5T enables Runge Kutta of order 5 for T direction\n\t-RK5Tau enables Runge Kutta of order 5 for Tau direction\n");
-    fmt::print("-noInteractionpic disables Interaction picture - enabled by default\n-noRWA disables rotating wave approximation - enabled by default\n-noHandler disables handerl strings and enables loadbar output (for console)\n");
-    fmt::print("--Threads [number] number of threads to use for both AKF and Spectrum integral calculation\n\n");
-}
-
 class Parameters {
     public:
         // Mandatory parameters, move to parent class:
@@ -24,6 +12,7 @@ class Parameters {
         int doSpectrum;
         int advancedLogging;
         int outputHandlerStrings;
+        int outputOperators;
 
         // Non mandatory parameters, dependant on system chosen:
         // System Parameters
@@ -56,7 +45,6 @@ class Parameters {
         double akf_omega_center, akf_omega_range;
         std::vector<double> akf_spec_possiblew;
 
-        double scaling;
 
         Parameters() {};
         Parameters(const std::vector<std::string> &arguments) {
@@ -69,6 +57,9 @@ class Parameters {
             int index = 1;
             bool legacy = false;
             // Looking for legacy input, usefull because the python handler doesnt understand named inputs :(
+            // TODO: in input funkiton verschieben, diese dann aufrufen!
+            // TODO: parentclass! dann in funktionen stat parentclass einfach template typename T
+            // TODO: oder einfach der inheritaged von namespace System::Parameters oder so, dann heißt die klasse hier immer noch Parameters
             if ( (index = vec_find_str("-legacy",arguments)) != -1) {
                 t_start             = 0.0;
                 t_end               = getNextInput<double>(arguments,"t_end",++index);
@@ -319,6 +310,16 @@ class Parameters {
             } else {
                 outputHandlerStrings = 1;
             }
+            outputOperators = 0;
+            if ( (index = vec_find_str("-outputOperators", arguments)) != -1) {
+                outputOperators = 1;
+            }
+            if ( (index = vec_find_str("-outputHamiltons", arguments)) != -1) {
+                outputOperators = 2;
+            }
+            if ( (index = vec_find_str("-outputOperatorsStop", arguments)) != -1) {
+                outputOperators = 3;
+            }
 
             subfolder           = arguments.back();
 
@@ -406,9 +407,10 @@ class Parameters {
                 logs("RAD rate gamma = {} Hz -> {} mueV\n",gamma,Hz_to_eV(gamma)*1E6);
                 logs("Initial state rho0 = |{},{}> with maximum number of {} photons\n\n", (rho_0%2 == 0 ? "g" : "e"), (int)std::floor(rho_0/2), maxPhotonNumber );
             logs.wrapInBar("Excitation Pulse",LOG_SIZE_HALF,LOG_LEVEL_1,LOG_BAR_1);
-            if (pulse_center != -1 && pulse_amp != 0)
-                logs("Exiting system at t_0 = {} with amplitude {} ({}meV), frequency {}eV ({}) and FWHM {}\n\n",pulse_center,pulse_amp,Hz_to_eV(pulse_amp)*1E3,pulse_freq,Hz_to_eV(pulse_freq),pulse_sigma*(2*std::sqrt(2*std::log(2))));
-            else
+            if (pulse_center != -1 && pulse_amp != 0) {
+                logs("Exiting system at t_0 = {} with amplitude {} ({}meV), frequency {}eV ({}) and FWHM {}\n",pulse_center,pulse_amp,Hz_to_eV(pulse_amp)*1E3,pulse_freq,Hz_to_eV(pulse_freq),pulse_sigma*(2*std::sqrt(2*std::log(2))));
+                logs("Used pulsetype? - "+pulsetype+"\n\n");
+            } else
                 logs("Not using pulse to exite system\n\n");
             logs.wrapInBar("Energy Chirp",LOG_SIZE_HALF,LOG_LEVEL_1,LOG_BAR_1);
             if (chirp_total != 0) {
@@ -445,9 +447,22 @@ class Parameters {
             logs("Use rotating wave approximation (RWA)? - {}\n",((doRWA == 1) ? "YES" : "NO"));
             logs("Use interaction picture for calculations? - {}\n",((doInteractionPicture == 1) ? "YES" : "NO"));
             logs("Threads used for AFK? - {}\n",akf_maxThreads);
-            logs("Used pulsetype? - "+pulsetype+"\n");
             logs("\n");
             logs.wrapInBar("Program Log:",LOG_SIZE_FULL, LOG_LEVEL_2); logs("\n");
             logs.level2("OutputHandlerStrings: {}\n",outputHandlerStrings);
+        }
+
+        static void help() {
+            fmt::print("--help, -help, -h\tThis screen\n");
+            fmt::print("--time [start] [end] [step]\n\t--tstart [start]\n\t--tend [end]\n\t--tstep [step]\n");
+            fmt::print("--system [omegaE] [omegaC] [g] [kappa] [gamma_pure] [gamma] else standard values (1.52eV,1.52eV,66mueV,66mueV,3mueV,1mueV) are used\n\t--we [omegaE]\n\t--wc [omegaC]\n\t--coupling [g]\n\t--kappa [kappa]\n\t--gamma [gamma]\n\t--gammapure [gamma_pure]\n");
+            fmt::print("--chirp ['[Array Time]'] ['[Array Y]'] ['[Array d/dt]'] [type]\n\t--chirpT ['[Array Time]']\n\t--chirpY ['[Array Y]']\n\t--chirpDDT ['[Array d/dt]']\n\t--chirpType [type] where type = monotone, hermite, linear, spline\n");
+            fmt::print("--pulse [Center] [Amplitude] [Frequency] [Sigma] [Type]\n\t-pulse for standard pulse\n\t--pulseCenter [Center]\n\t--pulseAmp [Amplitude]\n\t--pulseFreq [Frequency]\n\t--pulseSigma [Sigma]\n\t--pulseType [Type] where Type = cw, gauss, gauss_pi\n");
+            fmt::print("--dimensions [maximum Photons] [Initial state]\n\t--maxPhotons [maximum Photons]\n\t--initState [Initial state], has to be smaller than (2*n+1)\n");
+            fmt::print("--spectrum [Iteration Skips] [Center] [Range] [Omega Skips] enables spectrum\n\t-spectrum enables spectrum centered at cavity\n\t--specXIt [Iterations skips (int)]\n\t--specCenter [Center]\n\t--specRange [Range]\n\t--specSkip [0/1] True/False\n");
+            fmt::print("-RK5 enables Runge Kutta of order 5 for T and Tau direction\n\t-RK5T enables Runge Kutta of order 5 for T direction\n\t-RK5Tau enables Runge Kutta of order 5 for Tau direction\n");
+            fmt::print("-noInteractionpic disables Interaction picture - enabled by default\n-noRWA disables rotating wave approximation - enabled by default\n");
+            fmt::print("--Threads [number] number of threads to use for both AKF and Spectrum integral calculation\n");
+            fmt::print("Additional commands:\n\t-advLog Enables advanced logging\n\t-noHandler disables handler strings and enables loadbar output (for console)\n\t-outputOperators, -outputHamiltons, -outputOperatorsStop Enables output of matrices (requires -advLog)");
         }
 };

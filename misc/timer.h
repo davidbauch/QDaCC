@@ -188,7 +188,7 @@ void outputTimeStrings(Timer &t, const long unsigned int maxItTotal, std::string
 
 void outputProgressBar(Timer &t, ProgressBar &p, const long unsigned int maxItTotal, std::string suffix = "", int final = 0) {
     if (t.doOutput() || final) {
-        p.print(t.getTotalIterationNumber(),fmt::format("T - {} {}{}" ,Timer::format(((double)maxItTotal - t.getTotalIterationNumber())*t.getAverageIterationTime()),suffix.size()>0?"-":"", suffix));
+        p.print(t.getTotalIterationNumber(),fmt::format("T - {}" ,Timer::format(((double)maxItTotal - t.getTotalIterationNumber())*t.getAverageIterationTime())), suffix);
     }
 }
 

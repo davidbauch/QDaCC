@@ -1,5 +1,14 @@
 #pragma once
-#include "../global.h"
+
+#include <cmath>
+#include <complex>
+#include <time.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string>
+#include <fmt/core.h> // -DFMT_HEADER_ONLY
+#include <fmt/format.h>
+#include <fmt/ostream.h>
 
 #define LOG_LEVEL_2 2
 #define LOG_LEVEL_1 0
@@ -44,7 +53,6 @@ class Log {
         }
         Log() {};
         
-        // level 1 log
         template <typename... Args>
         void operator()(std::string s, const Args &... args) {
             fmt::vprint(s, fmt::make_format_args(args...));
