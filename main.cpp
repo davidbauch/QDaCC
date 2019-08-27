@@ -32,7 +32,6 @@ int main(int argc, char* argv[]) {
 
     // System
     System system = System(inputs);
-    system.init();
     // Solver
     ODESolver solver = ODESolver(system,false);
     // Spectrum
@@ -81,12 +80,13 @@ int main(int argc, char* argv[]) {
         spectrum.calculateSpectrum(system);
         spectrum.fileOutput(system, system.parameters.subfolder + "spectrum.txt");
     }
-    
+    system.exit_system();
+
     double finalTime = Timer::summary();
-    logs("\nStartcommand: "); //TODO: kein legacy output, nur named, und dann auch nur wenn gebraucht. in parameter klasse!
+    logs("\nStartcommand: ");
     for (int ii=0;ii<argc;ii++)
         logs("{} ",std::string(argv[ii])); 
-    logs("\n\n"+system.terminateMessage+"\n");
+    logs("\n\n"+system.terminate_message+"\n");
 
     logs.close();
     if (system.parameters.outputHandlerStrings) {

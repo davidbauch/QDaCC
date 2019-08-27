@@ -1,4 +1,6 @@
-class Parameters {
+#include "../parameters.cpp"
+
+class Parameters : public Parameters_Parent{
     public:
         // Mandatory parameters, move to parent class:
         // Time variables
@@ -7,12 +9,6 @@ class Parameters {
         int maxStates, maxPhotonNumber;
         // Starting state:
         int rho_0;
-        // Non Numeric parameters:
-        std::string subfolder;
-        int doSpectrum;
-        int advancedLogging;
-        int outputHandlerStrings;
-        int outputOperators;
 
         // Non mandatory parameters, dependant on system chosen:
         // System Parameters
@@ -21,45 +17,36 @@ class Parameters {
         double g;
         double k;
         double gamma_pure, gamma;
-        int doRWA, doInteractionPicture;
+
         // Calculated System properties:
         double init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
+        
         // Chirp and Pulse properties:
         double pulse_center, pulse_amp, pulse_freq, pulse_sigma, chirp_onofftime;
         double chirp_total;
         std::vector<double> chirp_t,chirp_y,chirp_ddt;
-
         std::string pulsetype, chirp_type;
 
         // Runtime parameters and other stuff
         int maxItMainRK; 
         int maxItTotal; 
-        int akf_maxThreads;
-        int orderRKT, orderRKTau;
         std::vector<double> trace;
-
-        int akf_everyXIt,akf_skip_omega;
-        int akf_spec_max_w;
-        double akf_deltaWmax;
+        
+        // AKF & Spectrum
+        int akf_maxThreads, akf_everyXIt, akf_skip_omega, akf_spec_max_w;
+        double akf_deltaWmax, akf_omega_center, akf_omega_range;
         std::vector<std::complex<double>> akf_spec_out;
-        double akf_omega_center, akf_omega_range;
         std::vector<double> akf_spec_possiblew;
-
 
         Parameters() {};
         Parameters(const std::vector<std::string> &arguments) {
-            Timer &timer = createTimer("Parameters");
-            timer.start();
+            init(arguments);
+        }
 
-            // Parse parameters and convert to SI, Input parameters 
-            logs.wrapInBar("Conversion of input variables",LOG_SIZE_FULL,LOG_LEVEL_2,LOG_BAR_0); logs.level2("\n");
-            logs.level2("Parsing input variables... ");
+        bool parseInput(const std::vector<std::string> &arguments) {
             int index = 1;
             bool legacy = false;
             // Looking for legacy input, usefull because the python handler doesnt understand named inputs :(
-            // TODO: in input funkiton verschieben, diese dann aufrufen!
-            // TODO: parentclass! dann in funktionen stat parentclass einfach template typename T
-            // TODO: oder einfach der inheritaged von namespace System::Parameters oder so, dann heißt die klasse hier immer noch Parameters
             if ( (index = vec_find_str("-legacy",arguments)) != -1) {
                 t_start             = 0.0;
                 t_end               = getNextInput<double>(arguments,"t_end",++index);
@@ -312,19 +299,23 @@ class Parameters {
             }
             outputOperators = 0;
             if ( (index = vec_find_str("-outputOperators", arguments)) != -1) {
-                outputOperators = 1;
-            }
-            if ( (index = vec_find_str("-outputHamiltons", arguments)) != -1) {
                 outputOperators = 2;
             }
-            if ( (index = vec_find_str("-outputOperatorsStop", arguments)) != -1) {
+            if ( (index = vec_find_str("-outputHamiltons", arguments)) != -1) {
+                outputOperators = 1;
+            }
+            if ( (index = vec_find_str("-outputOperatorsStop", arguments)) != -1) { //TODO: move to parent class
                 outputOperators = 3;
             }
+            orderTimeTrafo = TIMETRANSFORMATION_PRECALCULATED;
+            if ( (index = vec_find_str("-timeTrafoMatrixExponential", arguments)) != -1) {
+                orderTimeTrafo = TIMETRANSFORMATION_MATRIXEXPONENTIAL;
+            }
+            subfolder = arguments.back();
+            return true;
+        }
 
-            subfolder           = arguments.back();
-
-            logs.level2("Done! Elapsed time is {}ms.\nProcessing input variables...",timer.getWallTime()*1E3);
-
+        bool adjustInput() {
             // Calculate/Recalculate some parameters:
             // Adjust pulse area if pulsetype is "gauss_pi"
             if (pulsetype.compare("gauss_pi") == 0) {
@@ -338,9 +329,9 @@ class Parameters {
             // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
             if (t_step == -1) {
                 if (doRWA)
-                    t_step = std::min(2./8.*M_PI/std::max(std::max(init_rabifrequenz,max_rabifrequenz),g+k+gamma+gamma_pure),1E-12);
+                    t_step = 2./8.*M_PI/std::max(std::max(init_rabifrequenz,max_rabifrequenz),g+k+gamma+gamma_pure);
                 if (!doRWA)
-                    t_step = std::min(2./8.*M_PI/std::max(std::max(init_rabifrequenz,max_rabifrequenz), omegaE+omegaC),1E-12);
+                    t_step = 2./8.*M_PI/std::max(std::max(init_rabifrequenz,max_rabifrequenz), omegaE+omegaC);
             }
 
             // Calculate the maximum dimensions for operator matrices (max states)
@@ -385,11 +376,9 @@ class Parameters {
                 }
             }
             trace.reserve(maxItMainRK+5);
-
-            // Done
-            timer.end();
-            logs.level2("Done! Elapsed time is {}ms\n\n",timer.getWallTime()*1E3);
+            return true;
         }
+
         void log() {
             logs.wrapInBar("Parameters"); logs("\n");
             logs.wrapInBar("Time borders and t_step",LOG_SIZE_HALF,LOG_LEVEL_1,LOG_BAR_1);
@@ -446,6 +435,7 @@ class Parameters {
             logs("\nOrder of Runge-Kutta used: Time: RK{}, Spectrum: RK{}\n",orderRKT,orderRKTau);
             logs("Use rotating wave approximation (RWA)? - {}\n",((doRWA == 1) ? "YES" : "NO"));
             logs("Use interaction picture for calculations? - {}\n",((doInteractionPicture == 1) ? "YES" : "NO"));
+            logs("Time Transformation used? - {}\n",((orderTimeTrafo == TIMETRANSFORMATION_PRECALCULATED) ? "Analytic" : "Matrix Exponential"));
             logs("Threads used for AFK? - {}\n",akf_maxThreads);
             logs("\n");
             logs.wrapInBar("Program Log:",LOG_SIZE_FULL, LOG_LEVEL_2); logs("\n");
@@ -461,7 +451,7 @@ class Parameters {
             fmt::print("--dimensions [maximum Photons] [Initial state]\n\t--maxPhotons [maximum Photons]\n\t--initState [Initial state], has to be smaller than (2*n+1)\n");
             fmt::print("--spectrum [Iteration Skips] [Center] [Range] [Omega Skips] enables spectrum\n\t-spectrum enables spectrum centered at cavity\n\t--specXIt [Iterations skips (int)]\n\t--specCenter [Center]\n\t--specRange [Range]\n\t--specSkip [0/1] True/False\n");
             fmt::print("-RK5 enables Runge Kutta of order 5 for T and Tau direction\n\t-RK5T enables Runge Kutta of order 5 for T direction\n\t-RK5Tau enables Runge Kutta of order 5 for Tau direction\n");
-            fmt::print("-noInteractionpic disables Interaction picture - enabled by default\n-noRWA disables rotating wave approximation - enabled by default\n");
+            fmt::print("-noInteractionpic disables Interaction picture - enabled by default\n-noRWA disables rotating wave approximation - enabled by default\n-timeTrafoMatrixExponential enables Time Transformation via Matrix exponential - disabled by default\n");
             fmt::print("--Threads [number] number of threads to use for both AKF and Spectrum integral calculation\n");
             fmt::print("Additional commands:\n\t-advLog Enables advanced logging\n\t-noHandler disables handler strings and enables loadbar output (for console)\n\t-outputOperators, -outputHamiltons, -outputOperatorsStop Enables output of matrices (requires -advLog)");
         }

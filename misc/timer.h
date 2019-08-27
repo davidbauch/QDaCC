@@ -2,6 +2,9 @@
 #include "../global.h"
 
 #define PROGRESS_FORCE_OUTPUT 1
+#define TIMER_SECONDS 1.0
+#define TIMER_MILLISECONDS 1E3
+#define TIMER_MICROSECONDS 1E6
 
 /* Timer Functions */
 class Timer {
@@ -28,11 +31,11 @@ class Timer {
         void end();
         void iterate();
         void add(time_t cpu, double wall);
-        double getWallTime();
-        double getWallTimeOnce();
-        double getCPUTime();
-        double getCPUTimeOnce();
-        double getAverageIterationTime();
+        double getWallTime(int scale = TIMER_SECONDS);
+        double getWallTimeOnce(int scale = TIMER_SECONDS);
+        double getCPUTime(int scale = TIMER_SECONDS);
+        double getCPUTimeOnce(int scale = TIMER_SECONDS);
+        double getAverageIterationTime(int scale = TIMER_SECONDS);
         double getTotalIterationNumber();
         bool doOutput();
         void setOutputModTime(double s);
@@ -97,28 +100,29 @@ void Timer::add(time_t cpu, double wall) {
     iterate();
 }
 // Elapsed Wall Time between all start,end and between last start/end
-double Timer::getWallTime() {
-    return totalWallTime;
+double Timer::getWallTime(int scale) {
+    return totalWallTime*scale;
 }
-double Timer::getWallTimeOnce() {
+// Elapsed Wall Time between start and now
+double Timer::getWallTimeOnce(int scale) {
     if (running)
-        return omp_get_wtime()-wallTimeStarted;
-    return wallTimeEnded-wallTimeStarted;
+        return (omp_get_wtime()-wallTimeStarted)*scale;
+    return (wallTimeEnded-wallTimeStarted)*scale;
 }
 // Elapsed CPU Time between all start,end and between last start/end
-double Timer::getCPUTime() {
-    return totalCPUTime;
+double Timer::getCPUTime(int scale) {
+    return totalCPUTime*scale;
 }
-double Timer::getCPUTimeOnce() {
+double Timer::getCPUTimeOnce(int scale) {
     if (running)
-        return (double)(clock()-cpuTimeStarted)/CLOCKS_PER_SEC;
-    return (double)(cpuTimeEnded-cpuTimeStarted)/CLOCKS_PER_SEC;
+        return (double)(clock()-cpuTimeStarted)/CLOCKS_PER_SEC*scale;
+    return (double)(cpuTimeEnded-cpuTimeStarted)/CLOCKS_PER_SEC*scale;
 }
 // Average Iteration Number (walltime)
-double Timer::getAverageIterationTime() {
+double Timer::getAverageIterationTime(int scale) {
     if (running)
-        return getWallTimeOnce()/totalIterationNum;
-    return totalWallTime/totalIterationNum;
+        return getWallTimeOnce()/totalIterationNum*scale;
+    return totalWallTime/totalIterationNum*scale;
 }
 // Total Iterations counted
 double Timer::getTotalIterationNumber() {
