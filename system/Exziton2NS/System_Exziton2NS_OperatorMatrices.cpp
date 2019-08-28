@@ -7,16 +7,12 @@ class OperatorMatrices : public OperatorMatrices_Parent{
         MatrixXcd H_I;
         MatrixXcd rho;
         MatrixXcd H_used;
-        MatrixXcd photon_create;
-        MatrixXcd photon_annihilate;
-        MatrixXcd atom_exited;
-        MatrixXcd atom_ground;
-        MatrixXcd photon_n;
-        MatrixXcd atom_sigmaplus;
-        MatrixXcd atom_sigmaminus;
-        MatrixXcd atom_inversion;
 
-        MatrixXcd test1,test2;
+        // Operator Matrices
+        MatrixXcd photon_create, photon_annihilate, atom_exited, atom_ground, photon_n, atom_sigmaplus, atom_sigmaminus, atom_inversion;
+        
+        // Bare matrices:
+        MatrixXcd bare_photon_create, bare_photon_annihilate, bare_photon_n, bare_atom_exited, bare_atom_ground, bare_atom_sigmaplus, bare_atom_sigmaminus, bare_atom_inversion;
 
         OperatorMatrices() {};
         OperatorMatrices(const Parameters &p) {
@@ -24,48 +20,49 @@ class OperatorMatrices : public OperatorMatrices_Parent{
         }
 
         bool generateOperators(const Parameters &p) {
+            // Zeroing Hamiltons (redundant at this point)
             logs.level2("Creating operator matrices, dimension = {}\nCreating base matrices... ",p.maxStates);
             H = MatrixXcd::Zero(p.maxStates,p.maxStates);
             H_0 = MatrixXcd::Zero(p.maxStates,p.maxStates);
             H_I = MatrixXcd::Zero(p.maxStates,p.maxStates);
-            photon_create = MatrixXcd::Zero(p.maxStates,p.maxStates);
-            photon_annihilate = MatrixXcd::Zero(p.maxStates,p.maxStates);
-            photon_n = MatrixXcd::Zero(p.maxStates,p.maxStates);
-            atom_exited = MatrixXcd::Zero(p.maxStates,p.maxStates);
-            atom_ground = MatrixXcd::Zero(p.maxStates,p.maxStates);
-            atom_sigmaplus = MatrixXcd::Zero(p.maxStates,p.maxStates);
-            atom_sigmaminus = MatrixXcd::Zero(p.maxStates,p.maxStates);
-            atom_inversion = MatrixXcd::Zero(p.maxStates,p.maxStates);
             H_used = MatrixXcd::Zero(p.maxStates,p.maxStates);
             rho = MatrixXcd::Zero(p.maxStates,p.maxStates);
 
-            logs.level2("Done! Finalizing matrices... ");
-            for (int n = 0; n < p.maxStates; n++)
-                for (int m = 0; m < p.maxStates; m++) {
-                    if (n==m) photon_n(n,m) = (int)((n)/2);                       
-                        photon_create(n,m) = std::sqrt((int)(m/2+1))*delta(n%2,m%2)*delta((int)(n/2),(int)(m/2)+1);          
-                        photon_annihilate(n,m) = std::sqrt((int)(m/2))*delta(n%2,m%2)*delta((int)(n/2),(int)(m/2)-1);
-                        atom_sigmaplus(n,m) = delta((int)(n/2),(int)(m/2))*delta((int)(n%2),1)*delta((int)(m%2),0);
-                        atom_sigmaminus(n,m) = delta((int)(n/2),(int)(m/2))*delta((int)(n%2),0)*delta((int)(m%2),1);
-                        atom_ground(n,m) = delta((int)(n/2),(int)(m/2))*delta((int)(n%2),0)*delta((int)(m%2),0);
-                        atom_exited(n,m) = delta((int)(n/2),(int)(m/2))*delta((int)(n%2),1)*delta((int)(m%2),1);
-                    }
-                    for (int n = 0; n < p.maxStates; n++) {
-                        atom_inversion(n,n) = (n%2 == 0) ? -1 : 1;
-                    }
-            //test
-            MatrixXcd N1,N2;
-            N1 = MatrixXcd::Zero(2,2);
-            N2 = MatrixXcd::Zero(p.maxPhotonNumber+1,p.maxPhotonNumber+1);
-            N1 <<   0,0,
-                    1,0;
-            for (int i = 0; i < p.maxPhotonNumber; i++)
-                    N2(i+1,i) = sqrt(i+1);
-            //std::cout << "N1:\n" << N1 << "\nN\n" << N2 << std::endl;
-            test1 = expand_atomic_operator(N1,p.maxPhotonNumber);
-            test2 = expand_photonic_operator(N2,2);
+            // Initializing bare matrices:
+            logs.level2("Initializing base matrices... ");
+            bare_atom_exited = MatrixXcd::Zero(2,2);
+            bare_atom_exited     <<      0,0,
+                                         0,1;
+            bare_atom_ground = MatrixXcd::Zero(2,2);
+            bare_atom_ground     <<      1,0,
+                                         0,0;
+            bare_atom_sigmaplus = MatrixXcd::Zero(2,2);
+            bare_atom_sigmaplus  <<      0,0,
+                                         1,0;
+            bare_atom_sigmaminus = MatrixXcd::Zero(2,2);
+            bare_atom_sigmaminus <<      0,1,
+                                         0,0;
+            bare_atom_inversion = MatrixXcd::Zero(2,2);
+            bare_atom_inversion  <<     -1,0,
+                                         0,1; 
+            bare_photon_create       = create_photonic_operator(OPERATOR_PHOTONIC_CREATE, p.maxPhotonNumber);        
+            bare_photon_annihilate   = create_photonic_operator(OPERATOR_PHOTONIC_ANNIHILATE, p.maxPhotonNumber);        
+            bare_photon_n            = bare_photon_create*bare_photon_annihilate;
+            
+            // Expanding both states
+            logs.level2("Expanding single state matrices... ");
+            atom_exited = expand_atomic_operator(bare_atom_exited, p.maxPhotonNumber);
+            atom_ground = expand_atomic_operator(bare_atom_ground, p.maxPhotonNumber);
+            atom_sigmaminus = expand_atomic_operator(bare_atom_sigmaminus, p.maxPhotonNumber);
+            atom_sigmaplus = expand_atomic_operator(bare_atom_sigmaplus, p.maxPhotonNumber);
+            atom_inversion = expand_atomic_operator(bare_atom_inversion, p.maxPhotonNumber);
+            
+            photon_create = expand_photonic_operator(bare_photon_create, 2);
+            photon_annihilate = expand_photonic_operator(bare_photon_annihilate, 2);
+            photon_n = expand_photonic_operator(bare_photon_n, 2);
+            
+            // All possible Hamiltonions
             logs.level2("Done! Creating Hamiltonoperator... ");
-            /* All possible Hamiltonions */
             // H_0
             H_0 = p.omegaE/2.0*atom_inversion + p.omegaC*photon_n;
             // H_I
@@ -77,17 +74,15 @@ class OperatorMatrices : public OperatorMatrices_Parent{
             // non RWA
             if (!p.doRWA) {
                 logs.level2("NOT using RWA... ");
-                //H_I = p.g*( (atom_sigmaplus+atom_sigmaminus)*(photon_annihilate+photon_create) );
                 H_I = p.g*( atom_sigmaplus*photon_create + atom_sigmaplus*photon_annihilate + atom_sigmaminus*photon_create + atom_sigmaminus*photon_annihilate );
             }
             // H
             H = H_0 + H_I;
-            
+            // Interaction picture
             if (p.doInteractionPicture) {
                 logs.level2("using interaction picture... ");
                 H_used = H_I;
             }
-            
             if (!p.doInteractionPicture) {
                 logs.level2("NOT using interaction picture... ");
                 H_used = H;
@@ -122,5 +117,41 @@ class OperatorMatrices : public OperatorMatrices_Parent{
                 if (p.outputOperators == 3)
                     exit(0);
             }
+        }
+        // Redundant
+        void checkMatrices2NS() {
+            // Creating Matrices the old way
+            MatrixXcd photon_create_check, photon_annihilate_check, atom_exited_check, atom_ground_check, photon_n_check, atom_sigmaplus_check, atom_sigmaminus_check, atom_inversion_check;
+            photon_create_check = MatrixXcd::Zero(p.maxStates,p.maxStates);
+            photon_annihilate_check = MatrixXcd::Zero(p.maxStates,p.maxStates);
+            photon_n_check = MatrixXcd::Zero(p.maxStates,p.maxStates);
+            atom_exited_check = MatrixXcd::Zero(p.maxStates,p.maxStates);
+            atom_ground_check = MatrixXcd::Zero(p.maxStates,p.maxStates);
+            atom_sigmaplus_check = MatrixXcd::Zero(p.maxStates,p.maxStates);
+            atom_sigmaminus_check = MatrixXcd::Zero(p.maxStates,p.maxStates);
+            atom_inversion_check = MatrixXcd::Zero(p.maxStates,p.maxStates);
+            // Generating Matrices
+            for (int n = 0; n < p.maxStates; n++)
+                for (int m = 0; m < p.maxStates; m++) {
+                    if (n==m) photon_n_check(n,m) = (int)((n)/2);                       
+                    photon_create_check(n,m) = std::sqrt((int)(m/2+1))*delta(n%2,m%2)*delta((int)(n/2),(int)(m/2)+1);          
+                    photon_annihilate_check(n,m) = std::sqrt((int)(m/2))*delta(n%2,m%2)*delta((int)(n/2),(int)(m/2)-1);
+                    atom_sigmaplus_check(n,m) = delta((int)(n/2),(int)(m/2))*delta((int)(n%2),1)*delta((int)(m%2),0);
+                    atom_sigmaminus_check(n,m) = delta((int)(n/2),(int)(m/2))*delta((int)(n%2),0)*delta((int)(m%2),1);
+                    atom_ground_check(n,m) = delta((int)(n/2),(int)(m/2))*delta((int)(n%2),0)*delta((int)(m%2),0);
+                    atom_exited_check(n,m) = delta((int)(n/2),(int)(m/2))*delta((int)(n%2),1)*delta((int)(m%2),1);
+                }
+                for (int n = 0; n < p.maxStates; n++) {
+                    atom_inversion_check(n,n) = (n%2 == 0) ? -1 : 1;
+                }
+            // Checking
+            if (!atom_exited.isApprox(atom_exited_check)) logs("atom_exited wrong!\n");
+            if (!atom_ground.isApprox(atom_ground_check)) logs("atom_ground wrong!\n");
+            if (!atom_sigmaplus.isApprox(atom_sigmaplus_check)) logs("atom_sigmaplus wrong!\n");
+            if (!atom_sigmaminus.isApprox(atom_sigmaminus_check)) logs("atom_sigmaminus wrong!\n");
+            if (!atom_inversion.isApprox(atom_inversion_check)) logs("atom_inversion wrong!\n");
+            if (!photon_create.isApprox(photon_create_check)) logs("photon_create wrong!\n");
+            if (!photon_annihilate.isApprox(photon_annihilate_check)) logs("photon_annihilate wrong!\n");
+            if (!photon_n.isApprox(photon_n_check)) logs("photon_n wrong!\n");
         }
 };

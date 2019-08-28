@@ -49,4 +49,7 @@ class OperatorMatrices_Parent {
         }
         // To be called from child constructor
         void init(const Parameters &p);
+        // Basic Operator functions:
+        MatrixXcd create_photonic_operator(const int type, const int maxPhotons);
+        //MatrixXcd create_electronic_operator(const int type, const int maxStates);
 };
