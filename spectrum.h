@@ -7,6 +7,7 @@ class Spectrum {
         MatrixXcd akf_mat;
         std::vector<MatrixXcd> rhos;
         std::vector<double> times;
+        int curIt;
     public:
         Spectrum(System &s);
         Spectrum() {};
@@ -17,4 +18,5 @@ class Spectrum {
         int getIterationNumberSpectrum(System &s);
         void fileOutput(System &s, std::string filepath);
         int getRhoDim();
+        bool queueNow(System &s);
 };

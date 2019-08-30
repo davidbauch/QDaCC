@@ -277,7 +277,7 @@ class Parameters : public Parameters_Parent{
             }
 
             // Look for other parameters
-            if ( (index = vec_find_str("-nointeractionpic", arguments)) != -1) {
+            if ( (index = vec_find_str("-noInteractionpic", arguments)) != -1) {
                 doInteractionPicture = 0;
             } else if(!legacy) {
                 doInteractionPicture = 1;

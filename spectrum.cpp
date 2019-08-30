@@ -10,6 +10,7 @@ Spectrum::Spectrum(System &s) {
     for(int w=0;w<s.parameters.akf_spec_max_w;w++) {
         out.push_back(0);
     }
+    curIt = 1;
     logs.level2("done!\n");
 }
 
@@ -111,6 +112,15 @@ void Spectrum::fileOutput(System &s, std::string filepath) {
 
 int Spectrum::getRhoDim() {
     return rhos.size();
+}
+
+bool Spectrum::queueNow(System &s) {
+    if (s.parameters.doSpectrum && curIt%s.parameters.akf_everyXIt == 0) {
+        curIt = 1;
+        return true;
+    }
+    curIt++;
+    return false;
 }
 
 /*

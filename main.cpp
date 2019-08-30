@@ -12,10 +12,11 @@
 //current: test pMac15062019A
 
 //BIGGE TODO:S:
-// header files für system
-// header files / .cpp files aufteilung vernünftig.
+// header files für system [DONE]
+// header files / .cpp files aufteilung vernünftig. [DONE]
 // generell abläufe in konstruktoren auf funktionsaufrufe umändern.
-
+// BBIGGGG: scaling der parameter!!
+// Abläufe wie t direction, spectrum über systemaufrufe.
 
 // last 2 inputs: XY x=loglevem,y=outputhanderlstrings, Z z=workpath
 int main(int argc, char* argv[]) {
@@ -49,19 +50,13 @@ int main(int argc, char* argv[]) {
         spectrum.addRho(rho,system.parameters.t_start);
     system.expectationValues(rho,system.parameters.t_start);
 
-    int curIt = 1;
     // Main Time Loop
     for (double t_t=system.parameters.t_start+system.parameters.t_step; t_t<system.parameters.t_end; t_t+=system.parameters.t_step) {
         // Runge-Kutta iteration 
         rho = solver.iterate(rho,system,t_t);
-        // Save Rho for tau-direction
-        // TODO: move to system function system.queueSpectrum() die dann den check übernimmt.
-        if (system.parameters.doSpectrum && curIt%system.parameters.akf_everyXIt == 0) {
-            curIt = 1;
+        // Save Rho for tau-direction 
+        if (spectrum.queueNow(system))
             spectrum.addRho(rho,t_t);
-        } else {
-            curIt++;
-        }
         // Expectation Values
         system.expectationValues(rho,t_t);
         // Progress and time output
@@ -74,12 +69,13 @@ int main(int argc, char* argv[]) {
     }
     rkTimer.end();
 
-    // Spectrum //TODO: in system.calculateSpectrum, damit für 4ns nacher ggf. mehrere spektren berechnet werden können!
+    // Spectrum
     if (system.parameters.doSpectrum) {
         spectrum.calculateTauDirection(system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate,solver);
         spectrum.calculateSpectrum(system);
         spectrum.fileOutput(system, system.parameters.subfolder + "spectrum.txt");
     }
+    // Finalizing all calculations
     system.exit_system();
 
     double finalTime = Timer::summary();

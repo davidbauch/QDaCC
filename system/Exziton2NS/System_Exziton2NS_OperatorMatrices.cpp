@@ -119,7 +119,7 @@ class OperatorMatrices : public OperatorMatrices_Parent{
             }
         }
         // Redundant
-        void checkMatrices2NS() {
+        void checkMatrices2NS(Parameters &p) {
             // Creating Matrices the old way
             MatrixXcd photon_create_check, photon_annihilate_check, atom_exited_check, atom_ground_check, photon_n_check, atom_sigmaplus_check, atom_sigmaminus_check, atom_inversion_check;
             photon_create_check = MatrixXcd::Zero(p.maxStates,p.maxStates);
