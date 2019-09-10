@@ -31,7 +31,7 @@ std::string PREFIX_SUFFIX                = "@#SUFFIX#@";
 #include "misc/timer.h"
 
 using Eigen::MatrixXcd;
-using Eigen::MatrixXd; 
+using Eigen::MatrixXd;
 
 using namespace std::complex_literals;
 
@@ -41,6 +41,7 @@ std::string global_message_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBE
 
 #define DIR_T 1
 #define DIR_TAU 2
+#define DIR_W 3
 
 #define TIMETRANSFORMATION_PRECALCULATED 0
 #define TIMETRANSFORMATION_MATRIXEXPONENTIAL 1

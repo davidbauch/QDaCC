@@ -1,64 +1,64 @@
 #include "interpolant.h"
 
 // Takes X,Y[,Z], Values to return evaluations at
-Interpolant::Interpolant(std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::string t = "linear") {
+Interpolant::Interpolant( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::string t = "linear" ) {
     X = "";
     Y = "";
     Z = "";
-    for (unsigned long i = 0; i < interpolationPointsX.size(); i++) {
-        X += std::to_string(interpolationPointsX.at(i));
-        Y += std::to_string(interpolationPointsY.at(i));
+    for ( unsigned long i = 0; i < interpolationPointsX.size(); i++ ) {
+        X += std::to_string( interpolationPointsX.at( i ) );
+        Y += std::to_string( interpolationPointsY.at( i ) );
     }
-    generate(t);
+    generate( t );
 }
 
-Interpolant::Interpolant(std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::vector<double> &interpolationPointsZ, std::string t = "linear") {
+Interpolant::Interpolant( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::vector<double> &interpolationPointsZ, std::string t = "linear" ) {
     // TODO: verify inputs (length, etc)
     // Interpolant
     // Generate input strings for interpolant
     X = "[";
     Y = "[";
     Z = "[";
-    for (unsigned long i = 0; i < interpolationPointsX.size(); i++) {
-        X += fmt::format("{:.15e}",interpolationPointsX.at(i)) + (i < interpolationPointsX.size()-1 ? "," : "");
-        Y += fmt::format("{:.15e}",interpolationPointsY.at(i)) + (i < interpolationPointsX.size()-1 ? "," : "");
-        Z += fmt::format("{:.15e}",interpolationPointsZ.at(i)) + (i < interpolationPointsX.size()-1 ? "," : "");
+    for ( unsigned long i = 0; i < interpolationPointsX.size(); i++ ) {
+        X += fmt::format( "{:.15e}", interpolationPointsX.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
+        Y += fmt::format( "{:.15e}", interpolationPointsY.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
+        Z += fmt::format( "{:.15e}", interpolationPointsZ.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
     }
     X += "]";
     Y += "]";
     Z += "]";
     //std::cout << "X = " << X << "\nY = " << Y << "\nZ = " << Z << "\nType = " << t <<"\n";
-    generate(t);
+    generate( t );
 }
 
-void Interpolant::generate(std::string t = "linear") {
+void Interpolant::generate( std::string t = "linear" ) {
     type = t;
     alglib::real_1d_array x = X.c_str();
     alglib::real_1d_array y = Y.c_str();
     alglib::real_1d_array z = Z.c_str();
-    if (!type.compare("cubic"))
-        alglib::spline1dbuildcubic(x,y,p);
-    else if (!type.compare("hermite"))
-        alglib::spline1dbuildhermite(x,y,z,p);
-    else if (!type.compare("akima"))
-        alglib::spline1dbuildakima(x,y,p);
-    else if (!type.compare("catmullrom"))
-        alglib::spline1dbuildcatmullrom(x,y,p);
-    else if (!type.compare("monotone"))
-        alglib::spline1dbuildmonotone(x,y,p);
+    if ( !type.compare( "cubic" ) )
+        alglib::spline1dbuildcubic( x, y, p );
+    else if ( !type.compare( "hermite" ) )
+        alglib::spline1dbuildhermite( x, y, z, p );
+    else if ( !type.compare( "akima" ) )
+        alglib::spline1dbuildakima( x, y, p );
+    else if ( !type.compare( "catmullrom" ) )
+        alglib::spline1dbuildcatmullrom( x, y, p );
+    else if ( !type.compare( "monotone" ) )
+        alglib::spline1dbuildmonotone( x, y, p );
     else
-        alglib::spline1dbuildlinear(x,y,p);
+        alglib::spline1dbuildlinear( x, y, p );
 }
 
-double Interpolant::evaluate(double x) {
-    return (double)alglib::spline1dcalc(p, x);
+double Interpolant::evaluate( double x ) {
+    return (double)alglib::spline1dcalc( p, x );
 }
 
-std::vector<double> Interpolant::evaluate(std::vector<double> &xar) {
+std::vector<double> Interpolant::evaluate( std::vector<double> &xar ) {
     std::vector<double> ret;
-    ret.reserve(xar.size());
-    for (double x : xar) {
-        ret.emplace_back( (double)alglib::spline1dcalc(p, x) );
+    ret.reserve( xar.size() );
+    for ( double x : xar ) {
+        ret.emplace_back( (double)alglib::spline1dcalc( p, x ) );
     }
     return ret;
 }
