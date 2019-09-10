@@ -50,7 +50,7 @@ void Interpolant::generate( std::string t = "linear" ) {
         alglib::spline1dbuildlinear( x, y, p );
 }
 
-double Interpolant::evaluate( double x ) {
+double Interpolant::evaluate( double x ) const {
     return (double)alglib::spline1dcalc( p, x );
 }
 

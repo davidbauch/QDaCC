@@ -24,9 +24,9 @@ class Parameters : public Parameters_Parent {
     double init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
 
     // Chirp and Pulse properties:
-    double pulse_center, pulse_amp, pulse_freq, pulse_sigma, chirp_onofftime;
+    double pulse_center, pulse_amp, pulse_freq, pulse_sigma;
     double chirp_total;
-    std::vector<double> chirp_t, chirp_y, chirp_ddt; //TODO: chirp parameter klasse + das gleiche für puls
+    std::vector<double> chirp_t, chirp_y, chirp_ddt;
     std::string pulse_type, chirp_type;
 
     // Runtime parameters and other stuff
@@ -158,7 +158,7 @@ class Parameters : public Parameters_Parent {
             chirp_ddt = {0.0, 0.0};
             chirp_type = "monotone";
         }
-        // Look for single parameter corrections
+        // Look for single parameter corrections //TODO: redundant
         if ( ( index = vec_find_str( "--chirpT", arguments ) ) != -1 ) {
             chirp_t = getNextInputVector<double>( arguments, "chirp_time single", ++index );
         }
@@ -239,6 +239,9 @@ class Parameters : public Parameters_Parent {
         if ( ( index = vec_find_str( "-RK5Tau", arguments ) ) != -1 ) {
             numerics_order_tau = 5;
         }
+        numerics_order_highest = numerics_order_t;
+        if (numerics_order_tau > numerics_order_highest)
+            numerics_order_highest = numerics_order_tau;
 
         // Look for --spectrum, if not found, no spectrum is evaluated
         if ( ( index = vec_find_str( "--spectrum", arguments ) ) != -1 ) {

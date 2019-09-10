@@ -28,24 +28,26 @@ class System : public System_Parent {
     }
 
     bool init_system() {
-        chirp = Chirp( parameters );
+        // Single chirp for single atomic level
+        Chirp::Inputs chirpinputs(parameters.t_start, parameters.t_end, parameters.t_step, parameters.chirp_type, parameters.numerics_order_highest);
+        chirpinputs.add(parameters.chirp_t, parameters.chirp_y, parameters.chirp_ddt);
+        chirp = Chirp(chirpinputs);
         if ( parameters.chirp_total != 0 )
-            chirp.fileOutput( parameters.subfolder + "chirp.txt", parameters );
+            chirp.fileOutput( parameters.subfolder + "chirp.txt" );
 
+        // Arbitrary number of pulses onto single atomic level
         pulse = Pulse( parameters );
         pulse.generateFromParam( parameters );
         if ( parameters.pulse_amp != 0 )
             pulse.fileOutput( parameters.subfolder + "pulse.txt", parameters );
+        
+        // Time Transformation
         timeTrafoMatrix = ( 1i * operatorMatrices.H_0 ).exp();
         // Check time trafo
         MatrixXcd ttrafo = ( 1i * operatorMatrices.H_0 * 125E-12 ).exp() * operatorMatrices.H_used * ( -1i * operatorMatrices.H_0 * 125E-12 ).exp();
         MatrixXcd temp = dgl_timetrafo( operatorMatrices.H_used, 125E-12 ) - ttrafo;
         if ( std::abs( temp.sum()/parameters.p_omega_atomic ) >= 0.0001 ) {
             logs( "Unitary timetransformation error is bigger than 0.01% of atomic transition energy!\n\n" );
-            //std::ostringstream out;
-            //Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
-            //out << "Timetrafo:\n" << dgl_timetrafo(operatorMatrices.H_used,1.0).format(CleanFmt) << std::endl << "Matrix Exp:\n" << ((1i*operatorMatrices.H_0).exp()*operatorMatrices.H_used*(-1i*operatorMatrices.H_0).exp()).format(CleanFmt) << std::endl;
-            //logs.level2(out.str());
         }
         return true;
     }

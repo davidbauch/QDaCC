@@ -19,7 +19,7 @@ class Interpolant {
     Interpolant( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::string t );
     Interpolant( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::vector<double> &interpolationPointsZ, std::string t );
     void generate( std::string t );
-    double evaluate( double x );
+    double evaluate( double x ) const;
     std::vector<double> evaluate( std::vector<double> &xar );
 };
 

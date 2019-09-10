@@ -199,11 +199,6 @@ std::vector<T> getNextInputVector( const std::vector<std::string> &arguments, co
     logs.level2( "Trying to convert input named '{}' at index '{}' to '{}'...", name, index, arguments.at( index ) );
     return convertParam<T>( str_to_vec( arguments.at( index++ ) ) );
 }
-/*template <typename T>
-std::enable_if_t<std::is_same<std::string, T>::value, std::string> getNextInput(const std::vector<std::string> &arguments, const std::string name, int &index) {
-    logs.level2("Trying to convert input number named '{}' at index '{}' to '{}'... ",name,index,arguments.at(index));
-    return arguments.at(index++);
-}*/
 
 template <typename T>
 T vec_max( std::vector<T> input , bool norm = true) {
