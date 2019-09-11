@@ -75,7 +75,7 @@ std::vector<std::string> str_to_vec( std::string input = "[]" ) {
     return ret;
 }
 
-#define toStr(x) std::to_string(x)
+#define toStr( x ) std::to_string( x )
 
 template <typename T>
 T lerp( T a, T b, double c ) {
@@ -199,14 +199,17 @@ std::vector<T> getNextInputVector( const std::vector<std::string> &arguments, co
     logs.level2( "Trying to convert input named '{}' at index '{}' to '{}'...", name, index, arguments.at( index ) );
     return convertParam<T>( str_to_vec( arguments.at( index++ ) ) );
 }
+std::vector<std::string> getNextInputVectorString( const std::vector<std::string> &arguments, const std::string name, int &index ) {
+    return str_to_vec( arguments.at( index++ ) );
+}
 
 template <typename T>
-T vec_max( std::vector<T> input , bool norm = true) {
+T vec_max( std::vector<T> input, bool norm = true ) {
     if ( input.size() == 0 )
         return ( T )( 0.0 );
     T ret = input.at( 0 );
     for ( T element : input )
-        if ( (norm && (std::abs(element) > std::abs(ret))) || (!norm && (element > ret)) )
+        if ( ( norm && ( std::abs( element ) > std::abs( ret ) ) ) || ( !norm && ( element > ret ) ) )
             ret = element;
     return ret;
 }
@@ -216,7 +219,7 @@ T vec_min( std::vector<T> input, bool norm = true ) {
         return ( T )( 0.0 );
     T ret = input.at( 0 );
     for ( T element : input )
-        if ( (norm && (std::abs(element) < std::abs(ret))) || (!norm && (element < ret)) )
+        if ( ( norm && ( std::abs( element ) < std::abs( ret ) ) ) || ( !norm && ( element < ret ) ) )
             ret = element;
     return ret;
 }

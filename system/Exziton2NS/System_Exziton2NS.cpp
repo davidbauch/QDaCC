@@ -35,11 +35,12 @@ class System : public System_Parent {
         if ( parameters.chirp_total != 0 )
             chirp.fileOutput( parameters.subfolder + "chirp.txt" );
 
-        // Arbitrary number of pulses onto single atomic level
-        pulse = Pulse( parameters );
-        pulse.generateFromParam( parameters );
-        if ( parameters.pulse_amp != 0 )
-            pulse.fileOutput( parameters.subfolder + "pulse.txt", parameters );
+        // Arbitrary number of pulses onto single atomic level. As of now, only a single pulse input is supported via input.
+        Pulse::Inputs pulseinputs(parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_order_highest);
+        pulseinputs.add(parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_type);
+        pulse = Pulse( pulseinputs );
+        if ( parameters.pulse_amp.at(0) != 0 )
+            pulse.fileOutput( parameters.subfolder + "pulse.txt" );
         
         // Time Transformation
         timeTrafoMatrix = ( 1i * operatorMatrices.H_0 ).exp();
@@ -122,7 +123,7 @@ class System : public System_Parent {
         return 0.5 * operatorMatrices.atom_inversion * chirp.get( t );
     }
     MatrixXcd dgl_pulse( const double t ) const {
-        if ( parameters.pulse_amp == 0 )
+        if ( parameters.pulse_amp.at(0) == 0 )
             return MatrixXcd::Zero( parameters.maxStates, parameters.maxStates );
         return 0.5 * ( operatorMatrices.atom_sigmaplus * pulse.get( t ) + operatorMatrices.atom_sigmaminus * std::conj( pulse.get( t ) ) );
     }

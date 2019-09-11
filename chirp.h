@@ -3,17 +3,17 @@
 #include "misc/interpolant.cpp"
 
 class Chirp {
-    public:
+   public:
     class Inputs {
        public:
         double t_start, t_end, t_step;
-        int order;
-        std::vector<double> t,y,ddt;
+        std::vector<double> t, y, ddt;
         std::string type;
+        int order;
         Inputs() {}
-        Inputs( double t_start, double t_end, double t_step, std::string type, int order ) : t_start(t_start), t_end(t_end), t_step(t_step), type(type), order(order) {}
-        void add(double _t, double _y, double _ddt);
-        void add(std::vector<double> &_t, std::vector<double> &_y, std::vector<double> &_ddt);
+        Inputs( double t_start, double t_end, double t_step, std::string type, int order ) : t_start( t_start ), t_end( t_end ), t_step( t_step ), type( type ), order( order ) {}
+        void add( double _t, double _y, double _ddt );
+        void add( std::vector<double> &_t, std::vector<double> &_y, std::vector<double> &_ddt );
     };
 
    private:

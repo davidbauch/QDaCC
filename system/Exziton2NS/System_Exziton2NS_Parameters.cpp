@@ -24,10 +24,11 @@ class Parameters : public Parameters_Parent {
     double init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
 
     // Chirp and Pulse properties:
-    double pulse_center, pulse_amp, pulse_freq, pulse_sigma;
+    std::vector<double> pulse_center, pulse_amp, pulse_omega, pulse_sigma;
+    std::vector<std::string> pulse_type;
     double chirp_total;
     std::vector<double> chirp_t, chirp_y, chirp_ddt;
-    std::string pulse_type, chirp_type;
+    std::string chirp_type;
 
     // Runtime parameters and other stuff
     int iterations_t_max;
@@ -63,11 +64,11 @@ class Parameters : public Parameters_Parent {
             chirp_ddt = getNextInputVector<double>( arguments, "chirp_diff", index );
             chirp_type = getNextInputString( arguments, "chirp_file_type", index );
 
-            pulse_center = getNextInput<double>( arguments, "pulse_center", index );
-            pulse_amp = getNextInput<double>( arguments, "pulse_amp", index );
-            pulse_freq = getNextInput<double>( arguments, "pulse_freq", index );
-            pulse_sigma = getNextInput<double>( arguments, "pulse_sigma", index );
-            pulse_type = getNextInputString( arguments, "pulse_type", index );
+            pulse_center.emplace_back( getNextInput<double>( arguments, "pulse_center", index ) );
+            pulse_amp.emplace_back( getNextInput<double>( arguments, "pulse_amp", index ) );
+            pulse_omega.emplace_back( getNextInput<double>( arguments, "pulse_omega", index ) );
+            pulse_sigma.emplace_back( getNextInput<double>( arguments, "pulse_sigma", index ) );
+            pulse_type.emplace_back( getNextInputString( arguments, "pulse_type", index ) );
 
             p_max_photon_number = getNextInput<int>( arguments, "p_max_photon_number", index );
             p_initial_state = getNextInput<int>( arguments, "p_initial_state", index );
@@ -174,40 +175,49 @@ class Parameters : public Parameters_Parent {
 
         // Look for --pulse, if not found, standard system is used (no pulse, everything zero)
         if ( ( index = vec_find_str( "--pulse", arguments ) ) != -1 ) {
-            pulse_center = getNextInput<double>( arguments, "pulse_center", ++index );
-            pulse_amp = getNextInput<double>( arguments, "pulse_amp", index );
-            pulse_freq = getNextInput<double>( arguments, "pulse_freq", index );
-            pulse_sigma = getNextInput<double>( arguments, "pulse_sigma", index );
-            pulse_type = getNextInputString( arguments, "pulse_type", index );
+            // Single pulse:
+            if ( arguments.at( index + 1 ).at( 0 ) == '[' ) {
+                pulse_center = getNextInputVector<double>( arguments, "pulse_center", ++index );
+                pulse_amp = getNextInputVector<double>( arguments, "pulse_amp", index );
+                pulse_omega = getNextInputVector<double>( arguments, "pulse_omega", index );
+                pulse_sigma = getNextInputVector<double>( arguments, "pulse_sigma", index );
+                pulse_type = getNextInputVectorString( arguments, "pulse_type", index );
+            } else {
+                pulse_center.emplace_back( getNextInput<double>( arguments, "pulse_center", ++index ) );
+                pulse_amp.emplace_back( getNextInput<double>( arguments, "pulse_amp", index ) );
+                pulse_omega.emplace_back( getNextInput<double>( arguments, "pulse_omega", index ) );
+                pulse_sigma.emplace_back( getNextInput<double>( arguments, "pulse_sigma", index ) );
+                pulse_type.emplace_back( getNextInputString( arguments, "pulse_type", index ) );
+            }
         } else if ( !legacy ) {
-            pulse_center = 0.0;
-            pulse_amp = 0.0;
-            pulse_freq = 0.0;
-            pulse_sigma = 1.0;
-            pulse_type = "cw";
+            pulse_center.emplace_back( 0.0 );
+            pulse_amp.emplace_back( 0.0 );
+            pulse_omega.emplace_back( 0.0 );
+            pulse_sigma.emplace_back( 1.0 );
+            pulse_type.emplace_back( "cw" );
         }
         if ( ( index = vec_find_str( "-pulse", arguments ) ) != -1 ) {
-            pulse_amp = 1.0;
-            pulse_freq = p_omega_atomic;
-            pulse_sigma = convertParam<double>( "20ps" );
-            pulse_center = 10.0 * pulse_sigma;
-            pulse_type = "gauss_pi";
-        }
-        // Look for single parameter corrections
-        if ( ( index = vec_find_str( "--pulseCenter", arguments ) ) != -1 ) {
-            pulse_center = getNextInput<double>( arguments, "pulse_center single", ++index );
-        }
-        if ( ( index = vec_find_str( "--pulseAmp", arguments ) ) != -1 ) {
-            pulse_amp = getNextInput<double>( arguments, "pulse_amp single", ++index );
-        }
-        if ( ( index = vec_find_str( "--pulseFreq", arguments ) ) != -1 ) {
-            pulse_freq = getNextInput<double>( arguments, "pulse_freq single", ++index );
-        }
-        if ( ( index = vec_find_str( "--pulseSigma", arguments ) ) != -1 ) {
-            pulse_sigma = getNextInput<double>( arguments, "pulse_sigma single", ++index );
-        }
-        if ( ( index = vec_find_str( "--pulseType", arguments ) ) != -1 ) {
-            pulse_type = getNextInputString( arguments, "pulse_type single", ++index );
+            pulse_amp.emplace_back( 1.0 );
+            pulse_omega.emplace_back( p_omega_atomic );
+            pulse_sigma.emplace_back( convertParam<double>( "20ps" ) );
+            pulse_center.emplace_back( 10.0 * pulse_sigma.back() );
+            pulse_type.emplace_back( "gauss_pi" );
+            // Look for single parameter corrections
+            if ( ( index = vec_find_str( "--pulseCenter", arguments ) ) != -1 ) {
+                pulse_center.back() = getNextInput<double>( arguments, "pulse_center single", ++index );
+            }
+            if ( ( index = vec_find_str( "--pulseAmp", arguments ) ) != -1 ) {
+                pulse_amp.back() = getNextInput<double>( arguments, "pulse_amp single", ++index );
+            }
+            if ( ( index = vec_find_str( "--pulseFreq", arguments ) ) != -1 ) {
+                pulse_omega.back() = getNextInput<double>( arguments, "pulse_omega single", ++index );
+            }
+            if ( ( index = vec_find_str( "--pulseSigma", arguments ) ) != -1 ) {
+                pulse_sigma.back() = getNextInput<double>( arguments, "pulse_sigma single", ++index );
+            }
+            if ( ( index = vec_find_str( "--pulseType", arguments ) ) != -1 ) {
+                pulse_type.back() = getNextInputString( arguments, "pulse_type single", ++index );
+            }
         }
 
         // Look for --dimensions, if not found, standard system is used (maxphotons = 0, starting state = |g,0>)
@@ -240,7 +250,7 @@ class Parameters : public Parameters_Parent {
             numerics_order_tau = 5;
         }
         numerics_order_highest = numerics_order_t;
-        if (numerics_order_tau > numerics_order_highest)
+        if ( numerics_order_tau > numerics_order_highest )
             numerics_order_highest = numerics_order_tau;
 
         // Look for --spectrum, if not found, no spectrum is evaluated
@@ -325,9 +335,10 @@ class Parameters : public Parameters_Parent {
     bool adjustInput() {
         // Calculate/Recalculate some parameters:
         // Adjust pulse area if pulse_type is "gauss_pi"
-        if ( pulse_type.compare( "gauss_pi" ) == 0 ) {
-            pulse_amp = M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma );
-        }
+        for ( int i = 0; i < (int)pulse_amp.size(); i++ )
+            if ( pulse_type.at( i ).compare( "gauss_pi" ) == 0 ) {
+                pulse_amp.at( i ) = M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) );
+            }
 
         // Calculate Rabi frequencies:
         init_rabifrequenz = rabiFrequency( p_omega_atomic - p_omega_cavity, p_omega_coupling, (int)( p_initial_state / 2.0 ) );
@@ -400,14 +411,17 @@ class Parameters : public Parameters_Parent {
         logs( "RAD rate gamma = {} Hz -> {} mueV\n", p_omega_decay, Hz_to_eV( p_omega_decay ) * 1E6 );
         logs( "Initial state rho0 = |{},{}> with maximum number of {} photons\n\n", ( p_initial_state % 2 == 0 ? "g" : "e" ), (int)std::floor( p_initial_state / 2 ), p_max_photon_number );
         logs.wrapInBar( "Excitation Pulse", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
-        if ( pulse_center != -1 && pulse_amp != 0 ) {
-            logs( "Exiting system at t_0 = {} with amplitude {} ({}meV), frequency {}eV ({}) and FWHM {}\n", pulse_center, pulse_amp, Hz_to_eV( pulse_amp ) * 1E3, pulse_freq, Hz_to_eV( pulse_freq ), pulse_sigma * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ) );
-            logs( "Used pulse_type? - " + pulse_type + "\n\n" );
+        if ( pulse_amp.size() > 0 && pulse_center.at( 0 ) != -1 && pulse_amp.at( 0 ) != 0 ) {
+            for ( int i = 0; i < (int)pulse_amp.size(); i++ ) {
+                logs( "Exiting system at t_0 = {} with amplitude {} ({}meV), frequency {}eV ({}) and FWHM {}\n", pulse_center.at( i ), pulse_amp.at( i ), Hz_to_eV( pulse_amp.at( i ) ) * 1E3, pulse_omega.at( i ), Hz_to_eV( pulse_omega.at( i ) ), pulse_sigma.at( i ) * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ) );
+                logs( "Used pulse_type - " + pulse_type.at( i ) + "\n" );
+            }
         } else
             logs( "Not using pulse to exite system\n\n" );
         logs.wrapInBar( "Energy Chirp", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         if ( chirp_total != 0 ) {
             for ( int i = 0; i < (int)chirp_t.size() - 1; i++ ) {
+                //TODO: das falsch
                 logs( "Chirp between t0 = {}ps and t1 = {}ps: {}mueV -> average rate {}mueV/ps\n", chirp_t.at( i ), chirp_t.at( i + 1 ), chirp_y.at( i + 1 ) - chirp_y.at( i ), ( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) * 1e12 / ( chirp_t.at( i + 1 ) - chirp_t.at( i ) ) );
             }
             if ( chirp_type.compare( "none" ) != 0 )

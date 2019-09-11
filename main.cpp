@@ -30,6 +30,7 @@
 //TODO: inputs für chirp und pulse mit eigener inpuit klasse!
 //TODO: spereater skip für tau richtung und dann nochmal spectrum!
 //TODO: time evolution des spektrums
+//TODO: pulse chirping
 
 // last 2 inputs: XY x=loglevem,y=outputhanderlstrings, Z z=workpath
 int main( int argc, char* argv[] ) {
