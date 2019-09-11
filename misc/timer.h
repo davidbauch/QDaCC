@@ -174,10 +174,13 @@ double Timer::summary( bool output = true ) {
                 totalWallTime += timer.getWallTime();
                 totalCPUTime += timer.getCPUTime();
             }
-            logs( "{:<{}}: Walltime: {} CPUTime: {} Iterations: {} Average Time per Iteration: {}\n", timer.getName(), len, Timer::format( timer.getWallTime() ), ( timer.getCPUTime() != 0 ) ? Timer::format( timer.getCPUTime() ) : "--", timer.getTotalIterationNumber(), Timer::format( timer.getAverageIterationTime() ) );
+            logs( "{:<{}}: Walltime: {} ", timer.getName(), len, Timer::format( timer.getWallTime() ) );
+            if ( timer.getTotalIterationNumber() > 1 )
+                logs( "CPUTime: {} Iterations: {} Average Time per Iteration: {}", ( timer.getCPUTime() != 0 ) ? Timer::format( timer.getCPUTime() ) : "--", timer.getTotalIterationNumber(), Timer::format( timer.getAverageIterationTime() ) );
+            logs( "\n" );
         }
         logs.bar( LOG_SIZE_FULL, LOG_LEVEL_1, LOG_BAR_1 );
-        logs( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), Timer::format( totalCPUTime ) );
+        logs( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0  ? Timer::format( totalCPUTime ) : "--" ) );
         logs.bar();
     }
     return totalWallTime;
