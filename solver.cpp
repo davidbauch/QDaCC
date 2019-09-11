@@ -2,7 +2,6 @@
 #include "global.h"
 #include "solver.h"
 
-
 ODESolver::ODESolver( const System &s ) {
     logs.level2( "Creating ODESolver Class... " );
     int dim = reset( s );
@@ -71,7 +70,7 @@ void ODESolver::saveState( const MatrixXcd &mat, const double t ) {
 }
 
 bool ODESolver::queueNow( const System &s, int &curIt ) {
-    if ( s.calculate_spectrum() && curIt % s.getIterationSkip( DIR_TAU ) == 0 ) {
+    if ( ( s.calculate_spectrum() || s.calculate_g2() ) && curIt % s.getIterationSkip( DIR_TAU ) == 0 ) {
         curIt = 1;
         return true;
     }
@@ -93,6 +92,7 @@ int ODESolver::reset( const System &s ) {
 // Numerical functions:
 // Calculate T-Direction, output to files via system.expectationValues and save matrices for further calculations
 bool ODESolver::calculate_t_direction( System &s ) {
+    logs.level2( "Calculating t-direction from {} to {} at stepsize {}... ", s.getTimeborderStart(), s.getTimeborderEnd(), s.getTimeStep() );
     Timer &rkTimer = createTimer( "RungeKutta-Main-Loop" );
     ProgressBar progressbar = ProgressBar( s.parameters.iterations_total_max, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
     rkTimer.start();
@@ -121,6 +121,7 @@ bool ODESolver::calculate_t_direction( System &s ) {
         }
     }
     rkTimer.end();
+    logs.level2( "Done! Saved {} states.\n", savedStates.size() );
     return true;
 }
 // Helperfunctions
@@ -149,7 +150,7 @@ double ODESolver::getTimeAt( int i ) {
 MatrixXcd ODESolver::getRhoAt( int i ) {
     return savedStates.at( i ).rho;
 }
-// Calculate tau-direction for given operators b,b^+ and precalculated rho. //TODO: statt system eigene config klasse übergeben, z.b. Solver_G1_Settings die dann alles beinhaltet!
+// Calculate tau-direction for given operators b,b^+ and precalculated rho.
 bool ODESolver::calculate_g1( const System &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator ) {
     if ( !( (int)savedStates.size() > 0 ) ) {
         logs( "Need to calculate t-direction first!\n" );
@@ -183,8 +184,47 @@ bool ODESolver::calculate_g1( const System &s, const MatrixXcd &op_creator, cons
     timer.end();
     return true;
 }
+
+bool ODESolver::calculate_g2_0( const System &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator, std::string fileOutputName = "g2(0).txt" ) {
+    if ( !( (int)savedStates.size() > 0 ) ) {
+        logs( "Need to calculate t-direction first!\n" );
+        return false;
+    }
+
+    Timer &timer = createTimer( "G2-0-Loop" );
+    int totalIterations = (int)savedStates.size();
+    ProgressBar progressbar = ProgressBar( totalIterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
+    progressbar.strBarStart = "|";
+    progressbar.strBarEnd = "|";
+    timer.start();
+
+    std::vector<std::complex<double>> g2Values;
+    g2Values.reserve( totalIterations );
+    for ( int i = 0; i < totalIterations; i++ ) {
+        double t_t = getTimeAt( i );
+        MatrixXcd rho = getRhoAt( i );
+        MatrixXcd M1 = op_creator * op_creator * op_annihilator * op_annihilator;
+        MatrixXcd M2 = op_creator * op_annihilator;
+        g2Values.emplace_back( s.dgl_expectationvalue( rho, M1, t_t ) / std::pow( s.dgl_expectationvalue( rho, M2, t_t ), 2 ) );
+        timer.iterate();
+        outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "G2: " );
+    }
+    timer.end();
+    std::string filepath = s.parameters.subfolder + fileOutputName;
+    FILE *g2file = std::fopen( filepath.c_str(), "w" );
+    if ( !g2file ) {
+        logs.level2( "Failed to open outputfile for g2(0)!\n" );
+        return false;
+    }
+    for ( int i = 0; i < totalIterations; i++ ) {
+        fmt::print( g2file, "{0:.15e}\t{1:.15e}\n", getTimeAt( i ), std::real( g2Values.at( i ) ) );
+    }
+    std::fclose( g2file );
+    return true;
+}
+
 // Calculate Spectrum from previously calculated akf_mat
-bool ODESolver::calculate_spectrum( const System &s ) {
+bool ODESolver::calculate_spectrum( const System &s, std::string fileOutputName = "spectrum.txt" ) {
     Timer &timer = createTimer( "Spectrum-Loop" );
     int totalIterations = getIterationNumberSpectrum( s );
     ProgressBar progressbar = ProgressBar( totalIterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
@@ -215,7 +255,7 @@ bool ODESolver::calculate_spectrum( const System &s ) {
     }
     outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "AKF-Spectrum", PROGRESS_FORCE_OUTPUT );
     timer.end();
-    std::string filepath = s.parameters.subfolder + "spectrum.txt";
+    std::string filepath = s.parameters.subfolder + fileOutputName;
     FILE *spectrumfile = std::fopen( filepath.c_str(), "w" );
     if ( !spectrumfile ) {
         logs.level2( "Failed to open outputfile for spectrum!\n" );

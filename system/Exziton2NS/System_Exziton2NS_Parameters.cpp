@@ -288,6 +288,12 @@ class Parameters : public Parameters_Parent {
             iterations_skips_w = getNextInput<int>( arguments, "iterations_skips_w single", ++index );
         }
 
+        if ( ( index = vec_find_str( "-g2", arguments ) ) != -1 ) {
+            numerics_calculate_g2 = true;
+        } else {
+            numerics_calculate_g2 = false;
+        }
+
         // Look for other parameters
         if ( ( index = vec_find_str( "-noInteractionpic", arguments ) ) != -1 ) {
             numerics_use_interactionpicture = 0;

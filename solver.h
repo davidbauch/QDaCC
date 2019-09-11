@@ -61,8 +61,8 @@ class ODESolver {
     MatrixXcd iterate( const MatrixXcd &rho, const System &s, const double t, const int dir );
     bool calculate_t_direction( System &s );
     bool calculate_g1( const System &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator );
-    bool calculate_g2( const System &s );
-    bool calculate_spectrum( const System &s );
+    bool calculate_g2_0( const System &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator, std::string fileOutputName );
+    bool calculate_spectrum( const System &s, std::string fileOutputName );
     int reset( const System &s );
 };
 
