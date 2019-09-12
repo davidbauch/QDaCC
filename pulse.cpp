@@ -2,7 +2,7 @@
 #include "pulse.h"
 
 Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
-    logs.level2("Creating total pulse with {} individual pulses... ",inputs.amp.size());
+    logs.level2( "Creating total pulse with {} individual pulses... ", inputs.amp.size() );
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 6.0 + 5 );
     pulsearray.reserve( n );
     timearray.reserve( n );
@@ -10,9 +10,9 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
         steps = {0, 1. / 5. * inputs.t_step, 3. / 10. * inputs.t_step, 1. / 2. * inputs.t_step, 4. / 5. * inputs.t_step, 8. / 9. * inputs.t_step};
     else
         steps = {0, 0.5 * inputs.t_step};
-    logs.level2("Done initializing class, creating precalculated chirp... ");
+    logs.level2( "Done initializing class, creating precalculated chirp... " );
     generate();
-    logs.level2("Done!\n");
+    logs.level2( "Done!\n" );
 }
 
 // Generate array of energy-values corresponding to the Pulse
@@ -62,7 +62,7 @@ void Pulse::fileOutput( std::string filepath ) {
     std::fclose( pulsefile );
 }
 
-void Pulse::Inputs::add( double _center, double _amp, double _sigma, double _omega, std::string _type ) {
+void Pulse::Inputs::add( double _center, double _amp, double _sigma, double _omega, std::string _type ) { //,double chirp = 0) {
     center.emplace_back( _center );
     amp.emplace_back( _amp );
     sigma.emplace_back( _sigma );
@@ -76,11 +76,11 @@ void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp
         return;
     }
     for ( int i = 0; i < (int)_amp.size(); i++ ) {
-        center.emplace_back( _center.at(i) );
-        amp.emplace_back( _amp.at(i) );
-        sigma.emplace_back( _sigma.at(i) );
-        omega.emplace_back( _omega.at(i) );
-        type.emplace_back( _type.at(i) );
+        center.emplace_back( _center.at( i ) );
+        amp.emplace_back( _amp.at( i ) );
+        sigma.emplace_back( _sigma.at( i ) );
+        omega.emplace_back( _omega.at( i ) );
+        type.emplace_back( _type.at( i ) );
     }
 }
 

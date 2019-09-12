@@ -265,17 +265,17 @@ class Parameters : public Parameters_Parent {
             iterations_skips_tau = 1;
             spectrum_frequency_center = p_omega_cavity;
             spectrum_frequency_range = 0.0;
-            iterations_skips_w = 0;
+            iterations_skips_w = 1;
         }
         if ( ( index = vec_find_str( "-spectrum", arguments ) ) != -1 ) {
             numerics_calculate_spectrum = 1;
             iterations_skips_tau = 1;
             spectrum_frequency_center = p_omega_cavity;
             spectrum_frequency_range = ( p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing ) * 10.0;
-            iterations_skips_w = 0;
+            iterations_skips_w = 1;
         }
         // Look for single parameter corrections
-        if ( ( index = vec_find_str( "--specXIt", arguments ) ) != -1 ) {
+        if ( ( index = vec_find_str( "--specTauSkip", arguments ) ) != -1 ) {
             iterations_skips_tau = getNextInput<int>( arguments, "iterations_skips_tau single", ++index );
         }
         if ( ( index = vec_find_str( "--specCenter", arguments ) ) != -1 ) {
@@ -284,7 +284,7 @@ class Parameters : public Parameters_Parent {
         if ( ( index = vec_find_str( "--specRange", arguments ) ) != -1 ) {
             spectrum_frequency_range = getNextInput<double>( arguments, "spectrum_frequency_range single", ++index );
         }
-        if ( ( index = vec_find_str( "--specSkip", arguments ) ) != -1 ) {
+        if ( ( index = vec_find_str( "--specWSkip", arguments ) ) != -1 ) {
             iterations_skips_w = getNextInput<int>( arguments, "iterations_skips_w single", ++index );
         }
 
@@ -375,7 +375,7 @@ class Parameters : public Parameters_Parent {
         max_detuning = ( init_detuning + chirp_total > init_detuning ) ? init_detuning + chirp_total : init_detuning;
 
         // Adjust/calculate frequency range for spectrum
-        spectrum_frequency_iterations = iterations_t_max / ( ( iterations_skips_tau - 1 ) * ( 1 - iterations_skips_w ) + 1 );
+        spectrum_frequency_iterations = iterations_t_max / iterations_skips_w;
         if ( spectrum_frequency_center == -1 )
             spectrum_frequency_center = p_omega_cavity;
         if ( spectrum_frequency_range == -1 )
@@ -474,7 +474,7 @@ class Parameters : public Parameters_Parent {
         fmt::print( "--chirp ['[Array Time]'] ['[Array Y]'] ['[Array d/dt]'] [type]\n\t--chirpT ['[Array Time]']\n\t--chirpY ['[Array Y]']\n\t--chirpDDT ['[Array d/dt]']\n\t--chirpType [type] where type = monotone, hermite, linear, spline\n" );
         fmt::print( "--pulse [Center] [Amplitude] [Frequency] [Sigma] [Type]\n\t-pulse for standard pulse\n\t--pulseCenter [Center]\n\t--pulseAmp [Amplitude]\n\t--pulseFreq [Frequency]\n\t--pulseSigma [Sigma]\n\t--pulseType [Type] where Type = cw, gauss, gauss_pi\n" );
         fmt::print( "--dimensions [maximum Photons] [Initial state]\n\t--maxPhotons [maximum Photons]\n\t--initState [Initial state], has to be smaller than (2*n+1)\n" );
-        fmt::print( "--spectrum [Iteration Skips] [Center] [Range] [Omega Skips] enables spectrum\n\t-spectrum enables spectrum centered at cavity\n\t--specXIt [Iterations skips (int)]\n\t--specCenter [Center]\n\t--specRange [Range]\n\t--specSkip [0/1] True/False\n" );
+        fmt::print( "--spectrum [Tau Skips] [Center] [Range] [Omega Skips] enables spectrum\n\t-spectrum enables spectrum centered at cavity\n\t--specTauSkip [Iterations skips (int)]\n\t--specCenter [Center]\n\t--specRange [Range]\n\t--specWSkip [Iteration skips (int)]\n" );
         fmt::print( "-RK5 enables Runge Kutta of order 5 for T and Tau direction\n\t-RK5T enables Runge Kutta of order 5 for T direction\n\t-RK5Tau enables Runge Kutta of order 5 for Tau direction\n" );
         fmt::print( "-noInteractionpic disables Interaction picture - enabled by default\n-noRWA disables rotating wave approximation - enabled by default\n-timeTrafoMatrixExponential enables Time Transformation via Matrix exponential - disabled by default\n" );
         fmt::print( "--Threads [number] number of threads to use for both AKF and Spectrum integral calculation\n" );

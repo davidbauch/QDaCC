@@ -28,9 +28,9 @@
 //TODO: alle abgefragten variablen auf funktionsaufrufe system.f() reduzieren
 //TODO: array für pulse, wie chirp! (mehrere pulse zulassen, bei chirp sinds mehrere interpolant punkte) //DONE
 //TODO: inputs für chirp und pulse mit eigener inpuit klasse! //DONE
-//TODO: spereater skip für tau richtung und dann nochmal spectrum!
+//TODO: spereater skip für tau richtung und dann nochmal spectrum! //DONE
 //TODO: time evolution des spektrums
-//TODO: pulse chirping
+//TODO: pulse chirping, ez to add via chirp = X standard variable
 //TODO: Solver overhaul: log, alle values speichern, konsistentere übergabe der filenames //TODO: statt system eigene config klasse übergeben, z.b. Solver_G1_Settings die dann alles beinhaltet!,
 //TODO: operatoren aus system.getNextSpectrumOperator() und dann das als vecator
 

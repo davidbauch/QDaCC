@@ -205,7 +205,7 @@ bool ODESolver::calculate_g2_0( const System &s, const MatrixXcd &op_creator, co
         MatrixXcd rho = getRhoAt( i );
         MatrixXcd M1 = op_creator * op_creator * op_annihilator * op_annihilator;
         MatrixXcd M2 = op_creator * op_annihilator;
-        g2Values.emplace_back( s.dgl_expectationvalue( rho, M1, t_t ) / std::pow( s.dgl_expectationvalue( rho, M2, t_t ), 2 ) );
+        g2Values.emplace_back( s.dgl_expectationvalue( rho, M1, t_t ) ); // / std::pow( s.dgl_expectationvalue( rho, M2, t_t ), 2 ) );
         timer.iterate();
         outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "G2: " );
     }
@@ -235,7 +235,7 @@ bool ODESolver::calculate_spectrum( const System &s, std::string fileOutputName 
     //Calculate frequencies:
     std::vector<double> spectrum_frequency_w;
     for ( int w = 0; w < s.parameters.spectrum_frequency_iterations; w++ ) {
-        spectrum_frequency_w.push_back( s.parameters.spectrum_frequency_center - ( s.parameters.spectrum_frequency_range ) + w / ( (double)s.parameters.iterations_t_max ) * ( ( s.parameters.iterations_skips_tau - 1 ) * ( 1 - s.parameters.iterations_skips_w ) + 1 ) * ( 2. * ( s.parameters.spectrum_frequency_range ) ) );
+        spectrum_frequency_w.push_back( s.parameters.spectrum_frequency_center - ( s.parameters.spectrum_frequency_range ) + w / ( (double)s.parameters.spectrum_frequency_iterations ) * ( 2. * ( s.parameters.spectrum_frequency_range ) ) );
     }
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads ) //reduction(+:spectrum.out)
     for ( int spec_w = 0; spec_w < s.parameters.spectrum_frequency_iterations; spec_w++ ) {
