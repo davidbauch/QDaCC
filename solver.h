@@ -32,20 +32,22 @@ class ODESolver {
     double b65 = -2187. / 6784.;
     double b66 = 11. / 84.;
 
-    // Vector for rho/time
+    int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc,track_gethamilton_calcattempt;
+
+    // Vector for mat/time, tuple
     class SaveState {
        public:
-        MatrixXcd rho;
+        MatrixXcd mat;
         double t;
-        SaveState( const MatrixXcd &mat, const double time ) {
-            rho = mat;
-            t = time;
-        }
+        SaveState( const MatrixXcd &mat, const double time ) : mat(mat), t(time) {};
     };
-    std::vector<SaveState> savedStates;
+
+    std::vector<SaveState> savedStates; // Vector for saved matrix-time tuples for densitymatrix
+    std::vector<SaveState> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
     std::vector<std::complex<double>> out;
     MatrixXcd akf_mat;
     void saveState( const MatrixXcd &mat, const double t );
+    void saveHamilton( const MatrixXcd &mat, const double t );
     bool queueNow( const System &s, int &curIt );
     MatrixXcd iterateRungeKutta4( const MatrixXcd &rho, const System &s, const double t );
     MatrixXcd iterateRungeKutta5( const MatrixXcd &rho, const System &s, const double t );
@@ -53,17 +55,17 @@ class ODESolver {
     int getIterationNumberSpectrum( const System &s );
     double getTimeAt( int i );
     MatrixXcd getRhoAt( int i );
+    MatrixXcd getHamilton( const System &s, const double t, bool use_saved_hamiltons );
+    int reset( const System &s );
 
    public:
     ODESolver(){};
     ODESolver( const System &s );
-    MatrixXcd getHamilton( const System &s, const double t );
     MatrixXcd iterate( const MatrixXcd &rho, const System &s, const double t, const int dir );
     bool calculate_t_direction( System &s );
     bool calculate_g1( const System &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator );
     bool calculate_g2_0( const System &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator, std::string fileOutputName );
     bool calculate_spectrum( const System &s, std::string fileOutputName );
-    int reset( const System &s );
 };
 
 /*

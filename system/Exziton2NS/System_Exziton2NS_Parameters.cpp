@@ -34,6 +34,7 @@ class Parameters : public Parameters_Parent {
     int iterations_t_max;
     int iterations_total_max;
     std::vector<double> trace;
+    bool output_full_dm;
 
     // AKF & Spectrum
     int numerics_maximum_threads, spectrum_frequency_iterations; //akf_everyXIt //akf_skip_omega
@@ -334,6 +335,12 @@ class Parameters : public Parameters_Parent {
         } else {
             startCoherent = false;
         }
+        if ( ( index = vec_find_str( "-fullDM", arguments ) ) != -1 ) {
+            output_full_dm = true;
+        } else {
+            output_full_dm = false;
+        }
+        
         subfolder = arguments.back();
         return true;
     }
@@ -476,7 +483,7 @@ class Parameters : public Parameters_Parent {
         fmt::print( "--dimensions [maximum Photons] [Initial state]\n\t--maxPhotons [maximum Photons]\n\t--initState [Initial state], has to be smaller than (2*n+1)\n" );
         fmt::print( "--spectrum [Tau Skips] [Center] [Range] [Omega Skips] enables spectrum\n\t-spectrum enables spectrum centered at cavity\n\t--specTauSkip [Iterations skips (int)]\n\t--specCenter [Center]\n\t--specRange [Range]\n\t--specWSkip [Iteration skips (int)]\n" );
         fmt::print( "-RK5 enables Runge Kutta of order 5 for T and Tau direction\n\t-RK5T enables Runge Kutta of order 5 for T direction\n\t-RK5Tau enables Runge Kutta of order 5 for Tau direction\n" );
-        fmt::print( "-noInteractionpic disables Interaction picture - enabled by default\n-noRWA disables rotating wave approximation - enabled by default\n-timeTrafoMatrixExponential enables Time Transformation via Matrix exponential - disabled by default\n" );
+        fmt::print( "-noInteractionpic disables Interaction picture - enabled by default\n-noRWA disables rotating wave approximation - enabled by default\n-timeTrafoMatrixExponential enables Time Transformation via Matrix exponential - disabled by default\n-startCoherent enables starting with a coherent state. Starting state is then ground state with alpha = initState\n-fullDM enables full output of densitymatrix including all offdiagonal terms.\n" );
         fmt::print( "--Threads [number] number of threads to use for both AKF and Spectrum integral calculation\n" );
         fmt::print( "Additional commands:\n\t-advLog Enables advanced logging\n\t-noHandler disables handler strings and enables loadbar output (for console)\n\t-output_operators, -outputHamiltons, -outputOperatorsStop Enables output of matrices (requires -advLog)" );
     }

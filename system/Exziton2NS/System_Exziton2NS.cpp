@@ -2,7 +2,7 @@
 #include "System_Exziton2NS_OperatorMatrices.cpp"
 #include "System_Exziton2NS_FileOutput.cpp"
 #include "../system.cpp"
-#include "../../chirp.h" 
+#include "../../chirp.h"
 #include "../../pulse.h"
 
 class System : public System_Parent {
@@ -29,25 +29,25 @@ class System : public System_Parent {
 
     bool init_system() {
         // Single chirp for single atomic level
-        Chirp::Inputs chirpinputs(parameters.t_start, parameters.t_end, parameters.t_step, parameters.chirp_type, parameters.numerics_order_highest);
-        chirpinputs.add(parameters.chirp_t, parameters.chirp_y, parameters.chirp_ddt);
-        chirp = Chirp(chirpinputs);
+        Chirp::Inputs chirpinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.chirp_type, parameters.numerics_order_highest );
+        chirpinputs.add( parameters.chirp_t, parameters.chirp_y, parameters.chirp_ddt );
+        chirp = Chirp( chirpinputs );
         if ( parameters.chirp_total != 0 )
             chirp.fileOutput( parameters.subfolder + "chirp.txt" );
 
         // Arbitrary number of pulses onto single atomic level. As of now, only a single pulse input is supported via input.
-        Pulse::Inputs pulseinputs(parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_order_highest);
-        pulseinputs.add(parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_type);
+        Pulse::Inputs pulseinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_order_highest );
+        pulseinputs.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_type );
         pulse = Pulse( pulseinputs );
-        if ( parameters.pulse_amp.at(0) != 0 )
+        if ( parameters.pulse_amp.at( 0 ) != 0 )
             pulse.fileOutput( parameters.subfolder + "pulse.txt" );
-        
+
         // Time Transformation
         timeTrafoMatrix = ( 1i * operatorMatrices.H_0 ).exp();
         // Check time trafo
         MatrixXcd ttrafo = ( 1i * operatorMatrices.H_0 * 125E-12 ).exp() * operatorMatrices.H_used * ( -1i * operatorMatrices.H_0 * 125E-12 ).exp();
         MatrixXcd temp = dgl_timetrafo( operatorMatrices.H_used, 125E-12 ) - ttrafo;
-        if ( std::abs( temp.sum()/parameters.p_omega_atomic ) >= 0.0001 ) {
+        if ( std::abs( temp.sum() / parameters.p_omega_atomic ) >= 0.0001 ) {
             logs( "Unitary timetransformation error is bigger than 0.01% of atomic transition energy!\n\n" );
         }
         return true;
@@ -123,7 +123,7 @@ class System : public System_Parent {
         return 0.5 * operatorMatrices.atom_inversion * chirp.get( t );
     }
     MatrixXcd dgl_pulse( const double t ) const {
-        if ( parameters.pulse_amp.at(0) == 0 )
+        if ( parameters.pulse_amp.at( 0 ) == 0 )
             return MatrixXcd::Zero( parameters.maxStates, parameters.maxStates );
         return 0.5 * ( operatorMatrices.atom_sigmaplus * pulse.get( t ) + operatorMatrices.atom_sigmaminus * std::conj( pulse.get( t ) ) );
     }
@@ -136,8 +136,14 @@ class System : public System_Parent {
         std::fprintf( fileoutput.fp_atomicinversion, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue( rho, operatorMatrices.atom_inversion, t ) ) );
         std::fprintf( fileoutput.fp_photonpopulation, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue( rho, operatorMatrices.photon_n, t ) ) );
         std::fprintf( fileoutput.fp_densitymatrix, "%e\t", t );
-        for ( int j = 0; j < parameters.maxStates; j++ )
-            std::fprintf( fileoutput.fp_densitymatrix, "%e\t", std::real( rho( j, j ) ) );
+        if ( parameters.output_full_dm ) {
+            for ( int i = 0; i < parameters.maxStates; i++ )
+                for ( int j = 0; j < parameters.maxStates; j++ ) {
+                    std::fprintf( fileoutput.fp_densitymatrix, "%e\t", std::real( rho( i, j ) ) );
+                }
+        } else
+            for ( int j = 0; j < parameters.maxStates; j++ )
+                std::fprintf( fileoutput.fp_densitymatrix, "%e\t", std::real( rho( j, j ) ) );
         std::fprintf( fileoutput.fp_densitymatrix, "\n" );
     }
 

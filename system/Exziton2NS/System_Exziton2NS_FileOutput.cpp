@@ -17,6 +17,18 @@ FileOutput::FileOutput( const std::vector<std::string> filenames, const Paramete
     fp_densitymatrix = std::fopen( ( p.subfolder + filenames.at( 0 ) ).c_str(), "w" );
     if ( !fp_densitymatrix )
         logs.level2( "\nCould not open file for densitymatrix!\n" );
+    else {
+        fmt::print( fp_densitymatrix, "States: " );
+        if ( p.output_full_dm ) {
+            for ( int i = 0; i < p.maxStates; i++ )
+                for ( int j = 0; j < p.maxStates; j++ ) {
+                    fmt::print( fp_densitymatrix, "|{},{}><{},{}|\t", ( i % 2 == 0 ? "g" : "e" ), std::floor( ( 1.0 * i ) / 2 ), ( j % 2 == 0 ? "g" : "e" ), std::floor( ( 1.0 * j ) / 2 ) );
+                }
+        } else
+            for ( int i = 0; i < p.maxStates; i++ )
+                fmt::print( fp_densitymatrix, "|{0},{1}><{0},{1}|\t", ( i % 2 == 0 ? "g" : "e" ), std::floor( ( 1.0 * i ) / 2 ) );
+        fmt::print( fp_densitymatrix, "\n" );
+    }
     fp_atomicinversion = std::fopen( ( p.subfolder + filenames.at( 1 ) ).c_str(), "w" );
     if ( !fp_atomicinversion )
         logs.level2( "\nCould not open file for atomic inversion!\n" );
