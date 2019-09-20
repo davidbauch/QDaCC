@@ -47,56 +47,13 @@ class Parameters : public Parameters_Parent {
 
     bool parseInput( const std::vector<std::string> &arguments ) {
         int index = 1;
-        bool legacy = false;
-        // Looking for legacy input, usefull because the python handler doesnt understand named inputs :(
-        if ( ( index = vec_find_str( "-legacy", arguments ) ) != -1 ) {
-            t_start = 0.0;
-            t_end = getNextInput<double>( arguments, "t_end", ++index );
-            t_step = getNextInput<double>( arguments, "t_step", index );
-            p_omega_atomic = getNextInput<double>( arguments, "p_omega_atomic", index );
-            p_omega_cavity = getNextInput<double>( arguments, "p_omega_cavity", index );
-            p_omega_coupling = getNextInput<double>( arguments, "p_omega_coupling", index );
-            p_omega_cavity_loss = getNextInput<double>( arguments, "p_omega_cavity_loss", index );
-            p_omega_pure_dephasing = getNextInput<double>( arguments, "p_omega_pure_dephasing", index );
-            p_omega_decay = getNextInput<double>( arguments, "p_omega_decay", index );
-
-            chirp_t = getNextInputVector<double>( arguments, "chirp_time", index );
-            chirp_y = getNextInputVector<double>( arguments, "chirp_yval", index );
-            chirp_ddt = getNextInputVector<double>( arguments, "chirp_diff", index );
-            chirp_type = getNextInputString( arguments, "chirp_file_type", index );
-
-            pulse_center.emplace_back( getNextInput<double>( arguments, "pulse_center", index ) );
-            pulse_amp.emplace_back( getNextInput<double>( arguments, "pulse_amp", index ) );
-            pulse_omega.emplace_back( getNextInput<double>( arguments, "pulse_omega", index ) );
-            pulse_sigma.emplace_back( getNextInput<double>( arguments, "pulse_sigma", index ) );
-            pulse_type.emplace_back( getNextInputString( arguments, "pulse_type", index ) );
-
-            p_max_photon_number = getNextInput<int>( arguments, "p_max_photon_number", index );
-            p_initial_state = getNextInput<int>( arguments, "p_initial_state", index );
-
-            numerics_calculate_spectrum = getNextInput<double>( arguments, "numerics_calculate_spectrum", index );
-            iterations_skips_tau = getNextInput<int>( arguments, "iterations_skips_tau", index );
-            spectrum_frequency_center = getNextInput<double>( arguments, "spectrum_frequency_center", index );
-            spectrum_frequency_range = getNextInput<double>( arguments, "spectrum_frequency_range", index );
-            iterations_skips_w = getNextInput<int>( arguments, "iterations_skips_w", index );
-
-            numerics_use_interactionpicture = getNextInput<int>( arguments, "numerics_use_interactionpicture", index );
-            numerics_use_rwa = getNextInput<int>( arguments, "numerics_use_rwa", index );
-            numerics_maximum_threads = getNextInput<int>( arguments, "numerics_maximum_threads", index );
-            double temp_rk_type = getNextInput<double>( arguments, "rungekuttatype", index );
-            output_advanced_log = getNextInput<int>( arguments, "output_advanced_log", index );
-            subfolder = getNextInputString( arguments, "subfolder", index );
-            numerics_order_t = (int)( temp_rk_type / 10 );   // 4 or 5
-            numerics_order_tau = ( (int)temp_rk_type ) % 10; // 4 or 5
-            legacy = true;
-        }
 
         // Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
         if ( ( index = vec_find_str( "--time", arguments ) ) != -1 ) {
             t_start = 0.0;
             t_end = getNextInput<double>( arguments, "t_end", ++index );
             t_step = getNextInput<double>( arguments, "t_step", index );
-        } else if ( !legacy ) {
+        } else {
             t_start = 0.0;
             t_end = convertParam<double>( "1.0ns" );
             t_step = -1;
@@ -120,7 +77,7 @@ class Parameters : public Parameters_Parent {
             p_omega_cavity_loss = getNextInput<double>( arguments, "p_omega_cavity_loss", index );
             p_omega_pure_dephasing = getNextInput<double>( arguments, "p_omega_pure_dephasing", index );
             p_omega_decay = getNextInput<double>( arguments, "p_omega_decay", index );
-        } else if ( !legacy ) {
+        } else {
             p_omega_atomic = convertParam<double>( "1.52eV" );
             p_omega_cavity = convertParam<double>( "1.52eV" );
             p_omega_coupling = convertParam<double>( "66mueV" );
@@ -154,7 +111,7 @@ class Parameters : public Parameters_Parent {
             chirp_y = getNextInputVector<double>( arguments, "chirp_yval", index );
             chirp_ddt = getNextInputVector<double>( arguments, "chirp_diff", index );
             chirp_type = getNextInputString( arguments, "chirp_file_type", index );
-        } else if ( !legacy ) {
+        } else {
             chirp_t = {t_start, t_end};
             chirp_y = {0.0, 0.0};
             chirp_ddt = {0.0, 0.0};
@@ -190,7 +147,7 @@ class Parameters : public Parameters_Parent {
                 pulse_sigma.emplace_back( getNextInput<double>( arguments, "pulse_sigma", index ) );
                 pulse_type.emplace_back( getNextInputString( arguments, "pulse_type", index ) );
             }
-        } else if ( !legacy ) {
+        } else {
             pulse_center.emplace_back( 0.0 );
             pulse_amp.emplace_back( 0.0 );
             pulse_omega.emplace_back( 0.0 );
@@ -261,7 +218,7 @@ class Parameters : public Parameters_Parent {
             spectrum_frequency_center = getNextInput<double>( arguments, "spectrum_frequency_center", index );
             spectrum_frequency_range = getNextInput<double>( arguments, "spectrum_frequency_range", index );
             iterations_skips_w = getNextInput<int>( arguments, "iterations_skips_w", index );
-        } else if ( !legacy ) {
+        } else {
             numerics_calculate_spectrum = 0;
             iterations_skips_tau = 1;
             spectrum_frequency_center = p_omega_cavity;
@@ -298,17 +255,17 @@ class Parameters : public Parameters_Parent {
         // Look for other parameters
         if ( ( index = vec_find_str( "-noInteractionpic", arguments ) ) != -1 ) {
             numerics_use_interactionpicture = 0;
-        } else if ( !legacy ) {
+        } else {
             numerics_use_interactionpicture = 1;
         }
         if ( ( index = vec_find_str( "-noRWA", arguments ) ) != -1 ) {
             numerics_use_rwa = 0;
-        } else if ( !legacy ) {
+        } else {
             numerics_use_rwa = 1;
         }
         if ( ( index = vec_find_str( "--Threads", arguments ) ) != -1 ) {
             numerics_maximum_threads = getNextInput<int>( arguments, "numerics_maximum_threads", ++index );
-        } else if ( !legacy ) {
+        } else {
             numerics_maximum_threads = 1;
         }
         if ( ( index = vec_find_str( "-noHandler", arguments ) ) != -1 ) {
@@ -429,6 +386,7 @@ class Parameters : public Parameters_Parent {
                 logs( "Exiting system at t_0 = {} with amplitude {} ({}meV), frequency {}eV ({}) and FWHM {}\n", pulse_center.at( i ), pulse_amp.at( i ), Hz_to_eV( pulse_amp.at( i ) ) * 1E3, pulse_omega.at( i ), Hz_to_eV( pulse_omega.at( i ) ), pulse_sigma.at( i ) * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ) );
                 logs( "Used pulse_type - " + pulse_type.at( i ) + "\n" );
             }
+            logs("\n");
         } else
             logs( "Not using pulse to exite system\n\n" );
         logs.wrapInBar( "Energy Chirp", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
@@ -482,7 +440,7 @@ class Parameters : public Parameters_Parent {
         fmt::print( "--pulse [Center] [Amplitude] [Frequency] [Sigma] [Type]\n\t-pulse for standard pulse\n\t--pulseCenter [Center]\n\t--pulseAmp [Amplitude]\n\t--pulseFreq [Frequency]\n\t--pulseSigma [Sigma]\n\t--pulseType [Type] where Type = cw, gauss, gauss_pi\n" );
         fmt::print( "--dimensions [maximum Photons] [Initial state]\n\t--maxPhotons [maximum Photons]\n\t--initState [Initial state], has to be smaller than (2*n+1)\n" );
         fmt::print( "--spectrum [Tau Skips] [Center] [Range] [Omega Skips] enables spectrum\n\t-spectrum enables spectrum centered at cavity\n\t--specTauSkip [Iterations skips (int)]\n\t--specCenter [Center]\n\t--specRange [Range]\n\t--specWSkip [Iteration skips (int)]\n" );
-        fmt::print( "-RK5 enables Runge Kutta of order 5 for T and Tau direction\n\t-RK5T enables Runge Kutta of order 5 for T direction\n\t-RK5Tau enables Runge Kutta of order 5 for Tau direction\n" );
+        fmt::print( "-g2 enables calculation of G2(tau=0)\n-RK5 enables Runge Kutta of order 5 for T and Tau direction\n\t-RK5T enables Runge Kutta of order 5 for T direction\n\t-RK5Tau enables Runge Kutta of order 5 for Tau direction\n" );
         fmt::print( "-noInteractionpic disables Interaction picture - enabled by default\n-noRWA disables rotating wave approximation - enabled by default\n-timeTrafoMatrixExponential enables Time Transformation via Matrix exponential - disabled by default\n-startCoherent enables starting with a coherent state. Starting state is then ground state with alpha = initState\n-fullDM enables full output of densitymatrix including all offdiagonal terms.\n" );
         fmt::print( "--Threads [number] number of threads to use for both AKF and Spectrum integral calculation\n" );
         fmt::print( "Additional commands:\n\t-advLog Enables advanced logging\n\t-noHandler disables handler strings and enables loadbar output (for console)\n\t-output_operators, -outputHamiltons, -outputOperatorsStop Enables output of matrices (requires -advLog)" );
