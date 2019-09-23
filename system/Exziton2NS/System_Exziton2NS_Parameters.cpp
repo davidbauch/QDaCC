@@ -297,9 +297,50 @@ class Parameters : public Parameters_Parent {
         } else {
             output_full_dm = false;
         }
-        
+        if ( ( index = vec_find_str( "-scale", arguments ) ) != -1 ) {
+            scale_parameters = true;
+        } else {
+            scale_parameters = false;
+        }
+
         subfolder = arguments.back();
         return true;
+    }
+
+    bool scaleInputs( const double scaling ) {
+        // Adjust normal parameters: time is multiplid by scaling, frequency divided
+        t_start = scaleVariable( t_start, scaling );
+        t_end = scaleVariable( t_end, scaling );
+        t_step = scaleVariable( t_step, scaling );
+        p_omega_atomic = scaleVariable( p_omega_atomic, 1.0 / scaling );
+        p_omega_cavity = scaleVariable( p_omega_cavity, 1.0 / scaling );
+        p_omega_coupling = scaleVariable( p_omega_coupling, 1.0 / scaling );
+        p_omega_cavity_loss = scaleVariable( p_omega_cavity_loss, 1.0 / scaling );
+        p_omega_pure_dephasing = scaleVariable( p_omega_pure_dephasing, 1.0 / scaling );
+        p_omega_decay = scaleVariable( p_omega_decay, 1.0 / scaling );
+        // Adjust chirp and pulse
+        for ( int i = 0; i < (int)chirp_t.size(); i++ ) {
+            chirp_t.at( i ) = scaleVariable( chirp_t.at( i ), scaling );
+            chirp_y.at( i ) = scaleVariable( chirp_y.at( i ), 1.0 / scaling );
+            chirp_ddt.at( i ) = scaleVariable( chirp_ddt.at( i ), 1.0 / scaling );
+        }
+        for ( int i = 0; i < (int)pulse_center.size(); i++ ) {
+            pulse_center.at( i ) = scaleVariable( pulse_center.at( i ), scaling );
+            pulse_amp.at( i ) = scaleVariable( pulse_amp.at( i ), 1.0 / scaling );
+            pulse_omega.at( i ) = scaleVariable( pulse_omega.at( i ), 1.0 / scaling );
+            pulse_sigma.at( i ) = scaleVariable( pulse_sigma.at( i ), scaling );
+        }
+        // Adjusting spectrum
+        spectrum_frequency_center = scaleVariable( spectrum_frequency_center, 1.0 / scaling );
+        spectrum_frequency_range = scaleVariable( spectrum_frequency_range, 1.0 / scaling );
+        return true;
+    }
+
+    double scaleVariable( const double variable, const double scaling ) {
+        if ( scale_parameters ) {
+            return variable * scaling;
+        }
+        return variable;
     }
 
     bool adjustInput() {
@@ -386,7 +427,7 @@ class Parameters : public Parameters_Parent {
                 logs( "Exiting system at t_0 = {} with amplitude {} ({}meV), frequency {}eV ({}) and FWHM {}\n", pulse_center.at( i ), pulse_amp.at( i ), Hz_to_eV( pulse_amp.at( i ) ) * 1E3, pulse_omega.at( i ), Hz_to_eV( pulse_omega.at( i ) ), pulse_sigma.at( i ) * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ) );
                 logs( "Used pulse_type - " + pulse_type.at( i ) + "\n" );
             }
-            logs("\n");
+            logs( "\n" );
         } else
             logs( "Not using pulse to exite system\n\n" );
         logs.wrapInBar( "Energy Chirp", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
@@ -426,6 +467,7 @@ class Parameters : public Parameters_Parent {
         logs( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture == 1 ) ? "YES" : "NO" ) );
         logs( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_PRECALCULATED ) ? "Analytic" : "Matrix Exponential" ) );
         logs( "Threads used for AFK? - {}\n", numerics_maximum_threads );
+        logs( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string(scale_value) : "no" ) );
         logs( "\n" );
         logs.wrapInBar( "Program Log:", LOG_SIZE_FULL, LOG_LEVEL_2 );
         logs( "\n" );

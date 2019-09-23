@@ -14,6 +14,8 @@ Parameters_Parent::Parameters_Parent() {
     iterations_skips_t = 1;
     iterations_skips_tau = 1;
     iterations_skips_w = 1;
+    scale_parameters = false;
+    scale_value = 1E12;
 }
 
 void Parameters_Parent::init( const std::vector<std::string> &arguments ) {
@@ -30,6 +32,13 @@ void Parameters_Parent::init( const std::vector<std::string> &arguments ) {
     }
     timer_parseInput.end();
     logs.level2( "successful. Elapsed time is {}ms\n", timer_parseInput.getWallTime( TIMER_MILLISECONDS ) );
+
+    // Scaling inputs:
+    if ( scale_parameters ) {
+        logs.level2("Rescaling parameters to {}... ",scale_value);
+        scaleInputs( scale_value );
+        logs.level2("Done!\n");
+    }
 
     // Adjusting inputs:
     Timer &timer_adjustInput = createTimer( "Adjusting parameters" );

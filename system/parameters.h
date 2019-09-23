@@ -13,6 +13,8 @@ class Parameters_Parent {
     int numerics_order_t, numerics_order_tau, numerics_order_highest;
     int output_advanced_log, output_handlerstrings, output_operators;
     int iterations_skips_t, iterations_skips_tau, iterations_skips_w;
+    bool scale_parameters;
+    double scale_value;
     // Functions
    public:
     // Constructor
@@ -26,6 +28,10 @@ class Parameters_Parent {
     virtual bool parseInput( const std::vector<std::string> &arguments ) { return false; };
     // @overwrite: Adjusting inputs
     virtual bool adjustInput() { return false; };
+    // @overwrite: Scale inputs
+    virtual bool scaleInputs( const double scaling ) { return false; };
+    // @overrwrite: Scale single input
+    virtual double scaleVariable( const double variable, const double scaling ) { return 0.0; };
     // To be called from child constructor
     void init( const std::vector<std::string> &arguments );
 };

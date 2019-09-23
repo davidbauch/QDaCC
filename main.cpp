@@ -4,40 +4,12 @@
 #include "pulse.cpp"
 #include "solver.cpp"
 
-// g++-8 main2.cpp -o ptestCPP_mymatrix3.out -std=c++1y -O3 -DFMT_HEADER_ONLY -fopenmp
-
-//current: test pMac15062019A
+// g++-8 '/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/main.cpp' -o /Users/davidbauch/bin/QDLC-2LS-1.0.out misc/ALGLIB/MAC/*.o -std=c++1y -O3 -DFMT_HEADER_ONLY -fopenmp -Wall
 
 //BIGGE TODO:S:
-// header files für system //DONE
-// header files / .cpp files aufteilung vernünftig. //DONE
-// generell abläufe in konstruktoren auf funktionsaufrufe umändern. more or less //DONE
-// TODO: BBIGGGG: scaling der parameter!!
-// Zugriffe auf parameters auf system.getXXX() abändern! //FIXME
-// Abläufe wie t direction, spectrum über systemaufrufe. //DONE
+// TODO: scale parameters back to SI when outputting
 
-// TODO: ???????????
-// alles auf solver bringen: -> spectrum klasse weg! //DONE
-// solver.calculate_t_direction() -> vector mit t-direction zeiten und densitymatritzen //DONE
-// solver.calculate_tau_direction() //DONE bis auf speichern der matrizen
-// solver.calculate_spectrum() -> inputs: t-vector und rho-vector, operatoren b,b+ //DONE
-// solver.calculate_g2() -> inputs: t-vector, rho vector, b,b+ //FIXME implementation fehlt
-// ...
-
-//TODO: output full densitymatrix on demand (-fullDM) //DONE
-//TODO: alle abgefragten variablen auf funktionsaufrufe system.f() reduzieren
-//TODO: array für pulse, wie chirp! (mehrere pulse zulassen, bei chirp sinds mehrere interpolant punkte) //DONE
-//TODO: inputs für chirp und pulse mit eigener inpuit klasse! //DONE
-//TODO: spereater skip für tau richtung und dann nochmal spectrum! //DONE
 //TODO: time evolution des spektrums
-//TODO: pulse chirping, ez to add via chirp = X standard variable
-//TODO: Solver overhaul: log, alle values speichern, konsistentere übergabe der filenames //TODO: statt system eigene config klasse übergeben, z.b. Solver_G1_Settings die dann alles beinhaltet!,
-//TODO: operatoren aus system.getNextSpectrumOperator() und dann das als vecator
-
-//TODO: proper documentation for each function to make working over several months more easy. https://developer.lsst.io/cpp/api-docs.html
-//TODO: check includes such that vscode doesnt create error types.
-
-//TODO: system class soweit mit gettern ausstatten, das system_parent eingesetzt werden kann (vielleicht, eig unnötig)
 
 // last 2 inputs: XY x=loglevem,y=outputhanderlstrings, Z z=workpath
 int main( int argc, char* argv[] ) {
