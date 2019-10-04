@@ -2,8 +2,6 @@
 
 void System_Parent::init() {
     terminate_message = global_message_normaltermination;
-    // Spectrum and ODE classes
-    //solver = ODESolver(this,false);
     // Adjusting inputs:
     Timer &timer_systeminit = createTimer( "System Initialization" );
     logs.level2( "System initialization... " );

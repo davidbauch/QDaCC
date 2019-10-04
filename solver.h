@@ -2,6 +2,11 @@
 
 #include "global.h"
 
+// Possibilities:
+// 1. Rewrite solver to accept template class for system such that the solver class can be used in system methods
+// 2. OR: include solver into system class (meh)
+
+
 class ODESolver {
    private:
     // RK 4&5 coefficients
@@ -48,24 +53,25 @@ class ODESolver {
     MatrixXcd akf_mat;
     void saveState( const MatrixXcd &mat, const double t );
     void saveHamilton( const MatrixXcd &mat, const double t );
-    bool queueNow( const System &s, int &curIt );
-    MatrixXcd iterateRungeKutta4( const MatrixXcd &rho, const System &s, const double t );
-    MatrixXcd iterateRungeKutta5( const MatrixXcd &rho, const System &s, const double t );
-    int getIterationNumberTau( const System &s );
-    int getIterationNumberSpectrum( const System &s );
+    bool queueNow( const System_Parent &s, int &curIt );
+    MatrixXcd iterateRungeKutta4( const MatrixXcd &rho, const System_Parent &s, const double t );
+    MatrixXcd iterateRungeKutta5( const MatrixXcd &rho, const System_Parent &s, const double t );
+    int getIterationNumberTau( const System_Parent &s );
+    int getIterationNumberSpectrum( const System_Parent &s );
     double getTimeAt( int i );
     MatrixXcd getRhoAt( int i );
-    MatrixXcd getHamilton( const System &s, const double t, bool use_saved_hamiltons );
-    int reset( const System &s );
+    MatrixXcd getHamilton( const System_Parent &s, const double t, bool use_saved_hamiltons );
+    int reset( const System_Parent &s );
 
    public:
     ODESolver(){};
-    ODESolver( const System &s );
-    MatrixXcd iterate( const MatrixXcd &rho, const System &s, const double t, const int dir );
-    bool calculate_t_direction( System &s );
-    bool calculate_g1( const System &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator );
-    bool calculate_g2_0( const System &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator, std::string fileOutputName );
-    bool calculate_spectrum( const System &s, std::string fileOutputName );
+    ODESolver( const System_Parent &s );
+    MatrixXcd iterate( const MatrixXcd &rho, const System_Parent &s, const double t, const int dir );
+    bool calculate_t_direction( System_Parent &s );
+    bool calculate_g1( const System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator );
+    bool calculate_g2_0( const System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator, std::string fileOutputName );
+    bool calculate_spectrum( const System_Parent &s, std::string fileOutputName );
+    
 };
 
 /*

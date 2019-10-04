@@ -15,10 +15,10 @@ class System_Parent {
     System_Parent(){};
     System_Parent( const std::vector<std::string> &input ){};
     // Functions:
-    virtual double getTimeborderStart() const { return 0.0; };
-    virtual double getTimeborderEnd() const { return 0.0; };
-    virtual double getTimeStep() const { return 0.0; };
-    virtual MatrixXcd getRho0() const { return MatrixXcd::Zero( 1, 1 ); }; // Rho is always complex
+    virtual double getTimeborderStart() const { return parameters.t_start; };
+    virtual double getTimeborderEnd() const { return parameters.t_end; };
+    virtual double getTimeStep() const { return parameters.t_step; };
+    virtual MatrixXcd getRho0() const { return operatorMatrices.rho; }; // Rho is always complex
     // Matrix Commutator function
     template <typename T>
     T dgl_kommutator( const T &A, const T &B ) const {
@@ -50,11 +50,11 @@ class System_Parent {
     // Runge function
     virtual MatrixXcd dgl_rungeFunction( const MatrixXcd &rho, const MatrixXcd &H, const double t ) const { return rho; }
     // Output Expectation Values
-    void expectationValues( MatrixXcd &rho, const double t ) const;
+    virtual void expectationValues( const MatrixXcd &rho, const double t ) const {};
     // Check for trace validity
     bool traceValid( MatrixXcd &rho, const double t, const bool forceOutput );
     // Return Hamiltonian for time t
-    MatrixXcd dgl_getHamilton( const double t ) const;
+    virtual MatrixXcd dgl_getHamilton( const double t ) const { return Eigen::MatrixXcd::Zero( 1, 1 ); };
     // Return solver order for time direction
     int getSolverOrder( const int dir );
     // To be called from child constructor
@@ -71,6 +71,6 @@ class System_Parent {
     bool output_handlerstrings() const;
     bool output_operators() const;
     int getSolverRungeKuttaOrder( int dir ) const;
-    int getTimeTransformationAlg() const;  //TODO finish
-    int getIterationSkip( int dir ) const; //TODO finish
+    int getTimeTransformationAlg() const;
+    int getIterationSkip( int dir ) const;
 };

@@ -53,22 +53,6 @@ class System : public System_Parent {
         return true;
     }
 
-    double getTimeborderStart() const {
-        return parameters.t_start;
-    }
-
-    double getTimeborderEnd() const {
-        return parameters.t_end;
-    }
-
-    double getTimeStep() const {
-        return parameters.t_step;
-    }
-
-    MatrixXcd getRho0() const {
-        return operatorMatrices.rho;
-    }
-
     MatrixXcd dgl_rungeFunction( const MatrixXcd &rho, const MatrixXcd &H, const double t ) const {
         MatrixXcd ret = -1i * dgl_kommutator( H, rho );
         // Photone losses
