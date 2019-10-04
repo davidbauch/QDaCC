@@ -3,7 +3,8 @@
 #include "solver.h"
 
 // Solver todo-list:
-//TODO: implement hamilton matrix saving (tuple t,H)
+// TODO: Seperate Solver completely from system (implement getHamilton in header as template instead of system) such that solver functions can be used by system class for phonons
+// TODO: save hamiltons ONLY in t direction, include new varibale "useSavedHamiltons" to e.g. exclude using saved matrices for e.g. phonons
 
 // Description: ODESolver class provides both Runge-Kutta functions of different orders and functions for different numerical operations
 // Type: ODESolver Class Constructor

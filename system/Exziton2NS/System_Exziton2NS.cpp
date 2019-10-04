@@ -129,6 +129,17 @@ class System : public System_Parent {
     }
 
     MatrixXcd dgl_phonons( const double t ) const {
+        // Determine Chi
+        //MatrixXcd chi = operatorMatrices.atom_sigmaplus*(parameters.p_omega_coupling*operatorMatrices.photon_annihilate + pulse.get(t));
+        // Time transform Chi such that we get Chi(t)
+        //chi = dgl_timetrafo(chi,t); // TTrafo mit H_0? 
+        // Calculate Chi(t) backwards to Chi(t-tau) for tau_max = 4ps
+        //TODO:
+        //MatrixXcd chi_1 = MatrixXcd::Zero(parameters.maxStates, parameters.maxStates);
+        // Calculate X_g and X_u via Hb.Eq.
+
+        // Calculate phonon correlation function Phi(t)
+        // Calculate G_g and G_u
         return MatrixXcd::Zero( 1, 1 );
     }
 

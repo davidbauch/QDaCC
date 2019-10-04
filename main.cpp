@@ -6,12 +6,7 @@
 
 // g++-8 '/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/main.cpp' -o /Users/davidbauch/bin/QDLC-2LS-1.0.out misc/ALGLIB/MAC/*.o -std=c++1y -O3 -DFMT_HEADER_ONLY -fopenmp -Wall
 
-//BIGGE TODO:S:
-// TODO: scale parameters back to SI when outputting
-
-//TODO: time evolution des spektrums
-
-// last 2 inputs: XY x=loglevem,y=outputhanderlstrings, Z z=workpath
+// last input: workpath
 int main( int argc, char* argv[] ) {
     // Help
     auto inputs = argv_to_vec( argc, argv );

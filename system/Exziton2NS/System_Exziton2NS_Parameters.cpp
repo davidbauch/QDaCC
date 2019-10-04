@@ -19,6 +19,7 @@ class Parameters : public Parameters_Parent {
     double p_omega_cavity_loss;
     double p_omega_pure_dephasing;
     double p_omega_decay;
+    double p_phonon_b, p_phonon_alpha, p_phonon_wb, p_phonon_T;
 
     // Calculated System properties:
     double init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
@@ -302,7 +303,8 @@ class Parameters : public Parameters_Parent {
         } else {
             scale_parameters = false;
         }
-
+        p_phonon_alpha = 0.03E-24;
+        p_phonon_wb = convertParam<double>( "1meV" );
         subfolder = arguments.back();
         return true;
     }
@@ -400,6 +402,19 @@ class Parameters : public Parameters_Parent {
                     curIt += 1;
             }
         }
+
+        // Calculate phonon stuff
+        p_phonon_b = 1.0;
+        if ( p_phonon_T > 0 ) {
+            double integral = 0;
+            double stepsize = 0.01 * p_phonon_wb;
+            for ( double w = 0; w < 10 * p_phonon_wb; w += stepsize ) {
+                integral += stepsize * ( p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wb / p_phonon_wb ) / std::tanh( 1.0545718E-34 * w / 2.0 / 1.3806488E-23 / p_phonon_T ) );
+            }
+            p_phonon_b = std::exp( -0.5 * integral );
+            p_omega_pure_dephasing = convertParam<double>( "1mueV" ) * p_phonon_T;
+            //p_omega_decay *= p_phonon_b*p_phonon_b;
+        }
         trace.reserve( iterations_t_max + 5 );
         return true;
     }
@@ -467,7 +482,7 @@ class Parameters : public Parameters_Parent {
         logs( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture == 1 ) ? "YES" : "NO" ) );
         logs( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_PRECALCULATED ) ? "Analytic" : "Matrix Exponential" ) );
         logs( "Threads used for AFK? - {}\n", numerics_maximum_threads );
-        logs( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string(scale_value) : "no" ) );
+        logs( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );
         logs( "\n" );
         logs.wrapInBar( "Program Log:", LOG_SIZE_FULL, LOG_LEVEL_2 );
         logs( "\n" );
