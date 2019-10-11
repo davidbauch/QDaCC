@@ -151,7 +151,8 @@ int ODESolver::reset( const System_Parent &s ) {
     int dim = (int)( s.parameters.iterations_t_max / s.getIterationSkip( DIR_TAU ) ) + 10;
     out.clear();
     out.reserve( (int)( std::ceil( s.parameters.spectrum_frequency_iterations ) + 5 ) );
-    akf_mat = MatrixXcd::Zero( dim, dim );
+    if ( s.calculate_spectrum() )
+        akf_mat = MatrixXcd::Zero( dim, dim );
     for ( int w = 0; w < s.parameters.spectrum_frequency_iterations; w++ ) {
         out.push_back( 0 );
     }
@@ -194,6 +195,32 @@ bool ODESolver::calculate_t_direction( System_Parent &s ) {
     rkTimer.end();
     logs.level2( "Done! Saved {} states.\n", savedStates.size() );
     return true;
+}
+template <typename T>
+MatrixXcd ODESolver::iterate_definite_integral( const MatrixXcd &rho, T rungefunction, const double t, const double step ) {
+    MatrixXcd rk1 = rungefunction( rho, t );
+    MatrixXcd rk2 = rungefunction( rho + step * 0.5 * rk1, t + step * 0.5 );
+    MatrixXcd rk3 = rungefunction( rho + step * 0.5 * rk2, t + step * 0.5 );
+    MatrixXcd rk4 = rungefunction( rho + step * rk3, t + step );
+    // Dichtematrix
+    return rho + step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
+}
+
+std::vector<ODESolver::SaveState> ODESolver::calculate_definite_integral_vec( MatrixXcd rho, std::function<MatrixXcd( const MatrixXcd &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
+    std::vector<ODESolver::SaveState> ret;
+    //ret.reserve( std::ceil( std::abs( t1 - t0 ) / std::abs( step ) ) );
+    ret.emplace_back( SaveState( rho, t0 ) );
+    if ( step > 0 )
+        for ( double t = t0 + step; t < t1; t += step ) {
+            rho = iterate_definite_integral( rho, rungefunction, t, step );
+            ret.emplace_back( SaveState( rho, t ) );
+        }
+    else if ( step < 0 )
+        for ( double t = t0 + step; t > t1; t += step ) {
+            rho = iterate_definite_integral( rho, rungefunction, t, step );
+            ret.emplace_back( SaveState( rho, t ) );
+        }
+    return ret;
 }
 
 // Desciption: Function to calculate the number of iterations used for tau direction calculations

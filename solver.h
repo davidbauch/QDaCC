@@ -2,12 +2,16 @@
 
 #include "global.h"
 
-// Possibilities:
-// 1. Rewrite solver to accept template class for system such that the solver class can be used in system methods
-// 2. OR: include solver into system class (meh)
-
-
 class ODESolver {
+   public:
+    // Vector for mat/time, tuple
+    class SaveState {
+       public:
+        MatrixXcd mat;
+        double t;
+        SaveState( const MatrixXcd &mat, const double time ) : mat( mat ), t( time ){};
+    };
+
    private:
     // RK 4&5 coefficients
     double a2 = 1. / 5.;
@@ -37,17 +41,9 @@ class ODESolver {
     double b65 = -2187. / 6784.;
     double b66 = 11. / 84.;
 
-    int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc,track_gethamilton_calcattempt;
+    int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
 
-    // Vector for mat/time, tuple
-    class SaveState {
-       public:
-        MatrixXcd mat;
-        double t;
-        SaveState( const MatrixXcd &mat, const double time ) : mat(mat), t(time) {};
-    };
-
-    std::vector<SaveState> savedStates; // Vector for saved matrix-time tuples for densitymatrix
+    std::vector<SaveState> savedStates;    // Vector for saved matrix-time tuples for densitymatrix
     std::vector<SaveState> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
     std::vector<std::complex<double>> out;
     MatrixXcd akf_mat;
@@ -71,7 +67,9 @@ class ODESolver {
     bool calculate_g1( const System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator );
     bool calculate_g2_0( const System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator, std::string fileOutputName );
     bool calculate_spectrum( const System_Parent &s, std::string fileOutputName );
-    
+    template <typename T>
+    static MatrixXcd iterate_definite_integral( const MatrixXcd &rho, T rungefunction, const double t, const double step );
+    static std::vector<ODESolver::SaveState> calculate_definite_integral_vec( MatrixXcd rho, std::function<MatrixXcd(const MatrixXcd&, const double)> const& rungefunction, const double t0, const double t1, const double step );
 };
 
 /*
