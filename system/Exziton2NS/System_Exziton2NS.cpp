@@ -4,6 +4,7 @@
 #include "../system.cpp"
 #include "../../chirp.h"
 #include "../../pulse.h"
+#include "../../solver.h"
 
 class System : public System_Parent {
    public:
@@ -42,6 +43,16 @@ class System : public System_Parent {
         if ( parameters.pulse_amp.at( 0 ) != 0 )
             pulse.fileOutput( parameters.subfolder + "pulse.txt" );
 
+        // Output Phonon functions of phonons are active
+        if ( parameters.p_phonon_T != 0 ) {
+            FILE *fp_phonons = std::fopen( ( parameters.subfolder + "phonons.txt" ).c_str(), "w" );
+            fmt::print( fp_phonons, "t\tphi(t)\tg_u(t)\tg_g(t)\n" );
+            for ( double t = getTimeborderStart() + getTimeStep(); t < 3 * parameters.p_photon_tcutoff; t += getTimeStep() ) {
+                fmt::print( fp_phonons, "{}\t{}\t{}\t{}\n", t, std::abs( dgl_phonons_phi( t ) ), std::abs( dgl_phonons_greenf( t, 'u' ) ), std::abs( dgl_phonons_greenf( t, 'g' ) ) );
+            }
+            std::fclose( fp_phonons );
+        }
+
         // Time Transformation
         timeTrafoMatrix = ( 1i * operatorMatrices.H_0 ).exp();
         // Check time trafo
@@ -67,6 +78,9 @@ class System : public System_Parent {
         }
         if ( parameters.p_omega_decay != 0.0 ) {
             ret += parameters.p_omega_decay * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus, operatorMatrices.atom_sigmaplus );
+        }
+        if ( parameters.p_phonon_T != 0.0 ) {
+            ret -= dgl_phonons( rho, t );
         }
         return ret;
     }
@@ -112,19 +126,74 @@ class System : public System_Parent {
         return 0.5 * ( operatorMatrices.atom_sigmaplus * pulse.get( t ) + operatorMatrices.atom_sigmaminus * std::conj( pulse.get( t ) ) );
     }
 
-    MatrixXcd dgl_phonons( const double t ) const {
-        // Determine Chi
-        //MatrixXcd chi = operatorMatrices.atom_sigmaplus*(parameters.p_omega_coupling*operatorMatrices.photon_annihilate + pulse.get(t));
-        // Time transform Chi such that we get Chi(t)
-        //chi = dgl_timetrafo(chi,t); // TTrafo mit H_0? 
-        // Calculate Chi(t) backwards to Chi(t-tau) for tau_max = 4ps
-        //TODO:
-        //MatrixXcd chi_1 = MatrixXcd::Zero(parameters.maxStates, parameters.maxStates);
-        // Calculate X_g and X_u via Hb.Eq.
+    MatrixXcd dgl_phonons_rungefunc( const MatrixXcd &rho, const double t ) const {
+        //MatrixXcd explicit_time = 1i * parameters.p_omega_atomic * operatorMatrices.atom_sigmaplus * parameters.p_omega_coupling * operatorMatrices.photon_annihilate + 1i * parameters.p_omega_atomic * operatorMatrices.atom_sigmaplus * pulse.get( t ) - 1i * operatorMatrices.atom_sigmaplus * parameters.p_omega_cavity * parameters.p_omega_coupling*operatorMatrices.photon_annihilate + operatorMatrices.atom_sigmaplus * ( pulse.get( t ) - pulse.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step;
+        MatrixXcd hamilton = parameters.p_phonon_b * dgl_getHamilton( t );
+        return -1i * dgl_kommutator( hamilton, rho );// + explicit_time;
+    }
 
-        // Calculate phonon correlation function Phi(t)
-        // Calculate G_g and G_u
-        return MatrixXcd::Zero( 1, 1 );
+    MatrixXcd dgl_phonons_chiToX( const MatrixXcd &chi, const char mode = 'u' ) const {
+        if ( mode == 'g' ) {
+            return chi + chi.adjoint().eval();
+        }
+        return 1i * ( chi - chi.adjoint().eval() );
+    }
+
+    std::complex<double> dgl_phonons_greenf( const double t, const char mode = 'u' ) const {
+        auto phi = dgl_phonons_phi( t );
+        if ( mode == 'g' ) {
+            return parameters.p_phonon_b * parameters.p_phonon_b * ( std::cosh( phi ) - 1.0 );
+        }
+        return parameters.p_phonon_b * parameters.p_phonon_b * std::sinh( phi );
+    }
+
+    std::complex<double> dgl_phonons_phi( const double t ) const {
+        std::complex<double> integral = 0;
+        double stepsize = 0.01 * parameters.p_phonon_wcutoff;
+        for ( double w = stepsize; w < 10 * parameters.p_phonon_wcutoff; w += stepsize ) {
+            integral += stepsize * ( parameters.p_phonon_alpha * w * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff ) * ( std::cos( w * t ) / std::tanh( 1.0545718E-34 * w / 2.0 / 1.3806488E-23 / parameters.p_phonon_T ) - 1i * std::sin( w * t ) ) );
+        }
+        return integral;
+    }
+
+    MatrixXcd dgl_phonons( const MatrixXcd &rho, const double t ) const {
+        // Determine Chi
+        MatrixXcd ret = MatrixXcd::Zero( parameters.maxStates, parameters.maxStates );
+        MatrixXcd chi = operatorMatrices.atom_sigmaplus * parameters.p_omega_coupling * operatorMatrices.photon_annihilate + operatorMatrices.atom_sigmaplus * pulse.get( t );
+        MatrixXcd integrant;
+        // Time transform Chi such that we get Chi(t)
+        //chi = dgl_timetrafo( chi, t );
+        // Calculate Chi(t) backwards to Chi(t-tau) for tau_max = 4ps
+        //std::vector<ODESolver::SaveState> chis = ODESolver::calculate_definite_integral_vec( chi, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( 0.0, t - parameters.p_photon_tcutoff ), -parameters.t_step );
+        //fmt::print( "Oha ammenakoyum t = {} to t-tau = {} -> Numer of chi's {}\n", t, std::max( 0.0, t - 4E-12 ), chis.size() );
+        // Calculate X_g and X_u via Hb.Eq.
+        //for ( int i = 1; i < (int)chis.size(); i++ ) {
+
+        if ( parameters.numerics_phonon_approximation == PHONON_APPROXIMATION_FULL ) {
+            // Calculate Chi(t) backwards to Chi(t-tau) for tau_max = 4ps
+            MatrixXcd chit = dgl_timetrafo( chi, t );
+            std::vector<ODESolver::SaveState> chis = ODESolver::calculate_definite_integral_vec( chit, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( 0.0, t - parameters.p_photon_tcutoff ), -parameters.t_step );
+            for ( int i = 1; i < (int)( chis.size() ); i++ ) {
+                double tau = parameters.t_step * (double)i;
+                integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( dgl_phonons_chiToX( chis.at( 0 ).mat, 'u' ), ( dgl_phonons_chiToX( chis.at( i ).mat, 'u' ) * rho ).eval() );
+                integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( chis.at( 0 ).mat, 'g' ), ( dgl_phonons_chiToX( chis.at( i ).mat, 'g' ) * rho ).eval() );
+                //integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( dgl_phonons_chiToX( dgl_timetrafo( chi, t ), 'u' ), ( dgl_phonons_chiToX( dgl_timetrafo( chi_tau, t - tau ), 'u' ) * rho ).eval() );
+                //integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( dgl_timetrafo( chi, t ), 'g' ), ( dgl_phonons_chiToX( dgl_timetrafo( chi_tau, t - tau ), 'g' ) * rho ).eval() );
+                ret += ( integrant + integrant.adjoint().eval() ) * parameters.t_step;
+            }
+        } else if ( parameters.numerics_phonon_approximation == PHONON_APPROXIMATION_MARKOV_1 ) {
+            for ( int i = 1; i < (int)( parameters.p_photon_tcutoff / parameters.t_step ); i++ ) {
+                double tau = parameters.t_step * (double)i;
+                MatrixXcd chi_tau = operatorMatrices.atom_sigmaplus * parameters.p_omega_coupling * operatorMatrices.photon_annihilate + operatorMatrices.atom_sigmaplus * pulse.get( t - tau );
+                //integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( dgl_phonons_chiToX( chis.at( 0 ).mat, 'u' ), (dgl_phonons_chiToX( chis.at( i ).mat, 'u' )*rho).eval() );
+                //integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( chis.at( 0 ).mat, 'g' ), (dgl_phonons_chiToX( chis.at( i ).mat, 'g' )*rho).eval() );
+                integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( dgl_phonons_chiToX( dgl_timetrafo( chi, t ), 'u' ), ( dgl_phonons_chiToX( dgl_timetrafo( chi_tau, t - tau ), 'u' ) * rho ).eval() );
+                integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( dgl_timetrafo( chi, t ), 'g' ), ( dgl_phonons_chiToX( dgl_timetrafo( chi_tau, t - tau ), 'g' ) * rho ).eval() );
+                ret += ( integrant + integrant.adjoint().eval() ) * parameters.t_step;
+            }
+        } else if ( parameters.numerics_phonon_approximation == PHONON_APPROXIMATION_MARKOV_2 ) {
+        }
+        return ret;
     }
 
     void expectationValues( const MatrixXcd &rho, const double t ) const {

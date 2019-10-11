@@ -60,7 +60,7 @@ int instr( const std::string &arr, const std::string tofind, int start = 0 ) {
 std::vector<std::string> str_to_vec( std::string input = "[]" ) {
     std::vector<std::string> ret;
     if ( (int)input.size() < 3 ) {
-        ret = {"-1"};
+        ret = {};
         return ret;
     }
     int s = 1; // Starting index
@@ -100,6 +100,7 @@ T convertParam( const std::string input ) {
     double value = 0;
     double conversion = 1;
     int index;
+    logs.level2( "Attempting to convert '{}'... ", input );
     if ( -1 != ( index = instr( input, "eV" ) ) ) {
         // Found 'eV' as unit (energy), now check for scaling
         if ( input.at( index - 1 ) == 'm' ) {
@@ -248,3 +249,67 @@ double factorial( double n ) {
 double getCoherent( double alpha, double N ) {
     return std::exp( -std::pow( alpha, 2.0 ) ) * std::pow( std::pow( alpha, 2.0 ), N ) / factorial( N );
 }
+
+class Parse_Parameters {
+   private:
+    std::vector<std::string> parameters;
+
+   public:
+    Parse_Parameters(){};
+    Parse_Parameters( const std::vector<std::string> &arguments, const std::vector<std::string> &flags, const std::vector<int> &number_of_parameters_per_flag, std::string name = "" ) {
+        if ( flags.size() != number_of_parameters_per_flag.size() ) {
+            logs.level2( "Error: Flag input vector and number vector have different sizes!\n" );
+        }
+        if ( name.size() > 0 )
+            logs.level2( "Parsing input block '{}'\n", name );
+        int i = 0;
+        for ( auto flag : flags ) {
+            int index = vec_find_str( flag, arguments );
+            for ( int j = 0; j < number_of_parameters_per_flag.at( i ); j++ ) {
+                if ( index == -1 )
+                    parameters.push_back( "_standard" );
+                else if ( arguments.at( index ).at( 1 ) != '-' )
+                    parameters.push_back( "_found" );
+                else
+                    parameters.push_back( arguments.at( index + j + 1 ) );
+            }
+            i++;
+        }
+        //logs.level2( "Parameters to read: {}\nRead Parameters: {}\nReturned Parameters: {}\n", fmt::join( flags, ", " ), fmt::join( arguments, ", " ), fmt::join( parameters, ", " ) );
+    }
+    // Returns a parsed parameter at position [at]. If this parameter could not be parsed, the passed standard parameter is returned instead.
+    std::string get( int at, std::string standard ) {
+        if ( parameters.at( at ).compare( "_standard" ) )
+            return parameters.at( at );
+        return standard;
+    }
+    // If a vector of ats is passed, the last non-standard parameter is returned.
+    std::string get( std::vector<int> ats, std::string standard) {
+        std::string ret = standard;
+        for ( int at : ats ) {
+            if ( parameters.at( at ).compare( "_standard" ) )
+                ret = parameters.at( at );
+        }
+        return ret;
+    }
+    template <typename T>
+    T get( std::vector<int> ats, std::string standard ) {
+        std::string ret = standard;
+        for ( int at : ats ) {
+            if ( parameters.at( at ).compare( "_standard" ) )
+                ret = parameters.at( at );
+        }
+        return convertParam<T>( ret );
+    }
+    template <typename T>
+    T get( int at, std::string standard = "" ) {
+        if ( parameters.at( at ).compare( "_standard" ) )
+            return convertParam<T>( parameters.at( at ) );
+        return convertParam<T>( standard );
+    }
+    bool get( int at ) {
+        if ( parameters.at( at ).compare( "_standard" ) )
+            return true;
+        return false;
+    }
+};

@@ -19,7 +19,7 @@ class Parameters : public Parameters_Parent {
     double p_omega_cavity_loss;
     double p_omega_pure_dephasing;
     double p_omega_decay;
-    double p_phonon_b, p_phonon_alpha, p_phonon_wb, p_phonon_T;
+    double p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_photon_tcutoff;
 
     // Calculated System properties:
     double init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
@@ -38,7 +38,7 @@ class Parameters : public Parameters_Parent {
     bool output_full_dm;
 
     // AKF & Spectrum
-    int numerics_maximum_threads, spectrum_frequency_iterations; //akf_everyXIt //akf_skip_omega
+    int numerics_maximum_threads, spectrum_frequency_iterations, numerics_phonon_approximation; //akf_everyXIt //akf_skip_omega
     double akf_deltaWmax, spectrum_frequency_center, spectrum_frequency_range;
 
     Parameters(){};
@@ -47,264 +47,90 @@ class Parameters : public Parameters_Parent {
     }
 
     bool parseInput( const std::vector<std::string> &arguments ) {
-        int index = 1;
-
+        Parse_Parameters params;
         // Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
-        if ( ( index = vec_find_str( "--time", arguments ) ) != -1 ) {
-            t_start = 0.0;
-            t_end = getNextInput<double>( arguments, "t_end", ++index );
-            t_step = getNextInput<double>( arguments, "t_step", index );
-        } else {
-            t_start = 0.0;
-            t_end = convertParam<double>( "1.0ns" );
-            t_step = -1;
-        }
-        // Look for single parameter corrections
-        if ( ( index = vec_find_str( "--tstart", arguments ) ) != -1 ) {
-            t_start = getNextInput<double>( arguments, "t_start single", ++index );
-        }
-        if ( ( index = vec_find_str( "--tend", arguments ) ) != -1 ) {
-            t_end = getNextInput<double>( arguments, "t_end single", ++index );
-        }
-        if ( ( index = vec_find_str( "--tstep", arguments ) ) != -1 ) {
-            t_step = getNextInput<double>( arguments, "t_step single", ++index );
-        }
+        params = Parse_Parameters( arguments, {"--time", "--tstart", "--tend", "--tstep"}, {3, 1, 1, 1}, "Timeparameters" );
+        t_start = params.get<double>( {0, 3}, "0.0" );
+        t_end = params.get<double>( {1, 4}, "1.0ns" );
+        t_step = params.get<double>( {2, 5}, "-1" );
 
         // Look for --system, if not found, standard system is used (g=66mueV, k=66mueV, p_omega_pure_dephasing = 3mueV, p_omega_decay = 1mueV)
-        if ( ( index = vec_find_str( "--system", arguments ) ) != -1 ) {
-            p_omega_atomic = getNextInput<double>( arguments, "p_omega_atomic", ++index );
-            p_omega_cavity = getNextInput<double>( arguments, "p_omega_cavity", index );
-            p_omega_coupling = getNextInput<double>( arguments, "p_omega_coupling", index );
-            p_omega_cavity_loss = getNextInput<double>( arguments, "p_omega_cavity_loss", index );
-            p_omega_pure_dephasing = getNextInput<double>( arguments, "p_omega_pure_dephasing", index );
-            p_omega_decay = getNextInput<double>( arguments, "p_omega_decay", index );
-        } else {
-            p_omega_atomic = convertParam<double>( "1.52eV" );
-            p_omega_cavity = convertParam<double>( "1.52eV" );
-            p_omega_coupling = convertParam<double>( "66mueV" );
-            p_omega_cavity_loss = convertParam<double>( "66mueV" );
-            p_omega_pure_dephasing = convertParam<double>( "3mueV" );
-            p_omega_decay = convertParam<double>( "1mueV" );
-        }
-        // Look for single parameter corrections
-        if ( ( index = vec_find_str( "--we", arguments ) ) != -1 ) {
-            p_omega_atomic = getNextInput<double>( arguments, "p_omega_atomic single", ++index );
-        }
-        if ( ( index = vec_find_str( "--wc", arguments ) ) != -1 ) {
-            p_omega_cavity = getNextInput<double>( arguments, "p_omega_cavity single", ++index );
-        }
-        if ( ( index = vec_find_str( "--coupling", arguments ) ) != -1 ) {
-            p_omega_coupling = getNextInput<double>( arguments, "p_omega_coupling single", ++index );
-        }
-        if ( ( index = vec_find_str( "--kappa", arguments ) ) != -1 ) {
-            p_omega_cavity_loss = getNextInput<double>( arguments, "p_omega_cavity_loss single", ++index );
-        }
-        if ( ( index = vec_find_str( "--gammapure", arguments ) ) != -1 ) {
-            p_omega_pure_dephasing = getNextInput<double>( arguments, "p_omega_pure_dephasing single", ++index );
-        }
-        if ( ( index = vec_find_str( "--gamma", arguments ) ) != -1 ) {
-            p_omega_decay = getNextInput<double>( arguments, "p_omega_decay single", ++index );
-        }
+        params = Parse_Parameters( arguments, {"--system", "--we", "--wc", "--coupling", "--kappa", "--gammapure", "--gamma"}, {6, 1, 1, 1, 1, 1, 1}, "Systemparameters" );
+        p_omega_atomic = params.get<double>( {0, 6}, "1.52eV" );
+        p_omega_cavity = params.get<double>( {1, 7}, "1.52eV" );
+        p_omega_coupling = params.get<double>( {2, 8}, "66mueV" );
+        p_omega_cavity_loss = params.get<double>( {3, 9}, "66mueV" );
+        p_omega_pure_dephasing = params.get<double>( {4, 10}, "3mueV" );
+        p_omega_decay = params.get<double>( {5, 11}, "1mueV" );
 
         // Look for --chirp, if not found, standard system is used (no chirp, everything zero)
-        if ( ( index = vec_find_str( "--chirp", arguments ) ) != -1 ) {
-            chirp_t = getNextInputVector<double>( arguments, "chirp_time", ++index );
-            chirp_y = getNextInputVector<double>( arguments, "chirp_yval", index );
-            chirp_ddt = getNextInputVector<double>( arguments, "chirp_diff", index );
-            chirp_type = getNextInputString( arguments, "chirp_file_type", index );
-        } else {
-            chirp_t = {t_start, t_end};
-            chirp_y = {0.0, 0.0};
-            chirp_ddt = {0.0, 0.0};
-            chirp_type = "monotone";
-        }
-        // Look for single parameter corrections //TODO: redundant
-        if ( ( index = vec_find_str( "--chirpT", arguments ) ) != -1 ) {
-            chirp_t = getNextInputVector<double>( arguments, "chirp_time single", ++index );
-        }
-        if ( ( index = vec_find_str( "--chirpY", arguments ) ) != -1 ) {
-            chirp_y = getNextInputVector<double>( arguments, "chirp_yval single", ++index );
-        }
-        if ( ( index = vec_find_str( "--chirpDDT", arguments ) ) != -1 ) {
-            chirp_ddt = getNextInputVector<double>( arguments, "chirp_ddt single", ++index );
-        }
-        if ( ( index = vec_find_str( "--chirpType", arguments ) ) != -1 ) {
-            chirp_type = getNextInputString( arguments, "chirp_type single", ++index );
-        }
+        params = Parse_Parameters( arguments, {"--chirp", "--chirpT", "--chirpY", "--chirpDDT", "--chirpType"}, {4, 1, 1, 1, 1}, "Chirpparameters" );
+        chirp_t = convertParam<double>( str_to_vec( params.get( {0, 4}, "[0,1E-9]" ) ) );
+        chirp_y = convertParam<double>( str_to_vec( params.get( {1, 5}, "[0,0]" ) ) );
+        chirp_ddt = convertParam<double>( str_to_vec( params.get( {2, 6}, "[0,0]" ) ) );
+        chirp_type = params.get( {3, 7}, "monotone" );
 
         // Look for --pulse, if not found, standard system is used (no pulse, everything zero)
-        if ( ( index = vec_find_str( "--pulse", arguments ) ) != -1 ) {
-            // Single pulse:
-            if ( arguments.at( index + 1 ).at( 0 ) == '[' ) {
-                pulse_center = getNextInputVector<double>( arguments, "pulse_center", ++index );
-                pulse_amp = getNextInputVector<double>( arguments, "pulse_amp", index );
-                pulse_omega = getNextInputVector<double>( arguments, "pulse_omega", index );
-                pulse_sigma = getNextInputVector<double>( arguments, "pulse_sigma", index );
-                pulse_type = getNextInputVectorString( arguments, "pulse_type", index );
-            } else {
-                pulse_center.emplace_back( getNextInput<double>( arguments, "pulse_center", ++index ) );
-                pulse_amp.emplace_back( getNextInput<double>( arguments, "pulse_amp", index ) );
-                pulse_omega.emplace_back( getNextInput<double>( arguments, "pulse_omega", index ) );
-                pulse_sigma.emplace_back( getNextInput<double>( arguments, "pulse_sigma", index ) );
-                pulse_type.emplace_back( getNextInputString( arguments, "pulse_type", index ) );
-            }
+        params = Parse_Parameters( arguments, {"--pulse", "--pulseCenter", "--pulseAmp", "--pulseFreq", "--pulseSigma", "--pulseType", "-pulse"}, {5, 1, 1, 1, 1, 1, 1}, "Pulseparameters" );
+        if ( params.get( 0, "Empty" ).at( 0 ) == '[' ) {
+            pulse_center = convertParam<double>( str_to_vec( params.get( {0, 5}, "[0]" ) ) );
+            pulse_amp = convertParam<double>( str_to_vec( params.get( {1, 6}, "[0]" ) ) );
+            pulse_omega = convertParam<double>( str_to_vec( params.get( {2, 7}, "[0]" ) ) );
+            pulse_sigma = convertParam<double>( str_to_vec( params.get( {3, 8}, "[1]" ) ) );
+            pulse_type = str_to_vec( params.get( {4, 9}, "[cw]" ) );
+        } else if ( params.get( 10 ) || params.get( 0 ) ) {
+            pulse_center.emplace_back( params.get<double>( {0, 5}, "100ps" ) );
+            pulse_amp.emplace_back( params.get<double>( {1, 6}, "2" ) );
+            pulse_omega.emplace_back( params.get<double>( {2, 7}, "1.52eV" ) );
+            pulse_sigma.emplace_back( params.get<double>( {3, 8}, "20ps" ) );
+            pulse_type.emplace_back( params.get( {4, 9}, "gauss_pi" ) );
         } else {
-            pulse_center.emplace_back( 0.0 );
-            pulse_amp.emplace_back( 0.0 );
-            pulse_omega.emplace_back( 0.0 );
-            pulse_sigma.emplace_back( 1.0 );
+            pulse_center.emplace_back( convertParam<double>( "0" ) );
+            pulse_amp.emplace_back( convertParam<double>( "0" ) );
+            pulse_omega.emplace_back( convertParam<double>( "0" ) );
+            pulse_sigma.emplace_back( convertParam<double>( "1" ) );
             pulse_type.emplace_back( "cw" );
-        }
-        if ( ( index = vec_find_str( "-pulse", arguments ) ) != -1 ) {
-            pulse_amp.emplace_back( 1.0 );
-            pulse_omega.emplace_back( p_omega_atomic );
-            pulse_sigma.emplace_back( convertParam<double>( "20ps" ) );
-            pulse_center.emplace_back( 10.0 * pulse_sigma.back() );
-            pulse_type.emplace_back( "gauss_pi" );
-            // Look for single parameter corrections
-            if ( ( index = vec_find_str( "--pulseCenter", arguments ) ) != -1 ) {
-                pulse_center.back() = getNextInput<double>( arguments, "pulse_center single", ++index );
-            }
-            if ( ( index = vec_find_str( "--pulseAmp", arguments ) ) != -1 ) {
-                pulse_amp.back() = getNextInput<double>( arguments, "pulse_amp single", ++index );
-            }
-            if ( ( index = vec_find_str( "--pulseFreq", arguments ) ) != -1 ) {
-                pulse_omega.back() = getNextInput<double>( arguments, "pulse_omega single", ++index );
-            }
-            if ( ( index = vec_find_str( "--pulseSigma", arguments ) ) != -1 ) {
-                pulse_sigma.back() = getNextInput<double>( arguments, "pulse_sigma single", ++index );
-            }
-            if ( ( index = vec_find_str( "--pulseType", arguments ) ) != -1 ) {
-                pulse_type.back() = getNextInputString( arguments, "pulse_type single", ++index );
-            }
         }
 
         // Look for --dimensions, if not found, standard system is used (maxphotons = 0, starting state = |g,0>)
-        if ( ( index = vec_find_str( "--dimensions", arguments ) ) != -1 ) {
-            p_max_photon_number = getNextInput<int>( arguments, "p_max_photon_number", ++index );
-            p_initial_state = getNextInput<int>( arguments, "p_initial_state", index );
-        } else {
-            p_max_photon_number = 1;
-            p_initial_state = 0;
-        }
-        // Look for single parameter corrections
-        if ( ( index = vec_find_str( "--maxPhotons", arguments ) ) != -1 ) {
-            p_max_photon_number = getNextInput<int>( arguments, "p_max_photon_number single", ++index );
-        }
-        if ( ( index = vec_find_str( "--initState", arguments ) ) != -1 ) {
-            p_initial_state = getNextInput<int>( arguments, "p_initial_state single", ++index );
-        }
+        params = Parse_Parameters( arguments, {"--dimensions", "--maxPhotons", "--initState"}, {2, 1, 1}, "Initial State parameters" );
+        p_max_photon_number = params.get<int>( {0, 2}, "1" );
+        p_initial_state = params.get<int>( {1, 3}, "0" );
+
+        // Look for --spectrum, if not found, no spectrum is evaluated
+        params = Parse_Parameters( arguments, {"--spectrum", "--specTauSkip", "--specCenter", "--specRange", "--specWSkip", "-spectrum"}, {4, 1, 1, 1, 1, 1}, "Spectrum Parameters" );
+        numerics_calculate_spectrum = params.get( 0 ) || params.get( 8 ) ? 1 : 0;
+        iterations_skips_tau = params.get<int>( {0, 4}, "1" );
+        spectrum_frequency_center = params.get<double>( {1, 5}, std::to_string( p_omega_cavity ) );
+        spectrum_frequency_range = params.get<double>( {2, 6}, std::to_string( ( p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing ) * 10.0 ) );
+        iterations_skips_w = params.get<int>( {3, 7}, "1" );
 
         // Look for (-RK4), -RK5, (-RK4T), (-RK4Tau), -RK5T, -RK5Tau
-        numerics_order_t = 4;
-        numerics_order_tau = 4;
-        if ( ( index = vec_find_str( "-RK5", arguments ) ) != -1 ) {
-            numerics_order_t = 5;
-            numerics_order_tau = 5;
-        }
-        if ( ( index = vec_find_str( "-RK5T", arguments ) ) != -1 ) {
-            numerics_order_t = 5;
-        }
-        if ( ( index = vec_find_str( "-RK5Tau", arguments ) ) != -1 ) {
-            numerics_order_tau = 5;
-        }
+        params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale"}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
+        numerics_calculate_g2 = params.get( 0 );
+        numerics_order_t = ( params.get( 1 ) || params.get( 2 ) ) ? 5 : 4;
+        numerics_order_tau = ( params.get( 1 ) || params.get( 3 ) ) ? 5 : 4;
         numerics_order_highest = numerics_order_t;
         if ( numerics_order_tau > numerics_order_highest )
             numerics_order_highest = numerics_order_tau;
+        numerics_use_interactionpicture = params.get( 4 ) ? 0 : 1;
+        numerics_use_rwa = params.get( 5 ) ? 0 : 1;
+        numerics_maximum_threads = params.get<int>( 6, "1" );
+        output_handlerstrings = params.get( 7 ) ? 0 : 1;
+        output_operators = params.get( 8 ) ? 2 : ( params.get( 9 ) ? 1 : ( params.get( 10 ) ? 3 : 0 ) );
+        numerics_order_timetrafo = params.get( 11 ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_PRECALCULATED;
+        startCoherent = params.get( 12 );
+        output_full_dm = params.get( 13 );
+        scale_parameters = params.get( 14 );
 
-        // Look for --spectrum, if not found, no spectrum is evaluated
-        if ( ( index = vec_find_str( "--spectrum", arguments ) ) != -1 ) {
-            numerics_calculate_spectrum = 1;
-            iterations_skips_tau = getNextInput<int>( arguments, "iterations_skips_tau", ++index );
-            spectrum_frequency_center = getNextInput<double>( arguments, "spectrum_frequency_center", index );
-            spectrum_frequency_range = getNextInput<double>( arguments, "spectrum_frequency_range", index );
-            iterations_skips_w = getNextInput<int>( arguments, "iterations_skips_w", index );
-        } else {
-            numerics_calculate_spectrum = 0;
-            iterations_skips_tau = 1;
-            spectrum_frequency_center = p_omega_cavity;
-            spectrum_frequency_range = 0.0;
-            iterations_skips_w = 1;
-        }
-        if ( ( index = vec_find_str( "-spectrum", arguments ) ) != -1 ) {
-            numerics_calculate_spectrum = 1;
-            iterations_skips_tau = 1;
-            spectrum_frequency_center = p_omega_cavity;
-            spectrum_frequency_range = ( p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing ) * 10.0;
-            iterations_skips_w = 1;
-        }
-        // Look for single parameter corrections
-        if ( ( index = vec_find_str( "--specTauSkip", arguments ) ) != -1 ) {
-            iterations_skips_tau = getNextInput<int>( arguments, "iterations_skips_tau single", ++index );
-        }
-        if ( ( index = vec_find_str( "--specCenter", arguments ) ) != -1 ) {
-            spectrum_frequency_center = getNextInput<double>( arguments, "spectrum_frequency_center single", ++index );
-        }
-        if ( ( index = vec_find_str( "--specRange", arguments ) ) != -1 ) {
-            spectrum_frequency_range = getNextInput<double>( arguments, "spectrum_frequency_range single", ++index );
-        }
-        if ( ( index = vec_find_str( "--specWSkip", arguments ) ) != -1 ) {
-            iterations_skips_w = getNextInput<int>( arguments, "iterations_skips_w single", ++index );
-        }
+        // Phonon Parameters
+        params = Parse_Parameters( arguments, {"--phonons", "--temperature", "-phonons", "--phononorder"}, {5, 1, 1, 1} );
+        p_phonon_alpha = params.get<double>( 0, "0.03E-24" );
+        p_phonon_wcutoff = params.get<double>( 1, "1meV" );
+        p_photon_tcutoff = params.get<double>( 2, "4ps" );
+        p_phonon_T = params.get( 6 ) ? 3.0 : params.get<double>( {3, 5}, "0" );
+        numerics_phonon_approximation = params.get<int>({4,7},std::to_string(PHONON_APPROXIMATION_FULL));
 
-        if ( ( index = vec_find_str( "-g2", arguments ) ) != -1 ) {
-            numerics_calculate_g2 = true;
-        } else {
-            numerics_calculate_g2 = false;
-        }
-
-        // Look for other parameters
-        if ( ( index = vec_find_str( "-noInteractionpic", arguments ) ) != -1 ) {
-            numerics_use_interactionpicture = 0;
-        } else {
-            numerics_use_interactionpicture = 1;
-        }
-        if ( ( index = vec_find_str( "-noRWA", arguments ) ) != -1 ) {
-            numerics_use_rwa = 0;
-        } else {
-            numerics_use_rwa = 1;
-        }
-        if ( ( index = vec_find_str( "--Threads", arguments ) ) != -1 ) {
-            numerics_maximum_threads = getNextInput<int>( arguments, "numerics_maximum_threads", ++index );
-        } else {
-            numerics_maximum_threads = 1;
-        }
-        if ( ( index = vec_find_str( "-noHandler", arguments ) ) != -1 ) {
-            output_handlerstrings = 0;
-        } else {
-            output_handlerstrings = 1;
-        }
-        output_operators = 0;
-        if ( ( index = vec_find_str( "-output_operators", arguments ) ) != -1 ) {
-            output_operators = 2;
-        }
-        if ( ( index = vec_find_str( "-outputHamiltons", arguments ) ) != -1 ) {
-            output_operators = 1;
-        }
-        if ( ( index = vec_find_str( "-outputOperatorsStop", arguments ) ) != -1 ) {
-            output_operators = 3;
-        }
-        numerics_order_timetrafo = TIMETRANSFORMATION_PRECALCULATED;
-        if ( ( index = vec_find_str( "-timeTrafoMatrixExponential", arguments ) ) != -1 ) {
-            numerics_order_timetrafo = TIMETRANSFORMATION_MATRIXEXPONENTIAL;
-        }
-        if ( ( index = vec_find_str( "-startCoherent", arguments ) ) != -1 ) {
-            startCoherent = true;
-        } else {
-            startCoherent = false;
-        }
-        if ( ( index = vec_find_str( "-fullDM", arguments ) ) != -1 ) {
-            output_full_dm = true;
-        } else {
-            output_full_dm = false;
-        }
-        if ( ( index = vec_find_str( "-scale", arguments ) ) != -1 ) {
-            scale_parameters = true;
-        } else {
-            scale_parameters = false;
-        }
-        p_phonon_alpha = 0.03E-24;
-        p_phonon_wb = convertParam<double>( "1meV" );
         subfolder = arguments.back();
         return true;
     }
@@ -350,7 +176,8 @@ class Parameters : public Parameters_Parent {
         // Adjust pulse area if pulse_type is "gauss_pi"
         for ( int i = 0; i < (int)pulse_amp.size(); i++ )
             if ( pulse_type.at( i ).compare( "gauss_pi" ) == 0 ) {
-                pulse_amp.at( i ) = M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) );
+                pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) );
+                pulse_type.at( i ) = "gauss";
             }
 
         // Calculate Rabi frequencies:
@@ -360,7 +187,7 @@ class Parameters : public Parameters_Parent {
         // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
         if ( t_step == -1 ) {
             if ( numerics_use_rwa )
-                t_step = 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing );
+                t_step = 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing + (vec_max( pulse_amp ) > 0 ? std::abs(p_omega_atomic-vec_max( pulse_omega )) : 0) );
             if ( !numerics_use_rwa )
                 t_step = 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_atomic + p_omega_cavity );
         }
@@ -369,7 +196,7 @@ class Parameters : public Parameters_Parent {
         maxStates = 2 * ( p_max_photon_number + 1 );
 
         // Calculate stuff for RK
-        iterations_t_max = (int)std::ceil( ( t_end - t_start ) / t_step ); // FIXME: rendundant
+        iterations_t_max = (int)std::ceil( ( t_end - t_start ) / t_step );
 
         // Mandatory: rescale chirp ddt into chirp/ps
         for ( long unsigned i = 0; i < chirp_ddt.size(); i++ )
@@ -388,7 +215,7 @@ class Parameters : public Parameters_Parent {
         if ( spectrum_frequency_range == -1 )
             spectrum_frequency_range = ( std::abs( max_detuning ) + p_omega_coupling + p_omega_cavity_loss / 2. ) * 3.;
 
-        // Calculate total number of iterations necessary //FIXME: redundant
+        // Calculate total number of iterations necessary
         iterations_total_max = iterations_t_max;
         if ( numerics_calculate_spectrum ) {
             int curIt = 1;
@@ -407,12 +234,12 @@ class Parameters : public Parameters_Parent {
         p_phonon_b = 1.0;
         if ( p_phonon_T > 0 ) {
             double integral = 0;
-            double stepsize = 0.01 * p_phonon_wb;
-            for ( double w = 0; w < 10 * p_phonon_wb; w += stepsize ) {
-                integral += stepsize * ( p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wb / p_phonon_wb ) / std::tanh( 1.0545718E-34 * w / 2.0 / 1.3806488E-23 / p_phonon_T ) );
+            double stepsize = 0.01 * p_phonon_wcutoff;
+            for ( double w = stepsize; w < 10 * p_phonon_wcutoff; w += stepsize ) {
+                integral += stepsize * ( p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wcutoff / p_phonon_wcutoff ) / std::tanh( 1.0545718E-34 * w / 2.0 / 1.3806488E-23 / p_phonon_T ) );
             }
             p_phonon_b = std::exp( -0.5 * integral );
-            p_omega_pure_dephasing = convertParam<double>( "1mueV" ) * p_phonon_T;
+            //p_omega_pure_dephasing = convertParam<double>( "1mueV" ) * p_phonon_T;
             //p_omega_decay *= p_phonon_b*p_phonon_b;
         }
         trace.reserve( iterations_t_max + 5 );
@@ -439,7 +266,7 @@ class Parameters : public Parameters_Parent {
         logs.wrapInBar( "Excitation Pulse", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         if ( pulse_amp.size() > 0 && pulse_center.at( 0 ) != -1 && pulse_amp.at( 0 ) != 0 ) {
             for ( int i = 0; i < (int)pulse_amp.size(); i++ ) {
-                logs( "Exiting system at t_0 = {} with amplitude {} ({}meV), frequency {}eV ({}) and FWHM {}\n", pulse_center.at( i ), pulse_amp.at( i ), Hz_to_eV( pulse_amp.at( i ) ) * 1E3, pulse_omega.at( i ), Hz_to_eV( pulse_omega.at( i ) ), pulse_sigma.at( i ) * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ) );
+                logs( "Exiting system at t_0 = {}\nAmplitude {} ({}meV)\nFrequency {} ({}eV)\nFWHM {}\n", pulse_center.at( i ), pulse_amp.at( i ), Hz_to_eV( pulse_amp.at( i ) ) * 1E3, pulse_omega.at( i ), Hz_to_eV( pulse_omega.at( i ) ), pulse_sigma.at( i ) * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ) );
                 logs( "Used pulse_type - " + pulse_type.at( i ) + "\n" );
             }
             logs( "\n" );
@@ -448,8 +275,7 @@ class Parameters : public Parameters_Parent {
         logs.wrapInBar( "Energy Chirp", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         if ( chirp_total != 0 ) {
             for ( int i = 0; i < (int)chirp_t.size() - 1; i++ ) {
-                //TODO: das falsch
-                logs( "Chirp between t0 = {}ps and t1 = {}ps: {}mueV -> average rate {}mueV/ps\n", chirp_t.at( i ), chirp_t.at( i + 1 ), chirp_y.at( i + 1 ) - chirp_y.at( i ), ( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) * 1e12 / ( chirp_t.at( i + 1 ) - chirp_t.at( i ) ) );
+                logs( "Chirp between t0 = {}ps\nt1 = {}ps\nTotal Chirp: {}mueV\n-> average rate {}mueV/ps\n", chirp_t.at( i ), chirp_t.at( i + 1 ), Hz_to_eV( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) * 1E6, Hz_to_eV( ( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) ) * 1E6 / 1E12 / ( chirp_t.at( i + 1 ) - chirp_t.at( i ) ) );
             }
             if ( chirp_type.compare( "none" ) != 0 )
                 logs( "\nChirpfile of type '" + chirp_type + "' is used!" );
@@ -476,6 +302,9 @@ class Parameters : public Parameters_Parent {
         logs( "Frequency Range: +/- {} Hz -> +/- {} mueV\n", spectrum_frequency_range, Hz_to_eV( spectrum_frequency_range ) * 1E6 );
         logs( "Skipping {} steps in grid\n\n", iterations_skips_tau - 1 );
 
+        logs.wrapInBar( "Phonons" );
+        logs( "\nTemperature = {}k\nCutoff energy = {}meV\nCutoff Time = {}ps\nAlpha = {}\n<B> = {}\nApproximation used: {}\n\n", p_phonon_T, Hz_to_eV( p_phonon_wcutoff ) * 1E3, p_photon_tcutoff*1E12, p_phonon_alpha, p_phonon_b, (numerics_phonon_approximation == PHONON_APPROXIMATION_FULL ? "full" : (numerics_phonon_approximation == PHONON_APPROXIMATION_MARKOV_1 ? "Markov I" : "Markov II")) );
+
         logs.wrapInBar( "Numerics" );
         logs( "\nOrder of Runge-Kutta used: Time: RK{}, Spectrum: RK{}\n", numerics_order_t, numerics_order_tau );
         logs( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
@@ -497,6 +326,7 @@ class Parameters : public Parameters_Parent {
         fmt::print( "--pulse [Center] [Amplitude] [Frequency] [Sigma] [Type]\n\t-pulse for standard pulse\n\t--pulseCenter [Center]\n\t--pulseAmp [Amplitude]\n\t--pulseFreq [Frequency]\n\t--pulseSigma [Sigma]\n\t--pulseType [Type] where Type = cw, gauss, gauss_pi\n" );
         fmt::print( "--dimensions [maximum Photons] [Initial state]\n\t--maxPhotons [maximum Photons]\n\t--initState [Initial state], has to be smaller than (2*n+1)\n" );
         fmt::print( "--spectrum [Tau Skips] [Center] [Range] [Omega Skips] enables spectrum\n\t-spectrum enables spectrum centered at cavity\n\t--specTauSkip [Iterations skips (int)]\n\t--specCenter [Center]\n\t--specRange [Range]\n\t--specWSkip [Iteration skips (int)]\n" );
+        fmt::print( "--phonons [Alpha] [W Cutoff] [t Cutoff ] [Temperature] Enables phonons with custom settings\n\t--temperature [temperature] Enables phonons with standard values and set temperature\n\t-phonons Enables phonons with standard values at T=3k\n" );
         fmt::print( "-g2 enables calculation of G2(tau=0)\n-RK5 enables Runge Kutta of order 5 for T and Tau direction\n\t-RK5T enables Runge Kutta of order 5 for T direction\n\t-RK5Tau enables Runge Kutta of order 5 for Tau direction\n" );
         fmt::print( "-noInteractionpic disables Interaction picture - enabled by default\n-noRWA disables rotating wave approximation - enabled by default\n-timeTrafoMatrixExponential enables Time Transformation via Matrix exponential - disabled by default\n-startCoherent enables starting with a coherent state. Starting state is then ground state with alpha = initState\n-fullDM enables full output of densitymatrix including all offdiagonal terms.\n" );
         fmt::print( "--Threads [number] number of threads to use for both AKF and Spectrum integral calculation\n" );

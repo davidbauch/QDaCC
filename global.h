@@ -15,6 +15,7 @@
 #include <unsupported/Eigen/MatrixFunctions>
 #include <omp.h> // -fopenmp
 #include <iostream>
+#include <functional>
 
 std::string PREFIX_PERCENT               = "@#PERCENT#@";
 std::string PREFIX_PERCENT_TIME          = "@#PERCENTTIME#@";
@@ -49,3 +50,7 @@ std::string global_message_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBE
 
 #define OPERATOR_PHOTONIC_CREATE 0
 #define OPERATOR_PHOTONIC_ANNIHILATE 1
+
+#define PHONON_APPROXIMATION_FULL 0
+#define PHONON_APPROXIMATION_MARKOV_1 1
+#define PHONON_APPROXIMATION_MARKOV_2 2
