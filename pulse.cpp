@@ -18,13 +18,6 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
 // Generate array of energy-values corresponding to the Pulse
 void Pulse::generate() {
     //logs.level2( "generating type " + inputs.pulse_type + "... " );
-    for ( int i = 0; i < (int)inputs.amp.size(); i++ ) {
-        if ( inputs.type.at( i ).compare( "gauss_pi" ) == 0 ) {
-            inputs.type.at( i ) = "gauss";
-            // Adjust amplitute in case this wasn't done in parameters adjustInput() function before:
-            inputs.amp.at( i ) = M_PI / ( std::sqrt( 2.0 * M_PI ) * inputs.sigma.at( i ) );
-        }
-    }
     double t;
     for ( double t1 = inputs.t_start; t1 < inputs.t_end + inputs.t_step * steps.size(); t1 += inputs.t_step ) {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
@@ -85,7 +78,7 @@ void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp
 }
 
 std::complex<double> Pulse::get( double t ) const {
-    int i = std::floor( t / inputs.t_step - 1 ) * steps.size();
+    int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
     while ( timearray.at( i ) < t ) {
         i++;
     }
