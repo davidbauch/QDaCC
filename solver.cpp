@@ -9,7 +9,7 @@
 // Description: ODESolver class provides both Runge-Kutta functions of different orders and functions for different numerical operations
 // Type: ODESolver Class Constructor
 // @param s: [&System] Class providing set of system functions
-ODESolver::ODESolver( const System_Parent &s ) {
+ODESolver::ODESolver( System_Parent &s ) {
     logs.level2( "Creating ODESolver Class... " );
     int dim = reset( s );
     savedStates.clear();
@@ -22,7 +22,7 @@ ODESolver::ODESolver( const System_Parent &s ) {
 // @param s: [&System] Class providing set of system functions
 // @param t: [double] Time to return Hamiltonoperator at
 // @return: [Eigent::MatrixXcd] hamilton matrix of type Eigen::MatrixXcd
-MatrixXcd ODESolver::getHamilton( const System_Parent &s, const double t, bool use_saved_hamiltons = true ) {
+MatrixXcd ODESolver::getHamilton( System_Parent &s, const double t, bool use_saved_hamiltons = true ) {
     if ( use_saved_hamiltons ) {
         if ( savedHamiltons.size() == 0 || t > savedHamiltons.back().t ) {
             track_gethamilton_calcattempt++;
@@ -53,7 +53,7 @@ MatrixXcd ODESolver::getHamilton( const System_Parent &s, const double t, bool u
 // @param s: [&System] Class providing set of system functions
 // @param t: [double] Time to iterate at
 // @return: [Eigen::MatrixXcd] rho at time t+t_step
-MatrixXcd ODESolver::iterateRungeKutta4( const MatrixXcd &rho, const System_Parent &s, const double t ) {
+MatrixXcd ODESolver::iterateRungeKutta4( const MatrixXcd &rho, System_Parent &s, const double t ) {
     // Verschiedene H's fuer k1-4 ausrechnen
     MatrixXcd H_calc_k1 = getHamilton( s, t );
     MatrixXcd H_calc_k23 = getHamilton( s, t + s.getTimeStep() * 0.5 );
@@ -73,7 +73,7 @@ MatrixXcd ODESolver::iterateRungeKutta4( const MatrixXcd &rho, const System_Pare
 // @param s: [&System] Class providing set of system functions
 // @param t: [double] Time to iterate at
 // @return: [Eigen::MatrixXcd] rho at time t+t_step
-MatrixXcd ODESolver::iterateRungeKutta5( const MatrixXcd &rho, const System_Parent &s, const double t ) {
+MatrixXcd ODESolver::iterateRungeKutta5( const MatrixXcd &rho, System_Parent &s, const double t ) {
     // Verschiedene H's fuer k1-6 ausrechnen
     MatrixXcd H_calc_k1 = getHamilton( s, t );
     MatrixXcd H_calc_k2 = getHamilton( s, t + a2 * s.getTimeStep() );
@@ -99,7 +99,7 @@ MatrixXcd ODESolver::iterateRungeKutta5( const MatrixXcd &rho, const System_Pare
 // @param t: [double] Time to iterate at
 // @param dir: [int] Time direction. Solver order can differ in both t and tau direction, depending on the systems settings. Default value is DIR_T
 // @return: [Eigen::MatrixXcd] rho at time t+t_step
-MatrixXcd ODESolver::iterate( const MatrixXcd &rho, const System_Parent &s, const double t, const int dir = DIR_T ) {
+MatrixXcd ODESolver::iterate( const MatrixXcd &rho, System_Parent &s, const double t, const int dir = DIR_T ) {
     int order = s.getSolverRungeKuttaOrder( dir );
     if ( order == 4 ) {
         return iterateRungeKutta4( rho, s, t );
@@ -130,7 +130,7 @@ void ODESolver::saveHamilton( const MatrixXcd &mat, const double t ) {
 // @param s: [&System] Class providing set of system functions
 // @param curIt: [&int] Iterator variable to use for iteration check
 // @return: [bool] True if current matrix should be saved, else false. Saving depends on the iteration skip for tau direction and wether or not they are needed later.
-bool ODESolver::queueNow( const System_Parent &s, int &curIt ) {
+bool ODESolver::queueNow( System_Parent &s, int &curIt ) {
     if ( ( s.calculate_spectrum() || s.calculate_g2() ) && curIt % s.getIterationSkip( DIR_TAU ) == 0 ) {
         curIt = 1;
         return true;
@@ -143,7 +143,7 @@ bool ODESolver::queueNow( const System_Parent &s, int &curIt ) {
 // Type: ODESolver private function
 // @param s: [&System] Class providing set of system functions
 // @return: [int] dimensions of temporary variables
-int ODESolver::reset( const System_Parent &s ) {
+int ODESolver::reset( System_Parent &s ) {
     track_gethamilton_read = 0;
     track_gethamilton_write = 0;
     track_gethamilton_calc = 0;
@@ -227,7 +227,7 @@ std::vector<ODESolver::SaveState> ODESolver::calculate_definite_integral_vec( Ma
 // Type: ODESolver private function
 // @param s: [&System] Class providing set of system functions
 // @return: [int] Number of tau-direction iterations
-int ODESolver::getIterationNumberTau( const System_Parent &s ) {
+int ODESolver::getIterationNumberTau( System_Parent &s ) {
     int num = 0;
     // Tau Direction Iteration steps
     for ( int i = 0; i < (int)savedStates.size(); i++ ) {
@@ -243,7 +243,7 @@ int ODESolver::getIterationNumberTau( const System_Parent &s ) {
 // Type: ODESolver private function
 // @param s: [&System] Class providing set of system functions
 // @return: [int] Number of spectrum iterations
-int ODESolver::getIterationNumberSpectrum( const System_Parent &s ) {
+int ODESolver::getIterationNumberSpectrum( System_Parent &s ) {
     int num = 0;
     // Spectrum steps
     for ( int spec_w = 0; spec_w < s.parameters.spectrum_frequency_iterations; spec_w++ ) {
@@ -274,7 +274,7 @@ MatrixXcd ODESolver::getRhoAt( int i ) {
 // @param op_creator: [&Eigen::MatrixXcd] Creator operator (adjunct of annihilator)
 // @param op_annihilator: [&Eigen::MatrixXcd] Annihilator operator
 // @return: [bool] True if calculations were sucessfull, else false
-bool ODESolver::calculate_g1( const System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator ) {
+bool ODESolver::calculate_g1( System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator ) {
     if ( !( (int)savedStates.size() > 0 ) ) {
         logs( "Need to calculate t-direction first!\n" );
         return false;
@@ -316,7 +316,7 @@ bool ODESolver::calculate_g1( const System_Parent &s, const MatrixXcd &op_creato
 // @param op_annihilator: [&Eigen::MatrixXcd] Annihilator operator
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
-bool ODESolver::calculate_g2_0( const System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator, std::string fileOutputName = "g2(0).txt" ) {
+bool ODESolver::calculate_g2_0( System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator, std::string fileOutputName = "g2(0).txt" ) {
     if ( !( (int)savedStates.size() > 0 ) ) {
         logs( "Need to calculate t-direction first!\n" );
         return false;
@@ -362,7 +362,7 @@ bool ODESolver::calculate_g2_0( const System_Parent &s, const MatrixXcd &op_crea
 // @param s: [&System] Class providing set of system functions
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
-bool ODESolver::calculate_spectrum( const System_Parent &s, std::string fileOutputName = "spectrum.txt" ) {
+bool ODESolver::calculate_spectrum( System_Parent &s, std::string fileOutputName = "spectrum.txt" ) {
     Timer &timer = createTimer( "Spectrum-Loop" );
     int totalIterations = getIterationNumberSpectrum( s );
     ProgressBar progressbar = ProgressBar( totalIterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );

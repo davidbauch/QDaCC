@@ -34,32 +34,32 @@ bool System_Parent::traceValid( MatrixXcd &rho, double t_hit, bool force = false
     }
 }
 
-bool System_Parent::calculate_spectrum() const {
+bool System_Parent::calculate_spectrum() {
     return parameters.numerics_calculate_spectrum;
 }
-bool System_Parent::calculate_g2() const {
+bool System_Parent::calculate_g2() {
     return parameters.numerics_calculate_g2;
 }
-bool System_Parent::use_interactionpicture() const {
+bool System_Parent::use_interactionpicture() {
     return parameters.numerics_use_interactionpicture;
 }
-bool System_Parent::use_rwa() const {
+bool System_Parent::use_rwa() {
     return parameters.numerics_use_rwa;
 }
-bool System_Parent::output_handlerstrings() const {
+bool System_Parent::output_handlerstrings() {
     return parameters.output_handlerstrings;
 }
-bool System_Parent::output_operators() const {
+bool System_Parent::output_operators() {
     return parameters.output_operators;
 }
-int System_Parent::getSolverRungeKuttaOrder( int dir = DIR_T ) const {
+int System_Parent::getSolverRungeKuttaOrder( int dir = DIR_T ) {
     return ( dir == DIR_T ? parameters.numerics_order_t : parameters.numerics_order_tau );
 }
-int System_Parent::getTimeTransformationAlg() const {
+int System_Parent::getTimeTransformationAlg() {
     return parameters.numerics_order_timetrafo;
 }
 // Returns the number of iterations to skip in either t, tau (both the same such that a same sided lattice is given) and if spectrum omega is also skipped (0 or 1)
-int System_Parent::getIterationSkip( int dir = DIR_T ) const {
+int System_Parent::getIterationSkip( int dir = DIR_T ) {
     if ( dir == DIR_TAU )
         return parameters.iterations_skips_tau;
     else if ( dir == DIR_W )
