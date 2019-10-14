@@ -26,6 +26,7 @@ class Pulse {
     // Helper variables/functions
     void generate( Parameters &p );
     int size;
+    int counter_evaluated, counter_returned;
     std::vector<double> steps;
     Inputs inputs;
 
@@ -34,7 +35,7 @@ class Pulse {
     Pulse( Inputs &inputs );
     void generate();
     void fileOutput( std::string filepath );
-    std::complex<double> evaluate( double t ) const;
-    std::complex<double> get( double t, bool force_evaluate ) const;
-    std::complex<double> get( int i ) const;
+    std::complex<double> evaluate( double t );
+    std::complex<double> get( double t, bool force_evaluate = false );
+    void log();
 };

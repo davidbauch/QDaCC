@@ -23,6 +23,7 @@ class Chirp {
     std::vector<double> timearray;
     // Helper variables/functions
     int size;
+    int counter_evaluated, counter_returned;
     std::vector<double> steps;
     Interpolant interpolant;
     Inputs inputs;
@@ -32,7 +33,7 @@ class Chirp {
     Chirp( Inputs &inputs );
     void generate();
     void fileOutput( std::string filepath );
-    double evaluate( double t ) const;
-    double get( double t, bool force_evaluate ) const;
-    double get( int i ) const;
+    double evaluate( double t );
+    double get( double t, bool force_evaluate = false );
+    void log();
 };

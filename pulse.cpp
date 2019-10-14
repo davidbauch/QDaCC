@@ -3,6 +3,8 @@
 
 Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     logs.level2( "Creating total pulse with {} individual pulses... ", inputs.amp.size() );
+    counter_evaluated = 0;
+    counter_returned = 0;
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 6.0 + 5 );
     pulsearray.reserve( n );
     timearray.reserve( n );
@@ -14,7 +16,7 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     generate();
     logs.level2( "Done!\n" );
 }
-std::complex<double> Pulse::evaluate( double t ) const {
+std::complex<double> Pulse::evaluate( double t ) {
     std::complex<double> ret = 0;
     for ( int i = 0; i < (int)inputs.amp.size(); i++ ) {
         if ( inputs.type.at( i ).compare( "cw" ) == 0 && t >= inputs.center.at( i ) )
@@ -32,7 +34,7 @@ void Pulse::generate() {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
             t = t1 + steps[i];
             std::complex<double> val = evaluate( t );
-            if ( std::abs( val ) > 0.1*inputs.t_step )
+            if ( std::abs( val ) > 0.1 * inputs.t_step )
                 pulsearray.push_back( val );
             else
                 pulsearray.push_back( 0 );
@@ -80,27 +82,29 @@ void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp
     }
 }
 
-std::complex<double> Pulse::get( double t, bool force_evaluate = false ) const {
-    if ( force_evaluate )
+std::complex<double> Pulse::get( double t, bool force_evaluate ) {
+    if ( force_evaluate ) {
+        counter_evaluated++;
         return evaluate( t );
+    }
 
     int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
     while ( timearray.at( i ) < t ) {
         i++;
     }
-    if ( std::abs( timearray.at( i ) - t ) > 1E-14 )
-        return evaluate( t );
-    if ( i < 0 || i >= size ) {
-        logs.level2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
+    if ( std::abs( timearray.at( i ) - t ) > 1E-14 ) {
+        counter_evaluated++;
         return evaluate( t );
     }
+    if ( i < 0 || i >= size ) {
+        logs.level2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
+        counter_evaluated++;
+        return evaluate( t );
+    }
+    counter_returned++;
     return pulsearray.at( i );
 }
 
-std::complex<double> Pulse::get( int i ) const {
-    if ( i < 0 || i >= size ) {
-        logs.level2( "!! Warning: requested pulsevalue at index {} is out of range!\n", i );
-        i = 0;
-    }
-    return pulsearray.at( i );
+void Pulse::log() {
+    logs( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
 }
