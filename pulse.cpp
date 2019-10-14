@@ -14,22 +14,25 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     generate();
     logs.level2( "Done!\n" );
 }
-
+std::complex<double> Pulse::evaluate( double t ) const {
+    std::complex<double> ret = 0;
+    for ( int i = 0; i < (int)inputs.amp.size(); i++ ) {
+        if ( inputs.type.at( i ).compare( "cw" ) == 0 && t >= inputs.center.at( i ) )
+            ret += inputs.amp.at( i ) * std::exp( -1i * inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) );
+        else if ( inputs.type.at( i ).compare( "gauss" ) == 0 )
+            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / inputs.sigma.at( i ), 2. ) - 1i * inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) );
+    }
+    return ret;
+}
 // Generate array of energy-values corresponding to the Pulse
 void Pulse::generate() {
     //logs.level2( "generating type " + inputs.pulse_type + "... " );
     double t;
     for ( double t1 = inputs.t_start; t1 < inputs.t_end + inputs.t_step * steps.size(); t1 += inputs.t_step ) {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
-            std::complex<double> val = 0;
             t = t1 + steps[i];
-            for ( int i = 0; i < (int)inputs.amp.size(); i++ ) {
-                if ( inputs.type.at( i ).compare( "cw" ) == 0 && t >= inputs.center.at( i ) )
-                    val += inputs.amp.at( i ) * std::exp( -1i * inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) );
-                else if ( inputs.type.at( i ).compare( "gauss" ) == 0 )
-                    val += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / inputs.sigma.at( i ), 2. ) - 1i * inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) );
-            }
-            if ( std::abs( val ) > 1E-10 )
+            std::complex<double> val = evaluate( t );
+            if ( std::abs( val ) > 0.1*inputs.t_step )
                 pulsearray.push_back( val );
             else
                 pulsearray.push_back( 0 );
@@ -77,18 +80,21 @@ void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp
     }
 }
 
-std::complex<double> Pulse::get( double t ) const {
+std::complex<double> Pulse::get( double t, bool force_evaluate = false ) const {
+    if ( force_evaluate )
+        return evaluate( t );
+
     int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
     while ( timearray.at( i ) < t ) {
         i++;
     }
+    if ( std::abs( timearray.at( i ) - t ) > 1E-14 )
+        return evaluate( t );
     if ( i < 0 || i >= size ) {
         logs.level2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
-        i = 0;
+        return evaluate( t );
     }
-    //logs.level2("Requested t = {:.10e}, returned t = {:.10e}\n",t,timearray.at(i));
     return pulsearray.at( i );
-    //return lerp<std::complex<double>>(pulsearray.at(j),pulsearray.at(j+1),delta);
 }
 
 std::complex<double> Pulse::get( int i ) const {

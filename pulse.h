@@ -34,6 +34,7 @@ class Pulse {
     Pulse( Inputs &inputs );
     void generate();
     void fileOutput( std::string filepath );
-    std::complex<double> get( double t ) const;
+    std::complex<double> evaluate( double t ) const;
+    std::complex<double> get( double t, bool force_evaluate ) const;
     std::complex<double> get( int i ) const;
 };

@@ -32,6 +32,7 @@ class Chirp {
     Chirp( Inputs &inputs );
     void generate();
     void fileOutput( std::string filepath );
-    double get( double t ) const;
+    double evaluate( double t ) const;
+    double get( double t, bool force_evaluate ) const;
     double get( int i ) const;
 };

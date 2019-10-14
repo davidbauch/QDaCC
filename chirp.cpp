@@ -1,5 +1,4 @@
 #include "chirp.h"
-//#include "misc/spline.h"
 
 Chirp::Chirp( Chirp::Inputs &inputs ) : inputs(inputs) {
     logs.level2("Creating Chirp with {} points of type {}... ", inputs.t.size(), inputs.type);
@@ -17,10 +16,13 @@ Chirp::Chirp( Chirp::Inputs &inputs ) : inputs(inputs) {
     logs.level2("Done!\n");
 }
 
-/* Generate array of energy-values corresponding to the chirp */
+double Chirp::evaluate(double t) const {
+    return interpolant.evaluate(t);
+}
+
 void Chirp::generate() {
     for ( double t1 = inputs.t_start; t1 < inputs.t_end + 10 * inputs.t_step; t1 += inputs.t_step / 2.0 ) {
-        chirparray.push_back( interpolant.evaluate( t1 ) );
+        chirparray.push_back( evaluate( t1 ) );
         timearray.push_back( t1 );
     }
     chirparray.shrink_to_fit();
@@ -60,16 +62,19 @@ void Chirp::Inputs::add(std::vector<double> &_t, std::vector<double> &_y, std::v
 }
 
 // Per index and rest is lerp delta
-double Chirp::get( double t ) const {
-    int i = std::floor( t / inputs.t_step - 1 ) * steps.size();
+double Chirp::get( double t, bool force_evaluate = false ) const {
+    if ( force_evaluate )
+        return evaluate( t );
+
+    int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
     while ( timearray.at( i ) < t ) {
         i++;
     }
+    if ( std::abs( timearray.at( i ) - t ) > 1E-14 )
+        return evaluate( t );
     if ( i < 0 || i >= size ) {
-        logs.level2( "!! Warning: requested chirpvalue at index {} is out of range! chirparray.size() = {}\n", i, chirparray.size() );
-        i = 0;
+        return evaluate( t );
     }
-    //logs.level2("Requested t = {:.10e}, returned t = {:.10e} with value chirp = {}\n",t,timearray.at(i),chirparray.at(i));
     return chirparray.at( i );
 }
 
