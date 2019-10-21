@@ -3,15 +3,6 @@
 #include "global.h"
 
 class ODESolver {
-   public:
-    // Vector for mat/time, tuple
-    class SaveState {
-       public:
-        MatrixXcd mat;
-        double t;
-        SaveState( const MatrixXcd &mat, const double time ) : mat( mat ), t( time ){};
-    };
-
    private:
     // RK 4&5 coefficients
     double a2 = 1. / 5.;
@@ -49,7 +40,6 @@ class ODESolver {
     MatrixXcd akf_mat;
     void saveState( const MatrixXcd &mat, const double t );
     void saveHamilton( const MatrixXcd &mat, const double t );
-    bool queueNow( System_Parent &s, int &curIt );
     MatrixXcd iterateRungeKutta4( const MatrixXcd &rho, System_Parent &s, const double t );
     MatrixXcd iterateRungeKutta5( const MatrixXcd &rho, System_Parent &s, const double t );
     int getIterationNumberTau( System_Parent &s );
@@ -57,6 +47,7 @@ class ODESolver {
     double getTimeAt( int i );
     MatrixXcd getRhoAt( int i );
     MatrixXcd getHamilton( System_Parent &s, const double t, bool use_saved_hamiltons );
+    bool queueNow( System_Parent &s, int &curIt );
     int reset( System_Parent &s );
 
    public:
@@ -69,7 +60,8 @@ class ODESolver {
     bool calculate_spectrum( System_Parent &s, std::string fileOutputName );
     template <typename T>
     static MatrixXcd iterate_definite_integral( const MatrixXcd &rho, T rungefunction, const double t, const double step );
-    static std::vector<ODESolver::SaveState> calculate_definite_integral_vec( MatrixXcd rho, std::function<MatrixXcd(const MatrixXcd&, const double)> const& rungefunction, const double t0, const double t1, const double step );
+    static std::vector<SaveState> calculate_definite_integral_vec( MatrixXcd rho, std::function<MatrixXcd( const MatrixXcd &, const double )> const &rungefunction, const double t0, const double t1, const double step );
+    static SaveState calculate_definite_integral( MatrixXcd rho, std::function<MatrixXcd( const MatrixXcd &, const double )> const &rungefunction, const double t0, const double t1, const double step );
 };
 
 /*

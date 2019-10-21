@@ -12,8 +12,8 @@ Parameters_Parent::Parameters_Parent() {
     output_handlerstrings = 0;
     output_operators = 0;
     iterations_skips_t = 1;
-    iterations_skips_tau = 1;
-    iterations_skips_w = 1;
+    iterations_tau_resolution = 1;
+    iterations_w_resolution = 1;
     scale_parameters = false;
     scale_value = 1E12;
 }

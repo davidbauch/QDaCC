@@ -51,6 +51,15 @@ std::string global_message_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBE
 #define OPERATOR_PHOTONIC_CREATE 0
 #define OPERATOR_PHOTONIC_ANNIHILATE 1
 
-#define PHONON_APPROXIMATION_FULL 0
-#define PHONON_APPROXIMATION_MARKOV_1 1
-#define PHONON_APPROXIMATION_MARKOV_2 2
+#define PHONON_APPROXIMATION_BACKWARDS_INTEGRAL 0
+#define PHONON_APPROXIMATION_TRANSFORMATION_MATRIX 1
+#define PHONON_APPROXIMATION_TIMETRANSFORMATION 2
+#define PHONON_APPROXIMATION_LINDBLAD_FULL 3
+
+// Vector for mat/time, tuple
+class SaveState {
+public:
+    MatrixXcd mat;
+    double t;
+    SaveState( const MatrixXcd &mat, const double time ) : mat( mat ), t( time ){};
+};

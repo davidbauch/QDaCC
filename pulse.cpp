@@ -106,5 +106,5 @@ std::complex<double> Pulse::get( double t, bool force_evaluate ) {
 }
 
 void Pulse::log() {
-    logs( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
+    logs.level2( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
 }

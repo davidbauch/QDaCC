@@ -2,10 +2,6 @@
 #include "global.h"
 #include "solver.h"
 
-// Solver todo-list:
-// TODO: Seperate Solver completely from system (implement getHamilton in header as template instead of system) such that solver functions can be used by system class for phonons
-// TODO: save hamiltons ONLY in t direction, include new varibale "useSavedHamiltons" to e.g. exclude using saved matrices for e.g. phonons
-
 // Description: ODESolver class provides both Runge-Kutta functions of different orders and functions for different numerical operations
 // Type: ODESolver Class Constructor
 // @param s: [&System] Class providing set of system functions
@@ -59,10 +55,10 @@ MatrixXcd ODESolver::iterateRungeKutta4( const MatrixXcd &rho, System_Parent &s,
     MatrixXcd H_calc_k23 = getHamilton( s, t + s.getTimeStep() * 0.5 );
     MatrixXcd H_calc_k4 = getHamilton( s, t + s.getTimeStep() );
     // k1-4 ausrechnen
-    MatrixXcd rk1 = s.dgl_rungeFunction( rho, H_calc_k1, t );
-    MatrixXcd rk2 = s.dgl_rungeFunction( rho + s.getTimeStep() * 0.5 * rk1, H_calc_k23, t + s.getTimeStep() * 0.5 );
-    MatrixXcd rk3 = s.dgl_rungeFunction( rho + s.getTimeStep() * 0.5 * rk2, H_calc_k23, t + s.getTimeStep() * 0.5 );
-    MatrixXcd rk4 = s.dgl_rungeFunction( rho + s.getTimeStep() * rk3, H_calc_k4, t + s.getTimeStep() );
+    MatrixXcd rk1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
+    MatrixXcd rk2 = s.dgl_rungeFunction( rho + s.getTimeStep() * 0.5 * rk1, H_calc_k23, t + s.getTimeStep() * 0.5, savedStates );
+    MatrixXcd rk3 = s.dgl_rungeFunction( rho + s.getTimeStep() * 0.5 * rk2, H_calc_k23, t + s.getTimeStep() * 0.5, savedStates );
+    MatrixXcd rk4 = s.dgl_rungeFunction( rho + s.getTimeStep() * rk3, H_calc_k4, t + s.getTimeStep(), savedStates );
     // Dichtematrix
     return rho + s.getTimeStep() / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
 }
@@ -82,12 +78,12 @@ MatrixXcd ODESolver::iterateRungeKutta5( const MatrixXcd &rho, System_Parent &s,
     MatrixXcd H_calc_k5 = getHamilton( s, t + a5 * s.getTimeStep() );
     MatrixXcd H_calc_k6 = getHamilton( s, t + a6 * s.getTimeStep() );
     // k1-6 ausrechnen
-    MatrixXcd k1 = s.dgl_rungeFunction( rho, H_calc_k1, t );
-    MatrixXcd k2 = s.dgl_rungeFunction( rho + s.getTimeStep() * b11 * k1, H_calc_k2, t + a2 * s.getTimeStep() );
-    MatrixXcd k3 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b21 * k1 + b22 * k2 ), H_calc_k3, t + a3 * s.getTimeStep() );
-    MatrixXcd k4 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b31 * k1 + b32 * k2 + b33 * k3 ), H_calc_k4, t + a4 * s.getTimeStep() );
-    MatrixXcd k5 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b41 * k1 + b42 * k2 + b43 * k3 + b44 * k4 ), H_calc_k5, t + a5 * s.getTimeStep() );
-    MatrixXcd k6 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b51 * k1 + b52 * k2 + b53 * k3 + b54 * k4 + b55 * k5 ), H_calc_k6, t + a6 * s.getTimeStep() );
+    MatrixXcd k1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
+    MatrixXcd k2 = s.dgl_rungeFunction( rho + s.getTimeStep() * b11 * k1, H_calc_k2, t + a2 * s.getTimeStep(), savedStates );
+    MatrixXcd k3 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b21 * k1 + b22 * k2 ), H_calc_k3, t + a3 * s.getTimeStep(), savedStates );
+    MatrixXcd k4 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b31 * k1 + b32 * k2 + b33 * k3 ), H_calc_k4, t + a4 * s.getTimeStep(), savedStates );
+    MatrixXcd k5 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b41 * k1 + b42 * k2 + b43 * k3 + b44 * k4 ), H_calc_k5, t + a5 * s.getTimeStep(), savedStates );
+    MatrixXcd k6 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b51 * k1 + b52 * k2 + b53 * k3 + b54 * k4 + b55 * k5 ), H_calc_k6, t + a6 * s.getTimeStep(), savedStates );
     // Dichtematrix
     return rho + s.getTimeStep() * ( b61 * k1 + b63 * k3 + b64 * k4 + b65 * k5 + b66 * k6 );
 }
@@ -169,18 +165,16 @@ bool ODESolver::calculate_t_direction( System_Parent &s ) {
     rkTimer.start();
 
     logs.level2( "Calculating t-direction from {} to {} at stepsize {}... ", s.getTimeborderStart(), s.getTimeborderEnd(), s.getTimeStep() );
-    int curIt = 1;
     MatrixXcd rho = s.getRho0();
     saveState( rho, s.getTimeborderStart() );
-    s.expectationValues( rho, s.getTimeborderStart() ); //maybe: neue funktion für output, das dann in system, eig redundant, da nie t direction ausgerechnet wird ohne sie auch auszugeben.
+    s.expectationValues( rho, s.getTimeborderStart() );
 
     // Main Time Loop
     for ( double t_t = s.getTimeborderStart() + s.getTimeStep(); t_t < s.getTimeborderEnd(); t_t += s.getTimeStep() ) {
         // Runge-Kutta iteration
         rho = iterate( rho, s, t_t );
         // Save Rho for tau-direction
-        if ( queueNow( s, curIt ) )
-            saveState( rho, t_t );
+        saveState( rho, t_t );
         // Expectation Values
         s.expectationValues( rho, t_t );
         // Progress and time output
@@ -206,21 +200,40 @@ MatrixXcd ODESolver::iterate_definite_integral( const MatrixXcd &rho, T rungefun
     return rho + step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
 }
 
-std::vector<ODESolver::SaveState> ODESolver::calculate_definite_integral_vec( MatrixXcd rho, std::function<MatrixXcd( const MatrixXcd &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
-    std::vector<ODESolver::SaveState> ret;
+// Description: Integrates rho from t0 to t1 via Rungefunc.
+// Type: ODESolver public static function
+// @return: [vector<SaveState>] Vector of save state tuples (matrix, time)
+std::vector<SaveState> ODESolver::calculate_definite_integral_vec( MatrixXcd rho, std::function<MatrixXcd( const MatrixXcd &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
+    std::vector<SaveState> ret;
     //ret.reserve( std::ceil( std::abs( t1 - t0 ) / std::abs( step ) ) );
     ret.emplace_back( SaveState( rho, t0 ) );
     if ( step > 0 )
-        for ( double t = t0 + step; t < t1; t += step ) {
+        for ( double t = t0; t < t1; t += step ) {
             rho = iterate_definite_integral( rho, rungefunction, t, step );
             ret.emplace_back( SaveState( rho, t ) );
         }
     else if ( step < 0 )
-        for ( double t = t0 + step; t > t1; t += step ) {
+        for ( double t = t0; t > t1; t += step ) {
             rho = iterate_definite_integral( rho, rungefunction, t, step );
             ret.emplace_back( SaveState( rho, t ) );
         }
     return ret;
+}
+
+// Description: Integrates rho from t0 to t1 via Rungefunc.
+// Type: ODESolver public static function
+// @return: [SaveState] Save state tuple (matrix, time)
+SaveState ODESolver::calculate_definite_integral( MatrixXcd rho, std::function<MatrixXcd( const MatrixXcd &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
+    //ret.reserve( std::ceil( std::abs( t1 - t0 ) / std::abs( step ) ) );
+    if ( step > 0 )
+        for ( double t = t0; t < t1; t += step ) {
+            rho = iterate_definite_integral( rho, rungefunction, t, step );
+        }
+    else if ( step < 0 )
+        for ( double t = t0; t > t1; t += step ) {
+            rho = iterate_definite_integral( rho, rungefunction, t, step );
+        }
+    return SaveState( rho, t1 );
 }
 
 // Desciption: Function to calculate the number of iterations used for tau direction calculations
@@ -286,9 +299,9 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatrixXcd &op_creator, con
     progressbar.strBarStart = "|";
     progressbar.strBarEnd = "|";
     timer.start();
-    logs.level2( "Calculating G1(tau), saving to akf_mat... " );
+    logs.level2( "Calculating G1(tau), saving to akf_mat of size {}x{}... ",akf_mat.rows(), akf_mat.cols() );
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( int i = 0; i < (int)savedStates.size(); i++ ) {
+    for ( int i = 0; i < (int)savedStates.size(); i++ ) { //FIXME: iteration skip
         double t_t = getTimeAt( i );
         MatrixXcd rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
         akf_mat( i, 0 ) = s.dgl_expectationvalue( rho_tau, op_creator, t_t );

@@ -85,5 +85,5 @@ double Chirp::get( double t, bool force_evaluate ) {
 }
 
 void Chirp::log() {
-    logs( "Chirp evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
+    logs.level2( "Chirp evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
 }

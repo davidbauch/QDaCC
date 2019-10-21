@@ -58,11 +58,12 @@ int System_Parent::getSolverRungeKuttaOrder( int dir = DIR_T ) {
 int System_Parent::getTimeTransformationAlg() {
     return parameters.numerics_order_timetrafo;
 }
-// Returns the number of iterations to skip in either t, tau (both the same such that a same sided lattice is given) and if spectrum omega is also skipped (0 or 1)
+
+// Returns the number of iterations to skip in either t, tau (both the same such that a same sided lattice is given)
 int System_Parent::getIterationSkip( int dir = DIR_T ) {
     if ( dir == DIR_TAU )
-        return parameters.iterations_skips_tau;
+        return parameters.iterations_tau_resolution;
     else if ( dir == DIR_W )
-        return ( parameters.iterations_skips_w != 0 ? 1 : 0 );
+        return ( parameters.iterations_w_resolution != 0 ? 1 : 0 );
     return parameters.iterations_skips_t;
 }

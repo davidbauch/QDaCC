@@ -48,13 +48,19 @@ class System_Parent {
         return dgl_timetrafo( op, t ) * rho;
     }
     // Runge function
-    virtual MatrixXcd dgl_rungeFunction( const MatrixXcd &rho, const MatrixXcd &H, const double t ) { return rho; }
+    virtual MatrixXcd dgl_rungeFunction( const MatrixXcd &rho, const MatrixXcd &H, const double t, std::vector<SaveState> &past_rhos ) {
+        logs( "Warning; Returning virtual function!\n" );
+        return rho;
+    }
     // Output Expectation Values
-    virtual void expectationValues( const MatrixXcd &rho, const double t ) {};
+    virtual void expectationValues( const MatrixXcd &rho, const double t ){};
     // Check for trace validity
     bool traceValid( MatrixXcd &rho, const double t, const bool forceOutput );
     // Return Hamiltonian for time t
-    virtual MatrixXcd dgl_getHamilton( const double t ) { return Eigen::MatrixXcd::Zero( 1, 1 ); };
+    virtual MatrixXcd dgl_getHamilton( const double t ) {
+        logs( "Warning; Returning virtual function\n" );
+        return Eigen::MatrixXcd::Zero( 1, 1 );
+    };
     // Return solver order for time direction
     int getSolverOrder( const int dir );
     // To be called from child constructor

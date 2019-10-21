@@ -284,7 +284,7 @@ class Parse_Parameters {
         return standard;
     }
     // If a vector of ats is passed, the last non-standard parameter is returned.
-    std::string get( std::vector<int> ats, std::string standard) {
+    std::string get( std::vector<int> ats, std::string standard ) {
         std::string ret = standard;
         for ( int at : ats ) {
             if ( parameters.at( at ).compare( "_standard" ) )
@@ -307,9 +307,21 @@ class Parse_Parameters {
             return convertParam<T>( parameters.at( at ) );
         return convertParam<T>( standard );
     }
+    // Special syntax: If no standard value is passed, the get function returns a boolean wether the string was found or not, instead of a value
     bool get( int at ) {
         if ( parameters.at( at ).compare( "_standard" ) )
             return true;
         return false;
     }
 };
+
+Eigen::MatrixXcd project_matrix( const Eigen::MatrixXcd &input ) {
+    Eigen::MatrixXcd ret = Eigen::MatrixXcd::Zero( input.cols(), input.rows() );
+    for ( int i = 0; i < ret.cols(); i++ ) {
+        for ( int j = 0; j < ret.rows(); j++ ) {
+            if ( real( input( i, j ) ) != 0 || imag( input( i, j ) ) != 0 )
+                ret( i, j ) = 0;
+        }
+    }
+    return ret;
+}
