@@ -287,7 +287,7 @@ class Parameters : public Parameters_Parent {
             logs( "Frequency Range: +/- {} Hz -> +/- {} mueV\n", spectrum_frequency_range, Hz_to_eV( spectrum_frequency_range ) * 1E6 );
             logs( "Maximum tau-grid resolution is {}x{} resulting in {} skips per timestep\nMaximum w-vector resolution is {}\n\n", iterations_tau_resolution, iterations_tau_resolution, iterations_t_skip, iterations_w_resolution );
         } else {
-            logs( "\nNot calculating spectrum\n\n" )
+            logs( "\nNot calculating spectrum\n\n" );
         }
 
         logs.wrapInBar( "Phonons" );
