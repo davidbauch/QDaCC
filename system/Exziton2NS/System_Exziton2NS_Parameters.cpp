@@ -237,9 +237,9 @@ class Parameters : public Parameters_Parent {
                 integral += stepsize * ( p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wcutoff / p_phonon_wcutoff ) / std::tanh( 1.0545718E-34 * w / 2.0 / 1.3806488E-23 / p_phonon_T ) );
             }
             p_phonon_b = std::exp( -0.5 * integral );
-            if (p_phonon_adjust) {
+            if ( p_phonon_adjust ) {
                 p_omega_pure_dephasing = convertParam<double>( "1mueV" ) * p_phonon_T;
-                p_omega_decay *= p_phonon_b*p_phonon_b;
+                p_omega_decay *= p_phonon_b * p_phonon_b;
             }
         }
         trace.reserve( iterations_t_max + 5 );
@@ -298,13 +298,21 @@ class Parameters : public Parameters_Parent {
             logs( "WARNING: Step may be too small to resolve predicted oscillation: \n-> delta T needed: {:.10e} \n-> delta T used: {:.10e}\n\n", 2. / 3. * M_PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
         }
         logs.wrapInBar( "Spectrum" );
-        logs( "\nCenter Frequency: {} Hz -> {} eV\n", spectrum_frequency_center, Hz_to_eV( spectrum_frequency_center ) );
-        logs( "Frequency Range: +/- {} Hz -> +/- {} mueV\n", spectrum_frequency_range, Hz_to_eV( spectrum_frequency_range ) * 1E6 );
-        logs( "Maximum tau-grid resolution is {}x{} resulting in {} skips per timestep\nMaximum w-vector resolution is {}\n\n", iterations_tau_resolution, iterations_tau_resolution, iterations_t_skip, iterations_w_resolution );
+        if ( numerics_calculate_spectrum ) {
+            logs( "\nCenter Frequency: {} Hz -> {} eV\n", spectrum_frequency_center, Hz_to_eV( spectrum_frequency_center ) );
+            logs( "Frequency Range: +/- {} Hz -> +/- {} mueV\n", spectrum_frequency_range, Hz_to_eV( spectrum_frequency_range ) * 1E6 );
+            logs( "Maximum tau-grid resolution is {}x{} resulting in {} skips per timestep\nMaximum w-vector resolution is {}\n\n", iterations_tau_resolution, iterations_tau_resolution, iterations_t_skip, iterations_w_resolution );
+        } else {
+            logs( "\nNot calculating spectrum\n\n" )
+        }
 
         logs.wrapInBar( "Phonons" );
-        std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism"};
-        logs( "\nTemperature = {}k\nCutoff energy = {}meV\nCutoff Time = {}ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n\n", p_phonon_T, Hz_to_eV( p_phonon_wcutoff ) * 1E3, p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_2, approximations.at( numerics_phonon_approximation_2 ) );
+        if ( p_phonon_T ) {
+            std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism"};
+            logs( "\nTemperature = {}k\nCutoff energy = {}meV\nCutoff Time = {}ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n\n", p_phonon_T, Hz_to_eV( p_phonon_wcutoff ) * 1E3, p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_2, approximations.at( numerics_phonon_approximation_2 ) );
+        } else {
+            logs("\nNot using phonons\n\n");
+        }
 
         logs.wrapInBar( "Numerics" );
         logs( "\nOrder of Runge-Kutta used: Time: RK{}, Spectrum: RK{}\n", numerics_order_t, numerics_order_tau );

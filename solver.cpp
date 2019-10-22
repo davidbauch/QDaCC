@@ -127,7 +127,7 @@ void ODESolver::saveHamilton( const MatrixXcd &mat, const double t ) {
 // @param curIt: [&int] Iterator variable to use for iteration check
 // @return: [bool] True if current matrix should be saved, else false. Saving depends on the iteration skip for tau direction and wether or not they are needed later.
 bool ODESolver::queueNow( System_Parent &s, int &curIt ) {
-    if ( ( s.calculate_spectrum() || s.calculate_g2() ) && curIt % s.getIterationSkip( DIR_TAU ) == 0 ) {
+    if ( ( s.calculate_spectrum() || s.calculate_g2() ) && curIt % s.getIterationSkip() == 0 ) {
         curIt = 1;
         return true;
     }
@@ -144,12 +144,12 @@ int ODESolver::reset( System_Parent &s ) {
     track_gethamilton_write = 0;
     track_gethamilton_calc = 0;
     track_gethamilton_calcattempt = 0;
-    int dim = (int)( s.parameters.iterations_t_max / s.getIterationSkip( DIR_TAU ) ) + 10;
+    int dim = (int)( s.parameters.iterations_t_max / s.getIterationSkip() ) + 10;
     out.clear();
-    out.reserve( (int)( std::ceil( s.parameters.spectrum_frequency_iterations ) + 5 ) );
+    out.reserve( (int)( std::ceil( s.parameters.iterations_w_resolution ) + 5 ) );
     if ( s.calculate_spectrum() )
         akf_mat = MatrixXcd::Zero( dim, dim );
-    for ( int w = 0; w < s.parameters.spectrum_frequency_iterations; w++ ) {
+    for ( int w = 0; w < s.parameters.iterations_w_resolution; w++ ) {
         out.push_back( 0 );
     }
     return dim;
@@ -161,7 +161,7 @@ int ODESolver::reset( System_Parent &s ) {
 // @return: [bool] True if calculations are sucessfull, else false
 bool ODESolver::calculate_t_direction( System_Parent &s ) {
     Timer &rkTimer = createTimer( "RungeKutta-Main-Loop" );
-    ProgressBar progressbar = ProgressBar( s.parameters.iterations_total_max, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
+    ProgressBar progressbar = ProgressBar( s.parameters.iterations_t_max, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
     rkTimer.start();
 
     logs.level2( "Calculating t-direction from {} to {} at stepsize {}... ", s.getTimeborderStart(), s.getTimeborderEnd(), s.getTimeStep() );
@@ -179,7 +179,7 @@ bool ODESolver::calculate_t_direction( System_Parent &s ) {
         s.expectationValues( rho, t_t );
         // Progress and time output
         rkTimer.iterate();
-        outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_total_max, "T-Direction: " );
+        outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, "T-Direction: " );
         // Divergent bruder?
         if ( !s.traceValid( rho, t_t ) ) {
             t_t = s.getTimeborderEnd() + s.getTimeStep();
@@ -243,7 +243,7 @@ SaveState ODESolver::calculate_definite_integral( MatrixXcd rho, std::function<M
 int ODESolver::getIterationNumberTau( System_Parent &s ) {
     int num = 0;
     // Tau Direction Iteration steps
-    for ( int i = 0; i < (int)savedStates.size(); i++ ) {
+    for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
         double t_t = getTimeAt( i );
         for ( double t_tau = t_t + s.getTimeStep(); t_tau < s.getTimeborderEnd(); t_tau += s.getTimeStep() ) { // t + +s.getTimeStep()
             num++;
@@ -259,7 +259,7 @@ int ODESolver::getIterationNumberTau( System_Parent &s ) {
 int ODESolver::getIterationNumberSpectrum( System_Parent &s ) {
     int num = 0;
     // Spectrum steps
-    for ( int spec_w = 0; spec_w < s.parameters.spectrum_frequency_iterations; spec_w++ ) {
+    for ( int spec_w = 0; spec_w < s.parameters.iterations_w_resolution; spec_w++ ) {
         num++;
     }
     return num;
@@ -299,19 +299,20 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatrixXcd &op_creator, con
     progressbar.strBarStart = "|";
     progressbar.strBarEnd = "|";
     timer.start();
-    logs.level2( "Calculating G1(tau), saving to akf_mat of size {}x{}... ",akf_mat.rows(), akf_mat.cols() );
+    logs.level2( "Calculating G1(tau), saving to akf_mat of size {}x{}... ", akf_mat.rows(), akf_mat.cols() );
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( int i = 0; i < (int)savedStates.size(); i++ ) { //FIXME: iteration skip
+    for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
+        int k = i / s.getIterationSkip();
         double t_t = getTimeAt( i );
         MatrixXcd rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
-        akf_mat( i, 0 ) = s.dgl_expectationvalue( rho_tau, op_creator, t_t );
+        akf_mat( k, 0 ) = s.dgl_expectationvalue( rho_tau, op_creator, t_t );
         int j = 1;
         int curIt_tau = 1;
         for ( double t_tau = t_t + s.getTimeStep(); t_tau < s.getTimeborderEnd(); t_tau += s.getTimeStep() ) { // t + +s.getTimeStep()
             rho_tau = iterate( rho_tau, s, t_tau, DIR_TAU );
             timer.iterate();
             if ( queueNow( s, curIt_tau ) ) {
-                akf_mat( i, j ) = s.dgl_expectationvalue( rho_tau, op_creator, t_tau );
+                akf_mat( k, j ) = s.dgl_expectationvalue( rho_tau, op_creator, t_tau );
                 j++; // equivalent to s.parameters.akf_vecIndex
             }
             outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "AKF-Tau: " );
@@ -336,7 +337,7 @@ bool ODESolver::calculate_g2_0( System_Parent &s, const MatrixXcd &op_creator, c
     }
 
     Timer &timer = createTimer( "G2-0-Loop" );
-    int totalIterations = (int)savedStates.size();
+    int totalIterations = (int)savedStates.size() / s.getIterationSkip();
     ProgressBar progressbar = ProgressBar( totalIterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
     progressbar.strBarStart = "|";
     progressbar.strBarEnd = "|";
@@ -345,7 +346,7 @@ bool ODESolver::calculate_g2_0( System_Parent &s, const MatrixXcd &op_creator, c
 
     std::vector<std::complex<double>> g2Values;
     g2Values.reserve( totalIterations );
-    for ( int i = 0; i < totalIterations; i++ ) {
+    for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
         double t_t = getTimeAt( i );
         MatrixXcd rho = getRhoAt( i );
         MatrixXcd M1 = op_creator * op_creator * op_annihilator * op_annihilator;
@@ -386,21 +387,22 @@ bool ODESolver::calculate_spectrum( System_Parent &s, std::string fileOutputName
     logs.level2( "Calculating spectrum... Calculating frequencies... " );
     //Calculate frequencies:
     std::vector<double> spectrum_frequency_w;
-    for ( int w = 0; w < s.parameters.spectrum_frequency_iterations; w++ ) {
-        spectrum_frequency_w.push_back( s.parameters.spectrum_frequency_center - ( s.parameters.spectrum_frequency_range ) + w / ( (double)s.parameters.spectrum_frequency_iterations ) * ( 2. * ( s.parameters.spectrum_frequency_range ) ) );
+    for ( int w = 0; w < s.parameters.iterations_w_resolution; w++ ) {
+        spectrum_frequency_w.push_back( s.parameters.spectrum_frequency_center - ( s.parameters.spectrum_frequency_range ) + w / ( (double)s.parameters.iterations_w_resolution ) * ( 2. * ( s.parameters.spectrum_frequency_range ) ) );
     }
     logs.level2( "Done, calculating fourier transform via direct integral... " );
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads ) //reduction(+:spectrum.out)
-    for ( int spec_w = 0; spec_w < s.parameters.spectrum_frequency_iterations; spec_w++ ) {
+    for ( int spec_w = 0; spec_w < s.parameters.iterations_w_resolution; spec_w++ ) {
         std::vector<std::complex<double>> expfunc;
-        expfunc.reserve( savedStates.size() );
-        for ( int spec_tau = 0; spec_tau < ( s.getTimeborderEnd() - s.getTimeborderStart() - 0.0 ) / ( s.getTimeStep() * s.getIterationSkip( DIR_TAU ) ); spec_tau++ ) {
-            expfunc.emplace_back( std::exp( -1i * spectrum_frequency_w.at( spec_w ) * (double)(spec_tau)*s.getTimeStep() * (double)( s.getIterationSkip( DIR_TAU ) ) ) );
+        expfunc.reserve( savedStates.size() / s.getIterationSkip() + 1 );
+        for ( int spec_tau = 0; spec_tau < ( s.getTimeborderEnd() - s.getTimeborderStart() - 0.0 ) / ( s.getTimeStep() * s.getIterationSkip() ); spec_tau++ ) {
+            expfunc.emplace_back( std::exp( -1i * spectrum_frequency_w.at( spec_w ) * (double)(spec_tau)*s.getTimeStep() * (double)( s.getIterationSkip() ) ) );
         }
-        for ( int i = 0; i < (int)savedStates.size(); i++ ) {
+        for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
+            int k = i / s.getIterationSkip();
             double t_t = getTimeAt( i );
-            for ( int spec_tau = 0; spec_tau < ( s.getTimeborderEnd() - s.getTimeborderStart() - t_t ) / ( s.getTimeStep() * s.getIterationSkip( DIR_TAU ) ); spec_tau++ ) {
-                out.at( spec_w ) += expfunc.at( spec_tau ) * akf_mat( i, spec_tau );
+            for ( int spec_tau = 0; spec_tau < ( s.getTimeborderEnd() - s.getTimeborderStart() - t_t ) / ( s.getTimeStep() * s.getIterationSkip() ); spec_tau++ ) {
+                out.at( spec_w ) += expfunc.at( spec_tau ) * akf_mat( k, spec_tau );
             }
             outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "AKF-Spectrum: " );
         }
@@ -416,8 +418,8 @@ bool ODESolver::calculate_spectrum( System_Parent &s, std::string fileOutputName
         logs.level2( "Failed to open outputfile for spectrum!\n" );
         return false;
     }
-    for ( int spec_w = 0; spec_w < s.parameters.spectrum_frequency_iterations; spec_w++ ) {
-        fmt::print( spectrumfile, "{0:.15e}\t{1:.15e}\n", spectrum_frequency_w[spec_w], real( out[spec_w] * s.getTimeStep() * s.getTimeStep() * (double)( s.getIterationSkip( DIR_TAU ) * s.getIterationSkip( DIR_TAU ) ) ) );
+    for ( int spec_w = 0; spec_w < s.parameters.iterations_w_resolution; spec_w++ ) {
+        fmt::print( spectrumfile, "{0:.15e}\t{1:.15e}\n", spectrum_frequency_w[spec_w], real( out[spec_w] * s.getTimeStep() * s.getTimeStep() * (double)( s.getIterationSkip() * s.getIterationSkip() ) ) );
     }
     std::fclose( spectrumfile );
     logs.level2( "Done!\n" );
