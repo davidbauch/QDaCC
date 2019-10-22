@@ -51,7 +51,7 @@ class System : public System_Parent {
                 auto phi = dgl_phonons_phi( t );
                 auto greenu = dgl_phonons_greenf( t, 'u' );
                 auto greeng = dgl_phonons_greenf( t, 'g' );
-                fmt::print( fp_phonons, "{}\t{}\t{}\t{}\n", t, std::real( phi ), std::imag( phi ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
+                fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi ), std::imag( phi ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
             }
             std::fclose( fp_phonons );
             if ( parameters.output_coefficients ) {
