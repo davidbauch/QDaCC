@@ -46,9 +46,12 @@ class System : public System_Parent {
         // Output Phonon functions of phonons are active
         if ( parameters.p_phonon_T != 0 ) {
             FILE *fp_phonons = std::fopen( ( parameters.subfolder + "phonons.txt" ).c_str(), "w" );
-            fmt::print( fp_phonons, "t\tphi(t)\tg_u(t)\tg_g(t)\n" );
+            fmt::print( fp_phonons, "t\treal(phi(t))\timag(phi(t))\treal(g_u(t))\timag(g_u(t))\treal(g_g(t))\timag(g_g(t))\n" );
             for ( double t = getTimeborderStart(); t < 3 * parameters.p_phonon_tcutoff; t += getTimeStep() ) {
-                fmt::print( fp_phonons, "{}\t{}\t{}\t{}\n", t, std::abs( dgl_phonons_phi( t ) ), std::abs( dgl_phonons_greenf( t, 'u' ) ), std::abs( dgl_phonons_greenf( t, 'g' ) ) );
+                auto phi = dgl_phonons_phi( t );
+                auto greenu = dgl_phonons_greenf( t, 'u' );
+                auto greeng = dgl_phonons_greenf( t, 'g' );
+                fmt::print( fp_phonons, "{}\t{}\t{}\t{}\n", t, std::real( phi ), std::imag( phi ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
             }
             std::fclose( fp_phonons );
             if ( parameters.output_coefficients ) {
