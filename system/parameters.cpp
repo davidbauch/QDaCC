@@ -17,7 +17,6 @@ Parameters_Parent::Parameters_Parent() {
     scale_parameters = false;
     scale_value = 1E12;
     iterations_t_max = 1;
-    iterations_total_max = 1;
     output_full_dm = false;
 }
 

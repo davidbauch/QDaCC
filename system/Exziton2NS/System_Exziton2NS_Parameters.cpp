@@ -213,21 +213,6 @@ class Parameters : public Parameters_Parent {
         if ( spectrum_frequency_range == -1 )
             spectrum_frequency_range = ( std::abs( max_detuning ) + p_omega_coupling + p_omega_cavity_loss / 2. ) * 3.;
 
-        // Calculate total number of iterations necessary
-        iterations_total_max = iterations_t_max;
-        if ( numerics_calculate_spectrum ) {
-            int curIt = 1;
-            for ( double ii = t_start + t_step; ii < t_end; ii += t_step ) {
-                if ( curIt % iterations_t_skip == 0 ) {
-                    for ( double iii = ii + t_step; iii < t_end; iii += t_step ) {
-                        iterations_total_max++;
-                    }
-                    curIt = 1;
-                } else
-                    curIt += 1;
-            }
-        }
-
         // Calculate phonon stuff
         p_phonon_b = 1.0;
         if ( p_phonon_T > 0 ) {
@@ -254,7 +239,6 @@ class Parameters : public Parameters_Parent {
         logs( "Timeborder right t_end = {} s\n", t_end );
         logs( "Timeborder t_step delta t = {} s\n", t_step );
         logs( "Time iterations (main loop) = {}\n", iterations_t_max );
-        logs( "Total time iterations = {}\n\n", iterations_total_max ); //, (int)ceil(iterations_t_max/2.*iterations_t_max/((double)akf_everyXIt)) );
         logs.wrapInBar( "System Parameters", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Energy Level difference |g><g| - |e><e| = {} Hz -> {} eV -> {} nm\n", p_omega_atomic, Hz_to_eV( p_omega_atomic ), Hz_to_wavelength( p_omega_atomic ) );
         logs( "Cavity Frequency w_c = {} Hz -> {} eV -> {} nm\n", p_omega_cavity, Hz_to_eV( p_omega_cavity ), Hz_to_wavelength( p_omega_cavity ) );

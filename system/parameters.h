@@ -17,10 +17,9 @@ class Parameters_Parent {
     double scale_value;
     // Runtime parameters and other stuff
     int iterations_t_max;
-    int iterations_total_max;
     std::vector<double> trace;
     bool output_full_dm;
-    
+
     // Functions
    public:
     // Constructor
