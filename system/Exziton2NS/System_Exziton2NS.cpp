@@ -46,9 +46,12 @@ class System : public System_Parent {
         // Output Phonon functions of phonons are active
         if ( parameters.p_phonon_T != 0 ) {
             FILE *fp_phonons = std::fopen( ( parameters.subfolder + "phonons.txt" ).c_str(), "w" );
-            fmt::print( fp_phonons, "t\tphi(t)\tg_u(t)\tg_g(t)\n" );
+            fmt::print( fp_phonons, "t\treal(phi(t))\timag(phi(t))\treal(g_u(t))\timag(g_u(t))\treal(g_g(t))\timag(g_g(t))\n" );
             for ( double t = getTimeborderStart(); t < 3 * parameters.p_phonon_tcutoff; t += getTimeStep() ) {
-                fmt::print( fp_phonons, "{}\t{}\t{}\t{}\n", t, std::abs( dgl_phonons_phi( t ) ), std::abs( dgl_phonons_greenf( t, 'u' ) ), std::abs( dgl_phonons_greenf( t, 'g' ) ) );
+                auto phi = dgl_phonons_phi( t );
+                auto greenu = dgl_phonons_greenf( t, 'u' );
+                auto greeng = dgl_phonons_greenf( t, 'g' );
+                fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi ), std::imag( phi ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
             }
             std::fclose( fp_phonons );
             if ( parameters.output_coefficients ) {
@@ -206,11 +209,12 @@ class System : public System_Parent {
 
         if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) {
             // Calculate Chi(t) backwards to Chi(t-tau)
-            std::vector<SaveState> chis = ODESolver::calculate_definite_integral_vec( chi, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( 0.0, t - parameters.p_phonon_tcutoff ), -parameters.t_step );
+            //std::vector<SaveState> chis = ODESolver::calculate_definite_integral_vec( chi, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( 0.0, t - parameters.p_phonon_tcutoff ), -parameters.t_step );
             for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) { //for ( auto chit : chis ) {
-                if ( parameters.numerics_phonon_approximation_1 ) {
+                if ( !parameters.numerics_phonon_approximation_1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
+                    //fmt::print( "Current t = {} -> Matrix rho_used for t-tau = {}, rho_used.t = {}, time for past_rhos.back() = {}\n", t, t - tau, past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).t, past_rhos.back().t);
                 }
                 MatrixXcd chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus * parameters.p_omega_coupling * operatorMatrices.photon_annihilate + operatorMatrices.atom_sigmaplus * pulse.get( t - tau ), t - tau );
                 MatrixXcd chi_tau_back = ODESolver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
@@ -221,7 +225,7 @@ class System : public System_Parent {
         }
         if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
             for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) {
-                if ( parameters.numerics_phonon_approximation_1 ) {
+                if ( !parameters.numerics_phonon_approximation_1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }
@@ -233,7 +237,7 @@ class System : public System_Parent {
             }
         } else if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_TIMETRANSFORMATION ) {
             for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) {
-                if ( parameters.numerics_phonon_approximation_1 ) {
+                if ( !parameters.numerics_phonon_approximation_1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }

@@ -38,10 +38,10 @@ class ODESolver {
     std::vector<SaveState> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
     std::vector<std::complex<double>> out;
     MatrixXcd akf_mat;
-    void saveState( const MatrixXcd &mat, const double t );
+    void saveState( const MatrixXcd &mat, const double t, std::vector<SaveState> &savedStates );
     void saveHamilton( const MatrixXcd &mat, const double t );
-    MatrixXcd iterateRungeKutta4( const MatrixXcd &rho, System_Parent &s, const double t );
-    MatrixXcd iterateRungeKutta5( const MatrixXcd &rho, System_Parent &s, const double t );
+    MatrixXcd iterateRungeKutta4( const MatrixXcd &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates );
+    MatrixXcd iterateRungeKutta5( const MatrixXcd &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates );
     int getIterationNumberTau( System_Parent &s );
     int getIterationNumberSpectrum( System_Parent &s );
     double getTimeAt( int i );
@@ -53,7 +53,7 @@ class ODESolver {
    public:
     ODESolver(){};
     ODESolver( System_Parent &s );
-    MatrixXcd iterate( const MatrixXcd &rho, System_Parent &s, const double t, const int dir );
+    MatrixXcd iterate( const MatrixXcd &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates, const int dir );
     bool calculate_t_direction( System_Parent &s );
     bool calculate_g1( System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator );
     bool calculate_g2_0( System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator, std::string fileOutputName );

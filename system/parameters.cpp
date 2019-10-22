@@ -11,11 +11,13 @@ Parameters_Parent::Parameters_Parent() {
     output_advanced_log = 0;
     output_handlerstrings = 0;
     output_operators = 0;
-    iterations_skips_t = 1;
+    iterations_t_skip = 1;
     iterations_tau_resolution = 1;
     iterations_w_resolution = 1;
     scale_parameters = false;
     scale_value = 1E12;
+    iterations_t_max = 1;
+    output_full_dm = false;
 }
 
 void Parameters_Parent::init( const std::vector<std::string> &arguments ) {

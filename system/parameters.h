@@ -12,9 +12,14 @@ class Parameters_Parent {
     int numerics_calculate_spectrum, numerics_calculate_g2, numerics_use_interactionpicture, numerics_use_rwa, numerics_order_timetrafo;
     int numerics_order_t, numerics_order_tau, numerics_order_highest;
     int output_advanced_log, output_handlerstrings, output_operators, output_coefficients;
-    int iterations_skips_t, iterations_tau_resolution, iterations_w_resolution;
+    int iterations_t_skip, iterations_tau_resolution, iterations_w_resolution;
     bool scale_parameters;
     double scale_value;
+    // Runtime parameters and other stuff
+    int iterations_t_max;
+    std::vector<double> trace;
+    bool output_full_dm;
+
     // Functions
    public:
     // Constructor
