@@ -78,5 +78,5 @@ class System_Parent {
     bool output_operators();
     int getSolverRungeKuttaOrder( int dir );
     int getTimeTransformationAlg();
-    int getIterationSkip( int dir );
+    int getIterationSkip( );
 };

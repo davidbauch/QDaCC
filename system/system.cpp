@@ -60,10 +60,6 @@ int System_Parent::getTimeTransformationAlg() {
 }
 
 // Returns the number of iterations to skip in either t, tau (both the same such that a same sided lattice is given)
-int System_Parent::getIterationSkip( int dir = DIR_T ) {
-    if ( dir == DIR_TAU )
-        return parameters.iterations_tau_resolution;
-    else if ( dir == DIR_W )
-        return ( parameters.iterations_w_resolution != 0 ? 1 : 0 );
-    return parameters.iterations_skips_t;
+int System_Parent::getIterationSkip( ) {
+    return parameters.iterations_t_skip;
 }

@@ -20,6 +20,7 @@ class Parameters : public Parameters_Parent {
     double p_omega_pure_dephasing;
     double p_omega_decay;
     double p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff;
+    bool p_phonon_adjust;
 
     // Calculated System properties:
     double init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
@@ -31,14 +32,8 @@ class Parameters : public Parameters_Parent {
     std::vector<double> chirp_t, chirp_y, chirp_ddt;
     std::string chirp_type;
 
-    // Runtime parameters and other stuff
-    int iterations_t_max;
-    int iterations_total_max;
-    std::vector<double> trace;
-    bool output_full_dm;
-
     // AKF & Spectrum
-    int numerics_maximum_threads, spectrum_frequency_iterations, numerics_phonon_approximation_1, numerics_phonon_approximation_2; //akf_everyXIt //akf_skip_omega
+    int numerics_maximum_threads, iterations_w_resolution, numerics_phonon_approximation_1, numerics_phonon_approximation_2;
     double akf_deltaWmax, spectrum_frequency_center, spectrum_frequency_range;
 
     Parameters(){};
@@ -100,10 +95,10 @@ class Parameters : public Parameters_Parent {
         // Look for --spectrum, if not found, no spectrum is evaluated
         params = Parse_Parameters( arguments, {"--spectrum", "--specTauRes", "--specCenter", "--specRange", "--specWRes", "-spectrum"}, {4, 1, 1, 1, 1, 1}, "Spectrum Parameters" );
         numerics_calculate_spectrum = params.get( 0 ) || params.get( 8 ) ? 1 : 0;
-        iterations_tau_resolution = params.get<int>( {0, 4}, "1" );
+        iterations_tau_resolution = params.get<int>( {0, 4}, "250" );
         spectrum_frequency_center = params.get<double>( {1, 5}, std::to_string( p_omega_cavity ) );
         spectrum_frequency_range = params.get<double>( {2, 6}, std::to_string( ( p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing ) * 10.0 ) );
-        iterations_w_resolution = params.get<int>( {3, 7}, "1" );
+        iterations_w_resolution = params.get<int>( {3, 7}, "500" );
 
         // Look for (-RK4), -RK5, (-RK4T), (-RK4Tau), -RK5T, -RK5Tau
         params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale"}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
@@ -124,7 +119,7 @@ class Parameters : public Parameters_Parent {
         scale_parameters = params.get( 14 );
 
         // Phonon Parameters
-        params = Parse_Parameters( arguments, {"--phonons", "--temperature", "-phonons", "--phononorder", "-noMarkov", "-phononcoeffs"}, {5, 1, 1, 1, 1, 1} );
+        params = Parse_Parameters( arguments, {"--phonons", "--temperature", "-phonons", "--phononorder", "-noMarkov", "-phononcoeffs", "-noPhononAdjust"}, {5, 1, 1, 1, 1, 1, 1} );
         p_phonon_alpha = params.get<double>( 0, "0.03E-24" );
         p_phonon_wcutoff = params.get<double>( 1, "1meV" );
         p_phonon_tcutoff = params.get<double>( 2, "4ps" );
@@ -132,6 +127,7 @@ class Parameters : public Parameters_Parent {
         numerics_phonon_approximation_2 = params.get<int>( {4, 7}, std::to_string( PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) ); // Second Markov / Transformation method
         numerics_phonon_approximation_1 = params.get( 8 ) ? 0 : 1;                                                              // First Markov
         output_coefficients = params.get( 9 ) ? 1 : 0;
+        p_phonon_adjust = !params.get( 10 );
 
         subfolder = arguments.back();
         return true;
@@ -199,9 +195,7 @@ class Parameters : public Parameters_Parent {
 
         // Calculate stuff for RK
         iterations_t_max = (int)std::ceil( ( t_end - t_start ) / t_step );
-
-        //FIXME Adjust tau resolution grid points to be at 1000 or the maximum t iterations in case that this number is smaller than 1000
-        //iterations_tau_resolution = std::max( iterations_t_max, iterations_tau_resolution );
+        iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
 
         // Mandatory: rescale chirp ddt into chirp/ps
         for ( long unsigned i = 0; i < chirp_ddt.size(); i++ )
@@ -214,7 +208,6 @@ class Parameters : public Parameters_Parent {
         max_detuning = ( init_detuning + chirp_total > init_detuning ) ? init_detuning + chirp_total : init_detuning;
 
         // Adjust/calculate frequency range for spectrum
-        spectrum_frequency_iterations = iterations_t_max / iterations_w_resolution;
         if ( spectrum_frequency_center == -1 )
             spectrum_frequency_center = p_omega_cavity;
         if ( spectrum_frequency_range == -1 )
@@ -225,7 +218,7 @@ class Parameters : public Parameters_Parent {
         if ( numerics_calculate_spectrum ) {
             int curIt = 1;
             for ( double ii = t_start + t_step; ii < t_end; ii += t_step ) {
-                if ( curIt % iterations_tau_resolution == 0 ) {
+                if ( curIt % iterations_t_skip == 0 ) {
                     for ( double iii = ii + t_step; iii < t_end; iii += t_step ) {
                         iterations_total_max++;
                     }
@@ -244,8 +237,10 @@ class Parameters : public Parameters_Parent {
                 integral += stepsize * ( p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wcutoff / p_phonon_wcutoff ) / std::tanh( 1.0545718E-34 * w / 2.0 / 1.3806488E-23 / p_phonon_T ) );
             }
             p_phonon_b = std::exp( -0.5 * integral );
-            //p_omega_pure_dephasing = convertParam<double>( "1mueV" ) * p_phonon_T;
-            //p_omega_decay *= p_phonon_b*p_phonon_b;
+            if (p_phonon_adjust) {
+                p_omega_pure_dephasing = convertParam<double>( "1mueV" ) * p_phonon_T;
+                p_omega_decay *= p_phonon_b*p_phonon_b;
+            }
         }
         trace.reserve( iterations_t_max + 5 );
         return true;
@@ -305,7 +300,7 @@ class Parameters : public Parameters_Parent {
         logs.wrapInBar( "Spectrum" );
         logs( "\nCenter Frequency: {} Hz -> {} eV\n", spectrum_frequency_center, Hz_to_eV( spectrum_frequency_center ) );
         logs( "Frequency Range: +/- {} Hz -> +/- {} mueV\n", spectrum_frequency_range, Hz_to_eV( spectrum_frequency_range ) * 1E6 );
-        logs( "Maximum tau-grid resolution is {}x{}\nMaximum w-vector resolution is {}\n\n", iterations_tau_resolution, iterations_tau_resolution, iterations_w_resolution );
+        logs( "Maximum tau-grid resolution is {}x{} resulting in {} skips per timestep\nMaximum w-vector resolution is {}\n\n", iterations_tau_resolution, iterations_tau_resolution, iterations_t_skip, iterations_w_resolution );
 
         logs.wrapInBar( "Phonons" );
         std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism"};
