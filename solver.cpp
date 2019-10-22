@@ -302,12 +302,18 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatrixXcd &op_creator, con
     logs.level2( "Calculating G1(tau), saving to akf_mat of size {}x{}... ", akf_mat.rows(), akf_mat.cols() );
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
+<<<<<<< HEAD
         std::vector<SaveState> past_rhos;
         past_rhos.reserve( (int)( ( savedStates.size() - i ) / s.getIterationSkip() ) );
         int k = i / s.getIterationSkip();
         double t_t = getTimeAt( i );
         MatrixXcd rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
         saveState( rho_tau, t_t, past_rhos );
+=======
+        int k = i / s.getIterationSkip();
+        double t_t = getTimeAt( i );
+        MatrixXcd rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
+>>>>>>> a425affc36ac0d03bac6509a8f43c8946c025fc2
         akf_mat( k, 0 ) = s.dgl_expectationvalue( rho_tau, op_creator, t_t );
         int j = 1;
         int curIt_tau = 1;
