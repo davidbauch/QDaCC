@@ -1,5 +1,5 @@
 #include "global.h"
-#include "system/Exziton2NS/System_Exziton2NS.cpp"
+#include "system/Exciton4NS/System_Exciton4NS.cpp"
 #include "chirp.cpp"
 #include "pulse.cpp"
 #include "solver.cpp"
@@ -22,8 +22,10 @@ int main( int argc, char* argv[] ) {
     System system = System( inputs );
     // Solver
     ODESolver solver = ODESolver( system );
+
     // Normal Time direction
     solver.calculate_t_direction( system );
+
     // Spectrum
     if ( system.calculate_spectrum() ) {
         solver.calculate_g1( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
@@ -48,3 +50,18 @@ int main( int argc, char* argv[] ) {
     }
     exit( EXIT_SUCCESS );
 }
+
+/*
+2NS:
+// Normal Time direction
+solver.calculate_t_direction( system );
+
+// Spectrum
+if ( system.calculate_spectrum() ) {
+    solver.calculate_g1( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
+    solver.calculate_spectrum( system );
+}
+if ( system.calculate_g2() ) {
+    solver.calculate_g2_0( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
+}
+*/
