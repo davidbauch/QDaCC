@@ -28,6 +28,14 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         H_used = MatrixXcd::Zero( p.maxStates, p.maxStates );
         rho = MatrixXcd::Zero( p.maxStates, p.maxStates );
 
+        std::vector<std::string> base1 = {"G", "E"};
+        std::vector<std::string> base2 = {"0", "1", "2"};
+        auto base = expand_operator_base( base1, base2 );
+        logs.level2( "Operator Base: (size {}) ", base.size() );
+        for ( auto b : base )
+            logs.level2( "|{}> ", b );
+        logs.level2( "\n" );
+
         // Initializing bare matrices:
         logs.level2( "Initializing base matrices... " );
         bare_atom_exited = MatrixXcd::Zero( 2, 2 );
@@ -45,8 +53,8 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         bare_atom_inversion = MatrixXcd::Zero( 2, 2 );
         bare_atom_inversion << -1, 0,
             0, 1;
-        bare_photon_create = create_photonic_operator( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
-        bare_photon_annihilate = create_photonic_operator( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
+        bare_photon_create = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
+        bare_photon_annihilate = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
         bare_photon_n = bare_photon_create * bare_photon_annihilate;
 
         // Expanding both states
@@ -87,7 +95,7 @@ class OperatorMatrices : public OperatorMatrices_Parent {
             logs.level2( "NOT using interaction picture... " );
             H_used = H;
         }
-        logs.level2( "Hamiltonoperator done! Used:\n{}\nSetting initial rho as pure state with rho_0 = {}... ", H_used, p.p_initial_state );
+        logs.level2( "Hamiltonoperator done! Used:\n{}\nSetting initial rho as pure state with rho_0 = {}...\n", H_used, p.p_initial_state );
         // rho, experimental: start with coherent state. in this case, always start in ground state.
         if ( !p.startCoherent )
             rho( p.p_initial_state, p.p_initial_state ) = 1;
@@ -101,7 +109,7 @@ class OperatorMatrices : public OperatorMatrices_Parent {
             rho( p.p_max_photon_number * 2, p.p_max_photon_number * 2 ) = trace_rest;
             logs( "Coherent state at N = {} with coefficient {}\n", p.p_max_photon_number, trace_rest );
         }
-        return true;
+        return checkMatrices2NS( p );
     }
 
     void outputOperators( const Parameters &p ) {
@@ -143,7 +151,8 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         }
     }
     // Redundant
-    void checkMatrices2NS( Parameters &p ) {
+    bool checkMatrices2NS( const Parameters &p ) {
+        bool valid = true;
         // Creating Matrices the old way
         MatrixXcd photon_create_check, photon_annihilate_check, atom_exited_check, atom_ground_check, photon_n_check, atom_sigmaplus_check, atom_sigmaminus_check, atom_inversion_check;
         photon_create_check = MatrixXcd::Zero( p.maxStates, p.maxStates );
@@ -169,13 +178,38 @@ class OperatorMatrices : public OperatorMatrices_Parent {
             atom_inversion_check( n, n ) = ( n % 2 == 0 ) ? -1 : 1;
         }
         // Checking
-        if ( !atom_exited.isApprox( atom_exited_check ) ) logs( "atom_exited wrong!\n" );
-        if ( !atom_ground.isApprox( atom_ground_check ) ) logs( "atom_ground wrong!\n" );
-        if ( !atom_sigmaplus.isApprox( atom_sigmaplus_check ) ) logs( "atom_sigmaplus wrong!\n" );
-        if ( !atom_sigmaminus.isApprox( atom_sigmaminus_check ) ) logs( "atom_sigmaminus wrong!\n" );
-        if ( !atom_inversion.isApprox( atom_inversion_check ) ) logs( "atom_inversion wrong!\n" );
-        if ( !photon_create.isApprox( photon_create_check ) ) logs( "photon_create wrong!\n" );
-        if ( !photon_annihilate.isApprox( photon_annihilate_check ) ) logs( "photon_annihilate wrong!\n" );
-        if ( !photon_n.isApprox( photon_n_check ) ) logs( "photon_n wrong!\n" );
+        if ( !atom_exited.isApprox( atom_exited_check ) ) {
+            logs.level2( "Operator atom_exited is wrong!\n" );
+            valid = false;
+        }
+        if ( !atom_ground.isApprox( atom_ground_check ) ) {
+            logs.level2( "Operator atom_ground is wrong!\n" );
+            valid = false;
+        }
+        if ( !atom_sigmaminus.isApprox( atom_sigmaminus_check ) ) {
+            logs.level2( "Operator atom_sigmaminus is wrong!\n" );
+            valid = false;
+        }
+        if ( !atom_sigmaplus.isApprox( atom_sigmaplus_check ) ) {
+            logs.level2( "Operator atom_sigmaplus is wrong!\n" );
+            valid = false;
+        }
+        if ( !atom_inversion.isApprox( atom_inversion_check ) ) {
+            logs.level2( "Operator atom_inversion is wrong!\n" );
+            valid = false;
+        }
+        if ( !photon_create.isApprox( photon_create_check ) ) {
+            logs.level2( "Operator photon_create is wrong!\n" );
+            valid = false;
+        }
+        if ( !photon_annihilate.isApprox( photon_annihilate_check ) ) {
+            logs.level2( "Operator photon_annihilate is wrong!\n" );
+            valid = false;
+        }
+        if ( !photon_n.isApprox( photon_n_check ) ) {
+            logs.level2( "Operator photon_n is wrong!\n" );
+            valid = false;
+        }
+        return valid;
     }
 };
