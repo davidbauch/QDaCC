@@ -16,41 +16,31 @@ class OperatorMatrices_Parent {
     virtual void outputOperators( const Parameters &p ){};
     // Operator functions
     template <class M>
-    static M expand_photonic_operator( const M &op, int N ) {
-        std::assert( op.cols() == op.rows() && "Rows must be equal to cols" );
-        M ret = M::Zero( op.rows() * N, op.rows() * N );
-        for ( int i = 0; i < op.cols(); i++ )
-            for ( int j = 0; j < op.rows(); j++ )
-                for ( int n = 0; n < N; n++ )
-                    for ( int m = 0; m < N; m++ )
-                        if ( n == m )
-                            ret( i * N + n, j * N + m ) = op( i, j );
-        return ret;
-    }
-    template <class M>
-    static M expand_atomic_operator( const M &op, int N ) {
-        std::assert( op.cols() == op.rows() && "Rows must be equal to cols" );
-        M ret = M::Zero( op.rows() * ( N + 1 ), op.rows() * ( N + 1 ) );
-        for ( int n = 0; n <= N; n++ )
-            for ( int i = 0; i < op.cols(); i++ )
-                for ( int j = 0; j < op.rows(); j++ )
-                    ret( n * op.cols() + i, n * op.rows() + j ) = op( i, j );
-        return ret;
-    }
-    template <class M>
     static M tensor( const M &a, const M &b ) {
-        std::assert( a.rows() == a.cols() && b.rows() == b.cols() );
+        assert( a.rows() == a.cols() && b.rows() == b.cols() && "Only Square matrices accepted");
         M ret = M::Zero( a.cols() * b.cols(), a.rows() * b.rows() );
-        for ( int i = 0; i < a.cols(); i++ )
-            for ( int j = 0; j < a.rows(); j++ )
-                for ( int k = 0; k < b.cols(); k++ )
-                    for ( int l = 0; l < b.rows(); l++ ) {
-                        ret( i * a.cols() + k, j * a.rows() + l ) = a( i, j ) * b( k, l );
+        for ( int i = 0; i < a.rows(); i++ )
+            for ( int j = 0; j < a.cols(); j++ )
+                for ( int k = 0; k < b.rows(); k++ )
+                    for ( int l = 0; l < b.cols(); l++ ) {
+                        ret( i * b.rows() + k, j * b.cols() + l ) = a( i, j ) * b( k, l );
                     }
         return ret;
     }
     template <class M>
-    static M create_photonic_operator( const int type, const int maxPhotons ) {
+    static M tensor( const M &a, const M &b, const M &c ) {
+        return tensor<M>(tensor<M>(a,b),c);
+    }
+    static std::vector<std::string> tensor( const std::vector<std::string> &a, const std::vector<std::string> &b ) {
+        std::vector<std::string> ret;
+        for ( int i = 0; i < a.size(); i++ )
+                for ( int k = 0; k < b.size(); k++ ) {
+                        ret.emplace_back(a.at( i) + "|" + b.at( k));
+                    }
+        return ret;
+    }
+    template <class M>
+    static M create_photonic_operator( int type, int maxPhotons ) {
         M ret = M::Zero( maxPhotons + 1, maxPhotons + 1 );
         for ( int i = 0; i < maxPhotons; i++ ) {
             if ( type == OPERATOR_PHOTONIC_CREATE )
@@ -58,17 +48,6 @@ class OperatorMatrices_Parent {
             if ( type == OPERATOR_PHOTONIC_ANNIHILATE )
                 ret( i, i + 1 ) = sqrt( i + 1 );
         }
-        return ret;
-    }
-    template <class M>
-    static M map_operator( const M &op, const M &map ) {
-        std::assert( op.cols() == op.rows() && map.cols() == map.rows() && "Rows must be equal to cols" );
-        M ret = M::Zero( op.rows() * ( map.rows() ), op.cols() * ( map.cols() ) );
-        for ( int i = 0; i < op.cols(); i++ )
-            for ( int j = 0; j < op.rows(); j++ )
-                for ( int n = 0; n < map.cols(); n++ )
-                    for ( int m = 0; m < map.rows(); m++ )
-                        ret( i * map.cols() + n, j * map.rows() + m ) = op( i, j ) * map( n, m );
         return ret;
     }
     // To be called from child constructor

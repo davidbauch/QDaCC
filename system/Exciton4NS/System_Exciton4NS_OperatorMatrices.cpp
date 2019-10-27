@@ -7,6 +7,7 @@ class OperatorMatrices : public OperatorMatrices_Parent {
     MatrixXcd H_I;
     MatrixXcd rho;
     MatrixXcd H_used;
+    std::vector<std::string> base;
 
     //Operator Matrices
     MatrixXcd photon_create_H, photon_annihilate_H, photon_create_V, photon_annihilate_V;
@@ -33,6 +34,24 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         H_I = MatrixXcd::Zero( p.maxStates, p.maxStates );
         H_used = MatrixXcd::Zero( p.maxStates, p.maxStates );
         rho = MatrixXcd::Zero( p.maxStates, p.maxStates );
+
+        // Create Base Matrices and Base Vector:
+        Eigen::MatrixXcd m_base1 = MatrixXcd::Identity( p.p_max_photon_number+1, p.p_max_photon_number+1 ); 
+        Eigen::MatrixXcd m_base2 = MatrixXcd::Identity( p.p_max_photon_number+1, p.p_max_photon_number+1) ; 
+        Eigen::MatrixXcd m_base3 = MatrixXcd::Identity(4,4);
+        std::vector<std::string> base1;
+        std::vector<std::string> base2;
+        std::vector<std::string> base3 = {"G","X_H","X_V","B"};
+        for (int i = 0; i <= p.p_max_photon_number; i++) {
+            base1.emplace_back(std::to_string(i)+"_H");
+            base2.emplace_back(std::to_string(i)+"_V");
+        }
+        base = tensor(tensor( base1, base2 ), base3);
+        
+        logs.level2( "Operator Base: (size {}) ", base.size() );
+        for ( auto b : base )
+            logs.level2( "|{}> ", b );
+        logs.level2( "\n" );
 
         // Initializing bare matrices:
         logs.level2( "Initializing base matrices... " );
@@ -123,45 +142,40 @@ class OperatorMatrices : public OperatorMatrices_Parent {
             0, 0, 0, 0,
             0, 0, 0, 1;
 
-        // Photonic mapping operators
-        MatrixXcd map1 = MatrixXcd::Zero( 2, 2 );
-        MatrixXcd map2 = MatrixXcd::Zero( 2, 2 );
-        map1 << 1, 0, 0, 0;
-        map2 << 0, 0, 0, 1;
         // Photon operators
-        bare_photon_create_H = map_operator( create_photonic_operator( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number ), map1 );
-        bare_photon_annihilate_H = map_operator( create_photonic_operator( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number ), map1 );
-        bare_photon_n_H = bare_photon_create * bare_photon_annihilate;
-        bare_photon_create_V = map_operator( create_photonic_operator( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number ), map2 );
-        bare_photon_annihilate_V = map_operator( create_photonic_operator( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number ), map2 );
-        bare_photon_n_V = bare_photon_create * bare_photon_annihilate;
+        bare_photon_create_H = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
+        bare_photon_annihilate_H = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
+        bare_photon_n_H = bare_photon_create_H * bare_photon_annihilate_H;
+        bare_photon_create_V = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
+        bare_photon_annihilate_V = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
+        bare_photon_n_V = bare_photon_create_V * bare_photon_annihilate_V;
 
         // Expanding both states
         logs.level2( "Expanding single state matrices... " );
-        atom_state_ground = expand_atomic_operator( bare_atom_state_ground, p.p_max_photon_number );
-        atom_state_biexciton = expand_atomic_operator( bare_atom_state_biexciton, p.p_max_photon_number );
-        atom_state_H = expand_atomic_operator( bare_atom_state_H, p.p_max_photon_number );
-        atom_state_V = expand_atomic_operator( bare_atom_state_V, p.p_max_photon_number );
-        atom_sigmaplus_G_H = expand_atomic_operator( bare_atom_sigmaplus_G_H, p.p_max_photon_number );
-        atom_sigmaminus_G_H = expand_atomic_operator( bare_atom_sigmaminus_G_H, p.p_max_photon_number );
-        atom_sigmaplus_H_B = expand_atomic_operator( bare_atom_sigmaplus_H_B, p.p_max_photon_number );
-        atom_sigmaminus_H_B = expand_atomic_operator( bare_atom_sigmaminus_H_B, p.p_max_photon_number );
-        atom_sigmaplus_G_V = expand_atomic_operator( bare_atom_sigmaplus_G_V, p.p_max_photon_number );
-        atom_sigmaminus_G_V = expand_atomic_operator( bare_atom_sigmaminus_G_V, p.p_max_photon_number );
-        atom_sigmaplus_V_B = expand_atomic_operator( bare_atom_sigmaplus_V_B, p.p_max_photon_number );
-        atom_sigmaminus_V_B = expand_atomic_operator( bare_atom_sigmaminus_V_B, p.p_max_photon_number );
-        atom_inversion_G_H = expand_atomic_operator( bare_atom_inversion_G_H, p.p_max_photon_number );
-        atom_inversion_G_V = expand_atomic_operator( bare_atom_inversion_G_V, p.p_max_photon_number );
-        atom_inversion_H_B = expand_atomic_operator( bare_atom_inversion_H_B, p.p_max_photon_number );
-        atom_inversion_V_B = expand_atomic_operator( bare_atom_inversion_V_B, p.p_max_photon_number );
-        atom_inversion_G_B = expand_atomic_operator( bare_atom_inversion_G_B, p.p_max_photon_number );
+        atom_state_ground = tensor( m_base1, m_base2, bare_atom_state_ground );
+        atom_state_biexciton = tensor( m_base1, m_base2, bare_atom_state_biexciton);
+        atom_state_H = tensor( m_base1, m_base2, bare_atom_state_H );
+        atom_state_V = tensor( m_base1, m_base2, bare_atom_state_V );
+        atom_sigmaplus_G_H = tensor( m_base1, m_base2, bare_atom_sigmaplus_G_H );
+        atom_sigmaminus_G_H = tensor( m_base1, m_base2, bare_atom_sigmaminus_G_H );
+        atom_sigmaplus_H_B = tensor( m_base1, m_base2, bare_atom_sigmaplus_H_B );
+        atom_sigmaminus_H_B = tensor( m_base1, m_base2, bare_atom_sigmaminus_H_B );
+        atom_sigmaplus_G_V = tensor( m_base1, m_base2, bare_atom_sigmaplus_G_V );
+        atom_sigmaminus_G_V = tensor( m_base1, m_base2, bare_atom_sigmaminus_G_V );
+        atom_sigmaplus_V_B = tensor( m_base1, m_base2, bare_atom_sigmaplus_V_B );
+        atom_sigmaminus_V_B = tensor( m_base1, m_base2, bare_atom_sigmaminus_V_B );
+        atom_inversion_G_H = tensor( m_base1, m_base2, bare_atom_inversion_G_H );
+        atom_inversion_G_V = tensor( m_base1, m_base2, bare_atom_inversion_G_V );
+        atom_inversion_H_B = tensor( m_base1, m_base2, bare_atom_inversion_H_B );
+        atom_inversion_V_B = tensor( m_base1, m_base2, bare_atom_inversion_V_B );
+        atom_inversion_G_B = tensor( m_base1, m_base2, bare_atom_inversion_G_B );
 
-        photon_create_H = expand_photonic_operator( bare_photon_create_H, 4 );
-        photon_create_V = expand_photonic_operator( bare_photon_create_V, 4 );
-        photon_annihilate_H = expand_photonic_operator( bare_photon_annihilate_H, 4 );
-        photon_annihilate_V = expand_photonic_operator( bare_photon_annihilate_V, 4 );
-        photon_n_H = expand_photonic_operator( bare_photon_n_H, 4 );
-        photon_n_V = expand_photonic_operator( bare_photon_n_V, 4 );
+        photon_create_H = tensor( bare_photon_create_H, m_base2, m_base3 );
+        photon_create_V = tensor( m_base1, bare_photon_create_V, m_base3 );
+        photon_annihilate_H = tensor( bare_photon_annihilate_H, m_base2, m_base3 );
+        photon_annihilate_V = tensor( m_base1, bare_photon_annihilate_V, m_base3);
+        photon_n_H = tensor( bare_photon_n_H, m_base2, m_base3 );
+        photon_n_V = tensor( m_base1, bare_photon_n_V, m_base3);
 
         // All possible Hamiltonions
         logs.level2( "Done! Creating Hamiltonoperator... " );
@@ -171,12 +185,12 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         // RWA
         if ( p.numerics_use_rwa ) {
             logs.level2( "using RWA... " );
-            H_I = p.p_omega_coupling * ( atom_sigmaplus_G_H * photon_annihilate_G_H + atom_sigmaminus_G_H * photon_create_G_H + atom_sigmaplus_G_V * photon_annihilate_G_V + atom_sigmaminus_G_V * photon_create_G_V + atom_sigmaplus_H_B * photon_annihilate_H_B + atom_sigmaminus_H_B * photon_create_H_B + atom_sigmaplus_V_B * photon_annihilate_V_B + atom_sigmaminus_V_B * photon_create_V_B );
+            H_I = p.p_omega_coupling * ( atom_sigmaplus_G_H * photon_annihilate_H + atom_sigmaminus_G_H * photon_create_H + atom_sigmaplus_G_V * photon_annihilate_V + atom_sigmaminus_G_V * photon_create_V + atom_sigmaplus_H_B * photon_annihilate_H + atom_sigmaminus_H_B * photon_create_H + atom_sigmaplus_V_B * photon_annihilate_V + atom_sigmaminus_V_B * photon_create_V );
         }
         // non RWA
         if ( !p.numerics_use_rwa ) {
             logs.level2( "NOT using RWA... " );
-            H_I = p.p_omega_coupling * ( atom_sigmaplus_G_H * photon_create_G_H + atom_sigmaplus_G_H * photon_annihilate_G_H + atom_sigmaminus_G_H * photon_create_G_H + atom_sigmaminus_G_H * photon_annihilate_G_H + atom_sigmaplus_G_V * photon_create_G_V + atom_sigmaplus_G_V * photon_annihilate_G_V + atom_sigmaminus_G_V * photon_create_G_V + atom_sigmaminus_G_V * photon_annihilate_G_V + atom_sigmaplus_H_B * photon_create_H_B + atom_sigmaplus_H_B * photon_annihilate_H_B + atom_sigmaminus_H_B * photon_create_H_B + atom_sigmaminus_H_B * photon_annihilate_H_B + atom_sigmaplus_V_B * photon_create_V_B + atom_sigmaplus_V_B * photon_annihilate_V_B + atom_sigmaminus_V_B * photon_create_V_B + atom_sigmaminus_V_B * photon_annihilate_V_B );
+            H_I = p.p_omega_coupling * ( atom_sigmaplus_G_H * photon_create_H + atom_sigmaplus_G_H * photon_annihilate_H + atom_sigmaminus_G_H * photon_create_H + atom_sigmaminus_G_H * photon_annihilate_H + atom_sigmaplus_G_V * photon_create_V + atom_sigmaplus_G_V * photon_annihilate_V + atom_sigmaminus_G_V * photon_create_V + atom_sigmaminus_G_V * photon_annihilate_V + atom_sigmaplus_H_B * photon_create_H + atom_sigmaplus_H_B * photon_annihilate_H + atom_sigmaminus_H_B * photon_create_H + atom_sigmaminus_H_B * photon_annihilate_H + atom_sigmaplus_V_B * photon_create_V + atom_sigmaplus_V_B * photon_annihilate_V + atom_sigmaminus_V_B * photon_create_V + atom_sigmaminus_V_B * photon_annihilate_V );
         }
         // H
         H = H_0 + H_I;
@@ -257,7 +271,6 @@ class OperatorMatrices : public OperatorMatrices_Parent {
                     << photon_n_H.format( CleanFmt ) << std::endl;
                 out << "photon_n_V\n"
                     << photon_n_V.format( CleanFmt ) << std::endl;
-                
             }
             out << "Hamilton and Rho:\nH=H_0+H_I (no RWA)\n"
                 << H.format( CleanFmt ) << std::endl;

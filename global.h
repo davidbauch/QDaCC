@@ -56,10 +56,14 @@ std::string global_message_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBE
 #define PHONON_APPROXIMATION_TIMETRANSFORMATION 2
 #define PHONON_APPROXIMATION_LINDBLAD_FULL 3
 
+#define MATRIX_BASE Eigen::SparseMatrix<double>
+#define MATRIX_HAMILTON Eigen::SparseMatrix<std::complex<double>>
+#define MATRIX_DENSITY Eigen::MatrixXcd
+
 // Vector for mat/time, tuple
 class SaveState {
 public:
-    MatrixXcd mat;
+    MATRIX_HAMILTON mat;
     double t;
-    SaveState( const MatrixXcd &mat, const double time ) : mat( mat ), t( time ){};
+    SaveState( const MATRIX_HAMILTON &mat, const double time ) : mat( mat ), t( time ){};
 };

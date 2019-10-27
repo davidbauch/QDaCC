@@ -7,6 +7,7 @@ class OperatorMatrices : public OperatorMatrices_Parent {
     MatrixXcd H_I;
     MatrixXcd rho;
     MatrixXcd H_used;
+    std::string base;
 
     //Operator Matrices
     MatrixXcd photon_create, photon_annihilate, atom_exited, atom_ground, photon_n, atom_sigmaplus, atom_sigmaminus, atom_inversion;
@@ -28,9 +29,10 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         H_used = MatrixXcd::Zero( p.maxStates, p.maxStates );
         rho = MatrixXcd::Zero( p.maxStates, p.maxStates );
 
-        std::vector<std::string> base1 = {"G", "E"};
-        std::vector<std::string> base2 = {"0", "1", "2"};
-        auto base = expand_operator_base( base1, base2 );
+        std::vector<std::string> base2 = {"G", "E"};
+        std::vector<std::string> base1; for (int i = 0; i <= p.p_max_photon_number; i++) {base1.emplace_back(std::to_string(i));}
+        base = tensor( base1, base2 );
+        
         logs.level2( "Operator Base: (size {}) ", base.size() );
         for ( auto b : base )
             logs.level2( "|{}> ", b );
@@ -57,17 +59,20 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         bare_photon_annihilate = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
         bare_photon_n = bare_photon_create * bare_photon_annihilate;
 
+        Eigen::MatrixXcd m_base1 = MatrixXcd::Identity(bare_photon_create.rows(), bare_photon_create.cols()); 
+        Eigen::MatrixXcd m_base2 = MatrixXcd::Identity(2,2);
+
         // Expanding both states
         logs.level2( "Expanding single state matrices... " );
-        atom_exited = expand_atomic_operator( bare_atom_exited, p.p_max_photon_number );
-        atom_ground = expand_atomic_operator( bare_atom_ground, p.p_max_photon_number );
-        atom_sigmaminus = expand_atomic_operator( bare_atom_sigmaminus, p.p_max_photon_number );
-        atom_sigmaplus = expand_atomic_operator( bare_atom_sigmaplus, p.p_max_photon_number );
-        atom_inversion = expand_atomic_operator( bare_atom_inversion, p.p_max_photon_number );
+        atom_exited = tensor( m_base1, bare_atom_exited );
+        atom_ground = tensor( m_base1,bare_atom_ground );
+        atom_sigmaminus = tensor( m_base1,bare_atom_sigmaminus );
+        atom_sigmaplus = tensor( m_base1,bare_atom_sigmaplus );
+        atom_inversion = tensor( m_base1,bare_atom_inversion );
 
-        photon_create = expand_photonic_operator( bare_photon_create, 2 );
-        photon_annihilate = expand_photonic_operator( bare_photon_annihilate, 2 );
-        photon_n = expand_photonic_operator( bare_photon_n, 2 );
+        photon_create = tensor( bare_photon_create, m_base2 );
+        photon_annihilate = tensor( bare_photon_annihilate, m_base2 );
+        photon_n = tensor( bare_photon_n, m_base2 );
 
         // All possible Hamiltonions
         logs.level2( "Done! Creating Hamiltonoperator... " );

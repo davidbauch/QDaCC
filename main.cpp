@@ -5,7 +5,7 @@
 #include "solver.cpp"
 
 // g++-8 '/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/main.cpp' -o /Users/davidbauch/bin/QDLC-2LS-1.0.out misc/ALGLIB/MAC/*.o -std=c++1y -O3 -DFMT_HEADER_ONLY -fopenmp -Wall
-
+// test
 // last input: workpath
 int main( int argc, char* argv[] ) {
     // Help
@@ -22,18 +22,18 @@ int main( int argc, char* argv[] ) {
     System system = System( inputs );
     // Solver
     ODESolver solver = ODESolver( system );
-
     // Normal Time direction
     solver.calculate_t_direction( system );
 
     // Spectrum
     if ( system.calculate_spectrum() ) {
-        solver.calculate_g1( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
+        solver.calculate_g1( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
         solver.calculate_spectrum( system );
     }
     if ( system.calculate_g2() ) {
-        solver.calculate_g2_0( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
+        solver.calculate_g2_0( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
     }
+
     // Finalizing all calculations
     system.exit_system();
 
@@ -64,4 +64,19 @@ if ( system.calculate_spectrum() ) {
 if ( system.calculate_g2() ) {
     solver.calculate_g2_0( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
 }
+*/
+
+/*
+4NS
+// Normal Time direction
+    solver.calculate_t_direction( system );
+
+    // Spectrum
+    if ( system.calculate_spectrum() ) {
+        solver.calculate_g1( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
+        solver.calculate_spectrum( system );
+    }
+    if ( system.calculate_g2() ) {
+        solver.calculate_g2_0( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
+    }
 */

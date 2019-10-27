@@ -55,7 +55,7 @@ class Parameters : public Parameters_Parent {
 
         // Look for --system, if not found, standard system is used (g=66mueV, k=66mueV, p_omega_pure_dephasing = 3mueV, p_omega_decay = 1mueV)
         params = Parse_Parameters( arguments, {"--system", "--we", "--wc", "--coupling", "--kappa", "--gammapure", "--gamma"}, {7, 1, 1, 1, 1, 1, 1}, "Systemparameters" );
-        p_omega_atomic_G_V = params.get<double>( {0, 6}, "1.366eV" );
+        p_omega_atomic_G_H = params.get<double>( {0, 6}, "1.366eV" );
         p_omega_cavity_V = params.get<double>( {1, 7}, "1.366eV" );
         p_omega_cavity_H = params.get<double>( {1, 8}, "1.366eV" );
         p_omega_coupling = params.get<double>( {2, 9}, "66mueV" );
@@ -101,7 +101,7 @@ class Parameters : public Parameters_Parent {
         params = Parse_Parameters( arguments, {"--spectrum", "--specTauRes", "--specCenter", "--specRange", "--specWRes", "-spectrum"}, {4, 1, 1, 1, 1, 1}, "Spectrum Parameters" );
         numerics_calculate_spectrum = params.get( 0 ) || params.get( 8 ) ? 1 : 0;
         iterations_tau_resolution = params.get<int>( {0, 4}, "250" );
-        spectrum_frequency_center = params.get<double>( {1, 5}, std::to_string( p_omega_cavity ) );
+        spectrum_frequency_center = params.get<double>( {1, 5}, std::to_string( p_omega_cavity_H ) );
         spectrum_frequency_range = params.get<double>( {2, 6}, std::to_string( ( p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing ) * 10.0 ) );
         iterations_w_resolution = params.get<int>( {3, 7}, "500" );
 
@@ -143,12 +143,12 @@ class Parameters : public Parameters_Parent {
         t_start = scaleVariable( t_start, scaling );
         t_end = scaleVariable( t_end, scaling );
         t_step = scaleVariable( t_step, scaling );
-        p_omega_atomic_G_H = scaleVariable( p_omega_atomic, 1.0 / scaling );
-        p_omega_atomic_G_V = scaleVariable( p_omega_atomic, 1.0 / scaling );
-        p_omega_atomic_H_B = scaleVariable( p_omega_atomic, 1.0 / scaling );
-        p_omega_atomic_V_B = scaleVariable( p_omega_atomic, 1.0 / scaling );
-        p_omega_cavity_H = scaleVariable( p_omega_cavity, 1.0 / scaling );
-        p_omega_cavity_V = scaleVariable( p_omega_cavity, 1.0 / scaling );
+        p_omega_atomic_G_H = scaleVariable( p_omega_atomic_G_H, 1.0 / scaling );
+        p_omega_atomic_G_V = scaleVariable( p_omega_atomic_G_V, 1.0 / scaling );
+        p_omega_atomic_H_B = scaleVariable( p_omega_atomic_H_B, 1.0 / scaling );
+        p_omega_atomic_V_B = scaleVariable( p_omega_atomic_V_B, 1.0 / scaling );
+        p_omega_cavity_H = scaleVariable( p_omega_cavity_H, 1.0 / scaling );
+        p_omega_cavity_V = scaleVariable( p_omega_cavity_V, 1.0 / scaling );
         p_omega_coupling = scaleVariable( p_omega_coupling, 1.0 / scaling );
         p_omega_cavity_loss = scaleVariable( p_omega_cavity_loss, 1.0 / scaling );
         p_omega_pure_dephasing = scaleVariable( p_omega_pure_dephasing, 1.0 / scaling );
@@ -190,24 +190,24 @@ class Parameters : public Parameters_Parent {
         // Calculating remaining atomic frequencies depending on delta E and biexciton binding energy. 
         double deltaE = 0.0;
         double biexciton_bindingenergy = convertParam<double>( "3meV" );
-        p_omega_atomic_G_H = p_omega_atomic_G_V+deltaE;
+        p_omega_atomic_G_V = p_omega_atomic_G_H+deltaE;
         p_omega_atomic_H_B = p_omega_atomic_G_H-biexciton_bindingenergy;
-        p_omega_atomic_H_V = p_omega_atomic_G_V-biexciton_bindingenergy;
+        p_omega_atomic_V_B = p_omega_atomic_G_V-biexciton_bindingenergy;
 
         // Calculate Rabi frequencies:
-        init_rabifrequenz = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity, p_omega_coupling, (int)( p_initial_state / 2.0 ) );
-        max_rabifrequenz = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity, p_omega_coupling, (int)( p_initial_state / 2.0 ) + 1 );
+        init_rabifrequenz = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity_H, p_omega_coupling, (int)( p_initial_state / 2.0 ) );
+        max_rabifrequenz = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity_H, p_omega_coupling, (int)( p_initial_state / 2.0 ) + 1 );
 
         // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
         if ( t_step == -1 ) {
             if ( numerics_use_rwa )
                 t_step = 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing + ( vec_max( pulse_amp ) > 0 ? std::abs( p_omega_atomic_G_H - vec_max( pulse_omega ) ) : 0 ) );
             if ( !numerics_use_rwa )
-                t_step = 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_atomic_G_H + p_omega_cavity );
+                t_step = 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_atomic_G_H + p_omega_cavity_H );
         }
 
         // Calculate the maximum dimensions for operator matrices (max states)
-        maxStates = 4 * ( p_max_photon_number + 1 );
+        maxStates = 4 * ( p_max_photon_number + 1 ) * ( p_max_photon_number + 1 ); // 4 Electronic states x N+1 Photonic states * 2 for H,V modes
 
         // Calculate stuff for RK
         iterations_t_max = (int)std::ceil( ( t_end - t_start ) / t_step );
@@ -220,12 +220,12 @@ class Parameters : public Parameters_Parent {
         chirp_total = vec_max( chirp_y );
 
         // Initial and maximum system detuning (not taking into account custom chirps)
-        init_detuning = ( p_omega_atomic_G_H - p_omega_cavity );
+        init_detuning = ( p_omega_atomic_G_H - p_omega_cavity_H );
         max_detuning = ( init_detuning + chirp_total > init_detuning ) ? init_detuning + chirp_total : init_detuning;
 
         // Adjust/calculate frequency range for spectrum
         if ( spectrum_frequency_center == -1 )
-            spectrum_frequency_center = p_omega_cavity;
+            spectrum_frequency_center = p_omega_cavity_H;
         if ( spectrum_frequency_range == -1 )
             spectrum_frequency_range = ( std::abs( max_detuning ) + p_omega_coupling + p_omega_cavity_loss / 2. ) * 3.;
 
@@ -257,9 +257,9 @@ class Parameters : public Parameters_Parent {
         logs( "Time iterations (main loop) = {}\n", iterations_t_max );
         logs.wrapInBar( "System Parameters", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Energy Level difference |g><g| - |e><e| = {} Hz -> {} eV -> {} nm\n", p_omega_atomic_G_H, Hz_to_eV( p_omega_atomic_G_H ), Hz_to_wavelength( p_omega_atomic_G_H ) );
-        logs( "Cavity Frequency w_c = {} Hz -> {} eV -> {} nm\n", p_omega_cavity, Hz_to_eV( p_omega_cavity ), Hz_to_wavelength( p_omega_cavity ) );
+        logs( "Cavity Frequency w_c = {} Hz -> {} eV -> {} nm\n", p_omega_cavity_H, Hz_to_eV( p_omega_cavity_H ), Hz_to_wavelength( p_omega_cavity_H ) );
         logs( "Coupling strengh g = {} Hz -> {} mueV\n", p_omega_coupling, Hz_to_eV( p_omega_coupling ) * 1E6 );
-        logs( "Photon loss rate k = {} Hz -> {} mueV -> Q = {:.2f}\n", p_omega_cavity_loss, Hz_to_eV( p_omega_cavity_loss ) * 1E6, p_omega_cavity / p_omega_cavity_loss );
+        logs( "Photon loss rate k = {} Hz -> {} mueV -> Q = {:.2f}\n", p_omega_cavity_loss, Hz_to_eV( p_omega_cavity_loss ) * 1E6, p_omega_cavity_H / p_omega_cavity_loss );
         logs( "Atomic dephasing rate gamma_pure = {} Hz -> {} mueV\n", p_omega_pure_dephasing, Hz_to_eV( p_omega_pure_dephasing ) * 1E6 );
         logs( "RAD rate gamma = {} Hz -> {} mueV\n", p_omega_decay, Hz_to_eV( p_omega_decay ) * 1E6 );
         logs( "Initial state rho0 = |{},{}> with maximum number of {} photons\n\n", ( p_initial_state % 2 == 0 ? "g" : "e" ), (int)std::floor( p_initial_state / 2 ), p_max_photon_number );
