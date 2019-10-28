@@ -103,7 +103,7 @@ class Log {
     }
 
     void debug( double i = -1, std::string suffix = "" ) {
-        fmt::print( "Currently at {} {}\n", ( i == -1 ) ? deVar++ : i, suffix );
+        level2( "Currently at {} {}\n", ( i == -1 ) ? deVar++ : i, suffix );
     }
     void close() {
         level1( "[END OF LOGFILE]" );
