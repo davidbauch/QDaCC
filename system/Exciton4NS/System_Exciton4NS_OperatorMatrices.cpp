@@ -2,18 +2,18 @@
 
 class OperatorMatrices : public OperatorMatrices_Parent {
    public:
-    MatrixXcd H;
-    MatrixXcd H_0;
-    MatrixXcd H_I;
-    MatrixXcd rho;
-    MatrixXcd H_used;
+    DenseMat H;
+    DenseMat H_0;
+    DenseMat H_I;
+    DenseMat rho;
+    DenseMat H_used;
     std::vector<std::string> base;
 
     //Operator Matrices
-    MatrixXcd photon_create_H, photon_annihilate_H, photon_create_V, photon_annihilate_V;
-    MatrixXcd atom_state_biexciton, atom_state_ground, atom_state_H, atom_state_V, photon_n_H, photon_n_V;
-    MatrixXcd atom_sigmaplus_G_H, atom_sigmaminus_G_H, atom_sigmaplus_H_B, atom_sigmaminus_H_B, atom_sigmaplus_G_V, atom_sigmaminus_G_V, atom_sigmaplus_V_B, atom_sigmaminus_V_B;
-    MatrixXcd atom_inversion_G_H, atom_inversion_G_V, atom_inversion_H_B, atom_inversion_V_B, atom_inversion_G_B;
+    DenseMat photon_create_H, photon_annihilate_H, photon_create_V, photon_annihilate_V;
+    DenseMat atom_state_biexciton, atom_state_ground, atom_state_H, atom_state_V, photon_n_H, photon_n_V;
+    DenseMat atom_sigmaplus_G_H, atom_sigmaminus_G_H, atom_sigmaplus_H_B, atom_sigmaminus_H_B, atom_sigmaplus_G_V, atom_sigmaminus_G_V, atom_sigmaplus_V_B, atom_sigmaminus_V_B;
+    DenseMat atom_inversion_G_H, atom_inversion_G_V, atom_inversion_H_B, atom_inversion_V_B, atom_inversion_G_B;
 
     // Bare matrices:
     MatrixXcd bare_photon_create_H, bare_photon_annihilate_H, bare_photon_create_V, bare_photon_annihilate_V;
@@ -29,11 +29,11 @@ class OperatorMatrices : public OperatorMatrices_Parent {
     bool generateOperators( const Parameters &p ) {
         // Zeroing Hamiltons (redundant at this point)
         logs.level2( "Creating operator matrices, dimension = {}\nCreating base matrices... ", p.maxStates );
-        H = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        H_0 = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        H_I = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        H_used = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        rho = MatrixXcd::Zero( p.maxStates, p.maxStates );
+        H = DenseMat( p.maxStates, p.maxStates );
+        H_0 = DenseMat( p.maxStates, p.maxStates );
+        H_I = DenseMat( p.maxStates, p.maxStates );
+        H_used = DenseMat( p.maxStates, p.maxStates );
+        rho = DenseMat( p.maxStates, p.maxStates );
 
         // Create Base Matrices and Base Vector:
         Eigen::MatrixXcd m_base1 = MatrixXcd::Identity( p.p_max_photon_number+1, p.p_max_photon_number+1 ); 
@@ -152,30 +152,30 @@ class OperatorMatrices : public OperatorMatrices_Parent {
 
         // Expanding both states
         logs.level2( "Expanding single state matrices... " );
-        atom_state_ground = tensor( m_base1, m_base2, bare_atom_state_ground );
-        atom_state_biexciton = tensor( m_base1, m_base2, bare_atom_state_biexciton);
-        atom_state_H = tensor( m_base1, m_base2, bare_atom_state_H );
-        atom_state_V = tensor( m_base1, m_base2, bare_atom_state_V );
-        atom_sigmaplus_G_H = tensor( m_base1, m_base2, bare_atom_sigmaplus_G_H );
-        atom_sigmaminus_G_H = tensor( m_base1, m_base2, bare_atom_sigmaminus_G_H );
-        atom_sigmaplus_H_B = tensor( m_base1, m_base2, bare_atom_sigmaplus_H_B );
-        atom_sigmaminus_H_B = tensor( m_base1, m_base2, bare_atom_sigmaminus_H_B );
-        atom_sigmaplus_G_V = tensor( m_base1, m_base2, bare_atom_sigmaplus_G_V );
-        atom_sigmaminus_G_V = tensor( m_base1, m_base2, bare_atom_sigmaminus_G_V );
-        atom_sigmaplus_V_B = tensor( m_base1, m_base2, bare_atom_sigmaplus_V_B );
-        atom_sigmaminus_V_B = tensor( m_base1, m_base2, bare_atom_sigmaminus_V_B );
-        atom_inversion_G_H = tensor( m_base1, m_base2, bare_atom_inversion_G_H );
-        atom_inversion_G_V = tensor( m_base1, m_base2, bare_atom_inversion_G_V );
-        atom_inversion_H_B = tensor( m_base1, m_base2, bare_atom_inversion_H_B );
-        atom_inversion_V_B = tensor( m_base1, m_base2, bare_atom_inversion_V_B );
-        atom_inversion_G_B = tensor( m_base1, m_base2, bare_atom_inversion_G_B );
+        atom_state_ground = tensor( m_base1, m_base2, bare_atom_state_ground );//.sparseView();
+        atom_state_biexciton = tensor( m_base1, m_base2, bare_atom_state_biexciton);//.sparseView();
+        atom_state_H = tensor( m_base1, m_base2, bare_atom_state_H );//.sparseView();
+        atom_state_V = tensor( m_base1, m_base2, bare_atom_state_V );//.sparseView();
+        atom_sigmaplus_G_H = tensor( m_base1, m_base2, bare_atom_sigmaplus_G_H );//.sparseView();
+        atom_sigmaminus_G_H = tensor( m_base1, m_base2, bare_atom_sigmaminus_G_H );//.sparseView();
+        atom_sigmaplus_H_B = tensor( m_base1, m_base2, bare_atom_sigmaplus_H_B );//.sparseView();
+        atom_sigmaminus_H_B = tensor( m_base1, m_base2, bare_atom_sigmaminus_H_B );//.sparseView();
+        atom_sigmaplus_G_V = tensor( m_base1, m_base2, bare_atom_sigmaplus_G_V );//.sparseView();
+        atom_sigmaminus_G_V = tensor( m_base1, m_base2, bare_atom_sigmaminus_G_V );//.sparseView();
+        atom_sigmaplus_V_B = tensor( m_base1, m_base2, bare_atom_sigmaplus_V_B );//.sparseView();
+        atom_sigmaminus_V_B = tensor( m_base1, m_base2, bare_atom_sigmaminus_V_B );//.sparseView();
+        atom_inversion_G_H = tensor( m_base1, m_base2, bare_atom_inversion_G_H );//.sparseView();
+        atom_inversion_G_V = tensor( m_base1, m_base2, bare_atom_inversion_G_V );//.sparseView();
+        atom_inversion_H_B = tensor( m_base1, m_base2, bare_atom_inversion_H_B );//.sparseView();
+        atom_inversion_V_B = tensor( m_base1, m_base2, bare_atom_inversion_V_B );//.sparseView();
+        atom_inversion_G_B = tensor( m_base1, m_base2, bare_atom_inversion_G_B );//.sparseView();
 
-        photon_create_H = tensor( bare_photon_create_H, m_base2, m_base3 );
-        photon_create_V = tensor( m_base1, bare_photon_create_V, m_base3 );
-        photon_annihilate_H = tensor( bare_photon_annihilate_H, m_base2, m_base3 );
-        photon_annihilate_V = tensor( m_base1, bare_photon_annihilate_V, m_base3);
-        photon_n_H = tensor( bare_photon_n_H, m_base2, m_base3 );
-        photon_n_V = tensor( m_base1, bare_photon_n_V, m_base3);
+        photon_create_H = tensor( bare_photon_create_H, m_base2, m_base3 );//.sparseView();
+        photon_create_V = tensor( m_base1, bare_photon_create_V, m_base3 );//.sparseView();
+        photon_annihilate_H = tensor( bare_photon_annihilate_H, m_base2, m_base3 );//.sparseView();
+        photon_annihilate_V = tensor( m_base1, bare_photon_annihilate_V, m_base3);//.sparseView();
+        photon_n_H = tensor( bare_photon_n_H, m_base2, m_base3 );//.sparseView();
+        photon_n_V = tensor( m_base1, bare_photon_n_V, m_base3 );//.sparseView();
 
         // All possible Hamiltonions
         logs.level2( "Done! Creating Hamiltonoperator... " );

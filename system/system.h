@@ -30,36 +30,36 @@ class System_Parent {
         return A * B + B * A;
     }
     // Matrix Lindblad Decay Term
-    template <typename T>
-    MatrixXcd dgl_lindblad( const MatrixXcd &rho, const T &op, const T &opd ) {
+    template <typename T, typename T2, typename T3>
+    T dgl_lindblad( const T &rho, const T2 &op, const T3 &opd ) {
         return 2.0 * op * rho * opd - opd * op * rho - rho * opd * op;
     }
-    virtual MatrixXcd dgl_timetrafo( const MatrixXd &op, const double t ) { return op; };
-    virtual MatrixXcd dgl_timetrafo( const MatrixXcd &op, const double t ) { return op; };
+    //virtual MatrixXcd dgl_timetrafo( const DenseMat &op, const double t ) { return op; };
+    virtual DenseMat dgl_timetrafo( const DenseMat &op, const double t ) { return op; };
     // Expectationvalue
     template <typename T>
-    std::complex<double> dgl_expectationvalue( const MatrixXcd &rho, const T &op, const double t ) {
+    std::complex<double> dgl_expectationvalue( const T &rho, const T &op, const double t ) {
         return ( rho * dgl_timetrafo( op, t ) ).trace();
     }
     // Time Transformation ( -> Interaction picture)
     // Transformed densitymatrix (q.r.t)
     template <typename T>
-    MatrixXcd dgl_calc_rhotau( const MatrixXcd &rho, const T &op, const double t ) {
+    T dgl_calc_rhotau( const T &rho, const T &op, const double t ) {
         return dgl_timetrafo( op, t ) * rho;
     }
     // Runge function
-    virtual MatrixXcd dgl_rungeFunction( const MatrixXcd &rho, const MatrixXcd &H, const double t, std::vector<SaveState> &past_rhos ) {
+    virtual DenseMat dgl_rungeFunction( const DenseMat &rho, const MatrixXcd &H, const double t, std::vector<SaveState> &past_rhos ) {
         logs( "Warning; Returning virtual function!\n" );
         return rho;
     }
     // Output Expectation Values
-    virtual void expectationValues( const MatrixXcd &rho, const double t ){};
+    virtual void expectationValues( const DenseMat &rho, const double t ){};
     // Check for trace validity
-    bool traceValid( MatrixXcd &rho, const double t, const bool forceOutput );
+    bool traceValid( DenseMat &rho, const double t, const bool forceOutput );
     // Return Hamiltonian for time t
-    virtual MatrixXcd dgl_getHamilton( const double t ) {
+    virtual DenseMat dgl_getHamilton( const double t ) {
         logs( "Warning; Returning virtual function\n" );
-        return Eigen::MatrixXcd::Zero( 1, 1 );
+        return DenseMat( 1, 1 );
     };
     // Return solver order for time direction
     int getSolverOrder( const int dir );

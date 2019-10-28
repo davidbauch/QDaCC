@@ -16,18 +16,18 @@ class System : public System_Parent {
     FileOutput fileoutput;
     std::vector<std::complex<double>> phi_vector;
 
-    MatrixXcd timeTrafoMatrix;
+    DenseMat timeTrafoMatrix;
 
     System(){};
     System( const std::vector<std::string> &input ) {
         // Set Name of this system. 2 Level atomic system coupled to single mode optical field
-        name = "Exciton (2NS)";
+        name = "Biexciton (4NS)";
         logs.level2( "Creating System Class for '{}'\n", name );
         parameters = Parameters( input );
         parameters.log();
         operatorMatrices = OperatorMatrices( parameters );
         operatorMatrices.outputOperators( parameters );
-        fileoutput = FileOutput( {"densitymatrix.txt", "atomicinversion.txt", "photonpopulation.txt"}, parameters );
+        fileoutput = FileOutput( {"densitymatrix.txt", "atomicinversion.txt", "photonpopulation.txt"}, parameters, operatorMatrices );
         init();
     }
 
@@ -36,6 +36,7 @@ class System : public System_Parent {
         Chirp::Inputs chirpinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.chirp_type, parameters.numerics_order_highest );
         chirpinputs.add( parameters.chirp_t, parameters.chirp_y, parameters.chirp_ddt );
         chirp_H = Chirp( chirpinputs );
+        chirp_V = Chirp( chirpinputs );
         if ( parameters.chirp_total != 0 )
             chirp_H.fileOutput( parameters.subfolder + "chirp.txt" );
 
@@ -43,21 +44,22 @@ class System : public System_Parent {
         Pulse::Inputs pulseinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_order_highest );
         pulseinputs.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_type );
         pulse_H = Pulse( pulseinputs );
+        pulse_V = Pulse( pulseinputs );
         if ( parameters.pulse_amp.at( 0 ) != 0 )
             pulse_H.fileOutput( parameters.subfolder + "pulse.txt" );
 
         // Output Phonon functions if phonons are active
         if ( parameters.p_phonon_T != 0 ) {
-            phi_vector.reserve( parameters.p_phonon_tcutoff / getTimeStep() );
+            phi_vector.reserve( std::ceil( parameters.p_phonon_tcutoff / getTimeStep() * 3.1 ) );
             phi_vector.emplace_back( dgl_phonons_phi( getTimeStep() * 0.01 ) );
             for ( double tau = getTimeStep(); tau < parameters.p_phonon_tcutoff * 3.1; tau += getTimeStep() ) {
                 phi_vector.emplace_back( dgl_phonons_phi( tau ) );
             }
             FILE *fp_phonons = std::fopen( ( parameters.subfolder + "phonons.txt" ).c_str(), "w" );
             fmt::print( fp_phonons, "t\treal(phi(t))\timag(phi(t))\treal(g_u(t))\timag(g_u(t))\treal(g_g(t))\timag(g_g(t))\n" );
-            for ( double t = getTimeborderStart(); t < 3 * parameters.p_phonon_tcutoff; t += getTimeStep() ) {
-                auto greenu = dgl_phonons_greenf( t, -1, 'u' );
-                auto greeng = dgl_phonons_greenf( t, -1, 'g' );
+            for ( double t = getTimeborderStart(); t < 3.0 * parameters.p_phonon_tcutoff; t += getTimeStep() ) {
+                auto greenu = dgl_phonons_greenf( t, 'u' );
+                auto greeng = dgl_phonons_greenf( t, 'g' );
                 fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi_vector.at( std::floor( t / getTimeStep() ) ) ), std::imag( phi_vector.at( std::floor( t / getTimeStep() ) ) ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
             }
             std::fclose( fp_phonons );
@@ -74,16 +76,16 @@ class System : public System_Parent {
         // Time Transformation
         timeTrafoMatrix = ( 1i * operatorMatrices.H_0 ).exp();
         // Check time trafo
-        MatrixXcd ttrafo = ( 1i * operatorMatrices.H_0 * 125E-12 ).exp() * operatorMatrices.H_used * ( -1i * operatorMatrices.H_0 * 125E-12 ).exp();
-        MatrixXcd temp = dgl_timetrafo( operatorMatrices.H_used, 125E-12 ) - ttrafo;
+        DenseMat ttrafo = ( 1i * operatorMatrices.H_0 * 125E-12 ).exp() * operatorMatrices.H_used * ( -1i * operatorMatrices.H_0 * 125E-12 ).exp();
+        DenseMat temp = dgl_timetrafo( operatorMatrices.H_used, 125E-12 ) - ttrafo;
         if ( std::abs( temp.sum() / parameters.p_omega_atomic_G_H ) >= 0.0001 ) {
             logs( "Unitary timetransformation error is bigger than 0.01% of atomic transition energy!\n\n" );
         }
         return true;
     }
 
-    MatrixXcd dgl_rungeFunction( const MatrixXcd &rho, const MatrixXcd &H, const double t, std::vector<SaveState> &past_rhos ) {
-        MatrixXcd ret = -1i * dgl_kommutator( H, rho );
+    DenseMat dgl_rungeFunction( const DenseMat &rho, const DenseMat &H, const double t, std::vector<SaveState> &past_rhos ) {
+        DenseMat ret = -1i * dgl_kommutator( H, rho );
         // Photone losses
         if ( parameters.p_omega_cavity_loss != 0.0 ) {
             //ret += parameters.p_omega_cavity_loss / 2.0 * ( 2 * operatorMatrices.photon_annihilate_H * rho * operatorMatrices.photon_create_H - dgl_antikommutator( operatorMatrices.photon_n_H, rho ) );
@@ -111,8 +113,8 @@ class System : public System_Parent {
         return ret;
     }
 
-    MatrixXcd dgl_timetrafo( const MatrixXcd &A, const double t ) {
-        MatrixXcd ret = A;
+    DenseMat dgl_timetrafo( const DenseMat &A, const double t ) {
+        DenseMat ret = A;
         if ( parameters.numerics_use_interactionpicture == 1 ) {
             // TIMETRANSFORMATION_PRECALCULATED
             if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_PRECALCULATED ) {
@@ -132,30 +134,30 @@ class System : public System_Parent {
             }
             // TIMETRANSFORMATION_MATRIXEXPONENTIAL
             else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL ) {
-                MatrixXcd U = ( 1i * operatorMatrices.H_0 * t ).exp(); // auto slower than direct type, because of doubled evaluation
+                DenseMat U = ( 1i * operatorMatrices.H_0 * t ).exp(); // auto slower than direct type, because of doubled evaluation
                 ret = U * A * U.conjugate();
             } else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL_PRECALCULATED ) {
-                MatrixXcd U = timeTrafoMatrix.array().pow( t ); // auto slower than direct type, because of doubled evaluation
+                DenseMat U = timeTrafoMatrix.array().pow( t ); // auto slower than direct type, because of doubled evaluation
                 ret = U * A * U.conjugate();
             }
         }
         return ret;
     }
 
-    MatrixXcd dgl_chirp( const double t ) {
+    DenseMat dgl_chirp( const double t ) {
         if ( parameters.chirp_total == 0 )
-            return MatrixXcd::Zero( parameters.maxStates, parameters.maxStates );
+            return DenseMat::Zero( parameters.maxStates, parameters.maxStates );
         return 0.5 * operatorMatrices.atom_inversion_G_H * chirp_H.get( t );
     }
-    MatrixXcd dgl_pulse( const double t ) {
+    DenseMat dgl_pulse( const double t ) {
         if ( parameters.pulse_amp.at( 0 ) == 0 )
-            return MatrixXcd::Zero( parameters.maxStates, parameters.maxStates );
+            return DenseMat::Zero( parameters.maxStates, parameters.maxStates );
         return 0.5 * ( operatorMatrices.atom_sigmaplus_G_H * pulse_H.get( t ) + operatorMatrices.atom_sigmaminus_G_H * std::conj( pulse_H.get( t ) ) );
     }
 
-    MatrixXcd dgl_phonons_rungefunc( const MatrixXcd &chi, const double t ) {
+    DenseMat dgl_phonons_rungefunc( const DenseMat &chi, const double t ) {
         // H
-        MatrixXcd explicit_time = 1i * parameters.p_omega_atomic_G_H * parameters.p_omega_coupling * ( project_matrix( operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H ).cwiseProduct( chi ) );
+        DenseMat explicit_time = 1i * parameters.p_omega_atomic_G_H * parameters.p_omega_coupling * ( project_matrix( operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H ).cwiseProduct( chi ) );
         explicit_time += 1i * parameters.p_omega_atomic_H_B * parameters.p_omega_coupling * ( project_matrix( operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H ).cwiseProduct( chi ) );
         explicit_time += 1i * parameters.p_omega_atomic_G_H * pulse_H.get( t ) * ( project_matrix( operatorMatrices.atom_sigmaplus_G_H ).cwiseProduct( chi ) );
         explicit_time -= 1i * parameters.p_omega_coupling * parameters.p_omega_cavity_H * ( project_matrix( operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H ).cwiseProduct( chi ) );
@@ -170,22 +172,19 @@ class System : public System_Parent {
         explicit_time -= 1i * parameters.p_omega_coupling * parameters.p_omega_cavity_V * ( project_matrix( operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V ).cwiseProduct( chi ) );
         explicit_time += 1i * ( pulse_V.get( t ) - pulse_V.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( project_matrix( operatorMatrices.atom_sigmaplus_G_V ).cwiseProduct( chi ) );
         explicit_time += 1i * ( pulse_V.get( t ) - pulse_V.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( project_matrix( operatorMatrices.atom_sigmaplus_V_B ).cwiseProduct( chi ) );
-        MatrixXcd hamilton = dgl_getHamilton( t );
+        DenseMat hamilton = dgl_getHamilton( t );
         return -1i * dgl_kommutator( hamilton, chi ) + explicit_time;
     }
 
-    MatrixXcd dgl_phonons_chiToX( const MatrixXcd &chi, const char mode = 'u' ) {
+    DenseMat dgl_phonons_chiToX( const DenseMat &chi, const char mode = 'u' ) {
         if ( mode == 'g' ) {
             return chi + chi.adjoint().eval();
         }
         return 1i * ( chi - chi.adjoint().eval() );
     }
 
-    std::complex<double> dgl_phonons_greenf( double t, int i = -1, const char mode = 'u' ) {
-        if ( t == 0 )
-            t = parameters.t_step * 0.1;
-        if ( i == -1 )
-            i = std::floor( t / getTimeStep() );
+    std::complex<double> dgl_phonons_greenf( double t, const char mode = 'u' ) {
+        int i = std::floor( t / getTimeStep() );
         auto phi = phi_vector.at( i ); //dgl_phonons_phi( t );
         if ( mode == 'g' ) {
             return parameters.p_phonon_b * parameters.p_phonon_b * ( std::cosh( phi ) - 1.0 );
@@ -210,10 +209,9 @@ class System : public System_Parent {
         if ( mode == 'L' ) {
             double bpulsesquared, delta, nu;
             if ( level == 'H' ) {
-                    bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse_H.get( t ) ), 2.0 );
-                    delta = parameters.pulse_omega.at( 0 ) - omega_atomic; //FIXME : different pulse frequencies
-                }
-            else {
+                bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse_H.get( t ) ), 2.0 );
+                delta = parameters.pulse_omega.at( 0 ) - omega_atomic; //FIXME : different pulse frequencies
+            } else {
                 bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse_V.get( t ) ), 2.0 );
                 delta = parameters.pulse_omega.at( 0 ) - omega_atomic; //FIXME : different pulse frequencies
             }
@@ -242,13 +240,12 @@ class System : public System_Parent {
         return ret;
     }
 
-    MatrixXcd dgl_phonons( const MatrixXcd &rho, const double t, const std::vector<SaveState> &past_rhos ) {
+    DenseMat dgl_phonons( const DenseMat &rho, const double t, const std::vector<SaveState> &past_rhos ) {
         // Determine Chi
-        MatrixXcd ret = MatrixXcd::Zero( parameters.maxStates, parameters.maxStates );
-        MatrixXcd chi = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t ), t );
-        MatrixXcd integrant;
-
-        MatrixXcd rho_used = rho;
+        DenseMat ret = DenseMat::Zero( parameters.maxStates, parameters.maxStates );
+        DenseMat chi = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t ), t );
+        DenseMat integrant = ret;
+        DenseMat rho_used = rho;
 
         if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) {
             // Calculate Chi(t) backwards to Chi(t-tau)
@@ -256,10 +253,9 @@ class System : public System_Parent {
                 if ( !parameters.numerics_phonon_approximation_1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
-                    //fmt::print( "Current t = {} -> Matrix rho_used for t-tau = {}, rho_used.t = {}, time for past_rhos.back() = {}\n", t, t - tau, past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).t, past_rhos.back().t);
                 }
-                MatrixXcd chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
-                MatrixXcd chi_tau_back = ODESolver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
+                DenseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
+                DenseMat chi_tau_back = ODESolver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
                 integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'u' ), ( dgl_phonons_chiToX( chi_tau_back, 'u' ) * rho_used ).eval() );
                 integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'g' ), ( dgl_phonons_chiToX( chi_tau_back, 'g' ) * rho_used ).eval() );
                 ret -= ( integrant + integrant.adjoint().eval() ) * parameters.t_step;
@@ -271,8 +267,8 @@ class System : public System_Parent {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }
-                MatrixXcd chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
-                MatrixXcd U = ( -1i * dgl_getHamilton( t ) * tau ).exp();
+                DenseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
+                DenseMat U = ( -1i * dgl_getHamilton( t ) * tau ).exp();
                 integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'u' ), ( dgl_phonons_chiToX( U * chi_tau * U.adjoint().eval(), 'u' ) * rho_used ).eval() );
                 integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'g' ), ( dgl_phonons_chiToX( U * chi_tau * U.adjoint().eval(), 'g' ) * rho_used ).eval() );
                 ret -= ( integrant + integrant.adjoint().eval() ) * parameters.t_step;
@@ -283,7 +279,7 @@ class System : public System_Parent {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }
-                MatrixXcd chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
+                DenseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
                 integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'u' ), ( dgl_phonons_chiToX( chi_tau, 'u' ) * rho_used ).eval() );
                 integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'g' ), ( dgl_phonons_chiToX( chi_tau, 'g' ) * rho_used ).eval() );
                 ret -= ( integrant + integrant.adjoint().eval() ) * parameters.t_step;
@@ -311,7 +307,7 @@ class System : public System_Parent {
         return ret;
     }
 
-    void expectationValues( const MatrixXcd &rho, const double t ) {
+    void expectationValues( const DenseMat &rho, const double t ) {
         std::fprintf( fileoutput.fp_atomicinversion, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue( rho, operatorMatrices.atom_inversion_G_B, t ) ) );
         std::fprintf( fileoutput.fp_photonpopulation, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue( rho, operatorMatrices.photon_n_H, t ) ) );
         std::fprintf( fileoutput.fp_densitymatrix, "%e\t", t );
@@ -326,7 +322,7 @@ class System : public System_Parent {
         std::fprintf( fileoutput.fp_densitymatrix, "\n" );
     }
 
-    MatrixXcd dgl_getHamilton( const double t ) {
+    DenseMat dgl_getHamilton( const double t ) {
         return dgl_timetrafo( parameters.p_phonon_b * ( operatorMatrices.H_used + dgl_chirp( t ) + dgl_pulse( t ) ), t );
     }
 

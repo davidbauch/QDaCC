@@ -4,11 +4,11 @@ class FileOutput {
     FILE *fp_atomicinversion;
     FILE *fp_photonpopulation;
     FileOutput(){};
-    FileOutput( const std::vector<std::string> filenames, const Parameters &p );
+    FileOutput( const std::vector<std::string> filenames, const Parameters &p, const OperatorMatrices &op );
     void close();
 };
 
-FileOutput::FileOutput( const std::vector<std::string> filenames, const Parameters &p ) {
+FileOutput::FileOutput( const std::vector<std::string> filenames, const Parameters &p, const OperatorMatrices &op ) {
     logs.level2( "Creating FileOutputs... " );
     long unsigned int config_maximumNumberOfFiles = 3;
     if ( filenames.size() != config_maximumNumberOfFiles ) {
@@ -22,11 +22,11 @@ FileOutput::FileOutput( const std::vector<std::string> filenames, const Paramete
         if ( p.output_full_dm ) {
             for ( int i = 0; i < p.maxStates; i++ )
                 for ( int j = 0; j < p.maxStates; j++ ) {
-                    fmt::print( fp_densitymatrix, "|{},{}><{},{}|\t", ( i % 2 == 0 ? "g" : "e" ), std::floor( ( 1.0 * i ) / 2 ), ( j % 2 == 0 ? "g" : "e" ), std::floor( ( 1.0 * j ) / 2 ) );
+                    fmt::print( fp_densitymatrix, "|{}><{}|\t", op.base.at( i ), op.base.at( j ) );
                 }
         } else
             for ( int i = 0; i < p.maxStates; i++ )
-                fmt::print( fp_densitymatrix, "|{0},{1}><{0},{1}|\t", ( i % 2 == 0 ? "g" : "e" ), std::floor( ( 1.0 * i ) / 2 ) );
+                fmt::print( fp_densitymatrix, "|{}><{}|\t", op.base.at( i ), op.base.at( i ) );
         fmt::print( fp_densitymatrix, "\n" );
     }
     fp_atomicinversion = std::fopen( ( p.subfolder + filenames.at( 1 ) ).c_str(), "w" );

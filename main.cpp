@@ -1,5 +1,12 @@
+#define SYSTEM4LS
+
 #include "global.h"
+#ifdef SYSTEM2LS
+#include "system/Exciton2NS/System_Exciton2NS.cpp"
+#endif
+#ifdef SYSTEM4LS
 #include "system/Exciton4NS/System_Exciton4NS.cpp"
+#endif
 #include "chirp.cpp"
 #include "pulse.cpp"
 #include "solver.cpp"
@@ -25,7 +32,17 @@ int main( int argc, char* argv[] ) {
     // Normal Time direction
     solver.calculate_t_direction( system );
 
-    // Spectrum
+// Spectrum
+#ifdef SYSTEM2LS
+    if ( system.calculate_spectrum() ) {
+        solver.calculate_g1( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
+        solver.calculate_spectrum( system );
+    }
+    if ( system.calculate_g2() ) {
+        solver.calculate_g2_0( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
+    }
+#endif
+#ifdef SYSTEM4LS
     if ( system.calculate_spectrum() ) {
         solver.calculate_g1( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
         solver.calculate_spectrum( system );
@@ -33,6 +50,7 @@ int main( int argc, char* argv[] ) {
     if ( system.calculate_g2() ) {
         solver.calculate_g2_0( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
     }
+#endif
 
     // Finalizing all calculations
     system.exit_system();

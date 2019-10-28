@@ -33,8 +33,8 @@ class OperatorMatrices_Parent {
     }
     static std::vector<std::string> tensor( const std::vector<std::string> &a, const std::vector<std::string> &b ) {
         std::vector<std::string> ret;
-        for ( int i = 0; i < a.size(); i++ )
-                for ( int k = 0; k < b.size(); k++ ) {
+        for ( int i = 0; i < (int)a.size(); i++ )
+                for ( int k = 0; k < (int)b.size(); k++ ) {
                         ret.emplace_back(a.at( i) + "|" + b.at( k));
                     }
         return ret;

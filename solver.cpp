@@ -18,7 +18,7 @@ ODESolver::ODESolver( System_Parent &s ) {
 // @param s: [&System] Class providing set of system functions
 // @param t: [double] Time to return Hamiltonoperator at
 // @return: [Eigent::MatrixXcd] hamilton matrix of type Eigen::MatrixXcd
-MatrixXcd ODESolver::getHamilton( System_Parent &s, const double t, bool use_saved_hamiltons = true ) {
+DenseMat ODESolver::getHamilton( System_Parent &s, const double t, bool use_saved_hamiltons = true ) {
     if ( use_saved_hamiltons ) {
         if ( savedHamiltons.size() == 0 || t > savedHamiltons.back().t ) {
             track_gethamilton_calcattempt++;
@@ -49,16 +49,16 @@ MatrixXcd ODESolver::getHamilton( System_Parent &s, const double t, bool use_sav
 // @param s: [&System] Class providing set of system functions
 // @param t: [double] Time to iterate at
 // @return: [Eigen::MatrixXcd] rho at time t+t_step
-MatrixXcd ODESolver::iterateRungeKutta4( const MatrixXcd &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates ) {
+DenseMat ODESolver::iterateRungeKutta4( const DenseMat &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-4 ausrechnen
-    MatrixXcd H_calc_k1 = getHamilton( s, t );
-    MatrixXcd H_calc_k23 = getHamilton( s, t + s.getTimeStep() * 0.5 );
-    MatrixXcd H_calc_k4 = getHamilton( s, t + s.getTimeStep() );
+    DenseMat H_calc_k1 = getHamilton( s, t );
+    DenseMat H_calc_k23 = getHamilton( s, t + s.getTimeStep() * 0.5 );
+    DenseMat H_calc_k4 = getHamilton( s, t + s.getTimeStep() );
     // k1-4 ausrechnen
-    MatrixXcd rk1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
-    MatrixXcd rk2 = s.dgl_rungeFunction( rho + s.getTimeStep() * 0.5 * rk1, H_calc_k23, t + s.getTimeStep() * 0.5, savedStates );
-    MatrixXcd rk3 = s.dgl_rungeFunction( rho + s.getTimeStep() * 0.5 * rk2, H_calc_k23, t + s.getTimeStep() * 0.5, savedStates );
-    MatrixXcd rk4 = s.dgl_rungeFunction( rho + s.getTimeStep() * rk3, H_calc_k4, t + s.getTimeStep(), savedStates );
+    DenseMat rk1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
+    DenseMat rk2 = s.dgl_rungeFunction( rho + s.getTimeStep() * 0.5 * rk1, H_calc_k23, t + s.getTimeStep() * 0.5, savedStates );
+    DenseMat rk3 = s.dgl_rungeFunction( rho + s.getTimeStep() * 0.5 * rk2, H_calc_k23, t + s.getTimeStep() * 0.5, savedStates );
+    DenseMat rk4 = s.dgl_rungeFunction( rho + s.getTimeStep() * rk3, H_calc_k4, t + s.getTimeStep(), savedStates );
     // Dichtematrix
     return rho + s.getTimeStep() / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
 }
@@ -69,21 +69,21 @@ MatrixXcd ODESolver::iterateRungeKutta4( const MatrixXcd &rho, System_Parent &s,
 // @param s: [&System] Class providing set of system functions
 // @param t: [double] Time to iterate at
 // @return: [Eigen::MatrixXcd] rho at time t+t_step
-MatrixXcd ODESolver::iterateRungeKutta5( const MatrixXcd &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates ) {
+DenseMat ODESolver::iterateRungeKutta5( const DenseMat &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-6 ausrechnen
-    MatrixXcd H_calc_k1 = getHamilton( s, t );
-    MatrixXcd H_calc_k2 = getHamilton( s, t + a2 * s.getTimeStep() );
-    MatrixXcd H_calc_k3 = getHamilton( s, t + a3 * s.getTimeStep() );
-    MatrixXcd H_calc_k4 = getHamilton( s, t + a4 * s.getTimeStep() );
-    MatrixXcd H_calc_k5 = getHamilton( s, t + a5 * s.getTimeStep() );
-    MatrixXcd H_calc_k6 = getHamilton( s, t + a6 * s.getTimeStep() );
+    DenseMat H_calc_k1 = getHamilton( s, t );
+    DenseMat H_calc_k2 = getHamilton( s, t + a2 * s.getTimeStep() );
+    DenseMat H_calc_k3 = getHamilton( s, t + a3 * s.getTimeStep() );
+    DenseMat H_calc_k4 = getHamilton( s, t + a4 * s.getTimeStep() );
+    DenseMat H_calc_k5 = getHamilton( s, t + a5 * s.getTimeStep() );
+    DenseMat H_calc_k6 = getHamilton( s, t + a6 * s.getTimeStep() );
     // k1-6 ausrechnen
-    MatrixXcd k1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
-    MatrixXcd k2 = s.dgl_rungeFunction( rho + s.getTimeStep() * b11 * k1, H_calc_k2, t + a2 * s.getTimeStep(), savedStates );
-    MatrixXcd k3 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b21 * k1 + b22 * k2 ), H_calc_k3, t + a3 * s.getTimeStep(), savedStates );
-    MatrixXcd k4 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b31 * k1 + b32 * k2 + b33 * k3 ), H_calc_k4, t + a4 * s.getTimeStep(), savedStates );
-    MatrixXcd k5 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b41 * k1 + b42 * k2 + b43 * k3 + b44 * k4 ), H_calc_k5, t + a5 * s.getTimeStep(), savedStates );
-    MatrixXcd k6 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b51 * k1 + b52 * k2 + b53 * k3 + b54 * k4 + b55 * k5 ), H_calc_k6, t + a6 * s.getTimeStep(), savedStates );
+    DenseMat k1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
+    DenseMat k2 = s.dgl_rungeFunction( rho + s.getTimeStep() * b11 * k1, H_calc_k2, t + a2 * s.getTimeStep(), savedStates );
+    DenseMat k3 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b21 * k1 + b22 * k2 ), H_calc_k3, t + a3 * s.getTimeStep(), savedStates );
+    DenseMat k4 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b31 * k1 + b32 * k2 + b33 * k3 ), H_calc_k4, t + a4 * s.getTimeStep(), savedStates );
+    DenseMat k5 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b41 * k1 + b42 * k2 + b43 * k3 + b44 * k4 ), H_calc_k5, t + a5 * s.getTimeStep(), savedStates );
+    DenseMat k6 = s.dgl_rungeFunction( rho + s.getTimeStep() * ( b51 * k1 + b52 * k2 + b53 * k3 + b54 * k4 + b55 * k5 ), H_calc_k6, t + a6 * s.getTimeStep(), savedStates );
     // Dichtematrix
     return rho + s.getTimeStep() * ( b61 * k1 + b63 * k3 + b64 * k4 + b65 * k5 + b66 * k6 );
 }
@@ -95,7 +95,7 @@ MatrixXcd ODESolver::iterateRungeKutta5( const MatrixXcd &rho, System_Parent &s,
 // @param t: [double] Time to iterate at
 // @param dir: [int] Time direction. Solver order can differ in both t and tau direction, depending on the systems settings. Default value is DIR_T
 // @return: [Eigen::MatrixXcd] rho at time t+t_step
-MatrixXcd ODESolver::iterate( const MatrixXcd &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates, const int dir = DIR_T ) {
+DenseMat ODESolver::iterate( const DenseMat &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates, const int dir = DIR_T ) {
     int order = s.getSolverRungeKuttaOrder( dir );
     if ( order == 4 ) {
         return iterateRungeKutta4( rho, s, t, savedStates );
@@ -108,7 +108,7 @@ MatrixXcd ODESolver::iterate( const MatrixXcd &rho, System_Parent &s, const doub
 // @param mat: [&Eigen::MatrixXcd] Matrix to save
 // @param t: [double] Corresponding time
 // @return: [void]
-void ODESolver::saveState( const MatrixXcd &mat, const double t, std::vector<SaveState> &savedStates ) {
+void ODESolver::saveState( const DenseMat &mat, const double t, std::vector<SaveState> &savedStates ) {
     savedStates.emplace_back( SaveState( mat, t ) );
 }
 
@@ -117,7 +117,7 @@ void ODESolver::saveState( const MatrixXcd &mat, const double t, std::vector<Sav
 // @param mat: [&Eigen::MatrixXcd] Matrix to save
 // @param t: [double] Corresponding time
 // @return: [void]
-void ODESolver::saveHamilton( const MatrixXcd &mat, const double t ) {
+void ODESolver::saveHamilton( const DenseMat &mat, const double t ) {
     savedHamiltons.emplace_back( SaveState( mat, t ) );
 }
 
@@ -191,11 +191,11 @@ bool ODESolver::calculate_t_direction( System_Parent &s ) {
     return true;
 }
 template <typename T>
-MatrixXcd ODESolver::iterate_definite_integral( const MatrixXcd &rho, T rungefunction, const double t, const double step ) {
-    MatrixXcd rk1 = rungefunction( rho, t );
-    MatrixXcd rk2 = rungefunction( rho + step * 0.5 * rk1, t + step * 0.5 );
-    MatrixXcd rk3 = rungefunction( rho + step * 0.5 * rk2, t + step * 0.5 );
-    MatrixXcd rk4 = rungefunction( rho + step * rk3, t + step );
+DenseMat ODESolver::iterate_definite_integral( const DenseMat &rho, T rungefunction, const double t, const double step ) {
+    DenseMat rk1 = rungefunction( rho, t );
+    DenseMat rk2 = rungefunction( rho + step * 0.5 * rk1, t + step * 0.5 );
+    DenseMat rk3 = rungefunction( rho + step * 0.5 * rk2, t + step * 0.5 );
+    DenseMat rk4 = rungefunction( rho + step * rk3, t + step );
     // Dichtematrix
     return rho + step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
 }
@@ -203,7 +203,7 @@ MatrixXcd ODESolver::iterate_definite_integral( const MatrixXcd &rho, T rungefun
 // Description: Integrates rho from t0 to t1 via Rungefunc.
 // Type: ODESolver public static function
 // @return: [vector<SaveState>] Vector of save state tuples (matrix, time)
-std::vector<SaveState> ODESolver::calculate_definite_integral_vec( MatrixXcd rho, std::function<MatrixXcd( const MatrixXcd &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
+std::vector<SaveState> ODESolver::calculate_definite_integral_vec( DenseMat rho, std::function<DenseMat( const DenseMat &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
     std::vector<SaveState> ret;
     //ret.reserve( std::ceil( std::abs( t1 - t0 ) / std::abs( step ) ) );
     ret.emplace_back( SaveState( rho, t0 ) );
@@ -223,7 +223,7 @@ std::vector<SaveState> ODESolver::calculate_definite_integral_vec( MatrixXcd rho
 // Description: Integrates rho from t0 to t1 via Rungefunc.
 // Type: ODESolver public static function
 // @return: [SaveState] Save state tuple (matrix, time)
-SaveState ODESolver::calculate_definite_integral( MatrixXcd rho, std::function<MatrixXcd( const MatrixXcd &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
+SaveState ODESolver::calculate_definite_integral( DenseMat rho, std::function<DenseMat( const DenseMat &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
     //ret.reserve( std::ceil( std::abs( t1 - t0 ) / std::abs( step ) ) );
     if ( step > 0 )
         for ( double t = t0; t < t1; t += step ) {
@@ -287,7 +287,7 @@ MatrixXcd ODESolver::getRhoAt( int i ) {
 // @param op_creator: [&Eigen::MatrixXcd] Creator operator (adjunct of annihilator)
 // @param op_annihilator: [&Eigen::MatrixXcd] Annihilator operator
 // @return: [bool] True if calculations were sucessfull, else false
-bool ODESolver::calculate_g1( System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator ) {
+bool ODESolver::calculate_g1( System_Parent &s, const DenseMat &op_creator, const DenseMat &op_annihilator ) {
     if ( !( (int)savedStates.size() > 0 ) ) {
         logs( "Need to calculate t-direction first!\n" );
         return false;
@@ -306,7 +306,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatrixXcd &op_creator, con
         past_rhos.reserve( (int)( ( savedStates.size() - i ) / s.getIterationSkip() ) );
         int k = i / s.getIterationSkip();
         double t_t = getTimeAt( i );
-        MatrixXcd rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
+        DenseMat rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
         saveState( rho_tau, t_t, past_rhos );
 
         akf_mat( k, 0 ) = s.dgl_expectationvalue( rho_tau, op_creator, t_t );
@@ -335,7 +335,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatrixXcd &op_creator, con
 // @param op_annihilator: [&Eigen::MatrixXcd] Annihilator operator
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
-bool ODESolver::calculate_g2_0( System_Parent &s, const MatrixXcd &op_creator, const MatrixXcd &op_annihilator, std::string fileOutputName = "g2(0).txt" ) {
+bool ODESolver::calculate_g2_0( System_Parent &s, const DenseMat &op_creator, const DenseMat &op_annihilator, std::string fileOutputName = "g2(0).txt" ) {
     if ( !( (int)savedStates.size() > 0 ) ) {
         logs( "Need to calculate t-direction first!\n" );
         return false;
@@ -353,9 +353,9 @@ bool ODESolver::calculate_g2_0( System_Parent &s, const MatrixXcd &op_creator, c
     g2Values.reserve( totalIterations );
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
         double t_t = getTimeAt( i );
-        MatrixXcd rho = getRhoAt( i );
-        MatrixXcd M1 = op_creator * op_creator * op_annihilator * op_annihilator;
-        MatrixXcd M2 = op_creator * op_annihilator;
+        DenseMat rho = getRhoAt( i );
+        DenseMat M1 = op_creator * op_creator * op_annihilator * op_annihilator;
+        DenseMat M2 = op_creator * op_annihilator;
         g2Values.emplace_back( s.dgl_expectationvalue( rho, M1, t_t ) / std::pow( s.dgl_expectationvalue( rho, M2, t_t ), 2 ) );
         timer.iterate();
         outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "G2: " );

@@ -2,18 +2,18 @@
 
 class OperatorMatrices : public OperatorMatrices_Parent {
    public:
-    MatrixXcd H;
-    MatrixXcd H_0;
-    MatrixXcd H_I;
-    MatrixXcd rho;
-    MatrixXcd H_used;
-    std::string base;
+    DenseMat H;
+    DenseMat H_0;
+    DenseMat H_I;
+    DenseMat rho;
+    DenseMat H_used;
+    std::vector<std::string> base;
 
     //Operator Matrices
-    MatrixXcd photon_create, photon_annihilate, atom_exited, atom_ground, photon_n, atom_sigmaplus, atom_sigmaminus, atom_inversion;
+    DenseMat photon_create, photon_annihilate, atom_exited, atom_ground, photon_n, atom_sigmaplus, atom_sigmaminus, atom_inversion;
 
     // Bare matrices:
-    MatrixXcd bare_photon_create, bare_photon_annihilate, bare_photon_n, bare_atom_exited, bare_atom_ground, bare_atom_sigmaplus, bare_atom_sigmaminus, bare_atom_inversion;
+    DenseMat bare_photon_create, bare_photon_annihilate, bare_photon_n, bare_atom_exited, bare_atom_ground, bare_atom_sigmaplus, bare_atom_sigmaminus, bare_atom_inversion;
 
     OperatorMatrices(){};
     OperatorMatrices( const Parameters &p ) {
@@ -23,11 +23,11 @@ class OperatorMatrices : public OperatorMatrices_Parent {
     bool generateOperators( const Parameters &p ) {
         // Zeroing Hamiltons (redundant at this point)
         logs.level2( "Creating operator matrices, dimension = {}\nCreating base matrices... ", p.maxStates );
-        H = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        H_0 = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        H_I = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        H_used = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        rho = MatrixXcd::Zero( p.maxStates, p.maxStates );
+        H = DenseMat::Zero( p.maxStates, p.maxStates );
+        H_0 = DenseMat::Zero( p.maxStates, p.maxStates );
+        H_I = DenseMat::Zero( p.maxStates, p.maxStates );
+        H_used = DenseMat::Zero( p.maxStates, p.maxStates );
+        rho = DenseMat::Zero( p.maxStates, p.maxStates );
 
         std::vector<std::string> base2 = {"G", "E"};
         std::vector<std::string> base1; for (int i = 0; i <= p.p_max_photon_number; i++) {base1.emplace_back(std::to_string(i));}
@@ -40,27 +40,27 @@ class OperatorMatrices : public OperatorMatrices_Parent {
 
         // Initializing bare matrices:
         logs.level2( "Initializing base matrices... " );
-        bare_atom_exited = MatrixXcd::Zero( 2, 2 );
+        bare_atom_exited = DenseMat::Zero( 2, 2 );
         bare_atom_exited << 0, 0,
             0, 1;
-        bare_atom_ground = MatrixXcd::Zero( 2, 2 );
+        bare_atom_ground = DenseMat::Zero( 2, 2 );
         bare_atom_ground << 1, 0,
             0, 0;
-        bare_atom_sigmaplus = MatrixXcd::Zero( 2, 2 );
+        bare_atom_sigmaplus = DenseMat::Zero( 2, 2 );
         bare_atom_sigmaplus << 0, 0,
             1, 0;
-        bare_atom_sigmaminus = MatrixXcd::Zero( 2, 2 );
+        bare_atom_sigmaminus = DenseMat::Zero( 2, 2 );
         bare_atom_sigmaminus << 0, 1,
             0, 0;
-        bare_atom_inversion = MatrixXcd::Zero( 2, 2 );
+        bare_atom_inversion = DenseMat::Zero( 2, 2 );
         bare_atom_inversion << -1, 0,
             0, 1;
-        bare_photon_create = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
-        bare_photon_annihilate = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
+        bare_photon_create = create_photonic_operator<DenseMat>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
+        bare_photon_annihilate = create_photonic_operator<DenseMat>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
         bare_photon_n = bare_photon_create * bare_photon_annihilate;
 
-        Eigen::MatrixXcd m_base1 = MatrixXcd::Identity(bare_photon_create.rows(), bare_photon_create.cols()); 
-        Eigen::MatrixXcd m_base2 = MatrixXcd::Identity(2,2);
+        DenseMat m_base1 = DenseMat::Identity(bare_photon_create.rows(), bare_photon_create.cols()); 
+        DenseMat m_base2 = DenseMat::Identity(2,2);
 
         // Expanding both states
         logs.level2( "Expanding single state matrices... " );
@@ -159,15 +159,15 @@ class OperatorMatrices : public OperatorMatrices_Parent {
     bool checkMatrices2NS( const Parameters &p ) {
         bool valid = true;
         // Creating Matrices the old way
-        MatrixXcd photon_create_check, photon_annihilate_check, atom_exited_check, atom_ground_check, photon_n_check, atom_sigmaplus_check, atom_sigmaminus_check, atom_inversion_check;
-        photon_create_check = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        photon_annihilate_check = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        photon_n_check = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        atom_exited_check = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        atom_ground_check = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        atom_sigmaplus_check = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        atom_sigmaminus_check = MatrixXcd::Zero( p.maxStates, p.maxStates );
-        atom_inversion_check = MatrixXcd::Zero( p.maxStates, p.maxStates );
+        DenseMat photon_create_check, photon_annihilate_check, atom_exited_check, atom_ground_check, photon_n_check, atom_sigmaplus_check, atom_sigmaminus_check, atom_inversion_check;
+        photon_create_check = DenseMat::Zero( p.maxStates, p.maxStates );
+        photon_annihilate_check = DenseMat::Zero( p.maxStates, p.maxStates );
+        photon_n_check = DenseMat::Zero( p.maxStates, p.maxStates );
+        atom_exited_check = DenseMat::Zero( p.maxStates, p.maxStates );
+        atom_ground_check = DenseMat::Zero( p.maxStates, p.maxStates );
+        atom_sigmaplus_check = DenseMat::Zero( p.maxStates, p.maxStates );
+        atom_sigmaminus_check = DenseMat::Zero( p.maxStates, p.maxStates );
+        atom_inversion_check = DenseMat::Zero( p.maxStates, p.maxStates );
         // Generating Matrices
         for ( int n = 0; n < p.maxStates; n++ )
             for ( int m = 0; m < p.maxStates; m++ ) {

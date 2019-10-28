@@ -12,6 +12,7 @@
 #include <fmt/ostream.h>
 #include <vector>
 #include <Eigen/Dense>
+#include <Eigen/SparseCore>
 #include <unsupported/Eigen/MatrixFunctions>
 #include <omp.h> // -fopenmp
 #include <iostream>
@@ -56,14 +57,13 @@ std::string global_message_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBE
 #define PHONON_APPROXIMATION_TIMETRANSFORMATION 2
 #define PHONON_APPROXIMATION_LINDBLAD_FULL 3
 
-#define MATRIX_BASE Eigen::SparseMatrix<double>
-#define MATRIX_HAMILTON Eigen::SparseMatrix<std::complex<double>>
-#define MATRIX_DENSITY Eigen::MatrixXcd
+#define SparseMat Eigen::SparseMatrix<std::complex<double>>
+#define DenseMat Eigen::MatrixXcd
 
 // Vector for mat/time, tuple
 class SaveState {
 public:
-    MATRIX_HAMILTON mat;
+    DenseMat mat;
     double t;
-    SaveState( const MATRIX_HAMILTON &mat, const double time ) : mat( mat ), t( time ){};
+    SaveState( const DenseMat &mat, const double time ) : mat( mat ), t( time ){};
 };
