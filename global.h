@@ -19,14 +19,14 @@
 #include <iostream>
 #include <functional>
 
-std::string PREFIX_PERCENT               = "@#PERCENT#@";
-std::string PREFIX_PERCENT_TIME          = "@#PERCENTTIME#@";
-std::string PREFIX_PERCENT_TIME_FINAL    = "@#PERCENTTIMEFINAL#@";
-std::string PREFIX_WARNING               = "@#WARNING#@";
-std::string PREFIX_ERROR                 = "@#ERROR#@";
-std::string PREFIX_DEBUG                 = "@#DEBUG#@";
-std::string PREFIX_OUTPUT                = "@#OUTPUT#@";
-std::string PREFIX_SUFFIX                = "@#SUFFIX#@";
+std::string PREFIX_PERCENT = "@#PERCENT#@";
+std::string PREFIX_PERCENT_TIME = "@#PERCENTTIME#@";
+std::string PREFIX_PERCENT_TIME_FINAL = "@#PERCENTTIMEFINAL#@";
+std::string PREFIX_WARNING = "@#WARNING#@";
+std::string PREFIX_ERROR = "@#ERROR#@";
+std::string PREFIX_DEBUG = "@#DEBUG#@";
+std::string PREFIX_OUTPUT = "@#OUTPUT#@";
+std::string PREFIX_SUFFIX = "@#SUFFIX#@";
 
 #include "misc/log.h"
 #include "misc/ProgressBar.h"
@@ -60,12 +60,12 @@ std::string global_message_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBE
 
 #define SparseMat Eigen::SparseMatrix<std::complex<double>>
 #define DenseMat Eigen::MatrixXcd
-//#define DenseMat Eigen::SparseMatrix<std::complex<double>>
+#define MatType Eigen::SparseMatrix<std::complex<double>>
 
 // Vector for mat/time, tuple
 class SaveState {
-public:
-    DenseMat mat;
+   public:
+    MatType mat;
     double t;
-    SaveState( const DenseMat &mat, const double time ) : mat( mat ), t( time ){};
+    SaveState( const MatType &mat, const double time ) : mat( mat ), t( time ){};
 };

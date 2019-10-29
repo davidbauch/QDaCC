@@ -38,30 +38,30 @@ class ODESolver {
     std::vector<SaveState> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
     std::vector<std::complex<double>> out;
     DenseMat akf_mat;
-    void saveState( const DenseMat &mat, const double t, std::vector<SaveState> &savedStates );
-    void saveHamilton( const DenseMat &mat, const double t );
-    DenseMat iterateRungeKutta4( const DenseMat &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates );
-    DenseMat iterateRungeKutta5( const DenseMat &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates );
+    void saveState( const MatType &mat, const double t, std::vector<SaveState> &savedStates );
+    void saveHamilton( const MatType &mat, const double t );
+    MatType iterateRungeKutta4( const MatType &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates );
+    MatType iterateRungeKutta5( const MatType &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates );
     int getIterationNumberTau( System_Parent &s );
     int getIterationNumberSpectrum( System_Parent &s );
     double getTimeAt( int i );
-    DenseMat getRhoAt( int i );
-    DenseMat getHamilton( System_Parent &s, const double t, bool use_saved_hamiltons );
+    MatType getRhoAt( int i );
+    MatType getHamilton( System_Parent &s, const double t, bool use_saved_hamiltons );
     bool queueNow( System_Parent &s, int &curIt );
     int reset( System_Parent &s );
 
    public:
     ODESolver(){};
     ODESolver( System_Parent &s );
-    DenseMat iterate( const DenseMat &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates, const int dir );
+    MatType iterate( const MatType &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates, const int dir );
     bool calculate_t_direction( System_Parent &s );
-    bool calculate_g1( System_Parent &s, const DenseMat &op_creator, const DenseMat &op_annihilator );
-    bool calculate_g2_0( System_Parent &s, const DenseMat &op_creator, const DenseMat &op_annihilator, std::string fileOutputName );
+    bool calculate_g1( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator );
+    bool calculate_g2_0( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName );
     bool calculate_spectrum( System_Parent &s, std::string fileOutputName );
     template <typename T>
-    static DenseMat iterate_definite_integral( const DenseMat &rho, T rungefunction, const double t, const double step );
-    static std::vector<SaveState> calculate_definite_integral_vec( DenseMat rho, std::function<DenseMat( const DenseMat &, const double )> const &rungefunction, const double t0, const double t1, const double step );
-    static SaveState calculate_definite_integral( DenseMat rho, std::function<DenseMat( const DenseMat &, const double )> const &rungefunction, const double t0, const double t1, const double step );
+    static MatType iterate_definite_integral( const MatType &rho, T rungefunction, const double t, const double step );
+    static std::vector<SaveState> calculate_definite_integral_vec( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step );
+    static SaveState calculate_definite_integral( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step );
 };
 
 /*
