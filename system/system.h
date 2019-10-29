@@ -18,48 +18,73 @@ class System_Parent {
     virtual double getTimeborderStart() { return parameters.t_start; };
     virtual double getTimeborderEnd() { return parameters.t_end; };
     virtual double getTimeStep() { return parameters.t_step; };
-    virtual DenseMat getRho0() { return operatorMatrices.rho; }; // Rho is always complex
+    virtual MatType getRho0() { return operatorMatrices.rho; };
+    template <typename T>
+    inline T getTrace( const DenseMat &mat ) const {
+        return mat.trace();
+    }
+    template <typename T>
+    inline T getTrace( const SparseMat &mat ) const {
+        return getTrace<T>( DenseMat( mat ) );
+    }
     // Matrix Commutator function
     template <typename T>
-    T dgl_kommutator( const T &A, const T &B ) {
+    inline T dgl_kommutator( const T &A, const T &B ) {
         return A * B - B * A;
     }
     // Matrix Anticommutator function
     template <typename T>
-    T dgl_antikommutator( const T &A, const T &B ) {
+    inline T dgl_antikommutator( const T &A, const T &B ) {
         return A * B + B * A;
     }
     // Matrix Lindblad Decay Term
     template <typename T, typename T2, typename T3>
-    T dgl_lindblad( const T &rho, const T2 &op, const T3 &opd ) {
+    inline T dgl_lindblad( const T &rho, const T2 &op, const T3 &opd ) {
         return 2.0 * op * rho * opd - opd * op * rho - rho * opd * op;
     }
-    //virtual DenseMat dgl_timetrafo( const DenseMat &op, const double t ) { return op; };
-    virtual DenseMat dgl_timetrafo( const DenseMat &op, const double t ) { return op; };
+    //virtual MatType dgl_timetrafo( const MatType &op, const double t ) { return op; };
+    virtual MatType dgl_timetrafo( const MatType &op, const double t ) { return op; };
     // Expectationvalue
-    template <typename T>
-    std::complex<double> dgl_expectationvalue( const T &rho, const T &op, const double t ) {
-        return ( rho * dgl_timetrafo( op, t ) ).trace();
+    template <typename T, typename T2>
+    inline T2 dgl_expectationvalue( const T &rho, const T &op, const double t ) {
+        return getTrace<T2>( ( rho * dgl_timetrafo( op, t ) ).eval() );
     }
     // Time Transformation ( -> Interaction picture)
     // Transformed densitymatrix (q.r.t)
     template <typename T>
-    T dgl_calc_rhotau( const T &rho, const T &op, const double t ) {
+    inline T dgl_calc_rhotau( const T &rho, const T &op, const double t ) {
         return dgl_timetrafo( op, t ) * rho;
     }
     // Runge function
-    virtual DenseMat dgl_rungeFunction( const DenseMat &rho, const DenseMat &H, const double t, std::vector<SaveState> &past_rhos ) {
-        logs( "Warning; Returning virtual function!\n" );
+    virtual MatType dgl_rungeFunction( const MatType &rho, const MatType &H, const double t, std::vector<SaveState> &past_rhos ) {
         return rho;
-    }
+    };
     // Output Expectation Values
-    virtual void expectationValues( const DenseMat &rho, const double t ){};
+    virtual void expectationValues( const MatType &rho, const double t ){};
     // Check for trace validity
-    bool traceValid( DenseMat &rho, const double t, const bool forceOutput );
+    template <class T>
+    bool traceValid( T &rho, double t_hit, bool force = false ) {
+        double trace = std::real( getTrace<std::complex<double>>( rho ) );
+        parameters.trace.emplace_back( trace );
+        if ( trace < 0.99 || trace > 1.01 || force ) {
+            if ( force )
+                fmt::print( "{} {} -> trace check failed at t = {} with trace(rho) = {}\n", PREFIX_ERROR, global_message_error_divergent, t_hit, trace );
+            terminate_message = global_message_error_divergent;
+            parameters.numerics_calculate_spectrum = 0;
+            FILE *fp_trace = std::fopen( ( parameters.subfolder + "trace.txt" ).c_str(), "w" );
+            for ( int i = 0; i < (int)parameters.trace.size() && parameters.t_step * 1.0 * i < t_hit; i++ ) {
+                fmt::print( fp_trace, "{:.10e} {:.15e}\n", parameters.t_step * 1.0 * ( i + 1 ), parameters.trace.at( i ) );
+            }
+            std::fclose( fp_trace );
+            return false;
+        } else {
+            return true;
+        }
+    }
     // Return Hamiltonian for time t
-    virtual DenseMat dgl_getHamilton( const double t ) {
+    virtual MatType dgl_getHamilton( const double t ) {
         logs( "Warning; Returning virtual function\n" );
-        return DenseMat( 1, 1 );
+        return MatType( 1, 1 );
     };
     // Return solver order for time direction
     int getSolverOrder( const int dir );
@@ -78,5 +103,5 @@ class System_Parent {
     bool output_operators();
     int getSolverRungeKuttaOrder( int dir );
     int getTimeTransformationAlg();
-    int getIterationSkip( );
+    int getIterationSkip();
 };

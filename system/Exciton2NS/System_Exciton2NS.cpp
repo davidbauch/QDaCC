@@ -262,8 +262,8 @@ class System : public System_Parent {
     }
 
     void expectationValues( const DenseMat &rho, const double t ) {
-        std::fprintf( fileoutput.fp_atomicinversion, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue( rho, operatorMatrices.atom_inversion, t ) ) );
-        std::fprintf( fileoutput.fp_photonpopulation, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue( rho, operatorMatrices.photon_n, t ) ) );
+        std::fprintf( fileoutput.fp_atomicinversion, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue<DenseMat,std::complex<double>>( rho, operatorMatrices.atom_inversion, t ) ) );
+        std::fprintf( fileoutput.fp_photonpopulation, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue<DenseMat,std::complex<double>>( rho, operatorMatrices.photon_n, t ) ) );
         std::fprintf( fileoutput.fp_densitymatrix, "%e\t", t );
         if ( parameters.output_full_dm ) {
             for ( int i = 0; i < parameters.maxStates; i++ )
