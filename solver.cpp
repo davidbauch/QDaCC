@@ -165,7 +165,7 @@ bool ODESolver::calculate_t_direction( System_Parent &s ) {
     rkTimer.start();
 
     logs.level2( "Calculating t-direction from {} to {} at stepsize {}... ", s.getTimeborderStart(), s.getTimeborderEnd(), s.getTimeStep() );
-    MatrixXcd rho = s.getRho0();
+    DenseMat rho = s.getRho0();
     saveState( rho, s.getTimeborderStart(), savedStates );
     s.expectationValues( rho, s.getTimeborderStart() );
 
@@ -277,7 +277,7 @@ double ODESolver::getTimeAt( int i ) {
 // Type: ODESolver private function
 // @param i: [int] Iteration number
 // @return: [Eigen::MatrixXcd] (Density-) Matrix corresponding to iteration number i
-MatrixXcd ODESolver::getRhoAt( int i ) {
+DenseMat ODESolver::getRhoAt( int i ) {
     return savedStates.at( i ).mat;
 }
 

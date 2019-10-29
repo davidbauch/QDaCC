@@ -18,7 +18,7 @@ class System_Parent {
     virtual double getTimeborderStart() { return parameters.t_start; };
     virtual double getTimeborderEnd() { return parameters.t_end; };
     virtual double getTimeStep() { return parameters.t_step; };
-    virtual MatrixXcd getRho0() { return operatorMatrices.rho; }; // Rho is always complex
+    virtual DenseMat getRho0() { return operatorMatrices.rho; }; // Rho is always complex
     // Matrix Commutator function
     template <typename T>
     T dgl_kommutator( const T &A, const T &B ) {
@@ -34,7 +34,7 @@ class System_Parent {
     T dgl_lindblad( const T &rho, const T2 &op, const T3 &opd ) {
         return 2.0 * op * rho * opd - opd * op * rho - rho * opd * op;
     }
-    //virtual MatrixXcd dgl_timetrafo( const DenseMat &op, const double t ) { return op; };
+    //virtual DenseMat dgl_timetrafo( const DenseMat &op, const double t ) { return op; };
     virtual DenseMat dgl_timetrafo( const DenseMat &op, const double t ) { return op; };
     // Expectationvalue
     template <typename T>
@@ -48,7 +48,7 @@ class System_Parent {
         return dgl_timetrafo( op, t ) * rho;
     }
     // Runge function
-    virtual DenseMat dgl_rungeFunction( const DenseMat &rho, const MatrixXcd &H, const double t, std::vector<SaveState> &past_rhos ) {
+    virtual DenseMat dgl_rungeFunction( const DenseMat &rho, const DenseMat &H, const double t, std::vector<SaveState> &past_rhos ) {
         logs( "Warning; Returning virtual function!\n" );
         return rho;
     }

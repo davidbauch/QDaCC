@@ -74,7 +74,7 @@ class System : public System_Parent {
         }
 
         // Time Transformation
-        timeTrafoMatrix = ( 1i * operatorMatrices.H_0 ).exp();
+        timeTrafoMatrix = ( 1i * operatorMatrices.H_0 ).eval().exp();
         // Check time trafo
         DenseMat ttrafo = ( 1i * operatorMatrices.H_0 * 125E-12 ).exp() * operatorMatrices.H_used * ( -1i * operatorMatrices.H_0 * 125E-12 ).exp();
         DenseMat temp = dgl_timetrafo( operatorMatrices.H_used, 125E-12 ) - ttrafo;

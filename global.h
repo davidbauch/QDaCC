@@ -7,12 +7,13 @@
 #include <stdio.h>
 //#include <stdarg.h>
 #include <string>
+//#define EIGEN_SPARSEMATRIX_PLUGIN "matrixextension.h"
 #include <fmt/core.h> // -DFMT_HEADER_ONLY
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <vector>
 #include <Eigen/Dense>
-#include <Eigen/SparseCore>
+#include <Eigen/Sparse>
 #include <unsupported/Eigen/MatrixFunctions>
 #include <omp.h> // -fopenmp
 #include <iostream>
@@ -59,6 +60,7 @@ std::string global_message_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBE
 
 #define SparseMat Eigen::SparseMatrix<std::complex<double>>
 #define DenseMat Eigen::MatrixXcd
+//#define DenseMat Eigen::SparseMatrix<std::complex<double>>
 
 // Vector for mat/time, tuple
 class SaveState {

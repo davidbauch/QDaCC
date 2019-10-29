@@ -15,7 +15,7 @@ void System_Parent::init() {
     timer_systeminit.end();
 }
 
-bool System_Parent::traceValid( MatrixXcd &rho, double t_hit, bool force = false ) {
+bool System_Parent::traceValid( DenseMat &rho, double t_hit, bool force = false ) {
     double trace = std::real( rho.trace() );
     parameters.trace.emplace_back( trace );
     if ( trace < 0.99 || trace > 1.01 || force ) {
