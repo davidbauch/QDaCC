@@ -64,7 +64,7 @@ class System_Parent {
     // Check for trace validity
     template <class T>
     bool traceValid( T &rho, double t_hit, bool force = false ) {
-        double trace = std::real( getTrace<std::complex<double>>( rho ) );
+        double trace = std::real( getTrace<dcomplex>( rho ) );
         parameters.trace.emplace_back( trace );
         if ( trace < 0.99 || trace > 1.01 || force ) {
             if ( force )
@@ -94,8 +94,12 @@ class System_Parent {
     virtual bool init_system() { return false; };
     // Final exit. Should close any open files, should return true if seemed valid.
     virtual bool exit_system( const int failure ) { return false; };
+    // Return specific operators:
+    virtual MatType getOperator( std::string &argument ) { return MatType( 1, 1 ); }
     // Output predetermined parameter variables:
-    bool calculate_spectrum();
+    virtual bool calculate_spectrum() {
+        return parameters.numerics_calculate_spectrum;
+    }
     bool calculate_g2();
     bool use_interactionpicture();
     bool use_rwa();

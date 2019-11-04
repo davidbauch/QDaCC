@@ -1,6 +1,6 @@
 #pragma once
 // Dependencies
-#include <stdlib.h>
+#include "../global.h"
 #include "../misc/helperfunctions.h"
 #include "../misc/log.h"
 #include "../misc/timer.h"

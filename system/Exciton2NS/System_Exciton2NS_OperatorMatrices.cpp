@@ -1,3 +1,4 @@
+#include "../../global.h"
 #include "../operatormatrices.cpp"
 
 class OperatorMatrices : public OperatorMatrices_Parent {

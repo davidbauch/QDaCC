@@ -16,8 +16,8 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     generate();
     logs.level2( "Done!\n" );
 }
-std::complex<double> Pulse::evaluate( double t ) {
-    std::complex<double> ret = 0;
+dcomplex Pulse::evaluate( double t ) {
+    dcomplex ret = 0;
     for ( int i = 0; i < (int)inputs.amp.size(); i++ ) {
         if ( inputs.type.at( i ).compare( "cw" ) == 0 && t >= inputs.center.at( i ) )
             ret += inputs.amp.at( i ) * std::exp( -1i * inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) );
@@ -33,7 +33,7 @@ void Pulse::generate() {
     for ( double t1 = inputs.t_start; t1 < inputs.t_end + inputs.t_step * steps.size(); t1 += inputs.t_step ) {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
             t = t1 + steps[i];
-            std::complex<double> val = evaluate( t );
+            dcomplex val = evaluate( t );
             if ( std::abs( val ) > 0.1 * inputs.t_step )
                 pulsearray.push_back( val );
             else
@@ -82,7 +82,7 @@ void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp
     }
 }
 
-std::complex<double> Pulse::get( double t, bool force_evaluate ) {
+dcomplex Pulse::get( double t, bool force_evaluate ) {
     if ( force_evaluate ) {
         counter_evaluated++;
         return evaluate( t );

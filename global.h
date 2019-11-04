@@ -18,6 +18,7 @@
 #include <omp.h> // -fopenmp
 #include <iostream>
 #include <functional>
+#include <limits>
 
 std::string PREFIX_PERCENT = "@#PERCENT#@";
 std::string PREFIX_PERCENT_TIME = "@#PERCENTTIME#@";
@@ -33,8 +34,8 @@ std::string PREFIX_SUFFIX = "@#SUFFIX#@";
 #include "misc/helperfunctions.h"
 #include "misc/timer.h"
 
-using Eigen::MatrixXcd;
-using Eigen::MatrixXd;
+//using Eigen::MatrixXcd;
+//using Eigen::MatrixXd;
 
 using namespace std::complex_literals;
 
@@ -46,9 +47,8 @@ std::string global_message_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBE
 #define DIR_TAU 2
 #define DIR_W 3
 
-#define TIMETRANSFORMATION_PRECALCULATED 0
+#define TIMETRANSFORMATION_ANALYTICAL 0
 #define TIMETRANSFORMATION_MATRIXEXPONENTIAL 1
-#define TIMETRANSFORMATION_MATRIXEXPONENTIAL_PRECALCULATED 2
 
 #define OPERATOR_PHOTONIC_CREATE 0
 #define OPERATOR_PHOTONIC_ANNIHILATE 1
@@ -58,9 +58,10 @@ std::string global_message_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBE
 #define PHONON_APPROXIMATION_TIMETRANSFORMATION 2
 #define PHONON_APPROXIMATION_LINDBLAD_FULL 3
 
-#define SparseMat Eigen::SparseMatrix<std::complex<double>>
-#define DenseMat Eigen::MatrixXcd
-#define MatType Eigen::SparseMatrix<std::complex<double>>
+typedef std::complex<double> dcomplex;
+typedef Eigen::SparseMatrix<dcomplex> SparseMat;
+typedef Eigen::MatrixXcd DenseMat;
+typedef Eigen::SparseMatrix<dcomplex> MatType;
 
 // Vector for mat/time, tuple
 class SaveState {

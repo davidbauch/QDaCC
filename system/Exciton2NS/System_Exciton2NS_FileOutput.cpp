@@ -1,3 +1,5 @@
+#include "../../global.h"
+
 class FileOutput {
    public:
     FILE *fp_densitymatrix;

@@ -1,3 +1,4 @@
+#include "../../global.h"
 #include "System_Exciton4NS_Parameters.cpp"
 #include "System_Exciton4NS_OperatorMatrices.cpp"
 #include "System_Exciton4NS_FileOutput.cpp"
@@ -14,7 +15,7 @@ class System : public System_Parent {
     Pulse pulse_H;
     Pulse pulse_V;
     FileOutput fileoutput;
-    std::vector<std::complex<double>> phi_vector;
+    std::vector<dcomplex> phi_vector;
 
     SparseMat timeTrafoMatrix;
 
@@ -24,9 +25,9 @@ class System : public System_Parent {
         name = "Biexciton (4NS)";
         logs.level2( "Creating System Class for '{}'\n", name );
         parameters = Parameters( input );
-        parameters.log();
         operatorMatrices = OperatorMatrices( parameters );
         operatorMatrices.outputOperators( parameters );
+        parameters.log( operatorMatrices.base );
         fileoutput = FileOutput( {"densitymatrix.txt", "atomicinversion.txt", "photonpopulation.txt"}, parameters, operatorMatrices );
         init();
     }
@@ -74,7 +75,7 @@ class System : public System_Parent {
         }
 
         // Time Transformation
-        timeTrafoMatrix = ( DenseMat( 1i * operatorMatrices.H_0 ).exp() ).sparseView();
+        timeTrafoMatrix = ( DenseMat( 1i * operatorMatrices.H_0 ).exp() ).sparseView().pruned();
         // Check time trafo
         SparseMat ttrafo = ( DenseMat( 1i * operatorMatrices.H_0 * 125E-12 ).exp() * operatorMatrices.H_used * DenseMat( -1i * operatorMatrices.H_0 * 125E-12 ).exp() ).sparseView();
         SparseMat temp = dgl_timetrafo( operatorMatrices.H_used, 125E-12 ) - ttrafo;
@@ -116,30 +117,30 @@ class System : public System_Parent {
     SparseMat dgl_timetrafo( const SparseMat &A, const double t ) {
         SparseMat ret = A;
         if ( parameters.numerics_use_interactionpicture == 1 ) {
-            // TIMETRANSFORMATION_PRECALCULATED
-            if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_PRECALCULATED ) {
-                int i, j, pn, pm;
-                for ( int n = 0; n < A.rows(); n++ ) {
-                    i = n % 2;
-                    pn = (int)( n / 2 );
-                    // sum over NON zeros!
-                    //for ( int m = 0; m < A.cols(); m++ ) {
-                    //    if ( A.coeffRef( n, m ) != 0.0 ) {
-                    //        j = m % 2;
-                    //        pm = (int)( m / 2 );
-                    // FIXME: calculate analytical transformatiuon!
-                    //ret( n, m ) = A( n, m ) * std::exp( 1i * t * ( ( parameters.p_omega_atomic_G_H ) / 2. * ( delta( i, 1 ) - delta( i, 0 ) - delta( j, 1 ) + delta( j, 0 ) ) + parameters.p_omega_cavity_H * ( pn - pm ) ) );
-                    //    }
-                    //}
+            // TIMETRANSFORMATION_ANALYTICAL
+            if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) {
+                std::vector<Eigen::Triplet<dcomplex>> ret_v;
+                for ( int k = 0; k < A.outerSize(); ++k ) {
+                    for ( SparseMat::InnerIterator it( A, k ); it; ++it ) {
+                        // Convert row/col into respective photon numbers / atomic state
+                        int i = it.row() % 4;
+                        int photon_H_i = std::floor( it.row() / ( 4.0 * ( parameters.p_max_photon_number + 1 ) ) );
+                        int photon_V_i = ( (int)std::floor( it.row() / 4.0 ) ) % ( parameters.p_max_photon_number + 1 );
+                        int j = it.col() % 4;
+                        int photon_H_j = std::floor( it.col() / ( 4.0 * ( parameters.p_max_photon_number + 1 ) ) );
+                        int photon_V_j = ( (int)std::floor( it.col() / 4.0 ) ) % ( parameters.p_max_photon_number + 1 );
+                        // Add new Value to triplet list
+                        dcomplex factor = std::exp( 1i * t * ( parameters.p_omega_atomic_G_H / 2.0 * ( delta( i, 1 ) - delta( i, 0 ) - delta( j, 1 ) + delta( j, 0 ) ) + parameters.p_omega_atomic_G_V / 2.0 * ( delta( i, 2 ) - delta( i, 0 ) - delta( j, 2 ) + delta( j, 0 ) ) + parameters.p_omega_atomic_H_B / 2.0 * ( delta( i, 3 ) - delta( i, 1 ) - delta( j, 3 ) + delta( j, 1 ) ) + parameters.p_omega_atomic_V_B / 2.0 * ( delta( i, 3 ) - delta( i, 2 ) - delta( j, 3 ) + delta( j, 2 ) ) + parameters.p_omega_cavity_H * ( photon_H_i - photon_H_j ) + parameters.p_omega_cavity_V * ( photon_V_i - photon_V_j ) ) );
+                        ret_v.emplace_back( it.row(), it.col(), it.value() * factor );
+                    }
                 }
+                // Generate new Matrix from triplet list
+                ret.setFromTriplets( ret_v.begin(), ret_v.end() );
             }
             // TIMETRANSFORMATION_MATRIXEXPONENTIAL
             else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL ) {
-                SparseMat U = ( DenseMat( 1i * operatorMatrices.H_0 * t ).exp() ).sparseView(); // auto slower than direct type, because of doubled evaluation
-                ret = U * A * U.conjugate();
-            } else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL_PRECALCULATED ) {
-                //SparseMat U = ( DenseMat( timeTrafoMatrix ).array().pow( t ) ).sparseView(); // auto slower than direct type, because of doubled evaluation
-                //ret = U * A * U.conjugate();
+                SparseMat U = ( DenseMat( 1i * operatorMatrices.H_0 * t ).exp() ).sparseView();
+                ret = U * A * U.adjoint();
             }
         }
         return ret;
@@ -185,7 +186,7 @@ class System : public System_Parent {
         return 1i * ( chi - adjoint );
     }
 
-    std::complex<double> dgl_phonons_greenf( double t, const char mode = 'u' ) {
+    dcomplex dgl_phonons_greenf( double t, const char mode = 'u' ) {
         int i = std::floor( t / getTimeStep() );
         auto phi = phi_vector.at( i ); //dgl_phonons_phi( t );
         if ( mode == 'g' ) {
@@ -194,8 +195,8 @@ class System : public System_Parent {
         return parameters.p_phonon_b * parameters.p_phonon_b * std::sinh( phi );
     }
 
-    std::complex<double> dgl_phonons_phi( const double t ) {
-        std::complex<double> integral = 0;
+    dcomplex dgl_phonons_phi( const double t ) {
+        dcomplex integral = 0;
         double stepsize = 0.01 * parameters.p_phonon_wcutoff;
         for ( double w = stepsize; w < 10 * parameters.p_phonon_wcutoff; w += stepsize ) {
             integral += stepsize * ( parameters.p_phonon_alpha * w * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff ) * ( std::cos( w * t ) / std::tanh( 1.0545718E-34 * w / 2.0 / 1.3806488E-23 / parameters.p_phonon_T ) - 1i * std::sin( w * t ) ) );
@@ -220,7 +221,7 @@ class System : public System_Parent {
             nu = std::sqrt( bpulsesquared + delta * delta );
             int i = 0;
             for ( double tau = 0; tau < parameters.p_phonon_tcutoff; tau += step ) {
-                std::complex<double> f = ( delta * delta * std::cos( nu * tau ) + bpulsesquared ) / std::pow( nu, 2.0 );
+                dcomplex f = ( delta * delta * std::cos( nu * tau ) + bpulsesquared ) / std::pow( nu, 2.0 );
                 ret += std::real( ( std::cosh( phi_vector.at( i ) ) - 1.0 ) * f + std::sinh( phi_vector.at( i ) ) * std::cos( nu * tau ) ) - sign * std::imag( ( std::exp( phi_vector.at( i ) ) - 1.0 ) * delta * std::sin( nu * tau ) / nu );
                 i++;
             }
@@ -313,22 +314,33 @@ class System : public System_Parent {
     }
 
     void expectationValues( const SparseMat &rho, const double t ) {
-        std::fprintf( fileoutput.fp_atomicinversion, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue<SparseMat, std::complex<double>>( rho, operatorMatrices.atom_inversion_G_B, t ) ) );
-        std::fprintf( fileoutput.fp_photonpopulation, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue<SparseMat, std::complex<double>>( rho, operatorMatrices.photon_n_H, t ) ) );
-        std::fprintf( fileoutput.fp_densitymatrix, "%e\t", t );
+        fmt::print( fileoutput.fp_atomicinversion, "{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\n", t, std::real( dgl_expectationvalue<SparseMat, dcomplex>( rho, operatorMatrices.atom_state_ground, t ) ), std::real( dgl_expectationvalue<SparseMat, dcomplex>( rho, operatorMatrices.atom_state_H, t ) ), std::real( dgl_expectationvalue<SparseMat, dcomplex>( rho, operatorMatrices.atom_state_V, t ) ), std::real( dgl_expectationvalue<SparseMat, dcomplex>( rho, operatorMatrices.atom_state_biexciton, t ) ) );
+        fmt::print( fileoutput.fp_photonpopulation, "{:.5e}\t{:.5e}\t{:.5e}\n", t, std::real( dgl_expectationvalue<SparseMat, dcomplex>( rho, operatorMatrices.photon_n_H, t ) ), std::real( dgl_expectationvalue<SparseMat, dcomplex>( rho, operatorMatrices.photon_n_V, t ) ) );
+        fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", t );
         if ( parameters.output_full_dm ) {
             for ( int i = 0; i < parameters.maxStates; i++ )
                 for ( int j = 0; j < parameters.maxStates; j++ ) {
-                    std::fprintf( fileoutput.fp_densitymatrix, "%e\t", std::real( rho.coeff( i, j ) ) );
+                    fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", std::real( rho.coeff( i, j ) ) );
                 }
         } else
             for ( int j = 0; j < parameters.maxStates; j++ )
-                std::fprintf( fileoutput.fp_densitymatrix, "%e\t", std::real( rho.coeff( j, j ) ) );
-        std::fprintf( fileoutput.fp_densitymatrix, "\n" );
+                fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", std::real( rho.coeff( j, j ) ) );
+        fmt::print( fileoutput.fp_densitymatrix, "\n" );
     }
 
     SparseMat dgl_getHamilton( const double t ) {
         return dgl_timetrafo( parameters.p_phonon_b * ( operatorMatrices.H_used + dgl_chirp( t ) + dgl_pulse( t ) ), t );
+    }
+
+    bool calculate_spectrum() {
+        return parameters.numerics_calculate_spectrum_H || parameters.numerics_calculate_spectrum_V;
+    }
+
+    bool calculate_spectrum_H() {
+        return parameters.numerics_calculate_spectrum_H;
+    }
+    bool calculate_spectrum_V() {
+        return parameters.numerics_calculate_spectrum_H;
     }
 
     bool exit_system( const int failure = 0 ) {

@@ -148,7 +148,7 @@ int ODESolver::reset( System_Parent &s ) {
     out.clear();
     out.reserve( (int)( std::ceil( s.parameters.iterations_w_resolution ) + 5 ) );
     if ( s.calculate_spectrum() )
-        akf_mat = MatrixXcd::Zero( dim, dim );
+        akf_mat = Eigen::MatrixXcd::Zero( dim, dim );
     for ( int w = 0; w < s.parameters.iterations_w_resolution; w++ ) {
         out.push_back( 0 );
     }
@@ -309,7 +309,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
         MatType rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
         saveState( rho_tau, t_t, past_rhos );
 
-        akf_mat( k, 0 ) = s.dgl_expectationvalue<MatType,std::complex<double>>( rho_tau, op_creator, t_t );
+        akf_mat( k, 0 ) = s.dgl_expectationvalue<MatType,dcomplex>( rho_tau, op_creator, t_t );
         int j = 1;
         int curIt_tau = 1;
         for ( double t_tau = t_t + s.getTimeStep(); t_tau < s.getTimeborderEnd(); t_tau += s.getTimeStep() ) { // t + +s.getTimeStep()
@@ -317,7 +317,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
             saveState( rho_tau, t_tau, past_rhos );
             timer.iterate();
             if ( queueNow( s, curIt_tau ) ) {
-                akf_mat( k, j ) = s.dgl_expectationvalue<MatType,std::complex<double>>( rho_tau, op_creator, t_tau );
+                akf_mat( k, j ) = s.dgl_expectationvalue<MatType,dcomplex>( rho_tau, op_creator, t_tau );
                 j++; // equivalent to s.parameters.akf_vecIndex
             }
             outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "AKF-Tau: " );
@@ -349,14 +349,14 @@ bool ODESolver::calculate_g2_0( System_Parent &s, const MatType &op_creator, con
     timer.start();
     logs.level2( "Calculating G2(0)... " );
 
-    std::vector<std::complex<double>> g2Values;
+    std::vector<dcomplex> g2Values;
     g2Values.reserve( totalIterations );
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
         double t_t = getTimeAt( i );
         MatType rho = getRhoAt( i );
         MatType M1 = op_creator * op_creator * op_annihilator * op_annihilator;
         MatType M2 = op_creator * op_annihilator;
-        g2Values.emplace_back( s.dgl_expectationvalue<MatType,std::complex<double>>( rho, M1, t_t ) / std::pow( s.dgl_expectationvalue<MatType,std::complex<double>>( rho, M2, t_t ), 2 ) );
+        g2Values.emplace_back( s.dgl_expectationvalue<MatType,dcomplex>( rho, M1, t_t ) / std::pow( s.dgl_expectationvalue<MatType,dcomplex>( rho, M2, t_t ), 2 ) );
         timer.iterate();
         outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "G2: " );
     }
@@ -398,7 +398,7 @@ bool ODESolver::calculate_spectrum( System_Parent &s, std::string fileOutputName
     logs.level2( "Done, calculating fourier transform via direct integral... " );
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads ) //reduction(+:spectrum.out)
     for ( int spec_w = 0; spec_w < s.parameters.iterations_w_resolution; spec_w++ ) {
-        std::vector<std::complex<double>> expfunc;
+        std::vector<dcomplex> expfunc;
         expfunc.reserve( savedStates.size() / s.getIterationSkip() + 1 );
         for ( int spec_tau = 0; spec_tau < ( s.getTimeborderEnd() - s.getTimeborderStart() - 0.0 ) / ( s.getTimeStep() * s.getIterationSkip() ); spec_tau++ ) {
             expfunc.emplace_back( std::exp( -1i * spectrum_frequency_w.at( spec_w ) * (double)(spec_tau)*s.getTimeStep() * (double)( s.getIterationSkip() ) ) );

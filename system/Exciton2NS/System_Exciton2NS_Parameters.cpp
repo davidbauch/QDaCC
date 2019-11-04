@@ -1,3 +1,4 @@
+#include "../../global.h"
 #include "../parameters.cpp"
 
 class Parameters : public Parameters_Parent {
@@ -113,7 +114,7 @@ class Parameters : public Parameters_Parent {
         numerics_maximum_threads = params.get<int>( 6, "1" );
         output_handlerstrings = params.get( 7 ) ? 0 : 1;
         output_operators = params.get( 8 ) ? 2 : ( params.get( 9 ) ? 1 : ( params.get( 10 ) ? 3 : 0 ) );
-        numerics_order_timetrafo = params.get( 11 ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_PRECALCULATED;
+        numerics_order_timetrafo = params.get( 11 ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
         startCoherent = params.get( 12 );
         output_full_dm = params.get( 13 );
         scale_parameters = params.get( 14 );
@@ -231,7 +232,7 @@ class Parameters : public Parameters_Parent {
         return true;
     }
 
-    void log() {
+    void log( const std::vector<std::string> &info ) {
         logs.wrapInBar( "Parameters" );
         logs( "\n" );
         logs.wrapInBar( "Time borders and t_step", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
@@ -246,7 +247,7 @@ class Parameters : public Parameters_Parent {
         logs( "Photon loss rate k = {} Hz -> {} mueV -> Q = {:.2f}\n", p_omega_cavity_loss, Hz_to_eV( p_omega_cavity_loss ) * 1E6, p_omega_cavity / p_omega_cavity_loss );
         logs( "Atomic dephasing rate gamma_pure = {} Hz -> {} mueV\n", p_omega_pure_dephasing, Hz_to_eV( p_omega_pure_dephasing ) * 1E6 );
         logs( "RAD rate gamma = {} Hz -> {} mueV\n", p_omega_decay, Hz_to_eV( p_omega_decay ) * 1E6 );
-        logs( "Initial state rho0 = |{},{}> with maximum number of {} photons\n\n", ( p_initial_state % 2 == 0 ? "g" : "e" ), (int)std::floor( p_initial_state / 2 ), p_max_photon_number );
+        logs( "Initial state rho0 = |{0}><{0}| with maximum number of {1} photons\n\n", info.at(p_initial_state), p_max_photon_number );
         logs.wrapInBar( "Excitation Pulse", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         if ( pulse_amp.size() > 0 && pulse_center.at( 0 ) != -1 && pulse_amp.at( 0 ) != 0 ) {
             for ( int i = 0; i < (int)pulse_amp.size(); i++ ) {
@@ -295,14 +296,14 @@ class Parameters : public Parameters_Parent {
             std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism"};
             logs( "\nTemperature = {}k\nCutoff energy = {}meV\nCutoff Time = {}ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n\n", p_phonon_T, Hz_to_eV( p_phonon_wcutoff ) * 1E3, p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_2, approximations.at( numerics_phonon_approximation_2 ) );
         } else {
-            logs("\nNot using phonons\n\n");
+            logs( "\nNot using phonons\n\n" );
         }
 
         logs.wrapInBar( "Numerics" );
         logs( "\nOrder of Runge-Kutta used: Time: RK{}, Spectrum: RK{}\n", numerics_order_t, numerics_order_tau );
         logs( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
         logs( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture == 1 ) ? "YES" : "NO" ) );
-        logs( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_PRECALCULATED ) ? "Analytic" : "Matrix Exponential" ) );
+        logs( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) ? "Analytic" : "Matrix Exponential" ) );
         logs( "Threads used for AFK? - {}\n", numerics_maximum_threads );
         logs( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );
         logs( "\n" );

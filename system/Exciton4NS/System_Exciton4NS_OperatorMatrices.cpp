@@ -1,3 +1,4 @@
+#include "../../global.h"
 #include "../operatormatrices.cpp"
 
 class OperatorMatrices : public OperatorMatrices_Parent {
@@ -16,10 +17,10 @@ class OperatorMatrices : public OperatorMatrices_Parent {
     SparseMat atom_inversion_G_H, atom_inversion_G_V, atom_inversion_H_B, atom_inversion_V_B, atom_inversion_G_B;
 
     // Bare matrices:
-    MatrixXcd bare_photon_create_H, bare_photon_annihilate_H, bare_photon_create_V, bare_photon_annihilate_V;
-    MatrixXcd bare_atom_state_biexciton, bare_atom_state_ground, bare_atom_state_H, bare_atom_state_V, bare_photon_n_H, bare_photon_n_V;
-    MatrixXcd bare_atom_sigmaplus_G_H, bare_atom_sigmaminus_G_H, bare_atom_sigmaplus_H_B, bare_atom_sigmaminus_H_B, bare_atom_sigmaplus_G_V, bare_atom_sigmaminus_G_V, bare_atom_sigmaplus_V_B, bare_atom_sigmaminus_V_B;
-    MatrixXcd bare_atom_inversion_G_H, bare_atom_inversion_G_V, bare_atom_inversion_H_B, bare_atom_inversion_V_B, bare_atom_inversion_G_B;
+    DenseMat bare_photon_create_H, bare_photon_annihilate_H, bare_photon_create_V, bare_photon_annihilate_V;
+    DenseMat bare_atom_state_biexciton, bare_atom_state_ground, bare_atom_state_H, bare_atom_state_V, bare_photon_n_H, bare_photon_n_V;
+    DenseMat bare_atom_sigmaplus_G_H, bare_atom_sigmaminus_G_H, bare_atom_sigmaplus_H_B, bare_atom_sigmaminus_H_B, bare_atom_sigmaplus_G_V, bare_atom_sigmaminus_G_V, bare_atom_sigmaplus_V_B, bare_atom_sigmaminus_V_B;
+    DenseMat bare_atom_inversion_G_H, bare_atom_inversion_G_V, bare_atom_inversion_H_B, bare_atom_inversion_V_B, bare_atom_inversion_G_B;
 
     OperatorMatrices(){};
     OperatorMatrices( const Parameters &p ) {
@@ -36,9 +37,9 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         rho = SparseMat( p.maxStates, p.maxStates );
 
         // Create Base Matrices and Base Vector:
-        Eigen::MatrixXcd m_base1 = MatrixXcd::Identity( p.p_max_photon_number + 1, p.p_max_photon_number + 1 );
-        Eigen::MatrixXcd m_base2 = MatrixXcd::Identity( p.p_max_photon_number + 1, p.p_max_photon_number + 1 );
-        Eigen::MatrixXcd m_base3 = MatrixXcd::Identity( 4, 4 );
+        DenseMat m_base1 = DenseMat::Identity( p.p_max_photon_number + 1, p.p_max_photon_number + 1 );
+        DenseMat m_base2 = DenseMat::Identity( p.p_max_photon_number + 1, p.p_max_photon_number + 1 );
+        DenseMat m_base3 = DenseMat::Identity( 4, 4 );
         std::vector<std::string> base1;
         std::vector<std::string> base2;
         std::vector<std::string> base3 = {"G", "X_H", "X_V", "B"};
@@ -56,98 +57,98 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         // Initializing bare matrices:
         logs.level2( "Initializing base matrices... " );
         // Atomic state operators
-        bare_atom_state_ground = MatrixXcd::Zero( 4, 4 );
+        bare_atom_state_ground = DenseMat::Zero( 4, 4 );
         bare_atom_state_ground << 1, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0;
-        bare_atom_state_biexciton = MatrixXcd::Zero( 4, 4 );
+        bare_atom_state_biexciton = DenseMat::Zero( 4, 4 );
         bare_atom_state_biexciton << 0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 1;
-        bare_atom_state_H = MatrixXcd::Zero( 4, 4 );
+        bare_atom_state_H = DenseMat::Zero( 4, 4 );
         bare_atom_state_H << 0, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0;
-        bare_atom_state_V = MatrixXcd::Zero( 4, 4 );
+        bare_atom_state_V = DenseMat::Zero( 4, 4 );
         bare_atom_state_V << 0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 0;
-        bare_atom_sigmaplus_G_H = MatrixXcd::Zero( 4, 4 );
+        bare_atom_sigmaplus_G_H = DenseMat::Zero( 4, 4 );
         bare_atom_sigmaplus_G_H << 0, 0, 0, 0,
             1, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0;
-        bare_atom_sigmaminus_G_H = MatrixXcd::Zero( 4, 4 );
+        bare_atom_sigmaminus_G_H = DenseMat::Zero( 4, 4 );
         bare_atom_sigmaminus_G_H << 0, 1, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0;
-        bare_atom_sigmaplus_G_V = MatrixXcd::Zero( 4, 4 );
+        bare_atom_sigmaplus_G_V = DenseMat::Zero( 4, 4 );
         bare_atom_sigmaplus_G_V << 0, 0, 0, 0,
             0, 0, 0, 0,
             1, 0, 0, 0,
             0, 0, 0, 0;
-        bare_atom_sigmaminus_G_V = MatrixXcd::Zero( 4, 4 );
+        bare_atom_sigmaminus_G_V = DenseMat::Zero( 4, 4 );
         bare_atom_sigmaminus_G_V << 0, 0, 1, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0;
-        bare_atom_sigmaplus_H_B = MatrixXcd::Zero( 4, 4 );
+        bare_atom_sigmaplus_H_B = DenseMat::Zero( 4, 4 );
         bare_atom_sigmaplus_H_B << 0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 1, 0, 0;
-        bare_atom_sigmaminus_H_B = MatrixXcd::Zero( 4, 4 );
+        bare_atom_sigmaminus_H_B = DenseMat::Zero( 4, 4 );
         bare_atom_sigmaminus_H_B << 0, 0, 0, 0,
             0, 0, 0, 1,
             0, 0, 0, 0,
             0, 0, 0, 0;
-        bare_atom_sigmaplus_V_B = MatrixXcd::Zero( 4, 4 );
+        bare_atom_sigmaplus_V_B = DenseMat::Zero( 4, 4 );
         bare_atom_sigmaplus_V_B << 0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 1, 0;
-        bare_atom_sigmaminus_V_B = MatrixXcd::Zero( 4, 4 );
+        bare_atom_sigmaminus_V_B = DenseMat::Zero( 4, 4 );
         bare_atom_sigmaminus_V_B << 0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 1,
             0, 0, 0, 0;
-        bare_atom_inversion_G_H = MatrixXcd::Zero( 4, 4 );
+        bare_atom_inversion_G_H = DenseMat::Zero( 4, 4 );
         bare_atom_inversion_G_H << -1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0;
-        bare_atom_inversion_G_V = MatrixXcd::Zero( 4, 4 );
+        bare_atom_inversion_G_V = DenseMat::Zero( 4, 4 );
         bare_atom_inversion_G_V << -1, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 1, 0,
             0, 0, 0, 0;
-        bare_atom_inversion_H_B = MatrixXcd::Zero( 4, 4 );
+        bare_atom_inversion_H_B = DenseMat::Zero( 4, 4 );
         bare_atom_inversion_H_B << 0, 0, 0, 0,
             0, -1, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 1;
-        bare_atom_inversion_V_B = MatrixXcd::Zero( 4, 4 );
+        bare_atom_inversion_V_B = DenseMat::Zero( 4, 4 );
         bare_atom_inversion_V_B << 0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, -1, 0,
             0, 0, 0, 1;
-        bare_atom_inversion_G_B = MatrixXcd::Zero( 4, 4 );
+        bare_atom_inversion_G_B = DenseMat::Zero( 4, 4 );
         bare_atom_inversion_G_B << -1, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 1;
 
         // Photon operators
-        bare_photon_create_H = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
-        bare_photon_annihilate_H = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
+        bare_photon_create_H = create_photonic_operator<DenseMat>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
+        bare_photon_annihilate_H = create_photonic_operator<DenseMat>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
         bare_photon_n_H = bare_photon_create_H * bare_photon_annihilate_H;
-        bare_photon_create_V = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
-        bare_photon_annihilate_V = create_photonic_operator<Eigen::MatrixXcd>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
+        bare_photon_create_V = create_photonic_operator<DenseMat>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
+        bare_photon_annihilate_V = create_photonic_operator<DenseMat>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
         bare_photon_n_V = bare_photon_create_V * bare_photon_annihilate_V;
 
         // Expanding both states

@@ -1,4 +1,5 @@
 #pragma once
+#include "../../global.h"
 
 class FileOutput_Parent {
     FileOutput_Parent(){};

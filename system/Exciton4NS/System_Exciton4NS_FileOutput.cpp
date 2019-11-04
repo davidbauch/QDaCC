@@ -1,3 +1,5 @@
+#include "../../global.h"
+
 class FileOutput {
    public:
     FILE *fp_densitymatrix;
@@ -18,7 +20,7 @@ FileOutput::FileOutput( const std::vector<std::string> filenames, const Paramete
     if ( !fp_densitymatrix )
         logs.level2( "\nCould not open file for densitymatrix!\n" );
     else {
-        fmt::print( fp_densitymatrix, "States: " );
+        fmt::print( fp_densitymatrix, "t\t" );
         if ( p.output_full_dm ) {
             for ( int i = 0; i < p.maxStates; i++ )
                 for ( int j = 0; j < p.maxStates; j++ ) {
@@ -32,9 +34,13 @@ FileOutput::FileOutput( const std::vector<std::string> filenames, const Paramete
     fp_atomicinversion = std::fopen( ( p.subfolder + filenames.at( 1 ) ).c_str(), "w" );
     if ( !fp_atomicinversion )
         logs.level2( "\nCould not open file for atomic inversion!\n" );
+    else
+        fmt::print( fp_atomicinversion, "t\t|G><G|\t|X_H><X_H|\t|X_V><X_V|\t|B><B|\n" );
     fp_photonpopulation = std::fopen( ( p.subfolder + filenames.at( 2 ) ).c_str(), "w" );
     if ( !fp_photonpopulation )
         logs.level2( "\nCould not open file for photonpopulation!\n" );
+    else
+        fmt::print( fp_photonpopulation, "t\tHorizontal\tVertical\n" );
     logs.level2( "done!\n" );
 }
 

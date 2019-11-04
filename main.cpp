@@ -44,8 +44,14 @@ int main( int argc, char* argv[] ) {
 #endif
 #ifdef SYSTEM4LS
     if ( system.calculate_spectrum() ) {
-        solver.calculate_g1( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
-        solver.calculate_spectrum( system );
+        if ( system.calculate_spectrum_H() ) {
+            solver.calculate_g1( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
+            solver.calculate_spectrum( system, "spectrum_H.txt" );
+        }
+        if ( system.calculate_spectrum_V() ) {
+            solver.calculate_g1( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V );
+            solver.calculate_spectrum( system, "spectrum_V.txt" );
+        }
     }
     if ( system.calculate_g2() ) {
         solver.calculate_g2_0( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );

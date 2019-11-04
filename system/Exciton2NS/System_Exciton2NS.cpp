@@ -1,3 +1,4 @@
+#include "../../global.h"
 #include "System_Exciton2NS_Parameters.cpp"
 #include "System_Exciton2NS_OperatorMatrices.cpp"
 #include "System_Exciton2NS_FileOutput.cpp"
@@ -12,7 +13,7 @@ class System : public System_Parent {
     Chirp chirp;
     Pulse pulse;
     FileOutput fileoutput;
-    std::vector<std::complex<double>> phi_vector;
+    std::vector<dcomplex> phi_vector;
 
     DenseMat timeTrafoMatrix;
 
@@ -22,9 +23,9 @@ class System : public System_Parent {
         name = "Exciton (2NS)";
         logs.level2( "Creating System Class for '{}'\n", name );
         parameters = Parameters( input );
-        parameters.log();
         operatorMatrices = OperatorMatrices( parameters );
         operatorMatrices.outputOperators( parameters );
+        parameters.log(operatorMatrices.base);
         fileoutput = FileOutput( {"densitymatrix.txt", "atomicinversion.txt", "photonpopulation.txt"}, parameters, operatorMatrices );
         init();
     }
@@ -105,8 +106,8 @@ class System : public System_Parent {
     DenseMat dgl_timetrafo( const DenseMat &A, const double t ) {
         DenseMat ret = A;
         if ( parameters.numerics_use_interactionpicture == 1 ) {
-            // TIMETRANSFORMATION_PRECALCULATED
-            if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_PRECALCULATED ) {
+            // TIMETRANSFORMATION_ANALYTICAL
+            if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) {
                 int i, j, pn, pm;
                 for ( int n = 0; n < A.rows(); n++ ) {
                     i = n % 2;
@@ -159,7 +160,7 @@ class System : public System_Parent {
         return 1i * ( chi - chi.adjoint().eval() );
     }
 
-    std::complex<double> dgl_phonons_greenf( double t, const char mode = 'u' ) {
+    dcomplex dgl_phonons_greenf( double t, const char mode = 'u' ) {
         int i = std::floor( t / getTimeStep() );
         if ( mode == 'g' ) {
             return parameters.p_phonon_b * parameters.p_phonon_b * ( std::cosh( phi_vector.at( i ) ) - 1.0 );
@@ -167,8 +168,8 @@ class System : public System_Parent {
         return parameters.p_phonon_b * parameters.p_phonon_b * std::sinh( phi_vector.at( i ) );
     }
 
-    std::complex<double> dgl_phonons_phi( const double t ) {
-        std::complex<double> integral = 0;
+    dcomplex dgl_phonons_phi( const double t ) {
+        dcomplex integral = 0;
         double stepsize = 0.01 * parameters.p_phonon_wcutoff;
         for ( double w = stepsize; w < 10 * parameters.p_phonon_wcutoff; w += stepsize ) {
             integral += stepsize * ( parameters.p_phonon_alpha * w * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff ) * ( std::cos( w * t ) / std::tanh( 1.0545718E-34 * w / 2.0 / 1.3806488E-23 / parameters.p_phonon_T ) - 1i * std::sin( w * t ) ) );
@@ -187,7 +188,7 @@ class System : public System_Parent {
             double nu = std::sqrt( bpulsesquared + delta * delta );
             int i = 0;
             for ( double tau = 0; tau < parameters.p_phonon_tcutoff; tau += step ) {
-                std::complex<double> f = ( delta * delta * std::cos( nu * tau ) + bpulsesquared ) / std::pow( nu, 2.0 );
+                dcomplex f = ( delta * delta * std::cos( nu * tau ) + bpulsesquared ) / std::pow( nu, 2.0 );
                 auto phi = phi_vector.at( i );
                 ret += std::real( ( std::cosh( phi ) - 1.0 ) * f + std::sinh( phi ) * std::cos( nu * tau ) ) - sign * std::imag( ( std::exp( phi ) - 1.0 ) * delta * std::sin( nu * tau ) / nu );
                 i++;
@@ -262,8 +263,8 @@ class System : public System_Parent {
     }
 
     void expectationValues( const DenseMat &rho, const double t ) {
-        std::fprintf( fileoutput.fp_atomicinversion, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue<DenseMat,std::complex<double>>( rho, operatorMatrices.atom_inversion, t ) ) );
-        std::fprintf( fileoutput.fp_photonpopulation, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue<DenseMat,std::complex<double>>( rho, operatorMatrices.photon_n, t ) ) );
+        std::fprintf( fileoutput.fp_atomicinversion, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue<DenseMat,dcomplex>( rho, operatorMatrices.atom_inversion, t ) ) );
+        std::fprintf( fileoutput.fp_photonpopulation, "%.15e\t%.15e\n", t, std::real( dgl_expectationvalue<DenseMat,dcomplex>( rho, operatorMatrices.photon_n, t ) ) );
         std::fprintf( fileoutput.fp_densitymatrix, "%e\t", t );
         if ( parameters.output_full_dm ) {
             for ( int i = 0; i < parameters.maxStates; i++ )

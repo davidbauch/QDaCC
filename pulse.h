@@ -20,7 +20,7 @@ class Pulse {
 
    private:
     // Pulse values
-    std::vector<std::complex<double>> pulsearray;
+    std::vector<dcomplex> pulsearray;
     // Saving the corresponding t doesn't hurt
     std::vector<double> timearray;
     // Helper variables/functions
@@ -35,7 +35,7 @@ class Pulse {
     Pulse( Inputs &inputs );
     void generate();
     void fileOutput( std::string filepath );
-    std::complex<double> evaluate( double t );
-    std::complex<double> get( double t, bool force_evaluate = false );
+    dcomplex evaluate( double t );
+    dcomplex get( double t, bool force_evaluate = false );
     void log();
 };

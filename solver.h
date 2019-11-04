@@ -36,7 +36,7 @@ class ODESolver {
 
     std::vector<SaveState> savedStates;    // Vector for saved matrix-time tuples for densitymatrix
     std::vector<SaveState> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
-    std::vector<std::complex<double>> out;
+    std::vector<dcomplex> out;
     DenseMat akf_mat;
     void saveState( const MatType &mat, const double t, std::vector<SaveState> &savedStates );
     void saveHamilton( const MatType &mat, const double t );

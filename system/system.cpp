@@ -15,9 +15,6 @@ void System_Parent::init() {
     timer_systeminit.end();
 }
 
-bool System_Parent::calculate_spectrum() {
-    return parameters.numerics_calculate_spectrum;
-}
 bool System_Parent::calculate_g2() {
     return parameters.numerics_calculate_g2;
 }
