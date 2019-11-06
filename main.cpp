@@ -54,7 +54,8 @@ int main( int argc, char* argv[] ) {
         }
     }
     if ( system.calculate_g2() ) {
-        solver.calculate_g2_0( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
+        solver.calculate_g2_0( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "g2(0)_H.txt" );
+        solver.calculate_g2_0( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "g2(0)_V.txt" );
     }
 #endif
 

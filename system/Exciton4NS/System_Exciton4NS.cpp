@@ -15,7 +15,13 @@ class System : public System_Parent {
     Pulse pulse_H;
     Pulse pulse_V;
     FileOutput fileoutput;
-    std::vector<dcomplex> phi_vector;
+    std::vector<dcomplex> phi_vector;            // Vector of saved phonon-phi function
+    std::vector<SaveStateTau> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
+    int track_getcoefficient_read = 0;
+    int track_getcoefficient_write = 0;
+    int track_getcoefficient_calculate = 0;
+    int track_getcoefficient_read_but_unequal = 0;
+    int track_getcoefficient_calcattempt = 0;
 
     SparseMat timeTrafoMatrix;
 
@@ -243,6 +249,52 @@ class System : public System_Parent {
         return ret;
     }
 
+    int dgl_get_coefficient_index( const double t, const double tau = 0 ) {
+        if ( parameters.numerics_use_saved_coefficients ) {
+            double mult = std::floor( parameters.p_phonon_tcutoff / parameters.t_step );
+            // Look for already calculated coefficient. if not found, calculate and save new coefficient
+            if ( savedCoefficients.size() > 0 && t <= savedCoefficients.back().t && tau <= savedCoefficients.back().tau ) {
+                track_getcoefficient_calcattempt++;
+                int approx = std::min( (int)savedCoefficients.size() - 1, (int)( ( std::floor( t / getTimeStep() * 2.0 ) - 1.0 ) * mult ) );
+                while ( approx < (int)savedCoefficients.size() - 1 && t > savedCoefficients.at( approx ).t )
+                    approx++;
+                while ( approx > 0 && t < savedCoefficients.at( approx ).t )
+                    approx--;
+                while ( approx < (int)savedCoefficients.size() - 1 && tau > savedCoefficients.at( approx ).tau )
+                    approx--;
+                while ( approx > 0 && tau < savedCoefficients.at( approx ).tau )
+                    approx--;
+                if ( approx < (int)savedCoefficients.size() ) {
+                    if ( t != savedCoefficients.at( approx ).t || tau != savedCoefficients.at( approx ).tau ) {
+                        track_getcoefficient_read_but_unequal++;
+                        logs.level2( "Coefficient time mismatch! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
+                    } else {
+                        track_getcoefficient_read++;
+                        //logs.level2( "Coefficient time match! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
+                        return approx;
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+
+    void dgl_save_coefficient( const SparseMat &coefficient1, const SparseMat &coefficient2, const double t, const double tau ) {
+        track_getcoefficient_calculate++;
+        if ( parameters.numerics_use_saved_coefficients ) { //TODO: weitere bedingung ans speichern, z.b. spektrum
+            track_getcoefficient_write++;
+            savedCoefficients.emplace_back( SaveStateTau( coefficient1, coefficient2, t, tau ) );
+            //logs.level2("Saved coefficient for t = {}, tau = {}\n",t,tau);
+        }
+    }
+    void dgl_save_coefficient( const SparseMat &coefficient, const double t ) {
+        track_getcoefficient_calculate++;
+        if ( parameters.numerics_use_saved_coefficients ) { //TODO: weitere bedingung ans speichern, z.b. spektrum
+            track_getcoefficient_write++;
+            savedCoefficients.emplace_back( SaveStateTau( coefficient, t ) );
+        }
+    }
+
     SparseMat dgl_phonons( const SparseMat &rho, const double t, const std::vector<SaveState> &past_rhos ) {
         // Determine Chi
         SparseMat ret = SparseMat( parameters.maxStates, parameters.maxStates );
@@ -252,41 +304,86 @@ class System : public System_Parent {
 
         if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) {
             // Calculate Chi(t) backwards to Chi(t-tau)
+            SparseMat XUT = dgl_phonons_chiToX( chi, 'u' );
+            SparseMat XGT = dgl_phonons_chiToX( chi, 'g' );
+            SparseMat XUTAU, XGTAU;
+            // Chi_tau_back is chi(t-tau) transformed back from the second interaction picture. Saving of chiToX transformed would be better for runtime, but would require to save 2 matrices instead of 1.
+            SparseMat chi_tau_back_u, chi_tau_back_g;
             for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) { //for ( auto chit : chis ) {
+                // Determine rho to use. If first markov approximation is disabled, rho(t-tau) will be used from the past_rhos vector.
                 if ( !parameters.numerics_phonon_approximation_1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }
-                SparseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
-                SparseMat chi_tau_back = ODESolver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
-                integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'u' ), ( dgl_phonons_chiToX( chi_tau_back, 'u' ) * rho_used ).eval() );
-                integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'g' ), ( dgl_phonons_chiToX( chi_tau_back, 'g' ) * rho_used ).eval() );
+                // Check if chi(t-tau) has to be recalculated, or can just be retaken from saved matrices, since chi(t-tau) is only dependant on time
+                int index = dgl_get_coefficient_index( t );
+                if ( index != -1 ) {
+                    // Index was found, chi(t-tau) used from saved vector
+                    chi_tau_back_u = savedCoefficients.at( index ).mat1;
+                    chi_tau_back_g = savedCoefficients.at( index ).mat2;
+                } else {
+                    // Index not found, or no saving is used. Recalculate chi(t-tau).
+                    SparseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
+                    SparseMat chi_tau_back = ODESolver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
+                    // If saving is used, save current chi(t-tau).
+                    chi_tau_back_g = dgl_phonons_chiToX( chi_tau_back, 'g' );
+                    chi_tau_back_u = dgl_phonons_chiToX( chi_tau_back, 'u' );
+                    dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, tau );
+                }
+                integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * rho_used ).eval() );
+                integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_back_g * rho_used ).eval() );
                 SparseMat adjoint = integrant.adjoint();
                 ret -= ( integrant + adjoint ) * parameters.t_step;
             }
         }
         if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
+            SparseMat XUT = dgl_phonons_chiToX( chi, 'u' );
+            SparseMat XGT = dgl_phonons_chiToX( chi, 'g' );
+            SparseMat chi_tau_transformed_u, chi_tau_transformed_g;
             for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) {
                 if ( !parameters.numerics_phonon_approximation_1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }
-                SparseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
-                SparseMat U = ( DenseMat( -1i * dgl_getHamilton( t ) * tau ).exp() ).sparseView();
-                integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'u' ), ( dgl_phonons_chiToX( U * chi_tau * U.adjoint().eval(), 'u' ) * rho_used ).eval() );
-                integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'g' ), ( dgl_phonons_chiToX( U * chi_tau * U.adjoint().eval(), 'g' ) * rho_used ).eval() );
+                int index = dgl_get_coefficient_index( t, tau );
+                if ( index != -1 ) {
+                    // Index was found, chi(t-tau) used from saved vector
+                    chi_tau_transformed_u = savedCoefficients.at( index ).mat1;
+                    chi_tau_transformed_g = savedCoefficients.at( index ).mat2;
+                } else {
+                    SparseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
+                    SparseMat U = ( DenseMat( -1i * dgl_getHamilton( t ) * tau ).exp() ).sparseView();
+                    SparseMat chi_tau_transformed = U * chi_tau * U.adjoint().eval();
+                    chi_tau_transformed_u = dgl_phonons_chiToX( chi_tau_transformed, 'u' );
+                    chi_tau_transformed_g = dgl_phonons_chiToX( chi_tau_transformed, 'g' );
+                    dgl_save_coefficient( chi_tau_transformed_u, chi_tau_transformed_g, t, tau );
+                }
+                integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_transformed_u * rho_used ).eval() );
+                integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_transformed_g * rho_used ).eval() );
                 SparseMat adjoint = integrant.adjoint();
                 ret -= ( integrant + adjoint ) * parameters.t_step;
             }
         } else if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_TIMETRANSFORMATION ) {
+            SparseMat XUT = dgl_phonons_chiToX( chi, 'u' );
+            SparseMat XGT = dgl_phonons_chiToX( chi, 'g' );
+            SparseMat chi_tau_u, chi_tau_g;
             for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) {
                 if ( !parameters.numerics_phonon_approximation_1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }
-                SparseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
-                integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'u' ), ( dgl_phonons_chiToX( chi_tau, 'u' ) * rho_used ).eval() );
-                integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'g' ), ( dgl_phonons_chiToX( chi_tau, 'g' ) * rho_used ).eval() );
+                if ( index != -1 ) {
+                    // Index was found, chi(t-tau) used from saved vector
+                    chi_tau_u = savedCoefficients.at( index ).mat1;
+                    chi_tau_g = savedCoefficients.at( index ).mat2;
+                } else {
+                    SparseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
+                    chi_tau_u = dgl_phonons_chiToX( chi_tau, 'u' );
+                    chi_tau_g = dgl_phonons_chiToX( chi_tau, 'g' );
+                    dgl_save_coefficient( chi_tau_transformed_u, chi_tau_transformed_g, t, tau );
+                }
+                integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_u * rho_used ).eval() );
+                integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_g * rho_used ).eval() );
                 SparseMat adjoint = integrant.adjoint();
                 ret -= ( integrant + adjoint ) * parameters.t_step;
             }
@@ -340,12 +437,13 @@ class System : public System_Parent {
         return parameters.numerics_calculate_spectrum_H;
     }
     bool calculate_spectrum_V() {
-        return parameters.numerics_calculate_spectrum_H;
+        return parameters.numerics_calculate_spectrum_V;
     }
 
     bool exit_system( const int failure = 0 ) {
         pulse_H.log();
         chirp_H.log();
+        logs.level2( "Coefficients: Attempts w/r: {}, Calc: {}, Write: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
         fileoutput.close();
         return true;
     }

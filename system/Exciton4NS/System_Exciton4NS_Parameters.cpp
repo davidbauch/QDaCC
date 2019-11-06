@@ -26,6 +26,8 @@ class Parameters : public Parameters_Parent {
     double p_omega_decay;
     double p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff;
     bool p_phonon_adjust;
+    double p_deltaE;
+    double p_biexciton_bindingenergy;
 
     // Calculated System properties:
     double init_detuning_G_H, init_detuning_G_V, init_detuning_H_B, init_detuning_V_B, max_detuning_G_H, max_detuning_G_V, max_detuning_H_B, max_detuning_V_B;
@@ -43,6 +45,8 @@ class Parameters : public Parameters_Parent {
     int numerics_maximum_threads, iterations_w_resolution, numerics_phonon_approximation_1, numerics_phonon_approximation_2;
     double akf_deltaWmax, spectrum_frequency_center, spectrum_frequency_range;
     bool numerics_calculate_spectrum_H, numerics_calculate_spectrum_V;
+    bool numerics_use_saved_coefficients;
+    long unsigned int numerics_saved_coefficients_max_size;
 
     Parameters(){};
     Parameters( const std::vector<std::string> &arguments ) : Parameters_Parent() {
@@ -68,14 +72,16 @@ class Parameters : public Parameters_Parent {
         t_step = params.get<double>( {2, 5}, "-1" );
 
         // Look for --system, if not found, standard system is used (g=66mueV, k=66mueV, p_omega_pure_dephasing = 3mueV, p_omega_decay = 1mueV)
-        params = Parse_Parameters( arguments, {"--system", "--we", "--wc", "--coupling", "--kappa", "--gammapure", "--gamma"}, {7, 1, 1, 1, 1, 1, 1}, "Systemparameters" );
-        p_omega_atomic_G_H = params.get<double>( {0, 6}, "1.366eV" );
-        p_omega_cavity_V = params.get<double>( {1, 7}, "1.366eV" );
-        p_omega_cavity_H = params.get<double>( {1, 8}, "1.366eV" );
-        p_omega_coupling = params.get<double>( {2, 9}, "66mueV" );
-        p_omega_cavity_loss = params.get<double>( {3, 10}, "66mueV" );
-        p_omega_pure_dephasing = params.get<double>( {4, 11}, "3mueV" );
-        p_omega_decay = params.get<double>( {5, 12}, "1mueV" );
+        params = Parse_Parameters( arguments, {"--system", "--we", "--wcH", "--wcV", "--coupling", "--kappa", "--gammapure", "--gamma", "--deltaE", "--excitonBindEnergy"}, {9, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Systemparameters" );
+        p_omega_atomic_G_H = params.get<double>( {0, 9}, "1.366eV" );
+        p_omega_cavity_V = params.get<double>( {1, 10}, "1.366eV" );
+        p_omega_cavity_H = params.get<double>( {2, 11}, "1.366eV" );
+        p_omega_coupling = params.get<double>( {3, 12}, "66mueV" );
+        p_omega_cavity_loss = params.get<double>( {4, 13}, "66mueV" );
+        p_omega_pure_dephasing = params.get<double>( {5, 14}, "3mueV" );
+        p_omega_decay = params.get<double>( {6, 15}, "1mueV" );
+        p_deltaE = params.get<double>( {7, 16}, "0" );
+        p_biexciton_bindingenergy = params.get<double>( {8, 17}, "3meV" );
 
         // Look for --chirp, if not found, standard system is used (no chirp, everything zero)
         params = Parse_Parameters( arguments, {"--chirp", "--chirpT", "--chirpY", "--chirpDDT", "--chirpType"}, {4, 1, 1, 1, 1}, "Chirpparameters" );
@@ -108,7 +114,7 @@ class Parameters : public Parameters_Parent {
 
         // Look for --dimensions, if not found, standard system is used (maxphotons = 0, starting state = |g,0>)
         params = Parse_Parameters( arguments, {"--maxPhotons", "--initState"}, {1, 3}, "Initial State parameters" );
-        p_max_photon_number = params.get<int>( 0, "1" );
+        p_max_photon_number = params.get<int>( 0, "2" );
         p_initial_state = instr( "ghvb", params.get( 1, "0" ) ) + 4 * ( p_max_photon_number + 1 ) * params.get<int>( 2, "0" ) + 4 * params.get<int>( 3, "0" );
 
         // Look for --spectrum, if not found, no spectrum is evaluated
@@ -121,7 +127,7 @@ class Parameters : public Parameters_Parent {
         numerics_calculate_spectrum_V = params.get( 4 ) || params.get( 6 );
 
         // Look for (-RK4), -RK5, (-RK4T), (-RK4Tau), -RK5T, -RK5Tau
-        params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale"}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
+        params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale", "-disableMatrixCaching"}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
         numerics_calculate_g2 = params.get( 0 );
         numerics_order_t = ( params.get( 1 ) || params.get( 2 ) ) ? 5 : 4;
         numerics_order_tau = ( params.get( 1 ) || params.get( 3 ) ) ? 5 : 4;
@@ -137,6 +143,7 @@ class Parameters : public Parameters_Parent {
         startCoherent = params.get( 12 );
         output_full_dm = params.get( 13 );
         scale_parameters = params.get( 14 );
+        numerics_use_saved_coefficients = !params.get( 15 );
 
         // Phonon Parameters
         params = Parse_Parameters( arguments, {"--phonons", "--temperature", "-phonons", "--phononorder", "-noMarkov", "-phononcoeffs", "-noPhononAdjust"}, {5, 1, 1, 1, 1, 1, 1} );
@@ -203,11 +210,9 @@ class Parameters : public Parameters_Parent {
             }
 
         // Calculating remaining atomic frequencies depending on delta E and biexciton binding energy.
-        double deltaE = 0.0;
-        double biexciton_bindingenergy = convertParam<double>( "3meV" );
-        p_omega_atomic_G_V = p_omega_atomic_G_H + deltaE;
-        p_omega_atomic_H_B = p_omega_atomic_G_H - biexciton_bindingenergy;
-        p_omega_atomic_V_B = p_omega_atomic_G_V - biexciton_bindingenergy;
+        p_omega_atomic_G_V = p_omega_atomic_G_H + p_deltaE;
+        p_omega_atomic_H_B = p_omega_atomic_G_H - p_biexciton_bindingenergy;
+        p_omega_atomic_V_B = p_omega_atomic_G_V - p_biexciton_bindingenergy;
 
         // Calculate Rabi frequencies:
         init_rabifrequenz_G_H = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state ) );
@@ -227,9 +232,9 @@ class Parameters : public Parameters_Parent {
                 t_step = 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing + ( vec_max( pulse_amp ) > 0 ? std::abs( p_omega_atomic_G_H - vec_max( pulse_omega ) ) : 0 ) );
             if ( !numerics_use_rwa )
                 t_step = 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_atomic_G_H + p_omega_cavity_H );
+            t_step = std::min( 1E-13, t_step );
+            t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
         }
-        t_step = std::min( 1E-13, t_step );
-        t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
 
         // Calculate the maximum dimensions for operator matrices (max states)
         maxStates = 4 * ( p_max_photon_number + 1 ) * ( p_max_photon_number + 1 ); // 4 Electronic states x N+1 Photonic states * 2 for H,V modes
@@ -276,6 +281,9 @@ class Parameters : public Parameters_Parent {
                 p_omega_decay *= p_phonon_b * p_phonon_b;
             }
         }
+
+        numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step - 2 ) * ( p_phonon_tcutoff / t_step ) - 1;
+
         trace.reserve( iterations_t_max + 5 );
         return true;
     }
@@ -289,6 +297,8 @@ class Parameters : public Parameters_Parent {
         logs( "Timeborder t_step delta t = {} s (minimum possible: {})\n", t_step, std::numeric_limits<double>::epsilon() );
         logs( "Time iterations (main loop) = {}\n", iterations_t_max );
         logs.wrapInBar( "System Parameters", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
+        logs( "Exciton delta E = {} -> {} mueV\n", p_deltaE, Hz_to_eV( p_deltaE ) * 1E6 );
+        logs( "Biexciton binding energy = {} -> {} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
         logs( "Energy Level difference |X_H><X_H| - |G><G| = {} Hz -> {} eV -> {} nm\n", p_omega_atomic_G_H, Hz_to_eV( p_omega_atomic_G_H ), Hz_to_wavelength( p_omega_atomic_G_H ) );
         logs( "Energy Level difference |X_V><X_V| - |G><G| = {} Hz -> {} eV -> {} nm\n", p_omega_atomic_G_V, Hz_to_eV( p_omega_atomic_G_V ), Hz_to_wavelength( p_omega_atomic_G_V ) );
         logs( "Energy Level difference |B><B| - |X_H><X_H| = {} Hz -> {} eV -> {} nm\n", p_omega_atomic_H_B, Hz_to_eV( p_omega_atomic_H_B ), Hz_to_wavelength( p_omega_atomic_H_B ) );
@@ -373,6 +383,7 @@ class Parameters : public Parameters_Parent {
         logs( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) ? "Analytic" : "Matrix Exponential" ) );
         logs( "Threads used for AFK? - {}\n", numerics_maximum_threads );
         logs( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );
+        logs( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? "Yes" : "No" ) );
         logs( "\n" );
         logs.wrapInBar( "Program Log:", LOG_SIZE_FULL, LOG_LEVEL_2 );
         logs( "\n" );
@@ -382,7 +393,7 @@ class Parameters : public Parameters_Parent {
     static void help() {
         fmt::print( "--help, -help, -h\tThis screen\n" );
         fmt::print( "--time [start] [end] [step]\n\t--tstart [start]\n\t--tend [end]\n\t--tstep [step]\n" );
-        fmt::print( "--system [p_omega_atomic] [p_omega_cavity] [p_omega_coupling] [kappa] [gammapure] [gamma] else standard values (1.52eV,1.52eV,66mueV,66mueV,3mueV,1mueV) are used\n\t--we [p_omega_atomic]\n\t--wc [p_omega_cavity]\n\t--coupling [p_omega_coupling]\n\t--kappa [kappa]\n\t--gamma [p_omega_decay]\n\t--gammapure [p_omega_pure_dephasing]\n" );
+        fmt::print( "--system [p_omega_atomic] [p_omega_cavity_H] [p_omega_cavity_V] [p_omega_coupling] [kappa] [gammapure] [gamma] [deltaE] [bexcitonbinding] else standard values (1.366eV,1.366eV,1.366eV,66mueV,66mueV,3mueV,1mueV,0,3meV) are used\n\t--we [1.366eV] First (H-polarized) exciton energy\n\t--wcH [1.366eV] Cavity Energy H\n\t--wcV [1.366eV] Cavity Energy V\n\t--coupling [66mueV] QD-Lightfield coupling. Same for H and V.\n\t--kappa [66mueV] Cavity Decay\n\t--gamma [1mueV] Radiative Decay\n\t--gammapure [3mueV] Pure Dephasing\n\t--deltaE [0eV] H and V energy difference\n\t--excitonBindEnergy [3meV] Biexciton binding energy\n" );
         fmt::print( "--chirp ['[Array Time]'] ['[Array Y]'] ['[Array d/dt]'] [type]\n\t--chirpT ['[Array Time]']\n\t--chirpY ['[Array Y]']\n\t--chirpDDT ['[Array d/dt]']\n\t--chirpType [type] where type = monotone, hermite, linear, spline\n" );
         fmt::print( "--pulse [Center] [Amplitude] [Frequency] [Sigma] [Type]\n\t-pulse for standard pulse\n\t--pulseCenter [Center]\n\t--pulseAmp [Amplitude]\n\t--pulseFreq [Frequency]\n\t--pulseSigma [Sigma]\n\t--pulseType [Type] where Type = cw, gauss, gauss_pi\n" );
         fmt::print( "--dimensions [maximum Photons] [Initial state]\n\t--maxPhotons [maximum Photons]\n\t--initState [Initial state], has to be smaller than (2*n+1)\n" );

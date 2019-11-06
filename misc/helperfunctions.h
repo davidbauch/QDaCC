@@ -320,8 +320,22 @@ Eigen::MatrixXcd project_matrix( const Eigen::MatrixXcd &input ) {
     for ( int i = 0; i < ret.cols(); i++ ) {
         for ( int j = 0; j < ret.rows(); j++ ) {
             if ( real( input( i, j ) ) != 0 || imag( input( i, j ) ) != 0 )
-                ret( i, j ) = 0;
+                ret( i, j ) = 1.0;
         }
     }
+    return ret;
+}
+
+template <typename T>
+Eigen::SparseMatrix<T> project_matrix( const Eigen::SparseMatrix<T> &input ) {
+    Eigen::SparseMatrix<T> ret = Eigen::SparseMatrix<T>( input.cols(), input.rows() );
+    std::vector<Eigen::Triplet<T>> ret_v;
+    for ( int k = 0; k < input.outerSize(); ++k ) {
+        for ( Eigen::SparseMatrix<std::complex<double>>::InnerIterator it( input, k ); it; ++it ) {
+            ret_v.emplace_back( it.row(), it.col(), 1.0 );
+        }
+    }
+    // Generate new Matrix from triplet list
+    ret.setFromTriplets( ret_v.begin(), ret_v.end() );
     return ret;
 }

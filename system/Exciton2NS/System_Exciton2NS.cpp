@@ -125,9 +125,6 @@ class System : public System_Parent {
             else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL ) {
                 DenseMat U = ( 1i * operatorMatrices.H_0 * t ).exp(); // auto slower than direct type, because of doubled evaluation
                 ret = U * A * U.conjugate();
-            } else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL_PRECALCULATED ) {
-                DenseMat U = timeTrafoMatrix.array().pow( t ); // auto slower than direct type, because of doubled evaluation
-                ret = U * A * U.conjugate();
             }
         }
         return ret;

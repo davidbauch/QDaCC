@@ -7,7 +7,11 @@
 // @param s: [&System] Class providing set of system functions
 ODESolver::ODESolver( System_Parent &s ) {
     logs.level2( "Creating ODESolver Class... " );
-    int dim = reset( s );
+    track_gethamilton_read = 0;
+    track_gethamilton_write = 0;
+    track_gethamilton_calc = 0;
+    track_gethamilton_calcattempt = 0;
+    int dim = (int)( s.parameters.iterations_t_max / s.getIterationSkip() ) + 10;
     savedStates.clear();
     savedStates.reserve( dim );
     logs.level2( "Done!\n" );
@@ -27,7 +31,7 @@ MatType ODESolver::getHamilton( System_Parent &s, const double t, bool use_saved
             track_gethamilton_write++;
             return savedHamiltons.back().mat;
         } else {
-            int approx = std::floor( t / s.getTimeStep() );
+            int approx = std::floor( t / s.getTimeStep() / 2.0 );
             // Look for corresponding Hamilton. t-direction has to be calculated first if used with multiple threads
             while ( t > savedHamiltons.at( approx ).t )
                 approx++;
@@ -140,10 +144,6 @@ bool ODESolver::queueNow( System_Parent &s, int &curIt ) {
 // @param s: [&System] Class providing set of system functions
 // @return: [int] dimensions of temporary variables
 int ODESolver::reset( System_Parent &s ) {
-    track_gethamilton_read = 0;
-    track_gethamilton_write = 0;
-    track_gethamilton_calc = 0;
-    track_gethamilton_calcattempt = 0;
     int dim = (int)( s.parameters.iterations_t_max / s.getIterationSkip() ) + 10;
     out.clear();
     out.reserve( (int)( std::ceil( s.parameters.iterations_w_resolution ) + 5 ) );
@@ -187,7 +187,7 @@ bool ODESolver::calculate_t_direction( System_Parent &s ) {
         }
     }
     rkTimer.end();
-    logs.level2( "Done! Saved {} states.\n", savedStates.size() );
+    logs.level2( "Done! Saved {} states, cached {} hamilton matrices.\n", savedStates.size(), savedHamiltons.size() );
     return true;
 }
 template <typename T>
@@ -292,7 +292,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
         logs( "Need to calculate t-direction first!\n" );
         return false;
     }
-
+    reset(s);
     Timer &timer = createTimer( "RungeKutta-Tau-Loop" );
     int totalIterations = getIterationNumberTau( s );
     ProgressBar progressbar = ProgressBar( totalIterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );

@@ -70,3 +70,10 @@ class SaveState {
     double t;
     SaveState( const MatType &mat, const double time ) : mat( mat ), t( time ){};
 };
+class SaveStateTau {
+   public:
+    MatType mat1, mat2;
+    double t, tau;
+    SaveStateTau( const MatType &mat1, const MatType &mat2, const double t, const double tau ) : mat1( mat1 ), mat2( mat2 ), t( t ), tau( tau ){};
+    SaveStateTau( const MatType &mat, const double t ) : mat1( mat ), t( t ), tau( 0 ){};
+};

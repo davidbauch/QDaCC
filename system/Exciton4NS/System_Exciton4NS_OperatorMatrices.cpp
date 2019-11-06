@@ -231,7 +231,7 @@ class OperatorMatrices : public OperatorMatrices_Parent {
             logs.level2( "NOT using interaction picture... " );
             H_used = H;
         }
-        logs.level2( "Hamiltonoperator done! Used:\n{}\nSetting initial rho as pure state with rho_0 = {}... ", H_used, p.p_initial_state );
+        logs.level2( "Hamiltonoperator done! Used:\n{}\nSetting initial rho as pure state with rho_0 = {}... ", DenseMat(H_used), p.p_initial_state );
         // rho, experimental: start with coherent state. in this case, always start in ground state.
         if ( !p.startCoherent )
             rho.coeffRef( p.p_initial_state, p.p_initial_state ) = 1;
