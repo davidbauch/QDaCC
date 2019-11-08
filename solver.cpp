@@ -22,8 +22,8 @@ ODESolver::ODESolver( System_Parent &s ) {
 // @param s: [&System] Class providing set of system functions
 // @param t: [double] Time to return Hamiltonoperator at
 // @return: [Eigent::MatrixXcd] hamilton matrix of type Eigen::MatrixXcd
-MatType ODESolver::getHamilton( System_Parent &s, const double t, bool use_saved_hamiltons = true ) {
-    if ( use_saved_hamiltons ) {
+MatType ODESolver::getHamilton( System_Parent &s, const double t, bool use_saved_hamiltons = false ) {
+    if ( s.parameters.numerics_use_saved_hamiltons || use_saved_hamiltons ) {
         if ( savedHamiltons.size() == 0 || t > savedHamiltons.back().t ) {
             track_gethamilton_calcattempt++;
             // Calculate new Hamilton for t, save it, return it

@@ -165,21 +165,23 @@ class System : public System_Parent {
 
     SparseMat dgl_phonons_rungefunc( const SparseMat &chi, const double t ) {
         // H
-        SparseMat explicit_time = 1i * parameters.p_omega_atomic_G_H * parameters.p_omega_coupling * ( project_matrix( operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H ).cwiseProduct( chi ) );
-        explicit_time += 1i * parameters.p_omega_atomic_H_B * parameters.p_omega_coupling * ( project_matrix( operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H ).cwiseProduct( chi ) );
-        explicit_time += 1i * parameters.p_omega_atomic_G_H * pulse_H.get( t ) * ( project_matrix( operatorMatrices.atom_sigmaplus_G_H ).cwiseProduct( chi ) );
-        explicit_time -= 1i * parameters.p_omega_coupling * parameters.p_omega_cavity_H * ( project_matrix( operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H ).cwiseProduct( chi ) );
-        explicit_time -= 1i * parameters.p_omega_coupling * parameters.p_omega_cavity_H * ( project_matrix( operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H ).cwiseProduct( chi ) );
-        explicit_time += 1i * ( pulse_H.get( t ) - pulse_H.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( project_matrix( operatorMatrices.atom_sigmaplus_G_H ).cwiseProduct( chi ) );
-        explicit_time += 1i * ( pulse_H.get( t ) - pulse_H.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( project_matrix( operatorMatrices.atom_sigmaplus_H_B ).cwiseProduct( chi ) );
+        //SparseMat ones(chi.rows(),chi.cols()); ones.setIdentity();
+        SparseMat explicit_time = 1i * parameters.p_omega_atomic_G_H * parameters.p_omega_coupling * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H ).eval() ); //.cwiseProduct( ones ) );
+        explicit_time += 1i * parameters.p_omega_atomic_H_B * parameters.p_omega_coupling * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H ).eval() );          //.cwiseProduct( ones ) );
+        explicit_time += 1i * parameters.p_omega_atomic_G_H * pulse_H.get( t ) * project_matrix_sparse( operatorMatrices.atom_sigmaplus_G_H );                                                                       //.cwiseProduct( ones ) );
+        explicit_time += -1i * parameters.p_omega_coupling * parameters.p_omega_cavity_H * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H ).eval() );           //.cwiseProduct( ones ) );
+        explicit_time += -1i * parameters.p_omega_coupling * parameters.p_omega_cavity_H * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H ).eval() );           //.cwiseProduct( ones ) );
+        explicit_time += 1i * ( pulse_H.get( t ) - pulse_H.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * project_matrix_sparse( operatorMatrices.atom_sigmaplus_G_H );                       //.cwiseProduct( ones ) );
+        explicit_time += 1i * ( pulse_H.get( t ) - pulse_H.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * project_matrix_sparse( operatorMatrices.atom_sigmaplus_H_B );                       //.cwiseProduct( ones ) );
         // V
-        explicit_time += 1i * parameters.p_omega_atomic_G_V * parameters.p_omega_coupling * ( project_matrix( operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V ).cwiseProduct( chi ) );
-        explicit_time += 1i * parameters.p_omega_atomic_V_B * parameters.p_omega_coupling * ( project_matrix( operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V ).cwiseProduct( chi ) );
-        explicit_time += 1i * parameters.p_omega_atomic_G_V * pulse_V.get( t ) * ( project_matrix( operatorMatrices.atom_sigmaplus_G_V ).cwiseProduct( chi ) );
-        explicit_time -= 1i * parameters.p_omega_coupling * parameters.p_omega_cavity_V * ( project_matrix( operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V ).cwiseProduct( chi ) );
-        explicit_time -= 1i * parameters.p_omega_coupling * parameters.p_omega_cavity_V * ( project_matrix( operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V ).cwiseProduct( chi ) );
-        explicit_time += 1i * ( pulse_V.get( t ) - pulse_V.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( project_matrix( operatorMatrices.atom_sigmaplus_G_V ).cwiseProduct( chi ) );
-        explicit_time += 1i * ( pulse_V.get( t ) - pulse_V.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( project_matrix( operatorMatrices.atom_sigmaplus_V_B ).cwiseProduct( chi ) );
+        explicit_time += 1i * parameters.p_omega_atomic_G_V * parameters.p_omega_coupling * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V ).eval() ); //.cwiseProduct( ones ) );
+        explicit_time += 1i * parameters.p_omega_atomic_V_B * parameters.p_omega_coupling * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V ).eval() ); //.cwiseProduct( ones ) );
+        explicit_time += 1i * parameters.p_omega_atomic_G_V * pulse_V.get( t ) * ( project_matrix_sparse( operatorMatrices.atom_sigmaplus_G_V ) );                                                          //.cwiseProduct( ones ) );
+        explicit_time += -1i * parameters.p_omega_coupling * parameters.p_omega_cavity_V * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V ).eval() );  //.cwiseProduct( ones ) );
+        explicit_time += -1i * parameters.p_omega_coupling * parameters.p_omega_cavity_V * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V ).eval() );  //.cwiseProduct( ones ) );
+        explicit_time += 1i * ( pulse_V.get( t ) - pulse_V.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( project_matrix_sparse( operatorMatrices.atom_sigmaplus_G_V ) );          //.cwiseProduct( ones ) );
+        explicit_time += 1i * ( pulse_V.get( t ) - pulse_V.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( project_matrix_sparse( operatorMatrices.atom_sigmaplus_V_B ) );          //.cwiseProduct( ones ) );
+
         SparseMat hamilton = dgl_getHamilton( t );
         return -1i * dgl_kommutator( hamilton, chi ) + explicit_time;
     }
@@ -281,7 +283,7 @@ class System : public System_Parent {
 
     void dgl_save_coefficient( const SparseMat &coefficient1, const SparseMat &coefficient2, const double t, const double tau ) {
         track_getcoefficient_calculate++;
-        if ( parameters.numerics_use_saved_coefficients ) { //TODO: weitere bedingung ans speichern, z.b. spektrum
+        if ( parameters.numerics_use_saved_coefficients && savedCoefficients.size() < parameters.numerics_saved_coefficients_max_size ) {
             track_getcoefficient_write++;
             savedCoefficients.emplace_back( SaveStateTau( coefficient1, coefficient2, t, tau ) );
             //logs.level2("Saved coefficient for t = {}, tau = {}\n",t,tau);
@@ -289,7 +291,7 @@ class System : public System_Parent {
     }
     void dgl_save_coefficient( const SparseMat &coefficient, const double t ) {
         track_getcoefficient_calculate++;
-        if ( parameters.numerics_use_saved_coefficients ) { //TODO: weitere bedingung ans speichern, z.b. spektrum
+        if ( parameters.numerics_use_saved_coefficients && savedCoefficients.size() < parameters.numerics_saved_coefficients_max_size ) {
             track_getcoefficient_write++;
             savedCoefficients.emplace_back( SaveStateTau( coefficient, t ) );
         }
@@ -306,7 +308,6 @@ class System : public System_Parent {
             // Calculate Chi(t) backwards to Chi(t-tau)
             SparseMat XUT = dgl_phonons_chiToX( chi, 'u' );
             SparseMat XGT = dgl_phonons_chiToX( chi, 'g' );
-            SparseMat XUTAU, XGTAU;
             // Chi_tau_back is chi(t-tau) transformed back from the second interaction picture. Saving of chiToX transformed would be better for runtime, but would require to save 2 matrices instead of 1.
             SparseMat chi_tau_back_u, chi_tau_back_g;
             for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) { //for ( auto chit : chis ) {
@@ -316,18 +317,19 @@ class System : public System_Parent {
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }
                 // Check if chi(t-tau) has to be recalculated, or can just be retaken from saved matrices, since chi(t-tau) is only dependant on time
-                int index = dgl_get_coefficient_index( t );
+                int index = dgl_get_coefficient_index( t, tau );
                 if ( index != -1 ) {
                     // Index was found, chi(t-tau) used from saved vector
                     chi_tau_back_u = savedCoefficients.at( index ).mat1;
                     chi_tau_back_g = savedCoefficients.at( index ).mat2;
                 } else {
                     // Index not found, or no saving is used. Recalculate chi(t-tau).
+                    // TODO: aus chi tau alles was nicht zeitabhängig ist vorher ausrechnen (asu tau loop raus)
                     SparseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
                     SparseMat chi_tau_back = ODESolver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
-                    // If saving is used, save current chi(t-tau).
-                    chi_tau_back_g = dgl_phonons_chiToX( chi_tau_back, 'g' );
                     chi_tau_back_u = dgl_phonons_chiToX( chi_tau_back, 'u' );
+                    chi_tau_back_g = dgl_phonons_chiToX( chi_tau_back, 'g' );
+                    // If saving is used, save current chi(t-tau).
                     dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, tau );
                 }
                 integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * rho_used ).eval() );
@@ -335,8 +337,7 @@ class System : public System_Parent {
                 SparseMat adjoint = integrant.adjoint();
                 ret -= ( integrant + adjoint ) * parameters.t_step;
             }
-        }
-        if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
+        } else if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
             SparseMat XUT = dgl_phonons_chiToX( chi, 'u' );
             SparseMat XGT = dgl_phonons_chiToX( chi, 'g' );
             SparseMat chi_tau_transformed_u, chi_tau_transformed_g;
@@ -372,6 +373,7 @@ class System : public System_Parent {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }
+                int index = dgl_get_coefficient_index( t, tau );
                 if ( index != -1 ) {
                     // Index was found, chi(t-tau) used from saved vector
                     chi_tau_u = savedCoefficients.at( index ).mat1;
@@ -380,7 +382,7 @@ class System : public System_Parent {
                     SparseMat chi_tau = dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * parameters.p_omega_coupling * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t - tau ), t - tau );
                     chi_tau_u = dgl_phonons_chiToX( chi_tau, 'u' );
                     chi_tau_g = dgl_phonons_chiToX( chi_tau, 'g' );
-                    dgl_save_coefficient( chi_tau_transformed_u, chi_tau_transformed_g, t, tau );
+                    dgl_save_coefficient( chi_tau_u, chi_tau_g, t, tau );
                 }
                 integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_u * rho_used ).eval() );
                 integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_g * rho_used ).eval() );
@@ -443,7 +445,7 @@ class System : public System_Parent {
     bool exit_system( const int failure = 0 ) {
         pulse_H.log();
         chirp_H.log();
-        logs.level2( "Coefficients: Attempts w/r: {}, Calc: {}, Write: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
+        logs.level2( "Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
         fileoutput.close();
         return true;
     }

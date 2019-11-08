@@ -316,9 +316,9 @@ class Parse_Parameters {
 };
 
 Eigen::MatrixXcd project_matrix( const Eigen::MatrixXcd &input ) {
-    Eigen::MatrixXcd ret = Eigen::MatrixXcd::Zero( input.cols(), input.rows() );
-    for ( int i = 0; i < ret.cols(); i++ ) {
-        for ( int j = 0; j < ret.rows(); j++ ) {
+    Eigen::MatrixXcd ret = Eigen::MatrixXcd::Zero( input.rows(), input.cols() );
+    for ( int i = 0; i < ret.rows(); i++ ) {
+        for ( int j = 0; j < ret.cols(); j++ ) {
             if ( real( input( i, j ) ) != 0 || imag( input( i, j ) ) != 0 )
                 ret( i, j ) = 1.0;
         }
@@ -327,8 +327,8 @@ Eigen::MatrixXcd project_matrix( const Eigen::MatrixXcd &input ) {
 }
 
 template <typename T>
-Eigen::SparseMatrix<T> project_matrix( const Eigen::SparseMatrix<T> &input ) {
-    Eigen::SparseMatrix<T> ret = Eigen::SparseMatrix<T>( input.cols(), input.rows() );
+Eigen::SparseMatrix<T> project_matrix_sparse( const Eigen::SparseMatrix<T> &input ) {
+    Eigen::SparseMatrix<T> ret = Eigen::SparseMatrix<T>( input.rows(), input.cols() );
     std::vector<Eigen::Triplet<T>> ret_v;
     for ( int k = 0; k < input.outerSize(); ++k ) {
         for ( Eigen::SparseMatrix<std::complex<double>>::InnerIterator it( input, k ); it; ++it ) {
