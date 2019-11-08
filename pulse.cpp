@@ -129,7 +129,7 @@ void Pulse::log() {
     logs.level2( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
 }
 
-static void fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
+void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
     FILE *pulsefile = std::fopen( filepath.c_str(), "w" );
     if ( !pulsefile ) {
         logs.level2( "Failed to open outputfile for Pulse!\n" );
