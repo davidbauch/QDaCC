@@ -7,7 +7,7 @@ class Pulse {
        public:
         std::vector<std::string> type;
         std::vector<double> center;
-        std::vector<double> amp;
+        std::vector<std::complex<double>> amp;
         std::vector<double> sigma;
         std::vector<double> omega;
         double t_start, t_end, t_step;
@@ -15,8 +15,8 @@ class Pulse {
         Inputs(){};
         Inputs( double t_start, double t_end, double t_step, int order ) : t_start( t_start ), t_end( t_end ), t_step( t_step ), order( order ) {}
         void add( double _center, double _amp, double _sigma, double _omega, std::string _type );
-        void add( std::vector<double> &_center, std::vector<double> &_amp, std::vector<double> &_sigma, std::vector<double> &_omega, std::vector<std::string> &_type );
-        void add( std::vector<double> &_center, std::vector<double> &_amp, std::vector<double> &_sigma, std::vector<double> &_omega, std::vector<std::string> &_type, std::vector<std::string> &_filter, std::string to_match );
+        void add( std::vector<double> &_center, std::vector<double> &_amp, std::vector<double> &_sigma, std::vector<double> &_omega, std::vector<std::string> &_type, std::complex<double> amp_scaling = 1.0 );
+        void add( std::vector<double> &_center, std::vector<double> &_amp, std::vector<double> &_sigma, std::vector<double> &_omega, std::vector<std::string> &_type, std::vector<std::string> &_filter, std::string to_match, std::complex<double> amp_scaling = 1.0 );
     };
 
    private:

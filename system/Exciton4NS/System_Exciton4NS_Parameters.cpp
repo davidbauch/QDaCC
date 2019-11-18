@@ -18,6 +18,7 @@ class Parameters : public Parameters_Parent {
     double p_omega_atomic_G_H;
     double p_omega_atomic_V_B;
     double p_omega_atomic_H_B;
+    double p_omega_atomic_B;
     double p_omega_cavity_V;
     double p_omega_cavity_H;
     double p_omega_coupling;
@@ -37,6 +38,7 @@ class Parameters : public Parameters_Parent {
     // Chirp and Pulse properties:
     std::vector<double> pulse_center, pulse_amp, pulse_omega, pulse_sigma;
     std::vector<std::string> pulse_type;
+    std::vector<std::string> pulse_pol;
     double chirp_total;
     std::vector<double> chirp_t, chirp_y, chirp_ddt;
     std::string chirp_type;
@@ -46,6 +48,7 @@ class Parameters : public Parameters_Parent {
     double akf_deltaWmax, spectrum_frequency_center, spectrum_frequency_range;
     bool numerics_calculate_spectrum_H, numerics_calculate_spectrum_V;
     bool numerics_use_saved_coefficients;
+    bool numerics_use_saved_hamiltons;
     long unsigned int numerics_saved_coefficients_max_size;
 
     Parameters(){};
@@ -80,7 +83,7 @@ class Parameters : public Parameters_Parent {
         p_omega_cavity_loss = params.get<double>( {4, 13}, "66mueV" );
         p_omega_pure_dephasing = params.get<double>( {5, 14}, "3mueV" );
         p_omega_decay = params.get<double>( {6, 15}, "1mueV" );
-        p_deltaE = params.get<double>( {7, 16}, "0" );
+        p_deltaE = params.get<double>( {7, 16}, "2mueV" );
         p_biexciton_bindingenergy = params.get<double>( {8, 17}, "3meV" );
 
         // Look for --chirp, if not found, standard system is used (no chirp, everything zero)
@@ -91,25 +94,28 @@ class Parameters : public Parameters_Parent {
         chirp_type = params.get( {3, 7}, "monotone" );
 
         // Look for --pulse, if not found, standard system is used (no pulse, everything zero)
-        params = Parse_Parameters( arguments, {"--pulse", "--pulseCenter", "--pulseAmp", "--pulseFreq", "--pulseSigma", "--pulseType", "-pulse"}, {5, 1, 1, 1, 1, 1, 1}, "Pulseparameters" );
+        params = Parse_Parameters( arguments, {"--pulse", "--pulseCenter", "--pulseAmp", "--pulseFreq", "--pulseSigma", "--pulseType", "--pulsePol", "-pulse"}, {6, 1, 1, 1, 1, 1, 1, 1}, "Pulseparameters" );
         if ( params.get( 0, "Empty" ).at( 0 ) == '[' ) {
-            pulse_center = convertParam<double>( str_to_vec( params.get( {0, 5}, "[0]" ) ) );
-            pulse_amp = convertParam<double>( str_to_vec( params.get( {1, 6}, "[0]" ) ) );
-            pulse_omega = convertParam<double>( str_to_vec( params.get( {2, 7}, "[0]" ) ) );
-            pulse_sigma = convertParam<double>( str_to_vec( params.get( {3, 8}, "[1]" ) ) );
-            pulse_type = str_to_vec( params.get( {4, 9}, "[cw]" ) );
-        } else if ( params.get( 10 ) || params.get( 0 ) ) {
-            pulse_center.emplace_back( params.get<double>( {0, 5}, "100ps" ) );
-            pulse_amp.emplace_back( params.get<double>( {1, 6}, "2" ) );
-            pulse_omega.emplace_back( params.get<double>( {2, 7}, "1.52eV" ) );
-            pulse_sigma.emplace_back( params.get<double>( {3, 8}, "20ps" ) );
-            pulse_type.emplace_back( params.get( {4, 9}, "gauss_pi" ) );
+            pulse_center = convertParam<double>( str_to_vec( params.get( {0, 6}, "[0]" ) ) );
+            pulse_amp = convertParam<double>( str_to_vec( params.get( {1, 7}, "[0]" ) ) );
+            pulse_omega = convertParam<double>( str_to_vec( params.get( {2, 8}, "[0]" ) ) );
+            pulse_sigma = convertParam<double>( str_to_vec( params.get( {3, 9}, "[1]" ) ) );
+            pulse_type = str_to_vec( params.get( {4, 10}, "[cw]" ) );
+            pulse_pol = str_to_vec( params.get( {5, 11}, "[H]" ) );
+        } else if ( params.get( 12 ) || params.get( 0 ) ) {
+            pulse_center.emplace_back( params.get<double>( {0, 6}, "100ps" ) );
+            pulse_amp.emplace_back( params.get<double>( {1, 7}, "4" ) );
+            pulse_omega.emplace_back( params.get<double>( {2, 8}, "1.366eV" ) );
+            pulse_sigma.emplace_back( params.get<double>( {3, 9}, "20ps" ) );
+            pulse_type.emplace_back( params.get( {4, 10}, "gauss_pi" ) );
+            pulse_pol.emplace_back( params.get( {4, 11}, "H" ) );
         } else {
             pulse_center.emplace_back( convertParam<double>( "0" ) );
             pulse_amp.emplace_back( convertParam<double>( "0" ) );
             pulse_omega.emplace_back( convertParam<double>( "0" ) );
             pulse_sigma.emplace_back( convertParam<double>( "1" ) );
             pulse_type.emplace_back( "cw" );
+            pulse_pol.emplace_back( "H" );
         }
 
         // Look for --dimensions, if not found, standard system is used (maxphotons = 0, starting state = |g,0>)
@@ -127,7 +133,7 @@ class Parameters : public Parameters_Parent {
         numerics_calculate_spectrum_V = params.get( 4 ) || params.get( 6 );
 
         // Look for (-RK4), -RK5, (-RK4T), (-RK4Tau), -RK5T, -RK5Tau
-        params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale", "-disableMatrixCaching"}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
+        params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale", "-disableMatrixCaching", "-disableHamiltonCaching"}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
         numerics_calculate_g2 = params.get( 0 );
         numerics_order_t = ( params.get( 1 ) || params.get( 2 ) ) ? 5 : 4;
         numerics_order_tau = ( params.get( 1 ) || params.get( 3 ) ) ? 5 : 4;
@@ -144,13 +150,14 @@ class Parameters : public Parameters_Parent {
         output_full_dm = params.get( 13 );
         scale_parameters = params.get( 14 );
         numerics_use_saved_coefficients = !params.get( 15 );
+        numerics_use_saved_hamiltons = !params.get( 16 );
 
         // Phonon Parameters
         params = Parse_Parameters( arguments, {"--phonons", "--temperature", "-phonons", "--phononorder", "-noMarkov", "-phononcoeffs", "-noPhononAdjust"}, {5, 1, 1, 1, 1, 1, 1} );
         p_phonon_alpha = params.get<double>( 0, "0.03E-24" );
         p_phonon_wcutoff = params.get<double>( 1, "1meV" );
         p_phonon_tcutoff = params.get<double>( 2, "4ps" );
-        p_phonon_T = params.get( 6 ) ? 3.0 : params.get<double>( {3, 5}, "0" );
+        p_phonon_T = params.get( 6 ) ? params.get<double>( 5, "3" ) : params.get<double>( {3, 5}, "0" );
         numerics_phonon_approximation_2 = params.get<int>( {4, 7}, std::to_string( PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) ); // Second Markov / Transformation method
         numerics_phonon_approximation_1 = params.get( 8 ) ? 0 : 1;                                                              // First Markov
         output_coefficients = params.get( 9 ) ? 1 : 0;
@@ -213,6 +220,7 @@ class Parameters : public Parameters_Parent {
         p_omega_atomic_G_V = p_omega_atomic_G_H + p_deltaE;
         p_omega_atomic_H_B = p_omega_atomic_G_H - p_biexciton_bindingenergy;
         p_omega_atomic_V_B = p_omega_atomic_G_V - p_biexciton_bindingenergy;
+        p_omega_atomic_B = 2.0 * p_omega_atomic_G_H - p_biexciton_bindingenergy;
 
         // Calculate Rabi frequencies:
         init_rabifrequenz_G_H = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state ) );
@@ -281,9 +289,8 @@ class Parameters : public Parameters_Parent {
                 p_omega_decay *= p_phonon_b * p_phonon_b;
             }
         }
-
-        numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step - 2 ) * ( p_phonon_tcutoff / t_step ) - 1;
-
+        numerics_calculate_spectrum = numerics_calculate_spectrum_H || numerics_calculate_spectrum_V;
+        numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 ) * ( p_phonon_tcutoff / t_step ) + 10;
         trace.reserve( iterations_t_max + 5 );
         return true;
     }
@@ -299,10 +306,10 @@ class Parameters : public Parameters_Parent {
         logs.wrapInBar( "System Parameters", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Exciton delta E = {} -> {} mueV\n", p_deltaE, Hz_to_eV( p_deltaE ) * 1E6 );
         logs( "Biexciton binding energy = {} -> {} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
-        logs( "Energy Level difference |X_H><X_H| - |G><G| = {} Hz -> {} eV -> {} nm\n", p_omega_atomic_G_H, Hz_to_eV( p_omega_atomic_G_H ), Hz_to_wavelength( p_omega_atomic_G_H ) );
-        logs( "Energy Level difference |X_V><X_V| - |G><G| = {} Hz -> {} eV -> {} nm\n", p_omega_atomic_G_V, Hz_to_eV( p_omega_atomic_G_V ), Hz_to_wavelength( p_omega_atomic_G_V ) );
-        logs( "Energy Level difference |B><B| - |X_H><X_H| = {} Hz -> {} eV -> {} nm\n", p_omega_atomic_H_B, Hz_to_eV( p_omega_atomic_H_B ), Hz_to_wavelength( p_omega_atomic_H_B ) );
-        logs( "Energy Level difference |B><B| - |X_V><X_V| = {} Hz -> {} eV -> {} nm\n", p_omega_atomic_V_B, Hz_to_eV( p_omega_atomic_V_B ), Hz_to_wavelength( p_omega_atomic_V_B ) );
+        logs( "Energy Level difference |X_H><X_H| - |G><G| = {:.8e} Hz -> {:.8e} eV -> {:.8e} nm\n", p_omega_atomic_G_H, Hz_to_eV( p_omega_atomic_G_H ), Hz_to_wavelength( p_omega_atomic_G_H ) );
+        logs( "Energy Level difference |X_V><X_V| - |G><G| = {:.8e} Hz -> {:.8e} eV -> {:.8e} nm\n", p_omega_atomic_G_V, Hz_to_eV( p_omega_atomic_G_V ), Hz_to_wavelength( p_omega_atomic_G_V ) );
+        logs( "Energy Level difference |B><B| - |X_H><X_H| = {:.8e} Hz -> {:.8e} eV -> {:.8e} nm\n", p_omega_atomic_H_B, Hz_to_eV( p_omega_atomic_H_B ), Hz_to_wavelength( p_omega_atomic_H_B ) );
+        logs( "Energy Level difference |B><B| - |X_V><X_V| = {:.8e} Hz -> {:.8e} eV -> {:.8e} nm\n", p_omega_atomic_V_B, Hz_to_eV( p_omega_atomic_V_B ), Hz_to_wavelength( p_omega_atomic_V_B ) );
         logs( "Cavity Frequency w_c_H = {} Hz -> {} eV -> {} nm\n", p_omega_cavity_H, Hz_to_eV( p_omega_cavity_H ), Hz_to_wavelength( p_omega_cavity_H ) );
         logs( "Cavity Frequency w_c_V = {} Hz -> {} eV -> {} nm\n", p_omega_cavity_V, Hz_to_eV( p_omega_cavity_V ), Hz_to_wavelength( p_omega_cavity_V ) );
         logs( "Coupling strengh g = {} Hz -> {} mueV\n", p_omega_coupling, Hz_to_eV( p_omega_coupling ) * 1E6 );
@@ -314,18 +321,23 @@ class Parameters : public Parameters_Parent {
         if ( pulse_amp.size() > 0 && pulse_center.at( 0 ) != -1 && pulse_amp.at( 0 ) != 0 ) {
             for ( int i = 0; i < (int)pulse_amp.size(); i++ ) {
                 logs( "Exiting system at t_0 = {}\nAmplitude {} ({}meV)\nFrequency {} ({}eV)\nFWHM {}\n", pulse_center.at( i ), pulse_amp.at( i ), Hz_to_eV( pulse_amp.at( i ) ) * 1E3, pulse_omega.at( i ), Hz_to_eV( pulse_omega.at( i ) ), pulse_sigma.at( i ) * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ) );
-                logs( "Used pulse_type - " + pulse_type.at( i ) + "\n" );
+                logs( "Used pulse_type - {}\nUsed pulse_pol on mode {}", pulse_type.at( i ), pulse_pol.at( i ) );
             }
             logs( "\n" );
         } else
             logs( "Not using pulse to exite system\n\n" );
         logs.wrapInBar( "Energy Chirp", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         if ( chirp_total != 0 ) {
+            double total = 0;
             for ( int i = 0; i < (int)chirp_t.size() - 1; i++ ) {
-                logs( "Chirp between t0 = {}ps\nt1 = {}ps\nTotal Chirp: {}mueV\n-> average rate {}mueV/ps\n", chirp_t.at( i ), chirp_t.at( i + 1 ), Hz_to_eV( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) * 1E6, Hz_to_eV( ( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) ) * 1E6 / 1E12 / ( chirp_t.at( i + 1 ) - chirp_t.at( i ) ) );
+                if (chirp_y.at( i + 1 ) - chirp_y.at( i ) != 0.0) {
+                    logs( "Chirp between t0 = {} ps\nt1 = {} ps\nTotal Chirp: {} mueV\n-> average rate {} mueV/ps\n", chirp_t.at( i ), chirp_t.at( i + 1 ), Hz_to_eV( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) * 1E6, Hz_to_eV( ( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) ) * 1E6 / 1E12 / ( chirp_t.at( i + 1 ) - chirp_t.at( i ) ) );
+                    total += chirp_y.at( i + 1 ) - chirp_y.at( i );
+                }
             }
             if ( chirp_type.compare( "none" ) != 0 )
-                logs( "\nChirpfile of type '" + chirp_type + "' is used!" );
+                logs( "\nChirpfile of type '" + chirp_type + "' is used!\n" );
+            logs("Total Chirp = {} mueV\n", Hz_to_eV(total)*1E6);
         } else
             logs( "Not using chirp" );
         logs( "\n\n" );
@@ -383,7 +395,8 @@ class Parameters : public Parameters_Parent {
         logs( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) ? "Analytic" : "Matrix Exponential" ) );
         logs( "Threads used for AFK? - {}\n", numerics_maximum_threads );
         logs( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );
-        logs( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? "Yes" : "No" ) );
+        if ( p_phonon_T )
+            logs( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? fmt::format( "Yes (maximum {} matrices saved)", numerics_saved_coefficients_max_size ) : "No" ) );
         logs( "\n" );
         logs.wrapInBar( "Program Log:", LOG_SIZE_FULL, LOG_LEVEL_2 );
         logs( "\n" );

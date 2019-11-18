@@ -47,17 +47,19 @@ class System : public System_Parent {
 
         // Output Phonon functions if phonons are active
         if ( parameters.p_phonon_T != 0 ) {
-            phi_vector.reserve( std::ceil( parameters.p_phonon_tcutoff / getTimeStep() * 3.1 ) );
+            phi_vector.reserve( std::ceil( parameters.p_phonon_tcutoff / getTimeStep() * 2.0 ) );
             phi_vector.emplace_back( dgl_phonons_phi( getTimeStep() * 0.01 ) );
-            for ( double tau = getTimeStep(); tau < parameters.p_phonon_tcutoff * 3.1; tau += getTimeStep() ) {
+            for ( double tau = getTimeStep(); tau < parameters.p_phonon_tcutoff * 2.0; tau += getTimeStep() ) {
                 phi_vector.emplace_back( dgl_phonons_phi( tau ) );
             }
             FILE *fp_phonons = std::fopen( ( parameters.subfolder + "phonons.txt" ).c_str(), "w" );
             fmt::print( fp_phonons, "t\treal(phi(t))\timag(phi(t))\treal(g_u(t))\timag(g_u(t))\treal(g_g(t))\timag(g_g(t))\n" );
-            for ( double t = getTimeborderStart(); t < 3.0 * parameters.p_phonon_tcutoff; t += getTimeStep() ) {
+            //for ( double t = getTimeborderStart(); t < 3.0 * parameters.p_phonon_tcutoff; t += getTimeStep() ) {
+            for ( int i = 0; i < phi_vector.size(); i++ ) {
+                double t = 1.0*i*getTimeStep();
                 auto greenu = dgl_phonons_greenf( t, 'u' );
                 auto greeng = dgl_phonons_greenf( t, 'g' );
-                fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi_vector.at( std::floor( t / getTimeStep() ) ) ), std::imag( phi_vector.at( std::floor( t / getTimeStep() ) ) ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
+                fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi_vector.at( i ) ), std::imag( phi_vector.at( i ) ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
             }
             std::fclose( fp_phonons );
             if ( parameters.output_coefficients ) {
@@ -167,7 +169,7 @@ class System : public System_Parent {
 
     dcomplex dgl_phonons_phi( const double t ) {
         dcomplex integral = 0;
-        double stepsize = 0.01 * parameters.p_phonon_wcutoff;
+        double stepsize = 0.001 * parameters.p_phonon_wcutoff;
         for ( double w = stepsize; w < 10 * parameters.p_phonon_wcutoff; w += stepsize ) {
             integral += stepsize * ( parameters.p_phonon_alpha * w * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff ) * ( std::cos( w * t ) / std::tanh( 1.0545718E-34 * w / 2.0 / 1.3806488E-23 / parameters.p_phonon_T ) - 1i * std::sin( w * t ) ) );
         }

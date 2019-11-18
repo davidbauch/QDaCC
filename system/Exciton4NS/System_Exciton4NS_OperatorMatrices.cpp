@@ -22,6 +22,14 @@ class OperatorMatrices : public OperatorMatrices_Parent {
     DenseMat bare_atom_sigmaplus_G_H, bare_atom_sigmaminus_G_H, bare_atom_sigmaplus_H_B, bare_atom_sigmaminus_H_B, bare_atom_sigmaplus_G_V, bare_atom_sigmaminus_G_V, bare_atom_sigmaplus_V_B, bare_atom_sigmaminus_V_B;
     DenseMat bare_atom_inversion_G_H, bare_atom_inversion_G_V, bare_atom_inversion_H_B, bare_atom_inversion_V_B, bare_atom_inversion_G_B;
 
+    // Projector Matrices (only few needed)
+    SparseMat projector_atom_sigmaplus_G_H, projector_atom_sigmaminus_G_H, projector_atom_sigmaplus_H_B, projector_atom_sigmaminus_H_B, projector_atom_sigmaplus_G_V, projector_atom_sigmaminus_G_V, projector_atom_sigmaplus_V_B, projector_atom_sigmaminus_V_B;
+    SparseMat projector_photon_create_H, projector_photon_annihilate_H, projector_photon_create_V, projector_photon_annihilate_V;
+
+    // Concurrence map
+    DenseMat bare_concurrence_map;
+    SparseMat concurrence_map;
+
     OperatorMatrices(){};
     OperatorMatrices( const Parameters &p ) {
         init( p );
@@ -142,6 +150,11 @@ class OperatorMatrices : public OperatorMatrices_Parent {
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 1;
+        bare_concurrence_map = DenseMat::Zero( 4, 4 );
+        bare_concurrence_map << 0, 0, 0, 1,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0;
 
         // Photon operators
         bare_photon_create_H = create_photonic_operator<DenseMat>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
@@ -178,6 +191,8 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         photon_n_H = tensor( bare_photon_n_H, m_base2, m_base3 ).sparseView();
         photon_n_V = tensor( m_base1, bare_photon_n_V, m_base3 ).sparseView();
 
+        concurrence_map = tensor(m_base1, m_base2, bare_concurrence_map).sparseView();
+
         // Compressing
         atom_state_ground.makeCompressed();
         atom_state_biexciton.makeCompressed();
@@ -204,11 +219,25 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         photon_n_H.makeCompressed();
         photon_n_V.makeCompressed();
 
+        // Projector Matrices
+        projector_atom_sigmaplus_G_H = project_matrix_sparse( atom_sigmaplus_G_H );
+        projector_atom_sigmaminus_G_H = project_matrix_sparse( atom_sigmaminus_G_H );
+        projector_atom_sigmaplus_H_B = project_matrix_sparse( atom_sigmaplus_H_B );
+        projector_atom_sigmaminus_H_B = project_matrix_sparse( atom_sigmaminus_H_B );
+        projector_atom_sigmaplus_G_V = project_matrix_sparse( atom_sigmaplus_G_V );
+        projector_atom_sigmaminus_G_V = project_matrix_sparse( atom_sigmaminus_G_V );
+        projector_atom_sigmaplus_V_B = project_matrix_sparse( atom_sigmaplus_V_B );
+        projector_atom_sigmaminus_V_B = project_matrix_sparse( atom_sigmaminus_V_B );
+        projector_photon_create_H = project_matrix_sparse( photon_create_H );
+        projector_photon_annihilate_H = project_matrix_sparse( photon_annihilate_H );
+        projector_photon_create_V = project_matrix_sparse( photon_create_V );
+        projector_photon_annihilate_V = project_matrix_sparse( photon_annihilate_V );
 
         // All possible Hamiltonions
         logs.level2( "Done! Creating Hamiltonoperator... " );
         // H_0
-        H_0 = p.p_omega_atomic_G_H / 2.0 * atom_inversion_G_H + p.p_omega_atomic_G_V / 2.0 * atom_inversion_G_V + p.p_omega_atomic_H_B / 2.0 * atom_inversion_H_B + p.p_omega_atomic_V_B / 2.0 * atom_inversion_V_B + p.p_omega_cavity_H * photon_n_H + p.p_omega_cavity_V * photon_n_V;
+        H_0 = p.p_omega_atomic_G_H * atom_state_H + p.p_omega_atomic_G_V * atom_state_V + p.p_omega_atomic_B * atom_state_biexciton + p.p_omega_cavity_H * photon_n_H + p.p_omega_cavity_V * photon_n_V;
+        //H_0 = p.p_omega_atomic_G_H / 2.0 * atom_inversion_G_H + p.p_omega_atomic_G_V / 2.0 * atom_inversion_G_V + p.p_omega_atomic_H_B / 2.0 * atom_inversion_H_B + p.p_omega_atomic_V_B / 2.0 * atom_inversion_V_B + p.p_omega_cavity_H * photon_n_H + p.p_omega_cavity_V * photon_n_V;
         // H_I
         // RWA
         if ( p.numerics_use_rwa ) {
@@ -231,7 +260,7 @@ class OperatorMatrices : public OperatorMatrices_Parent {
             logs.level2( "NOT using interaction picture... " );
             H_used = H;
         }
-        logs.level2( "Hamiltonoperator done! Used:\n{}\nSetting initial rho as pure state with rho_0 = {}... ", DenseMat(H_used), p.p_initial_state );
+        logs.level2( "Hamiltonoperator done! Used:\n{}\nSetting initial rho as pure state with rho_0 = {}... ", DenseMat( H_used ), p.p_initial_state );
         // rho, experimental: start with coherent state. in this case, always start in ground state.
         if ( !p.startCoherent )
             rho.coeffRef( p.p_initial_state, p.p_initial_state ) = 1;
@@ -254,62 +283,62 @@ class OperatorMatrices : public OperatorMatrices_Parent {
             Eigen::IOFormat CleanFmt( 4, 0, ", ", "\n", "[", "]" );
             if ( p.output_operators > 1 ) {
                 out << "General Operators:\natom_state_ground\n"
-                    << DenseMat(atom_state_ground).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_state_ground ).format( CleanFmt ) << std::endl;
                 out << "atom_state_biexciton\n"
-                    << DenseMat(atom_state_biexciton).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_state_biexciton ).format( CleanFmt ) << std::endl;
                 out << "atom_state_H\n"
-                    << DenseMat(atom_state_H).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_state_H ).format( CleanFmt ) << std::endl;
                 out << "atom_state_V\n"
-                    << DenseMat(atom_state_V).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_state_V ).format( CleanFmt ) << std::endl;
                 out << "atom_sigmaplus_G_H\n"
-                    << DenseMat(atom_sigmaplus_G_H).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_sigmaplus_G_H ).format( CleanFmt ) << std::endl;
                 out << "atom_sigmaminus_G_H\n"
-                    << DenseMat(atom_sigmaminus_G_H).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_sigmaminus_G_H ).format( CleanFmt ) << std::endl;
                 out << "atom_sigmaplus_H_B\n"
-                    << DenseMat(atom_sigmaplus_H_B).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_sigmaplus_H_B ).format( CleanFmt ) << std::endl;
                 out << "atom_sigmaminus_H_B\n"
-                    << DenseMat(atom_sigmaminus_H_B).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_sigmaminus_H_B ).format( CleanFmt ) << std::endl;
                 out << "atom_sigmaplus_G_V\n"
-                    << DenseMat(atom_sigmaplus_G_V).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_sigmaplus_G_V ).format( CleanFmt ) << std::endl;
                 out << "atom_sigmaminus_G_V\n"
-                    << DenseMat(atom_sigmaminus_G_V).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_sigmaminus_G_V ).format( CleanFmt ) << std::endl;
                 out << "atom_sigmaplus_V_B\n"
-                    << DenseMat(atom_sigmaplus_V_B).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_sigmaplus_V_B ).format( CleanFmt ) << std::endl;
                 out << "atom_sigmaminus_V_B\n"
-                    << DenseMat(atom_sigmaminus_V_B).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_sigmaminus_V_B ).format( CleanFmt ) << std::endl;
                 out << "atom_inversion_G_H\n"
-                    << DenseMat(atom_inversion_G_H).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_inversion_G_H ).format( CleanFmt ) << std::endl;
                 out << "atom_inversion_G_V\n"
-                    << DenseMat(atom_inversion_G_V).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_inversion_G_V ).format( CleanFmt ) << std::endl;
                 out << "atom_inversion_H_B\n"
-                    << DenseMat(atom_inversion_H_B).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_inversion_H_B ).format( CleanFmt ) << std::endl;
                 out << "atom_inversion_V_B\n"
-                    << DenseMat(atom_inversion_V_B).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_inversion_V_B ).format( CleanFmt ) << std::endl;
                 out << "atom_inversion_G_B\n"
-                    << DenseMat(atom_inversion_G_B).format( CleanFmt ) << std::endl;
+                    << DenseMat( atom_inversion_G_B ).format( CleanFmt ) << std::endl;
                 out << "photon_create_H\n"
-                    << DenseMat(photon_create_H).format( CleanFmt ) << std::endl;
+                    << DenseMat( photon_create_H ).format( CleanFmt ) << std::endl;
                 out << "photon_create_V\n"
-                    << DenseMat(photon_create_V).format( CleanFmt ) << std::endl;
+                    << DenseMat( photon_create_V ).format( CleanFmt ) << std::endl;
                 out << "photon_annihilate_H\n"
-                    << DenseMat(photon_annihilate_H).format( CleanFmt ) << std::endl;
+                    << DenseMat( photon_annihilate_H ).format( CleanFmt ) << std::endl;
                 out << "photon_annihilate_V\n"
-                    << DenseMat(photon_annihilate_V).format( CleanFmt ) << std::endl;
+                    << DenseMat( photon_annihilate_V ).format( CleanFmt ) << std::endl;
                 out << "photon_n_H\n"
-                    << DenseMat(photon_n_H).format( CleanFmt ) << std::endl;
+                    << DenseMat( photon_n_H ).format( CleanFmt ) << std::endl;
                 out << "photon_n_V\n"
-                    << DenseMat(photon_n_V).format( CleanFmt ) << std::endl;
+                    << DenseMat( photon_n_V ).format( CleanFmt ) << std::endl;
             }
             out << "Hamilton and Rho:\nH=H_0+H_I (no RWA)\n"
-                << DenseMat(H).format( CleanFmt ) << std::endl;
+                << DenseMat( H ).format( CleanFmt ) << std::endl;
             out << "H_0\n"
-                << DenseMat(H_0).format( CleanFmt ) << std::endl;
+                << DenseMat( H_0 ).format( CleanFmt ) << std::endl;
             out << "H_I\n"
-                << DenseMat(H_I).format( CleanFmt ) << std::endl;
+                << DenseMat( H_I ).format( CleanFmt ) << std::endl;
             out << "H_used\n"
-                << DenseMat(H_used).format( CleanFmt ) << std::endl;
+                << DenseMat( H_used ).format( CleanFmt ) << std::endl;
             out << "rho\n"
-                << DenseMat(rho).format( CleanFmt ) << std::endl;
+                << DenseMat( rho ).format( CleanFmt ) << std::endl;
             //out << "test1\n" << test1.format(CleanFmt)<< "\ntest2\n" << test2.format(CleanFmt) << std::endl;
             logs.level2( out.str() );
             if ( p.output_operators == 3 )

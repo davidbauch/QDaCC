@@ -57,6 +57,7 @@ std::string global_message_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBE
 #define PHONON_APPROXIMATION_TRANSFORMATION_MATRIX 1
 #define PHONON_APPROXIMATION_TIMETRANSFORMATION 2
 #define PHONON_APPROXIMATION_LINDBLAD_FULL 3
+#define PHONON_APPROXIMATION_MULITPLY_HAMILTON 4
 
 typedef std::complex<double> dcomplex;
 typedef Eigen::SparseMatrix<dcomplex> SparseMat;
