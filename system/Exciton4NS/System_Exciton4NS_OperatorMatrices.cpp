@@ -26,10 +26,6 @@ class OperatorMatrices : public OperatorMatrices_Parent {
     SparseMat projector_atom_sigmaplus_G_H, projector_atom_sigmaminus_G_H, projector_atom_sigmaplus_H_B, projector_atom_sigmaminus_H_B, projector_atom_sigmaplus_G_V, projector_atom_sigmaminus_G_V, projector_atom_sigmaplus_V_B, projector_atom_sigmaminus_V_B;
     SparseMat projector_photon_create_H, projector_photon_annihilate_H, projector_photon_create_V, projector_photon_annihilate_V;
 
-    // Concurrence map
-    DenseMat bare_concurrence_map;
-    SparseMat concurrence_map;
-
     OperatorMatrices(){};
     OperatorMatrices( const Parameters &p ) {
         init( p );
@@ -150,11 +146,6 @@ class OperatorMatrices : public OperatorMatrices_Parent {
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 1;
-        bare_concurrence_map = DenseMat::Zero( 4, 4 );
-        bare_concurrence_map << 0, 0, 0, 1,
-            0, 0, 0, 0,
-            0, 0, 0, 0,
-            0, 0, 0, 0;
 
         // Photon operators
         bare_photon_create_H = create_photonic_operator<DenseMat>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
@@ -190,9 +181,7 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         photon_annihilate_V = tensor( m_base1, bare_photon_annihilate_V, m_base3 ).sparseView();
         photon_n_H = tensor( bare_photon_n_H, m_base2, m_base3 ).sparseView();
         photon_n_V = tensor( m_base1, bare_photon_n_V, m_base3 ).sparseView();
-
-        concurrence_map = tensor(m_base1, m_base2, bare_concurrence_map).sparseView();
-
+        
         // Compressing
         atom_state_ground.makeCompressed();
         atom_state_biexciton.makeCompressed();

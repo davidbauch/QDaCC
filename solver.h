@@ -33,11 +33,11 @@ class ODESolver {
     double b66 = 11. / 84.;
 
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
+    int dim;
 
     std::vector<SaveState> savedStates;    // Vector for saved matrix-time tuples for densitymatrix
     std::vector<SaveState> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
     std::vector<dcomplex> out;
-    DenseMat akf_mat;
     void saveState( const MatType &mat, const double t, std::vector<SaveState> &savedStates );
     void saveHamilton( const MatType &mat, const double t );
     MatType iterateRungeKutta4( const MatType &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates );
@@ -49,15 +49,16 @@ class ODESolver {
     MatType getHamilton( System_Parent &s, const double t, bool use_saved_hamiltons );
     bool queueNow( System_Parent &s, int &curIt );
     int reset( System_Parent &s );
+    bool calculate_g1( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, DenseMat &cache, std::string purpose = "unknown" );
+    bool calculate_g2( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, DenseMat &cache, std::string purpose = "unknown" );
 
-   public:
-    ODESolver(){};
+        public : ODESolver(){};
     ODESolver( System_Parent &s );
     MatType iterate( const MatType &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates, const int dir );
     bool calculate_t_direction( System_Parent &s );
-    bool calculate_g1( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator );
-    bool calculate_g2_0( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName );
-    bool calculate_spectrum( System_Parent &s, std::string fileOutputName );
+    //bool calculate_g2_0( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName ); //moved to advancedPhotonStatistics
+    bool calculate_spectrum( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName );
+    bool calculate_advanced_photon_statistics( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName );
     template <typename T>
     static MatType iterate_definite_integral( const MatType &rho, T rungefunction, const double t, const double step );
     static std::vector<SaveState> calculate_definite_integral_vec( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step );

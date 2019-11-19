@@ -45,17 +45,14 @@ int main( int argc, char* argv[] ) {
 #ifdef SYSTEM4LS
     if ( system.calculate_spectrum() ) {
         if ( system.calculate_spectrum_H() ) {
-            solver.calculate_g1( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
-            solver.calculate_spectrum( system, "spectrum_H.txt" );
+            solver.calculate_spectrum( system,system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "spectrum_H.txt" );
         }
         if ( system.calculate_spectrum_V() ) {
-            solver.calculate_g1( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V );
-            solver.calculate_spectrum( system, "spectrum_V.txt" );
+            solver.calculate_spectrum( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V,"spectrum_V.txt" );
         }
     }
     if ( system.calculate_g2() ) {
-        solver.calculate_g2_0( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "g2(0)_H.txt" );
-        solver.calculate_g2_0( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "g2(0)_V.txt" );
+        solver.calculate_advanced_photon_statistics( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H,system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "advanced_photon_statistics.txt" );
     }
 #endif
 

@@ -29,6 +29,7 @@ class System : public System_Parent {
     int track_getcoefficient_calculate = 0;
     int track_getcoefficient_read_but_unequal = 0;
     int track_getcoefficient_calcattempt = 0;
+    int globaltries = 0;
 
     SparseMat timeTrafoMatrix;
 
@@ -109,33 +110,30 @@ class System : public System_Parent {
 
     SparseMat dgl_rungeFunction( const SparseMat &rho, const SparseMat &H, const double t, std::vector<SaveState> &past_rhos ) {
         SparseMat ret = -1i * dgl_kommutator( H, rho );
-        SparseMat loss( parameters.maxStates, parameters.maxStates );
-        // Photone losses
+        // Photon losses
         if ( parameters.p_omega_cavity_loss != 0.0 ) {
             //ret += parameters.p_omega_cavity_loss / 2.0 * ( 2 * operatorMatrices.photon_annihilate_H * rho * operatorMatrices.photon_create_H - dgl_antikommutator( operatorMatrices.photon_n_H, rho ) );
-            loss += parameters.p_omega_cavity_loss * dgl_lindblad( rho, operatorMatrices.photon_annihilate_H, operatorMatrices.photon_create_H );
-            loss += parameters.p_omega_cavity_loss * dgl_lindblad( rho, operatorMatrices.photon_annihilate_V, operatorMatrices.photon_create_V );
+            ret += parameters.p_omega_cavity_loss * dgl_lindblad( rho, operatorMatrices.photon_annihilate_H, operatorMatrices.photon_create_H );
+            ret += parameters.p_omega_cavity_loss * dgl_lindblad( rho, operatorMatrices.photon_annihilate_V, operatorMatrices.photon_create_V );
         }
         // Pure Dephasing
         if ( parameters.p_omega_pure_dephasing != 0.0 ) {
-            loss -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_ground * rho * operatorMatrices.atom_state_H + operatorMatrices.atom_state_H * rho * operatorMatrices.atom_state_ground );
-            loss -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_ground * rho * operatorMatrices.atom_state_V + operatorMatrices.atom_state_V * rho * operatorMatrices.atom_state_ground );
-            loss -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_H * rho * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_biexciton * rho * operatorMatrices.atom_state_H );
-            loss -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_V * rho * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_biexciton * rho * operatorMatrices.atom_state_V );
+            ret -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_ground * rho * operatorMatrices.atom_state_H + operatorMatrices.atom_state_H * rho * operatorMatrices.atom_state_ground );
+            ret -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_ground * rho * operatorMatrices.atom_state_V + operatorMatrices.atom_state_V * rho * operatorMatrices.atom_state_ground );
+            ret -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_H * rho * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_biexciton * rho * operatorMatrices.atom_state_H );
+            ret -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_V * rho * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_biexciton * rho * operatorMatrices.atom_state_V );
         }
         // Radiative decay
         if ( parameters.p_omega_decay != 0.0 ) {
-            loss += parameters.p_omega_pure_dephasing / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_H, operatorMatrices.atom_sigmaplus_G_H );
-            loss += parameters.p_omega_pure_dephasing / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_V, operatorMatrices.atom_sigmaplus_G_V );
-            loss += parameters.p_omega_pure_dephasing / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B, operatorMatrices.atom_sigmaplus_H_B );
-            loss += parameters.p_omega_pure_dephasing / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B, operatorMatrices.atom_sigmaplus_V_B );
+            ret += parameters.p_omega_pure_dephasing / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_H, operatorMatrices.atom_sigmaplus_G_H );
+            ret += parameters.p_omega_pure_dephasing / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_V, operatorMatrices.atom_sigmaplus_G_V );
+            ret += parameters.p_omega_pure_dephasing / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B, operatorMatrices.atom_sigmaplus_H_B );
+            ret += parameters.p_omega_pure_dephasing / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B, operatorMatrices.atom_sigmaplus_V_B );
             //ret += parameters.p_phonon_b * parameters.p_phonon_b * parameters.p_omega_decay * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus, operatorMatrices.atom_sigmaplus );
         }
-        //fmt::print("Anderes Ungleich null = {}... ",loss.cwiseAbs().sum());
         if ( parameters.p_phonon_T != 0.0 ) {
-            loss += dgl_phonons( rho, t, past_rhos );
+            ret += dgl_phonons( rho, t, past_rhos );
         }
-        ret += loss;
         return ret.pruned();
     }
 
@@ -225,7 +223,7 @@ class System : public System_Parent {
 
     dcomplex dgl_phonons_greenf( double t, const char mode = 'u' ) {
         int i = std::floor( t / getTimeStep() );
-        dcomplex phi = phi_vector.at( i ); //dgl_phonons_phi( t );
+        auto phi = phi_vector.at( i ); //dgl_phonons_phi( t );
         if ( mode == 'g' ) {
             return parameters.p_phonon_b * parameters.p_phonon_b * ( std::cosh( phi ) - 1.0 );
         }
@@ -250,10 +248,10 @@ class System : public System_Parent {
             double bpulsesquared, delta, nu;
             if ( level == 'H' ) {
                 bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse_H.get( t ) ), 2.0 );
-                delta = parameters.pulse_omega.at( 0 ) - omega_atomic;
+                delta = parameters.pulse_omega.at( 0 ) - omega_atomic; //FIXME : different pulse frequencies
             } else {
                 bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse_V.get( t ) ), 2.0 );
-                delta = parameters.pulse_omega.at( 0 ) - omega_atomic;
+                delta = parameters.pulse_omega.at( 0 ) - omega_atomic; //FIXME : different pulse frequencies
             }
             nu = std::sqrt( bpulsesquared + delta * delta );
             int i = 0;
@@ -275,32 +273,45 @@ class System : public System_Parent {
                 ret += std::real( std::exp( 1i * sign * delta * tau ) * ( std::exp( phi_vector.at( i ) ) - 1.0 ) );
                 i++;
             }
-            ret *= parameters.p_phonon_b * parameters.p_phonon_b * parameters.p_omega_coupling * parameters.p_omega_coupling * step;
+            ret *= parameters.p_phonon_b * parameters.p_phonon_b * step;
         }
         return ret;
     }
 
     int dgl_get_coefficient_index( const double t, const double tau = 0 ) {
+        //FIXME: spektrum rechnung muss numerics_phonons_maximum_threads auf 1 setzen! oder hier muss bekannt sein ob t oder tau rechnung
+        // und auch nur dnan speichern, wenn unique. uff //&& parameters.numerics_phonons_maximum_threads == 1
         if ( parameters.numerics_use_saved_coefficients ) {
-            double mult = std::floor( parameters.p_phonon_tcutoff / parameters.t_step );
             // Look for already calculated coefficient. if not found, calculate and save new coefficient
             if ( savedCoefficients.size() > 0 && t <= savedCoefficients.back().t && tau <= savedCoefficients.back().tau ) {
                 track_getcoefficient_calcattempt++;
-                int approx = std::min( (int)savedCoefficients.size() - 1, (int)( ( std::floor( t / getTimeStep() * 2.0 ) - 1.0 ) * mult ) );
-                while ( approx < (int)savedCoefficients.size() - 1 && t > savedCoefficients.at( approx ).t )
+                double mult = std::floor( parameters.p_phonon_tcutoff / parameters.t_step );
+                int add = (int)std::floor( ( parameters.p_phonon_tcutoff - tau ) / parameters.t_step );
+                int approx = std::max( 0, std::min( (int)savedCoefficients.size() - 1, (int)( ( std::floor( t / getTimeStep() * 2.0 ) - 1.0 ) * mult ) ) - add ); //TODO: *4.0 wenn RK5
+                int tries = 0;
+                while ( approx < (int)savedCoefficients.size() - 1 && t > savedCoefficients.at( approx ).t ) {
                     approx++;
-                while ( approx > 0 && t < savedCoefficients.at( approx ).t )
+                    tries++;
+                }
+                while ( approx > 0 && t < savedCoefficients.at( approx ).t ) {
                     approx--;
-                while ( approx < (int)savedCoefficients.size() - 1 && tau > savedCoefficients.at( approx ).tau )
+                    tries++;
+                }
+                while ( approx < (int)savedCoefficients.size() - 1 && tau > savedCoefficients.at( approx ).tau ) {
+                    approx++;
+                    tries++;
+                }
+                while ( approx > 0 && tau < savedCoefficients.at( approx ).tau ) {
                     approx--;
-                while ( approx > 0 && tau < savedCoefficients.at( approx ).tau )
-                    approx--;
+                    tries++;
+                }
                 if ( approx < (int)savedCoefficients.size() ) {
                     if ( t != savedCoefficients.at( approx ).t || tau != savedCoefficients.at( approx ).tau ) {
                         track_getcoefficient_read_but_unequal++;
                         logs.level2( "Coefficient time mismatch! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
                     } else {
                         track_getcoefficient_read++;
+                        globaltries += tries;
                         //logs.level2( "Coefficient time match! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
                         return approx;
                     }
@@ -328,7 +339,7 @@ class System : public System_Parent {
     }
 
     inline SparseMat dgl_phonons_chi( const double t ) {
-        return dgl_timetrafo( parameters.p_omega_coupling * operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H + parameters.p_omega_coupling * operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t ) + parameters.p_omega_coupling * operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V + parameters.p_omega_coupling * operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V + ( operatorMatrices.atom_sigmaplus_G_V + operatorMatrices.atom_sigmaplus_V_B ) * pulse_V.get( t ), t );
+        return dgl_timetrafo( operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H + operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H + ( operatorMatrices.atom_sigmaplus_G_H + operatorMatrices.atom_sigmaplus_H_B ) * pulse_H.get( t ) + operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V + operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V + ( operatorMatrices.atom_sigmaplus_G_V + operatorMatrices.atom_sigmaplus_V_B ) * pulse_V.get( t ), t );
     }
 
     SparseMat dgl_phonons( const SparseMat &rho, const double t, const std::vector<SaveState> &past_rhos ) {
@@ -344,7 +355,11 @@ class System : public System_Parent {
             SparseMat XGT = dgl_phonons_chiToX( chi, 'g' );
             // Chi_tau_back is chi(t-tau) transformed back from the second interaction picture. Saving of chiToX transformed would be better for runtime, but would require to save 2 matrices instead of 1.
             SparseMat chi_tau_back_u, chi_tau_back_g, chi_tau, chi_tau_back;
-            for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) { //for ( auto chit : chis ) {
+            int _taumax = (int)std::min( parameters.p_phonon_tcutoff / parameters.t_step, t / parameters.t_step );
+            //#pragma omp parallel for schedule( dynamic ) shared( ret, savedCoefficients ) num_threads( parameters.numerics_phonons_maximum_threads )
+            for ( int _tau = 0; _tau < _taumax; _tau++ ) { //for ( auto chit : chis ) {
+                SparseMat chi_tau_back_u, chi_tau_back_g, chi_tau, chi_tau_back, integrant;
+                double tau = ( 1.0 * _tau ) * parameters.t_step;
                 // Determine rho to use. If first markov approximation is disabled, rho(t-tau) will be used from the past_rhos vector.
                 if ( !parameters.numerics_phonon_approximation_1 ) {
                     int tau_index = tau / parameters.t_step;
@@ -442,12 +457,7 @@ class System : public System_Parent {
             ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B, 'C', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B * operatorMatrices.photon_create_V, operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V );
             ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B, 'C', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V, operatorMatrices.atom_sigmaminus_V_B * operatorMatrices.photon_create_V );
         }
-        //fmt::print("Phononen Ungleich null = {}\n",ret.cwiseAbs().sum());
         return ret;
-    }
-
-    double getConcurrence( const SparseMat &rho ) {
-        return 2.0 * std::abs( operatorMatrices.concurrence_map.cwiseProduct( rho ).sum() );
     }
 
     void expectationValues( const SparseMat &rho, const double t ) {
@@ -459,7 +469,7 @@ class System : public System_Parent {
         photonemissionprob_integral_V += exp_photon_V * parameters.t_step * parameters.p_omega_cavity_loss;
         // Output expectation values
         fmt::print( fileoutput.fp_atomicinversion, "{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\n", t, std::real( dgl_expectationvalue<SparseMat, dcomplex>( rho, operatorMatrices.atom_state_ground, t ) ), std::real( dgl_expectationvalue<SparseMat, dcomplex>( rho, operatorMatrices.atom_state_H, t ) ), std::real( dgl_expectationvalue<SparseMat, dcomplex>( rho, operatorMatrices.atom_state_V, t ) ), std::real( dgl_expectationvalue<SparseMat, dcomplex>( rho, operatorMatrices.atom_state_biexciton, t ) ) );
-        fmt::print( fileoutput.fp_photonpopulation, "{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\n", t, exp_photon_H, exp_photon_V, photonemissionprob_integral_H, photonemissionprob_integral_V, getConcurrence( rho ) );
+        fmt::print( fileoutput.fp_photonpopulation, "{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\n", t, exp_photon_H, exp_photon_V, photonemissionprob_integral_H, photonemissionprob_integral_V );
         fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", t );
         if ( parameters.output_full_dm ) {
             for ( int i = 0; i < parameters.maxStates; i++ )
@@ -492,6 +502,7 @@ class System : public System_Parent {
         pulse_V.log();
         chirp.log();
         logs.level2( "Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
+        logs.level2( "Number of approx+/- adjustments: {}\n", globaltries );
         fileoutput.close();
         return true;
     }

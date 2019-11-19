@@ -55,6 +55,11 @@ class System_Parent {
     inline T dgl_calc_rhotau( const T &rho, const T &op, const double t ) {
         return dgl_timetrafo( op, t ) * rho;
     }
+    // Order 2
+    template <typename T>
+    inline T dgl_calc_rhotau_2( const T &rho, const T &op1, const T &op2, const double t ) {
+        return dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
+    }
     // Runge function
     virtual MatType dgl_rungeFunction( const MatType &rho, const MatType &H, const double t, std::vector<SaveState> &past_rhos ) {
         return rho;

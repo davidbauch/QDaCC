@@ -7,11 +7,7 @@
 // @param s: [&System] Class providing set of system functions
 ODESolver::ODESolver( System_Parent &s ) {
     logs.level2( "Creating ODESolver Class... " );
-    track_gethamilton_read = 0;
-    track_gethamilton_write = 0;
-    track_gethamilton_calc = 0;
-    track_gethamilton_calcattempt = 0;
-    int dim = (int)( s.parameters.iterations_t_max / s.getIterationSkip() ) + 10;
+    reset( s );
     savedStates.clear();
     savedStates.reserve( dim );
     logs.level2( "Done!\n" );
@@ -144,11 +140,13 @@ bool ODESolver::queueNow( System_Parent &s, int &curIt ) {
 // @param s: [&System] Class providing set of system functions
 // @return: [int] dimensions of temporary variables
 int ODESolver::reset( System_Parent &s ) {
-    int dim = (int)( s.parameters.iterations_t_max / s.getIterationSkip() ) + 10;
+    track_gethamilton_read = 0;
+    track_gethamilton_write = 0;
+    track_gethamilton_calc = 0;
+    track_gethamilton_calcattempt = 0;
+    dim = (int)( s.parameters.iterations_t_max / s.getIterationSkip() ) + 10;
     out.clear();
     out.reserve( (int)( std::ceil( s.parameters.iterations_w_resolution ) + 5 ) );
-    if ( s.calculate_spectrum() )
-        akf_mat = Eigen::MatrixXcd::Zero( dim, dim );
     for ( int w = 0; w < s.parameters.iterations_w_resolution; w++ ) {
         out.push_back( 0 );
     }
@@ -287,19 +285,20 @@ MatType ODESolver::getRhoAt( int i ) {
 // @param op_creator: [&Eigen::MatrixXcd] Creator operator (adjunct of annihilator)
 // @param op_annihilator: [&Eigen::MatrixXcd] Annihilator operator
 // @return: [bool] True if calculations were sucessfull, else false
-bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator ) {
+bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, DenseMat &cache, std::string purpose ) {
     if ( !( (int)savedStates.size() > 0 ) ) {
         logs( "Need to calculate t-direction first!\n" );
         return false;
     }
-    reset(s);
-    Timer &timer = createTimer( "RungeKutta-Tau-Loop" );
+    reset( s );
+    Timer &timer = createTimer( "RungeKutta-G1-Loop (" + purpose + ")" );
     int totalIterations = getIterationNumberTau( s );
     ProgressBar progressbar = ProgressBar( totalIterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
     progressbar.strBarStart = "|";
     progressbar.strBarEnd = "|";
     timer.start();
-    logs.level2( "Calculating G1(tau), saving to akf_mat of size {}x{}... ", akf_mat.rows(), akf_mat.cols() );
+    logs.level2( "Calculating G1(tau)... purpose: {}, saving to matrice of size {}x{}... ", purpose, cache.rows(), cache.cols() );
+    std::string progressstring = "G1("+purpose+"): ";
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
         std::vector<SaveState> past_rhos;
@@ -309,7 +308,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
         MatType rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
         saveState( rho_tau, t_t, past_rhos );
 
-        akf_mat( k, 0 ) = s.dgl_expectationvalue<MatType,dcomplex>( rho_tau, op_creator, t_t );
+        cache( k, 0 ) = s.dgl_expectationvalue<MatType, dcomplex>( rho_tau, op_creator, t_t );
         int j = 1;
         int curIt_tau = 1;
         for ( double t_tau = t_t + s.getTimeStep(); t_tau < s.getTimeborderEnd(); t_tau += s.getTimeStep() ) { // t + +s.getTimeStep()
@@ -317,14 +316,14 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
             saveState( rho_tau, t_tau, past_rhos );
             timer.iterate();
             if ( queueNow( s, curIt_tau ) ) {
-                akf_mat( k, j ) = s.dgl_expectationvalue<MatType,dcomplex>( rho_tau, op_creator, t_tau );
+                cache( k, j ) = s.dgl_expectationvalue<MatType, dcomplex>( rho_tau, op_creator, t_tau );
                 j++; // equivalent to s.parameters.akf_vecIndex
             }
-            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "AKF-Tau: " );
+            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
         }
     }
     timer.end();
-    logs.level2( "Spectrum: Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    logs.level2( "G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return true;
 }
 
@@ -335,7 +334,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
 // @param op_annihilator: [&Eigen::MatrixXcd] Annihilator operator
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
-bool ODESolver::calculate_g2_0( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName = "g2(0).txt" ) {
+/*bool ODESolver::calculate_g2_0( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName = "g2(0).txt" ) {
     if ( !( (int)savedStates.size() > 0 ) ) {
         logs( "Need to calculate t-direction first!\n" );
         return false;
@@ -374,21 +373,25 @@ bool ODESolver::calculate_g2_0( System_Parent &s, const MatType &op_creator, con
     std::fclose( g2file );
     logs.level2( "Done!\n" );
     return true;
-}
+}*/
 
 // Description: Calculates the Eberly-Wódkiewicz spectrum. Uses precalculated values from akf_mat
 // Type: ODESolver public function
 // @param s: [&System] Class providing set of system functions
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
-bool ODESolver::calculate_spectrum( System_Parent &s, std::string fileOutputName = "spectrum.txt" ) {
+bool ODESolver::calculate_spectrum( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName = "spectrum.txt" ) {
+    // Cache matrix. Saves complex double entries of G1(t,tau)
+    DenseMat akf_mat = DenseMat::Zero( dim, dim );
+    // Calculate G1(t,tau) with given operator matrices
+    calculate_g1( s, op_creator, op_annihilator, akf_mat, "spectrum" );
+    // Create Timer and Progressbar for the spectrum loop
     Timer &timer = createTimer( "Spectrum-Loop" );
     int totalIterations = getIterationNumberSpectrum( s );
     ProgressBar progressbar = ProgressBar( totalIterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
     progressbar.strBarStart = "|";
     progressbar.strBarEnd = "|";
     timer.start();
-
     logs.level2( "Calculating spectrum... Calculating frequencies... " );
     //Calculate frequencies:
     std::vector<double> spectrum_frequency_w;
@@ -396,6 +399,7 @@ bool ODESolver::calculate_spectrum( System_Parent &s, std::string fileOutputName
         spectrum_frequency_w.push_back( s.parameters.spectrum_frequency_center - ( s.parameters.spectrum_frequency_range ) + w / ( (double)s.parameters.iterations_w_resolution ) * ( 2. * ( s.parameters.spectrum_frequency_range ) ) );
     }
     logs.level2( "Done, calculating fourier transform via direct integral... " );
+    // Calculate main fourier transform integral
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads ) //reduction(+:spectrum.out)
     for ( int spec_w = 0; spec_w < s.parameters.iterations_w_resolution; spec_w++ ) {
         std::vector<dcomplex> expfunc;
@@ -413,9 +417,10 @@ bool ODESolver::calculate_spectrum( System_Parent &s, std::string fileOutputName
         }
         timer.iterate();
     }
+    // Final output and timer end
     outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "AKF-Spectrum", PROGRESS_FORCE_OUTPUT );
     timer.end();
-
+    // Save output
     logs.level2( "Done, saving to {}... ", fileOutputName );
     std::string filepath = s.parameters.subfolder + fileOutputName;
     FILE *spectrumfile = std::fopen( filepath.c_str(), "w" );
@@ -428,5 +433,74 @@ bool ODESolver::calculate_spectrum( System_Parent &s, std::string fileOutputName
     }
     std::fclose( spectrumfile );
     logs.level2( "Done!\n" );
+    // Sucessfull
+    return true;
+}
+
+bool ODESolver::calculate_g2( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, DenseMat &cache, std::string purpose ) {
+    // Ensuring T-Direction was calculated first
+    if ( !( (int)savedStates.size() > 0 ) ) {
+        logs( "Need to calculate t-direction first!\n" );
+        return false;
+    }
+    // Create Timer and Progresbar
+    Timer &timer = createTimer( "RungeKutta-G2-Loop (" + purpose + ")" );
+    int totalIterations = getIterationNumberTau( s );
+    ProgressBar progressbar = ProgressBar( totalIterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
+    progressbar.strBarStart = "|";
+    progressbar.strBarEnd = "|";
+    timer.start();
+    logs.level2( "Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}... ", purpose, cache.rows(), cache.cols() );
+    MatType evalOperator = op_creator_1*op_creator_2;
+    std::string progressstring = "G2("+purpose+"): ";
+    // Main G2 Loop
+#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
+    for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
+        // Create and reserve past rho's vector
+        std::vector<SaveState> past_rhos;
+        past_rhos.reserve( (int)( ( savedStates.size() - i ) / s.getIterationSkip() ) );
+        // Get index incrementing by 1 from global index
+        int k = i / s.getIterationSkip();
+        // Get Time from saved State
+        double t_t = getTimeAt( i );
+        // Calculate rho_tau
+        MatType rho_tau = s.dgl_calc_rhotau_2( getRhoAt( i ), op_annihilator_2, op_creator_1, t_t );
+        saveState( rho_tau, t_t, past_rhos );
+
+        cache( k, 0 ) = s.dgl_expectationvalue<MatType, dcomplex>( rho_tau, evalOperator, t_t );
+        int j = 1;
+        int curIt_tau = 1;
+        for ( double t_tau = t_t + s.getTimeStep(); t_tau < s.getTimeborderEnd(); t_tau += s.getTimeStep() ) { // t + +s.getTimeStep()
+            rho_tau = iterate( rho_tau, s, t_tau, past_rhos, DIR_TAU );
+            saveState( rho_tau, t_tau, past_rhos );
+            timer.iterate();
+            if ( queueNow( s, curIt_tau ) ) {
+                cache( k, j ) = s.dgl_expectationvalue<MatType, dcomplex>( rho_tau, evalOperator, t_tau );
+                j++; 
+            }
+            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
+        }
+    }
+    timer.end();
+    logs.level2( "G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    return true;
+}
+
+bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName ) {
+    // Cache matrix. Saves complex double entries of G1(t,tau)
+    DenseMat akf_mat_11 = DenseMat::Zero( dim, dim );
+    DenseMat akf_mat_22 = DenseMat::Zero( dim, dim );
+    DenseMat akf_mat_12 = DenseMat::Zero( dim, dim );
+    // Calculate G1(t,tau) with given operator matrices
+    calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, akf_mat_11, "Mode 11" );
+    calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2, akf_mat_22, "Mode 22" );
+    calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2, akf_mat_12, "Mode 12" );
+    // Create Timer and Progressbar for the spectrum loop
+    Timer &timer = createTimer( "Advanced photon Statistics" );
+    timer.start();
+    logs.level2( "Calculating advanced photon statistics... Calculating Concurrence... " );
+    
+    logs.level2( "Done!\n" );
+    // Sucessfull
     return true;
 }

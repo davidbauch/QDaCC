@@ -48,6 +48,7 @@ class Parameters : public Parameters_Parent {
     double akf_deltaWmax, spectrum_frequency_center, spectrum_frequency_range;
     bool numerics_calculate_spectrum_H, numerics_calculate_spectrum_V;
     bool numerics_use_saved_coefficients;
+    int numerics_phonons_maximum_threads;
     bool numerics_use_saved_hamiltons;
     long unsigned int numerics_saved_coefficients_max_size;
 
@@ -121,7 +122,7 @@ class Parameters : public Parameters_Parent {
         // Look for --dimensions, if not found, standard system is used (maxphotons = 0, starting state = |g,0>)
         params = Parse_Parameters( arguments, {"--maxPhotons", "--initState"}, {1, 3}, "Initial State parameters" );
         p_max_photon_number = params.get<int>( 0, "2" );
-        p_initial_state = instr( "ghvb", params.get( 1, "0" ) ) + 4 * ( p_max_photon_number + 1 ) * params.get<int>( 2, "0" ) + 4 * params.get<int>( 3, "0" );
+        p_initial_state = instr( "ghvb", params.get( 1, "b" ) ) + 4 * ( p_max_photon_number + 1 ) * params.get<int>( 2, "0" ) + 4 * params.get<int>( 3, "0" );
 
         // Look for --spectrum, if not found, no spectrum is evaluated
         params = Parse_Parameters( arguments, {"--specTauRes", "--specCenter", "--specRange", "--specWRes", "-spectrum", "-spectrumH", "-spectrumV"}, {1, 1, 1, 1, 1, 1, 1}, "Spectrum Parameters" );
@@ -292,6 +293,8 @@ class Parameters : public Parameters_Parent {
         numerics_calculate_spectrum = numerics_calculate_spectrum_H || numerics_calculate_spectrum_V;
         numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 ) * ( p_phonon_tcutoff / t_step ) + 10;
         trace.reserve( iterations_t_max + 5 );
+
+        numerics_phonons_maximum_threads = numerics_maximum_threads;
         return true;
     }
 
