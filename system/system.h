@@ -101,6 +101,8 @@ class System_Parent {
     virtual bool exit_system( const int failure ) { return false; };
     // Return specific operators:
     virtual MatType getOperator( std::string &argument ) { return MatType( 1, 1 ); }
+    // Execute specific commands:
+    virtual bool command(unsigned int index) { return true; }
     // Output predetermined parameter variables:
     virtual bool calculate_spectrum() {
         return parameters.numerics_calculate_spectrum;

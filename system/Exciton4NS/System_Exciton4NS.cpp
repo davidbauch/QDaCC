@@ -24,11 +24,11 @@ class System : public System_Parent {
     double photonemissionprob_integral_V = 0;
 
     // Coefficient Tracking variables
-    int track_getcoefficient_read = 0;
-    int track_getcoefficient_write = 0;
-    int track_getcoefficient_calculate = 0;
-    int track_getcoefficient_read_but_unequal = 0;
-    int track_getcoefficient_calcattempt = 0;
+    int track_getcoefficient_read = 0;             // Read coefficient from vector
+    int track_getcoefficient_write = 0;            // Wrote coefficient to vector
+    int track_getcoefficient_calculate = 0;        // Sucessfully calculated coefficient
+    int track_getcoefficient_read_but_unequal = 0; // Tried to read coefficient, but didnt find any. Recalculate
+    int track_getcoefficient_calcattempt = 0;      // Attempt to calculate coefficient
     int globaltries = 0;
 
     SparseMat timeTrafoMatrix;
@@ -279,8 +279,6 @@ class System : public System_Parent {
     }
 
     int dgl_get_coefficient_index( const double t, const double tau = 0 ) {
-        //FIXME: spektrum rechnung muss numerics_phonons_maximum_threads auf 1 setzen! oder hier muss bekannt sein ob t oder tau rechnung
-        // und auch nur dnan speichern, wenn unique. uff //&& parameters.numerics_phonons_maximum_threads == 1
         if ( parameters.numerics_use_saved_coefficients ) {
             // Look for already calculated coefficient. if not found, calculate and save new coefficient
             if ( savedCoefficients.size() > 0 && t <= savedCoefficients.back().t && tau <= savedCoefficients.back().tau ) {
@@ -305,10 +303,12 @@ class System : public System_Parent {
                     approx--;
                     tries++;
                 }
+                //logs.level2("Approx = {}, size = {}\n",approx,savedCoefficients.size());
                 if ( approx < (int)savedCoefficients.size() ) {
                     if ( t != savedCoefficients.at( approx ).t || tau != savedCoefficients.at( approx ).tau ) {
+                        // This situation may occur during multithreading.
                         track_getcoefficient_read_but_unequal++;
-                        logs.level2( "Coefficient time mismatch! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
+                        //logs.level2( "Coefficient time mismatch! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
                     } else {
                         track_getcoefficient_read++;
                         globaltries += tries;
@@ -354,10 +354,9 @@ class System : public System_Parent {
             SparseMat XUT = dgl_phonons_chiToX( chi, 'u' );
             SparseMat XGT = dgl_phonons_chiToX( chi, 'g' );
             // Chi_tau_back is chi(t-tau) transformed back from the second interaction picture. Saving of chiToX transformed would be better for runtime, but would require to save 2 matrices instead of 1.
-            SparseMat chi_tau_back_u, chi_tau_back_g, chi_tau, chi_tau_back;
             int _taumax = (int)std::min( parameters.p_phonon_tcutoff / parameters.t_step, t / parameters.t_step );
-            //#pragma omp parallel for schedule( dynamic ) shared( ret, savedCoefficients ) num_threads( parameters.numerics_phonons_maximum_threads )
-            for ( int _tau = 0; _tau < _taumax; _tau++ ) { //for ( auto chit : chis ) {
+#pragma omp parallel for ordered schedule( dynamic ) num_threads( parameters.numerics_phonons_maximum_threads )
+            for ( int _tau = 0; _tau < _taumax; _tau++ ) {
                 SparseMat chi_tau_back_u, chi_tau_back_g, chi_tau, chi_tau_back, integrant;
                 double tau = ( 1.0 * _tau ) * parameters.t_step;
                 // Determine rho to use. If first markov approximation is disabled, rho(t-tau) will be used from the past_rhos vector.
@@ -377,19 +376,25 @@ class System : public System_Parent {
                     chi_tau_back = ODESolver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
                     chi_tau_back_u = dgl_phonons_chiToX( chi_tau_back, 'u' );
                     chi_tau_back_g = dgl_phonons_chiToX( chi_tau_back, 'g' );
-                    // If saving is used, save current chi(t-tau).
+// If saving is used, save current chi(t-tau).
+#pragma omp critical
                     dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, tau );
                 }
                 integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * rho_used ).eval() );
                 integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_back_g * rho_used ).eval() );
                 SparseMat adjoint = integrant.adjoint();
+#pragma omp critical
                 ret -= ( integrant + adjoint ) * parameters.t_step;
             }
         } else if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
             SparseMat XUT = dgl_phonons_chiToX( chi, 'u' );
             SparseMat XGT = dgl_phonons_chiToX( chi, 'g' );
-            SparseMat chi_tau_transformed_u, chi_tau_transformed_g;
-            for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) {
+
+            int _taumax = (int)std::min( parameters.p_phonon_tcutoff / parameters.t_step, t / parameters.t_step );
+#pragma omp parallel for ordered schedule( dynamic ) num_threads( parameters.numerics_phonons_maximum_threads )
+            for ( int _tau = 0; _tau < _taumax; _tau++ ) {
+                SparseMat chi_tau_transformed_u, chi_tau_transformed_g, integrant;
+                double tau = ( 1.0 * _tau ) * parameters.t_step;
                 if ( !parameters.numerics_phonon_approximation_1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
@@ -405,11 +410,14 @@ class System : public System_Parent {
                     SparseMat chi_tau_transformed = U * chi_tau * U.adjoint().eval();
                     chi_tau_transformed_u = dgl_phonons_chiToX( chi_tau_transformed, 'u' );
                     chi_tau_transformed_g = dgl_phonons_chiToX( chi_tau_transformed, 'g' );
+                    // If saving is used, save current chi(t-tau).
+#pragma omp critical
                     dgl_save_coefficient( chi_tau_transformed_u, chi_tau_transformed_g, t, tau );
                 }
                 integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_transformed_u * rho_used ).eval() );
                 integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_transformed_g * rho_used ).eval() );
                 SparseMat adjoint = integrant.adjoint();
+#pragma omp critical
                 ret -= ( integrant + adjoint ) * parameters.t_step;
             }
         } else if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_TIMETRANSFORMATION ) {
@@ -495,6 +503,36 @@ class System : public System_Parent {
     }
     bool calculate_spectrum_V() {
         return parameters.numerics_calculate_spectrum_V;
+    }
+
+    bool command( unsigned int index = 0 ) {
+        // The only reason for classes using this system class to set the subprograms maximum threads to 1 is, if the usual T-direction is already done.
+        if ( index == ODESolver::CHANGE_TO_SINGLETHREADED_SUBPROGRAM ) {
+            logs.level2( "Setting maximum number of Threads for primary calculations to 1\n" );
+            parameters.numerics_phonons_maximum_threads = 1;
+            if ( parameters.numerics_use_saved_coefficients ) {
+                // Sort after t
+                logs.level2( "Sorting saved coefficients by t... " );
+                std::sort( savedCoefficients.begin(), savedCoefficients.end(), Save_State_sort_t );
+                // Sort after tau
+                logs.level2( "Done, sorting saved coefficients chunkwise by tau... " );
+                int current_start = 0;
+                int i;
+                for ( i = 0; i < (int)savedCoefficients.size(); i++ ) {
+                    if ( savedCoefficients.at( i ).t > savedCoefficients.at( current_start ).t || i >= (int)savedCoefficients.size() ) {
+                        std::sort( savedCoefficients.begin() + current_start, savedCoefficients.begin() + i, Save_State_sort_tau );
+                        current_start = i;
+                    }
+                }
+                // Sort last entries
+                std::sort( savedCoefficients.begin() + current_start, savedCoefficients.begin() + i, Save_State_sort_tau );
+                logs.level2( "Done!\n" );
+            }
+            //for (auto coeff : savedCoefficients) {
+            //    logs("Coefficient t = {}, tau = {}\n",coeff.t,coeff.tau);
+            //}
+        }
+        return true;
     }
 
     bool exit_system( const int failure = 0 ) {

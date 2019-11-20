@@ -213,7 +213,7 @@ class Parameters : public Parameters_Parent {
         // Adjust pulse area if pulse_type is "gauss_pi"
         for ( int i = 0; i < (int)pulse_amp.size(); i++ )
             if ( pulse_type.at( i ).compare( "gauss_pi" ) == 0 ) {
-                pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) );
+                pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) ) / 2.0;
                 pulse_type.at( i ) = "gauss";
             }
 
@@ -294,7 +294,8 @@ class Parameters : public Parameters_Parent {
         numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 ) * ( p_phonon_tcutoff / t_step ) + 10;
         trace.reserve( iterations_t_max + 5 );
 
-        numerics_phonons_maximum_threads = numerics_maximum_threads;
+        // For now, only use T-directional multithreading when no coefficientsaving is used. Only really useful for T-only calculations
+        numerics_phonons_maximum_threads = numerics_maximum_threads;//!numerics_use_saved_coefficients ? numerics_maximum_threads : 1;
         return true;
     }
 
@@ -333,14 +334,14 @@ class Parameters : public Parameters_Parent {
         if ( chirp_total != 0 ) {
             double total = 0;
             for ( int i = 0; i < (int)chirp_t.size() - 1; i++ ) {
-                if (chirp_y.at( i + 1 ) - chirp_y.at( i ) != 0.0) {
+                if ( chirp_y.at( i + 1 ) - chirp_y.at( i ) != 0.0 ) {
                     logs( "Chirp between t0 = {} ps\nt1 = {} ps\nTotal Chirp: {} mueV\n-> average rate {} mueV/ps\n", chirp_t.at( i ), chirp_t.at( i + 1 ), Hz_to_eV( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) * 1E6, Hz_to_eV( ( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) ) * 1E6 / 1E12 / ( chirp_t.at( i + 1 ) - chirp_t.at( i ) ) );
                     total += chirp_y.at( i + 1 ) - chirp_y.at( i );
                 }
             }
             if ( chirp_type.compare( "none" ) != 0 )
                 logs( "\nChirpfile of type '" + chirp_type + "' is used!\n" );
-            logs("Total Chirp = {} mueV\n", Hz_to_eV(total)*1E6);
+            logs( "Total Chirp = {} mueV\n", Hz_to_eV( total ) * 1E6 );
         } else
             logs( "Not using chirp" );
         logs( "\n\n" );
@@ -378,7 +379,7 @@ class Parameters : public Parameters_Parent {
             logs( "\nCalcluating spectrum for {}\n", ( numerics_calculate_spectrum_H && numerics_calculate_spectrum_V ? "cavities H and V" : fmt::format( "cavity {}", numerics_calculate_spectrum_H ? "H" : "V" ) ) );
             logs( "Center Frequency: {} Hz -> {} eV\n", spectrum_frequency_center, Hz_to_eV( spectrum_frequency_center ) );
             logs( "Frequency Range: +/- {} Hz -> +/- {} mueV\n", spectrum_frequency_range, Hz_to_eV( spectrum_frequency_range ) * 1E6 );
-            logs( "Maximum tau-grid resolution is {}x{} resulting in {} skips per timestep\nMaximum w-vector resolution is {}\n\n", iterations_tau_resolution, iterations_tau_resolution, iterations_t_skip, iterations_w_resolution );
+            logs( "Anticipated tau-grid resolution is {}x{} resulting in {} skips per timestep\nMaximum w-vector resolution is {}\n\n", iterations_tau_resolution, iterations_tau_resolution, iterations_t_skip, iterations_w_resolution );
         } else {
             logs( "\nNot calculating spectrum\n\n" );
         }
@@ -396,7 +397,7 @@ class Parameters : public Parameters_Parent {
         logs( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
         logs( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture == 1 ) ? "YES" : "NO" ) );
         logs( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) ? "Analytic" : "Matrix Exponential" ) );
-        logs( "Threads used for AFK? - {}\n", numerics_maximum_threads );
+        logs( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\n", numerics_phonons_maximum_threads, numerics_maximum_threads );
         logs( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );
         if ( p_phonon_T )
             logs( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? fmt::format( "Yes (maximum {} matrices saved)", numerics_saved_coefficients_max_size ) : "No" ) );

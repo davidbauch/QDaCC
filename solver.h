@@ -52,7 +52,8 @@ class ODESolver {
     bool calculate_g1( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, DenseMat &cache, std::string purpose = "unknown" );
     bool calculate_g2( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, DenseMat &cache, std::string purpose = "unknown" );
 
-        public : ODESolver(){};
+   public:
+    ODESolver(){};
     ODESolver( System_Parent &s );
     MatType iterate( const MatType &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates, const int dir );
     bool calculate_t_direction( System_Parent &s );
@@ -63,6 +64,9 @@ class ODESolver {
     static MatType iterate_definite_integral( const MatType &rho, T rungefunction, const double t, const double step );
     static std::vector<SaveState> calculate_definite_integral_vec( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step );
     static SaveState calculate_definite_integral( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step );
+
+    // Command variables
+    const static unsigned int CHANGE_TO_SINGLETHREADED_SUBPROGRAM = 1111111111;
 };
 
 /*

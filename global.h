@@ -78,3 +78,10 @@ class SaveStateTau {
     SaveStateTau( const MatType &mat1, const MatType &mat2, const double t, const double tau ) : mat1( mat1 ), mat2( mat2 ), t( t ), tau( tau ){};
     SaveStateTau( const MatType &mat, const double t ) : mat1( mat ), t( t ), tau( 0 ){};
 };
+
+bool Save_State_sort_t(const SaveStateTau &ss1, const SaveStateTau &ss2) {
+    return (ss1.t < ss2.t);
+}
+bool Save_State_sort_tau(const SaveStateTau &ss1, const SaveStateTau &ss2) {
+    return (ss1.tau < ss2.tau);
+}

@@ -297,7 +297,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
     progressbar.strBarStart = "|";
     progressbar.strBarEnd = "|";
     timer.start();
-    logs.level2( "Calculating G1(tau)... purpose: {}, saving to matrice of size {}x{}... ", purpose, cache.rows(), cache.cols() );
+    logs.level2( "Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}... ", purpose, cache.rows(), cache.cols() );
     std::string progressstring = "G1("+purpose+"): ";
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
@@ -381,6 +381,8 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
 bool ODESolver::calculate_spectrum( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName = "spectrum.txt" ) {
+    // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
+    s.command(ODESolver::CHANGE_TO_SINGLETHREADED_SUBPROGRAM);
     // Cache matrix. Saves complex double entries of G1(t,tau)
     DenseMat akf_mat = DenseMat::Zero( dim, dim );
     // Calculate G1(t,tau) with given operator matrices
@@ -487,6 +489,8 @@ bool ODESolver::calculate_g2( System_Parent &s, const MatType &op_creator_1, con
 }
 
 bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName ) {
+    // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
+    s.command(ODESolver::CHANGE_TO_SINGLETHREADED_SUBPROGRAM);
     // Cache matrix. Saves complex double entries of G1(t,tau)
     DenseMat akf_mat_11 = DenseMat::Zero( dim, dim );
     DenseMat akf_mat_22 = DenseMat::Zero( dim, dim );
