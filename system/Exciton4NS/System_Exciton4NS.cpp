@@ -191,28 +191,9 @@ class System : public System_Parent {
     }
 
     SparseMat dgl_phonons_rungefunc( const SparseMat &chi, const double t ) {
-        // H
-        /*SparseMat explicit_time = 1i * parameters.p_omega_atomic_G_H  * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H ).eval() );
-        explicit_time += 1i * parameters.p_omega_atomic_H_B  * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H ).eval() );
-        explicit_time += 1i * parameters.p_omega_atomic_G_H  * ( project_matrix_sparse( operatorMatrices.atom_sigmaplus_G_H ) );
-        explicit_time += 1i * parameters.p_omega_atomic_H_B  * ( project_matrix_sparse( operatorMatrices.atom_sigmaplus_H_B ) );
-        explicit_time += -1i  * parameters.p_omega_cavity_H * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H ).eval() );
-        explicit_time += -1i  * parameters.p_omega_cavity_H * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H ).eval() );
-        explicit_time += ( pulse_H.get( t ) - pulse_H.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * project_matrix_sparse( operatorMatrices.atom_sigmaplus_G_H );
-        explicit_time += ( pulse_H.get( t ) - pulse_H.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * project_matrix_sparse( operatorMatrices.atom_sigmaplus_H_B );
-        // V
-        explicit_time += 1i * parameters.p_omega_atomic_G_V  * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V ).eval() );
-        explicit_time += 1i * parameters.p_omega_atomic_V_B  * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V ).eval() );
-        explicit_time += 1i * parameters.p_omega_atomic_G_V  * ( project_matrix_sparse( operatorMatrices.atom_sigmaplus_G_V ) );
-        explicit_time += 1i * parameters.p_omega_atomic_V_B  * ( project_matrix_sparse( operatorMatrices.atom_sigmaplus_V_B ) );
-        explicit_time += -1i  * parameters.p_omega_cavity_V * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V ).eval() );
-        explicit_time += -1i  * parameters.p_omega_cavity_V * project_matrix_sparse( ( operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V ).eval() );
-        explicit_time += ( pulse_V.get( t ) - pulse_V.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( project_matrix_sparse( operatorMatrices.atom_sigmaplus_G_V ) );
-        explicit_time += ( pulse_V.get( t ) - pulse_V.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( project_matrix_sparse( operatorMatrices.atom_sigmaplus_V_B ) );
-        */
-        double chirpcorrection = chirp.get( t ) + t * ( chirp.get( t ) - chirp.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step; //TODO: kontrollieren! eig i*i=-1!
-        SparseMat explicit_time = 1i * ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H + 1i * ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B + 1i * ( ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B + ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H - parameters.p_omega_cavity_H * operatorMatrices.projector_atom_sigmaplus_G_H - parameters.p_omega_cavity_H * operatorMatrices.projector_atom_sigmaplus_H_B ) * operatorMatrices.projector_photon_annihilate_H + ( pulse_H.get( t ) - pulse_H.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( operatorMatrices.projector_atom_sigmaplus_G_H + operatorMatrices.projector_atom_sigmaplus_H_B );
-        explicit_time += 1i * ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V + 1i * ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + 1i * ( ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_V_B ) * operatorMatrices.projector_photon_annihilate_V + ( pulse_V.get( t ) - pulse_V.get( std::max( 0.0, t - parameters.t_step ) ) ) / parameters.t_step * ( operatorMatrices.projector_atom_sigmaplus_G_V + operatorMatrices.projector_atom_sigmaplus_V_B );
+        double chirpcorrection = chirp.get( t ) + t * ( chirp.get( t ) - chirp.derivative( t ) ); //TODO: kontrollieren! eig i*i=-1!
+        SparseMat explicit_time = 1i * ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H + 1i * ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B + 1i * ( ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B + ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H - parameters.p_omega_cavity_H * operatorMatrices.projector_atom_sigmaplus_G_H - parameters.p_omega_cavity_H * operatorMatrices.projector_atom_sigmaplus_H_B ) * operatorMatrices.projector_photon_annihilate_H + pulse_H.derivative( t ) * ( operatorMatrices.projector_atom_sigmaplus_G_H + operatorMatrices.projector_atom_sigmaplus_H_B );
+        explicit_time += 1i * ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V + 1i * ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + 1i * ( ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_V_B ) * operatorMatrices.projector_photon_annihilate_V + pulse_V.derivative( t ) * ( operatorMatrices.projector_atom_sigmaplus_G_V + operatorMatrices.projector_atom_sigmaplus_V_B );
 
         SparseMat hamilton = dgl_getHamilton( t );
 
@@ -457,31 +438,33 @@ class System : public System_Parent {
             }
         } else if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_LINDBLAD_FULL ) {
             // H
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H, 'L', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_H, operatorMatrices.atom_sigmaplus_G_H );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H, 'L', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_H, operatorMatrices.atom_sigmaminus_G_H );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H, 'C', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_H * operatorMatrices.photon_create_H, operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H, 'C', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H, operatorMatrices.atom_sigmaminus_G_H * operatorMatrices.photon_create_H );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B, 'L', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B, operatorMatrices.atom_sigmaplus_H_B );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B, 'L', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_H_B, operatorMatrices.atom_sigmaminus_H_B );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B, 'C', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B * operatorMatrices.photon_create_H, operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B, 'C', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H, operatorMatrices.atom_sigmaminus_H_B * operatorMatrices.photon_create_H );
+            double chirpcorrection = chirp.get( t );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H + chirpcorrection, 'L', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_H, operatorMatrices.atom_sigmaplus_G_H );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H + chirpcorrection, 'L', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_H, operatorMatrices.atom_sigmaminus_G_H );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H + chirpcorrection, 'C', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_H * operatorMatrices.photon_create_H, operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H + chirpcorrection, 'C', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H, operatorMatrices.atom_sigmaminus_G_H * operatorMatrices.photon_create_H );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B + chirpcorrection, 'L', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B, operatorMatrices.atom_sigmaplus_H_B );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B + chirpcorrection, 'L', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_H_B, operatorMatrices.atom_sigmaminus_H_B );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B + chirpcorrection, 'C', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B * operatorMatrices.photon_create_H, operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B + chirpcorrection, 'C', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H, operatorMatrices.atom_sigmaminus_H_B * operatorMatrices.photon_create_H );
             // V
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V, 'L', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_V, operatorMatrices.atom_sigmaplus_G_V );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V, 'L', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_V, operatorMatrices.atom_sigmaminus_G_V );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V, 'C', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_V * operatorMatrices.photon_create_V, operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V, 'C', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V, operatorMatrices.atom_sigmaminus_G_V * operatorMatrices.photon_create_V );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B, 'L', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B, operatorMatrices.atom_sigmaplus_V_B );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B, 'L', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_V_B, operatorMatrices.atom_sigmaminus_V_B );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B, 'C', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B * operatorMatrices.photon_create_V, operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V );
-            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B, 'C', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V, operatorMatrices.atom_sigmaminus_V_B * operatorMatrices.photon_create_V );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V + chirpcorrection, 'L', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_V, operatorMatrices.atom_sigmaplus_G_V );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V + chirpcorrection, 'L', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_V, operatorMatrices.atom_sigmaminus_G_V );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V + chirpcorrection, 'C', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_V * operatorMatrices.photon_create_V, operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V + chirpcorrection, 'C', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V, operatorMatrices.atom_sigmaminus_G_V * operatorMatrices.photon_create_V );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B + chirpcorrection, 'L', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B, operatorMatrices.atom_sigmaplus_V_B );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B + chirpcorrection, 'L', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_V_B, operatorMatrices.atom_sigmaminus_V_B );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B + chirpcorrection, 'C', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B * operatorMatrices.photon_create_V, operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V );
+            ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B + chirpcorrection, 'C', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V, operatorMatrices.atom_sigmaminus_V_B * operatorMatrices.photon_create_V );
         }
         return ret;
     }
 
     dcomplex dgl_raman_population_increment( const std::vector<SaveState> &past_rhos, const char mode, const dcomplex before, const double t ) {
         dcomplex ret = 0;
-        double w1 = ( mode == 'h' ? parameters.p_omega_atomic_G_H : parameters.p_omega_atomic_G_V );
-        double w2 = ( mode == 'h' ? parameters.p_omega_atomic_H_B : parameters.p_omega_atomic_V_B );
+        double chirpcorrection = chirp.get( t );
+        double w1 = ( mode == 'h' ? parameters.p_omega_atomic_G_H + chirpcorrection : parameters.p_omega_atomic_G_V + chirpcorrection );
+        double w2 = ( mode == 'h' ? parameters.p_omega_atomic_H_B + chirpcorrection : parameters.p_omega_atomic_V_B + chirpcorrection );
         double wc = ( mode == 'h' ? parameters.p_omega_cavity_H : parameters.p_omega_cavity_V );
         double sigma1 = parameters.p_omega_pure_dephasing + parameters.p_omega_decay;
         double sigma2 = parameters.p_omega_pure_dephasing + 3. * parameters.p_omega_decay;

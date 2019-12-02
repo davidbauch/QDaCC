@@ -27,6 +27,8 @@ class Pulse {
    public:
     // Pulse values
     std::vector<dcomplex> pulsearray;
+    std::vector<dcomplex> pulsearray_derivative;
+    std::vector<dcomplex> pulsearray_integral;
     // Saving the corresponding t doesn't hurt
     std::vector<double> timearray;
     std::vector<double> steps;
@@ -38,7 +40,11 @@ class Pulse {
     void generate();
     void fileOutput( std::string filepath );
     dcomplex evaluate( double t );
+    dcomplex evaluate_derivative( double t );
+    dcomplex evaluate_integral( double t );
     dcomplex get( double t, bool force_evaluate = false );
+    dcomplex derivative( double t, bool force_evaluate = false );
+    dcomplex integral( double t, bool force_evaluate = false );
     void log();
     static void fileOutput( std::string filepath, std::vector<Pulse> pulses );
 };

@@ -16,6 +16,7 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     generate();
     logs.level2( "Done!\n" );
 }
+
 dcomplex Pulse::evaluate( double t ) {
     dcomplex ret = 0;
     for ( int i = 0; i < (int)inputs.amp.size(); i++ ) {
@@ -26,6 +27,17 @@ dcomplex Pulse::evaluate( double t ) {
     }
     return ret;
 }
+
+dcomplex Pulse::evaluate_derivative( double t ) {
+    return ( evaluate( t ) - evaluate( t - inputs.t_step ) ) / inputs.t_step;
+}
+
+dcomplex Pulse::evaluate_integral( double t ) {
+    if ( pulsearray_integral.size() == 0 || t == 0.0 )
+        return evaluate( t ) * inputs.t_step;
+    return pulsearray_integral.at( std::max( (int)std::floor( t / inputs.t_step ), (int)pulsearray_integral.size() - 1 ) ) + evaluate( t ) * inputs.t_step;
+}
+
 // Generate array of energy-values corresponding to the Pulse
 void Pulse::generate() {
     //logs.level2( "generating type " + inputs.pulse_type + "... " );
@@ -34,10 +46,9 @@ void Pulse::generate() {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
             t = t1 + steps[i];
             dcomplex val = evaluate( t );
-            if ( std::abs( val ) > 0.1 * inputs.t_step )
-                pulsearray.push_back( val );
-            else
-                pulsearray.push_back( 0 );
+            pulsearray.push_back( val );
+            pulsearray_derivative.push_back( evaluate_derivative( t ) );
+            pulsearray_integral.push_back( evaluate_integral( t ) );
             timearray.push_back( t );
         }
     }
@@ -91,7 +102,7 @@ void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp
     for ( int i = 0; i < (int)_amp.size(); i++ ) {
         if ( to_match.compare( _filter.at( i ) ) == 0 ) {
             center.emplace_back( _center.at( i ) );
-            amp.emplace_back( _amp.at( i )*amp_scaling );
+            amp.emplace_back( _amp.at( i ) * amp_scaling );
             sigma.emplace_back( _sigma.at( i ) );
             omega.emplace_back( _omega.at( i ) );
             type.emplace_back( _type.at( i ) );
@@ -123,6 +134,52 @@ dcomplex Pulse::get( double t, bool force_evaluate ) {
     }
     counter_returned++;
     return pulsearray.at( i );
+}
+
+dcomplex Pulse::derivative( double t, bool force_evaluate ) {
+    if ( force_evaluate ) {
+        counter_evaluated++;
+        return evaluate_derivative( t );
+    }
+
+    int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
+    while ( timearray.at( i ) < t ) {
+        i++;
+    }
+    if ( std::abs( timearray.at( i ) - t ) > 1E-14 ) {
+        counter_evaluated++;
+        return evaluate_derivative( t );
+    }
+    if ( i < 0 || i >= size ) {
+        logs.level2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
+        counter_evaluated++;
+        return evaluate_derivative( t );
+    }
+    counter_returned++;
+    return pulsearray_derivative.at( i );
+}
+
+dcomplex Pulse::integral( double t, bool force_evaluate ) {
+    if ( force_evaluate ) {
+        counter_evaluated++;
+        return evaluate_integral( t );
+    }
+
+    int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
+    while ( timearray.at( i ) < t ) {
+        i++;
+    }
+    if ( std::abs( timearray.at( i ) - t ) > 1E-14 ) {
+        counter_evaluated++;
+        return evaluate_integral( t );
+    }
+    if ( i < 0 || i >= size ) {
+        logs.level2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
+        counter_evaluated++;
+        return evaluate_integral( t );
+    }
+    counter_returned++;
+    return pulsearray_integral.at( i );
 }
 
 void Pulse::log() {
