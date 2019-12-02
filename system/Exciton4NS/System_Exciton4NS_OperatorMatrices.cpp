@@ -15,12 +15,14 @@ class OperatorMatrices : public OperatorMatrices_Parent {
     SparseMat atom_state_biexciton, atom_state_ground, atom_state_H, atom_state_V, photon_n_H, photon_n_V;
     SparseMat atom_sigmaplus_G_H, atom_sigmaminus_G_H, atom_sigmaplus_H_B, atom_sigmaminus_H_B, atom_sigmaplus_G_V, atom_sigmaminus_G_V, atom_sigmaplus_V_B, atom_sigmaminus_V_B;
     SparseMat atom_inversion_G_H, atom_inversion_G_V, atom_inversion_H_B, atom_inversion_V_B, atom_inversion_G_B;
+    SparseMat atom_sigmaminus_G_B;
 
     // Bare matrices:
     DenseMat bare_photon_create_H, bare_photon_annihilate_H, bare_photon_create_V, bare_photon_annihilate_V;
     DenseMat bare_atom_state_biexciton, bare_atom_state_ground, bare_atom_state_H, bare_atom_state_V, bare_photon_n_H, bare_photon_n_V;
     DenseMat bare_atom_sigmaplus_G_H, bare_atom_sigmaminus_G_H, bare_atom_sigmaplus_H_B, bare_atom_sigmaminus_H_B, bare_atom_sigmaplus_G_V, bare_atom_sigmaminus_G_V, bare_atom_sigmaplus_V_B, bare_atom_sigmaminus_V_B;
     DenseMat bare_atom_inversion_G_H, bare_atom_inversion_G_V, bare_atom_inversion_H_B, bare_atom_inversion_V_B, bare_atom_inversion_G_B;
+    DenseMat bare_atom_sigmaminus_G_B;
 
     // Projector Matrices (only few needed)
     SparseMat projector_atom_sigmaplus_G_H, projector_atom_sigmaminus_G_H, projector_atom_sigmaplus_H_B, projector_atom_sigmaminus_H_B, projector_atom_sigmaplus_G_V, projector_atom_sigmaminus_G_V, projector_atom_sigmaplus_V_B, projector_atom_sigmaminus_V_B;
@@ -146,6 +148,11 @@ class OperatorMatrices : public OperatorMatrices_Parent {
             0, 0, 0, 0,
             0, 0, 0, 0,
             0, 0, 0, 1;
+        bare_atom_sigmaminus_G_B = DenseMat::Zero( 4, 4 );
+        bare_atom_sigmaminus_G_B << 0, 0, 0, 1,
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            0, 0, 0, 0;
 
         // Photon operators
         bare_photon_create_H = create_photonic_operator<DenseMat>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
@@ -174,6 +181,7 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         atom_inversion_H_B = tensor( m_base1, m_base2, bare_atom_inversion_H_B ).sparseView();
         atom_inversion_V_B = tensor( m_base1, m_base2, bare_atom_inversion_V_B ).sparseView();
         atom_inversion_G_B = tensor( m_base1, m_base2, bare_atom_inversion_G_B ).sparseView();
+        atom_sigmaminus_G_B = tensor( m_base1, m_base2, bare_atom_sigmaminus_G_B ).sparseView();
 
         photon_create_H = tensor( bare_photon_create_H, m_base2, m_base3 ).sparseView();
         photon_create_V = tensor( m_base1, bare_photon_create_V, m_base3 ).sparseView();
@@ -200,6 +208,7 @@ class OperatorMatrices : public OperatorMatrices_Parent {
         atom_inversion_H_B.makeCompressed();
         atom_inversion_V_B.makeCompressed();
         atom_inversion_G_B.makeCompressed();
+        atom_sigmaminus_G_B.makeCompressed();
 
         photon_create_H.makeCompressed();
         photon_create_V.makeCompressed();

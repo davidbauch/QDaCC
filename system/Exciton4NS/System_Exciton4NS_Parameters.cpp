@@ -48,8 +48,10 @@ class Parameters : public Parameters_Parent {
     double akf_deltaWmax, spectrum_frequency_center, spectrum_frequency_range;
     bool numerics_calculate_spectrum_H, numerics_calculate_spectrum_V;
     bool numerics_use_saved_coefficients;
+    bool numerics_output_raman_population;
     int numerics_phonons_maximum_threads;
     bool numerics_use_saved_hamiltons;
+    long unsigned int numerics_saved_coefficients_cutoff; // True: Only save last few coefficients (only viable for T-direction, not for G1/2)
     long unsigned int numerics_saved_coefficients_max_size;
 
     Parameters(){};
@@ -134,7 +136,7 @@ class Parameters : public Parameters_Parent {
         numerics_calculate_spectrum_V = params.get( 4 ) || params.get( 6 );
 
         // Look for (-RK4), -RK5, (-RK4T), (-RK4Tau), -RK5T, -RK5Tau
-        params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale", "-disableMatrixCaching", "-disableHamiltonCaching"}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
+        params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale", "-disableMatrixCaching", "-disableHamiltonCaching", "-disableMainProgramThreading", "-noRaman"}, {1, 1, 1,1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
         numerics_calculate_g2 = params.get( 0 );
         numerics_order_t = ( params.get( 1 ) || params.get( 2 ) ) ? 5 : 4;
         numerics_order_tau = ( params.get( 1 ) || params.get( 3 ) ) ? 5 : 4;
@@ -152,6 +154,8 @@ class Parameters : public Parameters_Parent {
         scale_parameters = params.get( 14 );
         numerics_use_saved_coefficients = !params.get( 15 );
         numerics_use_saved_hamiltons = !params.get( 16 );
+        numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !params.get( 17 ) ) ? numerics_maximum_threads : 1;
+        numerics_output_raman_population = !params.get( 18 );
 
         // Phonon Parameters
         params = Parse_Parameters( arguments, {"--phonons", "--temperature", "-phonons", "--phononorder", "-noMarkov", "-phononcoeffs", "-noPhononAdjust"}, {5, 1, 1, 1, 1, 1, 1} );
@@ -208,20 +212,30 @@ class Parameters : public Parameters_Parent {
         return variable;
     }
 
+    double getIdealTimestep() {
+        if ( numerics_use_rwa )
+            return 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing + ( vec_max( pulse_amp ) > 0 ? std::abs( p_omega_atomic_G_H - vec_max( pulse_omega ) ) : 0 ) );
+        if ( !numerics_use_rwa )
+            return 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_atomic_G_H + p_omega_cavity_H );
+        return 1E-13;
+    }
+
     bool adjustInput() {
         // Calculate/Recalculate some parameters:
         // Adjust pulse area if pulse_type is "gauss_pi"
         for ( int i = 0; i < (int)pulse_amp.size(); i++ )
             if ( pulse_type.at( i ).compare( "gauss_pi" ) == 0 ) {
-                pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) ) / 2.0;
+                if ( pulse_amp.at( i ) < 500 )
+                    pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) ) / 2.0;
                 pulse_type.at( i ) = "gauss";
             }
 
         // Calculating remaining atomic frequencies depending on delta E and biexciton binding energy.
-        p_omega_atomic_G_V = p_omega_atomic_G_H + p_deltaE;
-        p_omega_atomic_H_B = p_omega_atomic_G_H - p_biexciton_bindingenergy;
-        p_omega_atomic_V_B = p_omega_atomic_G_V - p_biexciton_bindingenergy;
+        p_omega_atomic_G_V = p_omega_atomic_G_H + p_deltaE / 2.0;
         p_omega_atomic_B = 2.0 * p_omega_atomic_G_H - p_biexciton_bindingenergy;
+        p_omega_atomic_G_H = p_omega_atomic_G_H - p_deltaE / 2.0;
+        p_omega_atomic_H_B = p_omega_atomic_B - p_omega_atomic_G_H;
+        p_omega_atomic_V_B = p_omega_atomic_B - p_omega_atomic_G_V;
 
         // Calculate Rabi frequencies:
         init_rabifrequenz_G_H = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state ) );
@@ -237,11 +251,7 @@ class Parameters : public Parameters_Parent {
 
         // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
         if ( t_step == -1 ) {
-            if ( numerics_use_rwa )
-                t_step = 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing + ( vec_max( pulse_amp ) > 0 ? std::abs( p_omega_atomic_G_H - vec_max( pulse_omega ) ) : 0 ) );
-            if ( !numerics_use_rwa )
-                t_step = 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_atomic_G_H + p_omega_cavity_H );
-            t_step = std::min( 1E-13, t_step );
+            t_step = std::min( 1E-13, getIdealTimestep() );
             t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
         }
 
@@ -291,11 +301,11 @@ class Parameters : public Parameters_Parent {
             }
         }
         numerics_calculate_spectrum = numerics_calculate_spectrum_H || numerics_calculate_spectrum_V;
-        numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 ) * ( p_phonon_tcutoff / t_step ) + 10;
+        numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 * ( p_phonon_tcutoff / t_step ) ) + 10;
         trace.reserve( iterations_t_max + 5 );
 
-        // For now, only use T-directional multithreading when no coefficientsaving is used. Only really useful for T-only calculations
-        numerics_phonons_maximum_threads = numerics_maximum_threads;//!numerics_use_saved_coefficients ? numerics_maximum_threads : 1;
+        numerics_saved_coefficients_cutoff = ( numerics_calculate_spectrum || numerics_calculate_g2 ) ? 0 : ( p_phonon_tcutoff / t_step ) * 5;
+
         return true;
     }
 
@@ -305,15 +315,17 @@ class Parameters : public Parameters_Parent {
         logs.wrapInBar( "Time borders and t_step", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Timeborder left t_start = {} s\n", t_start );
         logs( "Timeborder right t_end = {} s\n", t_end );
-        logs( "Timeborder t_step delta t = {} s (minimum possible: {})\n", t_step, std::numeric_limits<double>::epsilon() );
+        logs( "Timeborder t_step delta t = {} s (auto: {}s, minimum possible: {}s)\n", t_step, getIdealTimestep(), std::numeric_limits<double>::epsilon() );
         logs( "Time iterations (main loop) = {}\n", iterations_t_max );
         logs.wrapInBar( "System Parameters", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Exciton delta E = {} -> {} mueV\n", p_deltaE, Hz_to_eV( p_deltaE ) * 1E6 );
         logs( "Biexciton binding energy = {} -> {} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
-        logs( "Energy Level difference |X_H><X_H| - |G><G| = {:.8e} Hz -> {:.8e} eV -> {:.8e} nm\n", p_omega_atomic_G_H, Hz_to_eV( p_omega_atomic_G_H ), Hz_to_wavelength( p_omega_atomic_G_H ) );
-        logs( "Energy Level difference |X_V><X_V| - |G><G| = {:.8e} Hz -> {:.8e} eV -> {:.8e} nm\n", p_omega_atomic_G_V, Hz_to_eV( p_omega_atomic_G_V ), Hz_to_wavelength( p_omega_atomic_G_V ) );
-        logs( "Energy Level difference |B><B| - |X_H><X_H| = {:.8e} Hz -> {:.8e} eV -> {:.8e} nm\n", p_omega_atomic_H_B, Hz_to_eV( p_omega_atomic_H_B ), Hz_to_wavelength( p_omega_atomic_H_B ) );
-        logs( "Energy Level difference |B><B| - |X_V><X_V| = {:.8e} Hz -> {:.8e} eV -> {:.8e} nm\n", p_omega_atomic_V_B, Hz_to_eV( p_omega_atomic_V_B ), Hz_to_wavelength( p_omega_atomic_V_B ) );
+        logs( "Energy Level difference |X_H><X_H| - |G><G| = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_G_H, Hz_to_eV( p_omega_atomic_G_H ), Hz_to_wavelength( p_omega_atomic_G_H ) );
+        logs( "Energy Level difference |X_V><X_V| - |G><G| = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_G_V, Hz_to_eV( p_omega_atomic_G_V ), Hz_to_wavelength( p_omega_atomic_G_V ) );
+        logs( "Energy Level difference |B><B| - |X_H><X_H| = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_H_B, Hz_to_eV( p_omega_atomic_H_B ), Hz_to_wavelength( p_omega_atomic_H_B ) );
+        logs( "Energy Level difference |B><B| - |X_V><X_V| = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_V_B, Hz_to_eV( p_omega_atomic_V_B ), Hz_to_wavelength( p_omega_atomic_V_B ) );
+        logs( "Two Photon Resonance = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_B / 2.0, Hz_to_eV( p_omega_atomic_B / 2.0 ), Hz_to_wavelength( p_omega_atomic_B / 2.0 ) );
+        logs( "Biexciton Resonance = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_B, Hz_to_eV( p_omega_atomic_B ), Hz_to_wavelength( p_omega_atomic_B ) );
         logs( "Cavity Frequency w_c_H = {} Hz -> {} eV -> {} nm\n", p_omega_cavity_H, Hz_to_eV( p_omega_cavity_H ), Hz_to_wavelength( p_omega_cavity_H ) );
         logs( "Cavity Frequency w_c_V = {} Hz -> {} eV -> {} nm\n", p_omega_cavity_V, Hz_to_eV( p_omega_cavity_V ), Hz_to_wavelength( p_omega_cavity_V ) );
         logs( "Coupling strengh g = {} Hz -> {} mueV\n", p_omega_coupling, Hz_to_eV( p_omega_coupling ) * 1E6 );
@@ -400,7 +412,7 @@ class Parameters : public Parameters_Parent {
         logs( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\n", numerics_phonons_maximum_threads, numerics_maximum_threads );
         logs( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );
         if ( p_phonon_T )
-            logs( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? fmt::format( "Yes (maximum {} matrices saved)", numerics_saved_coefficients_max_size ) : "No" ) );
+            logs( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? fmt::format( "Yes (maximum {} matrices saved)", ( numerics_saved_coefficients_cutoff > 0 ) ? numerics_saved_coefficients_cutoff : numerics_saved_coefficients_max_size ) : "No" ) );
         logs( "\n" );
         logs.wrapInBar( "Program Log:", LOG_SIZE_FULL, LOG_LEVEL_2 );
         logs( "\n" );

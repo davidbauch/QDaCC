@@ -37,7 +37,6 @@ class ODESolver {
 
     std::vector<SaveState> savedStates;    // Vector for saved matrix-time tuples for densitymatrix
     std::vector<SaveState> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
-    std::vector<dcomplex> out;
     void saveState( const MatType &mat, const double t, std::vector<SaveState> &savedStates );
     void saveHamilton( const MatType &mat, const double t );
     MatType iterateRungeKutta4( const MatType &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates );
@@ -66,7 +65,7 @@ class ODESolver {
     static SaveState calculate_definite_integral( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step );
 
     // Command variables
-    const static unsigned int CHANGE_TO_SINGLETHREADED_SUBPROGRAM = 1111111111;
+    const static unsigned int CHANGE_TO_SINGLETHREADED_MAINPROGRAM = 1111111111;
 };
 
 /*

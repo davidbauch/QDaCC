@@ -65,7 +65,7 @@ class System_Parent {
         return rho;
     };
     // Output Expectation Values
-    virtual void expectationValues( const MatType &rho, const double t ){};
+    virtual void expectationValues( const MatType &rho, const double t, const std::vector<SaveState> &pastrhos ){};
     // Check for trace validity
     template <class T>
     bool traceValid( T &rho, double t_hit, bool force = false ) {
@@ -102,7 +102,7 @@ class System_Parent {
     // Return specific operators:
     virtual MatType getOperator( std::string &argument ) { return MatType( 1, 1 ); }
     // Execute specific commands:
-    virtual bool command(unsigned int index) { return true; }
+    virtual bool command( unsigned int index ) { return true; }
     // Output predetermined parameter variables:
     virtual bool calculate_spectrum() {
         return parameters.numerics_calculate_spectrum;

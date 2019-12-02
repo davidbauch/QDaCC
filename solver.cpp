@@ -145,11 +145,6 @@ int ODESolver::reset( System_Parent &s ) {
     track_gethamilton_calc = 0;
     track_gethamilton_calcattempt = 0;
     dim = (int)( s.parameters.iterations_t_max / s.getIterationSkip() ) + 10;
-    out.clear();
-    out.reserve( (int)( std::ceil( s.parameters.iterations_w_resolution ) + 5 ) );
-    for ( int w = 0; w < s.parameters.iterations_w_resolution; w++ ) {
-        out.push_back( 0 );
-    }
     return dim;
 }
 
@@ -165,7 +160,7 @@ bool ODESolver::calculate_t_direction( System_Parent &s ) {
     logs.level2( "Calculating t-direction from {} to {} at stepsize {}... ", s.getTimeborderStart(), s.getTimeborderEnd(), s.getTimeStep() );
     MatType rho = s.getRho0();
     saveState( rho, s.getTimeborderStart(), savedStates );
-    s.expectationValues( rho, s.getTimeborderStart() );
+    s.expectationValues( rho, s.getTimeborderStart(), savedStates );
 
     // Main Time Loop
     for ( double t_t = s.getTimeborderStart() + s.getTimeStep(); t_t < s.getTimeborderEnd(); t_t += s.getTimeStep() ) {
@@ -174,7 +169,7 @@ bool ODESolver::calculate_t_direction( System_Parent &s ) {
         // Save Rho for tau-direction
         saveState( rho, t_t, savedStates );
         // Expectation Values
-        s.expectationValues( rho, t_t );
+        s.expectationValues( rho, t_t, savedStates );
         // Progress and time output
         rkTimer.iterate();
         outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, "T-Direction: " );
@@ -298,7 +293,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
     progressbar.strBarEnd = "|";
     timer.start();
     logs.level2( "Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}... ", purpose, cache.rows(), cache.cols() );
-    std::string progressstring = "G1("+purpose+"): ";
+    std::string progressstring = "G1(" + purpose + "): ";
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
         std::vector<SaveState> past_rhos;
@@ -381,8 +376,8 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
 bool ODESolver::calculate_spectrum( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName = "spectrum.txt" ) {
-    // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
-    s.command(ODESolver::CHANGE_TO_SINGLETHREADED_SUBPROGRAM);
+    // Send system command to change to single core mainprogram, because this memberfunction is already using multithreading
+    s.command( ODESolver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Cache matrix. Saves complex double entries of G1(t,tau)
     DenseMat akf_mat = DenseMat::Zero( dim, dim );
     // Calculate G1(t,tau) with given operator matrices
@@ -397,12 +392,14 @@ bool ODESolver::calculate_spectrum( System_Parent &s, const MatType &op_creator,
     logs.level2( "Calculating spectrum... Calculating frequencies... " );
     //Calculate frequencies:
     std::vector<double> spectrum_frequency_w;
+    std::vector<dcomplex> out;
     for ( int w = 0; w < s.parameters.iterations_w_resolution; w++ ) {
         spectrum_frequency_w.push_back( s.parameters.spectrum_frequency_center - ( s.parameters.spectrum_frequency_range ) + w / ( (double)s.parameters.iterations_w_resolution ) * ( 2. * ( s.parameters.spectrum_frequency_range ) ) );
+        out.push_back( 0 );
     }
     logs.level2( "Done, calculating fourier transform via direct integral... " );
     // Calculate main fourier transform integral
-#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads ) //reduction(+:spectrum.out)
+#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int spec_w = 0; spec_w < s.parameters.iterations_w_resolution; spec_w++ ) {
         std::vector<dcomplex> expfunc;
         expfunc.reserve( savedStates.size() / s.getIterationSkip() + 1 );
@@ -415,12 +412,12 @@ bool ODESolver::calculate_spectrum( System_Parent &s, const MatType &op_creator,
             for ( int spec_tau = 0; spec_tau < ( s.getTimeborderEnd() - s.getTimeborderStart() - t_t ) / ( s.getTimeStep() * s.getIterationSkip() ); spec_tau++ ) {
                 out.at( spec_w ) += expfunc.at( spec_tau ) * akf_mat( k, spec_tau );
             }
-            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "AKF-Spectrum: " );
+            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum: " );
         }
         timer.iterate();
     }
     // Final output and timer end
-    outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "AKF-Spectrum", PROGRESS_FORCE_OUTPUT );
+    outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum", PROGRESS_FORCE_OUTPUT );
     timer.end();
     // Save output
     logs.level2( "Done, saving to {}... ", fileOutputName );
@@ -445,6 +442,7 @@ bool ODESolver::calculate_g2( System_Parent &s, const MatType &op_creator_1, con
         logs( "Need to calculate t-direction first!\n" );
         return false;
     }
+    reset( s );
     // Create Timer and Progresbar
     Timer &timer = createTimer( "RungeKutta-G2-Loop (" + purpose + ")" );
     int totalIterations = getIterationNumberTau( s );
@@ -453,8 +451,8 @@ bool ODESolver::calculate_g2( System_Parent &s, const MatType &op_creator_1, con
     progressbar.strBarEnd = "|";
     timer.start();
     logs.level2( "Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}... ", purpose, cache.rows(), cache.cols() );
-    MatType evalOperator = op_creator_1*op_creator_2;
-    std::string progressstring = "G2("+purpose+"): ";
+    MatType evalOperator = op_creator_1 * op_annihilator_2;
+    std::string progressstring = "G2(" + purpose + "): ";
     // Main G2 Loop
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
@@ -478,7 +476,7 @@ bool ODESolver::calculate_g2( System_Parent &s, const MatType &op_creator_1, con
             timer.iterate();
             if ( queueNow( s, curIt_tau ) ) {
                 cache( k, j ) = s.dgl_expectationvalue<MatType, dcomplex>( rho_tau, evalOperator, t_tau );
-                j++; 
+                j++;
             }
             outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
         }
@@ -488,23 +486,106 @@ bool ODESolver::calculate_g2( System_Parent &s, const MatType &op_creator_1, con
     return true;
 }
 
+//bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName );
 bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName ) {
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
-    s.command(ODESolver::CHANGE_TO_SINGLETHREADED_SUBPROGRAM);
+    s.command( ODESolver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
+    // Calculate T-Step
+    double deltaT = s.getTimeStep() * ( 1.0 * s.getIterationSkip() );
+    // Progress
+    ProgressBar progressbar = ProgressBar( (int)savedStates.size(), 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
+    progressbar.strBarStart = "|";
+    progressbar.strBarEnd = "|";
     // Cache matrix. Saves complex double entries of G1(t,tau)
     DenseMat akf_mat_11 = DenseMat::Zero( dim, dim );
     DenseMat akf_mat_22 = DenseMat::Zero( dim, dim );
     DenseMat akf_mat_12 = DenseMat::Zero( dim, dim );
-    // Calculate G1(t,tau) with given operator matrices
+    // Calculate G2(t,tau) with given operator matrices
+    logs.level2( "Calculating 3 seperate G2(t,tau) matrices...\n" );
     calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, akf_mat_11, "Mode 11" );
-    calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2, akf_mat_22, "Mode 22" );
+    calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_2, op_annihilator_2, akf_mat_22, "Mode 22" );
     calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2, akf_mat_12, "Mode 12" );
-    // Create Timer and Progressbar for the spectrum loop
-    Timer &timer = createTimer( "Advanced photon Statistics" );
+    // Calculating G2(tau)
+    Timer &timer_g2 = createTimer( "G2(tau integral" );
+    timer_g2.start();
+    logs.level2( "Calculating G2(tau)... " );
+    // Prepare output vector
+    std::vector<dcomplex> g2_11, g2_22, g2_12;
+    for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
+        g2_11.push_back( 0 );
+        g2_22.push_back( 0 );
+        g2_12.push_back( 0 );
+    }
+    for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
+        int k = i / s.getIterationSkip();
+        for ( int t = 0; t < deltaT; t++ ) {
+            g2_11.at( k ) += akf_mat_11( t, k ) * deltaT;
+            g2_22.at( k ) += akf_mat_22( t, k ) * deltaT;
+            g2_12.at( k ) += akf_mat_12( t, k ) * deltaT;
+        }
+        outputProgress( s.parameters.output_handlerstrings, timer_g2, progressbar, (int)savedStates.size(), "G2(tau): " );
+        timer_g2.iterate();
+    }
+    // Calculating Concurrence
+    Timer &timer = createTimer( "Concurrence" );
     timer.start();
-    logs.level2( "Calculating advanced photon statistics... Calculating Concurrence... " );
-    
+    logs.level2( "Calculating Concurrence... " );
+    // Prepare output vector
+    std::vector<dcomplex> rho_11, rho_22, rho_12;
+    for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
+        rho_11.push_back( 0 );
+        rho_22.push_back( 0 );
+        rho_12.push_back( 0 );
+    }
+    // Main integral
+    logs.level2( "Concurrence integral timestep: {}\n", deltaT );
+    //#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
+    for ( int T = 0; T < (int)savedStates.size(); T += s.getIterationSkip() ) {
+        int t = T / s.getIterationSkip();
+        for ( int i = 0; i < T; i += s.getIterationSkip() ) {
+            int k = i / s.getIterationSkip();
+            // Calculate for t
+            for ( int tau = 0; tau < t-k; tau++ ) {
+                rho_11.at( t ) += akf_mat_11( k, tau ) * deltaT * deltaT;
+                rho_22.at( t ) += akf_mat_22( k, tau ) * deltaT * deltaT;
+                rho_12.at( t ) += akf_mat_12( k, tau ) * deltaT * deltaT;
+            }
+            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, (int)savedStates.size(), "Concurrence: " );
+        }
+        timer.iterate();
+    }
+    // Final output and timer end
+    outputProgress( s.parameters.output_handlerstrings, timer, progressbar, (int)savedStates.size(), "Concurrence", PROGRESS_FORCE_OUTPUT );
+    timer.end();
+    // Save output
+    logs.level2( "Done, saving to {}... ", fileOutputName );
+    std::string filepath = s.parameters.subfolder + fileOutputName;
+    FILE *concurrencefile = std::fopen( filepath.c_str(), "w" );
+    if ( !concurrencefile ) {
+        logs.level2( "Failed to open outputfile for concurrence!\n" );
+        return false;
+    }
+    fmt::print( concurrencefile, "Time\tMatrixelement_11\tMatrixelement_22\tConcurrence\tG2_11(tau)\tG2_22(tau)\tG2_12(tau)\n" );
+    for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
+        int k = i / s.getIterationSkip();
+        fmt::print( concurrencefile, "{0:.5e}\t{1:.8e}\t{2:.8e}\t{3:.8e}\t{3:.8e}\t{3:.8e}\t{3:.8e}\n", getTimeAt( i ), std::abs( rho_11.at( k ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::abs( rho_22.at( k ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::abs( 2.0 * std::abs( rho_12.at( k ) ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), g2_11.at( k ), g2_22.at( k ), g2_12.at( k ) );
+    }
+    std::fclose( concurrencefile );
     logs.level2( "Done!\n" );
+    logs( "Final Concurrence: {}\n", std::real( 2.0 * std::abs( rho_12.back() ) / ( rho_11.back() + rho_22.back() ) ) );
+
+    //FILE *ganz = std::fopen( ( s.parameters.subfolder + "g2(ttau).txt" ).c_str(), "w" );
+    //fmt::print( ganz, "t\ttau\tG2_11(t,tau)\tG2_22(t,tau)\tG2_12(t,tau)\n" );
+    //for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
+    //    int k = i / s.getIterationSkip();
+    //    for ( int j = 0; j < (int)savedStates.size(); j += s.getIterationSkip() ) {
+    //        int l = j / s.getIterationSkip();
+    //        fmt::print( ganz, "{0:.5e}\t{1:.5e}\t{2:.8e}\t{3:.8e}\t{4:.8e}\n", getTimeAt( i ), getTimeAt( j ), std::abs( akf_mat_11( k, l ) ), std::abs( akf_mat_22( k, l ) ), std::abs( akf_mat_12( k, l ) ) );
+    //    }
+    //    fmt::print( ganz, "\n" );
+    //}
+    //std::fclose( ganz );
+
     // Sucessfull
     return true;
 }

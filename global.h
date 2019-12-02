@@ -33,6 +33,7 @@ std::string PREFIX_SUFFIX = "@#SUFFIX#@";
 #include "misc/ProgressBar.h"
 #include "misc/helperfunctions.h"
 #include "misc/timer.h"
+#include "misc/sysinfo.h"
 
 //using Eigen::MatrixXcd;
 //using Eigen::MatrixXd;

@@ -40,7 +40,7 @@ FileOutput::FileOutput( const std::vector<std::string> filenames, const Paramete
     if ( !fp_photonpopulation )
         logs.level2( "\nCould not open file for photonpopulation!\n" );
     else
-        fmt::print( fp_photonpopulation, "t\tHorizontal\tVertical\tEmission-Probability-H\tEmission-Probability-V\n" );
+        fmt::print( fp_photonpopulation, "t\tHorizontal\tVertical\tEmission-Probability-H\tEmission-Probability-V{}\n",( p.numerics_output_raman_population ? "\tRaman-Population-H\tRaman-Poppulation-V\tRaman-Emission-Probability-H\tRaman-Emission-Probability-V" : "" ) );
     logs.level2( "done!\n" );
 }
 
