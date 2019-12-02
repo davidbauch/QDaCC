@@ -19,6 +19,8 @@ class Chirp {
    private:
     // Chirp values
     std::vector<double> chirparray;
+    std::vector<double> chirparray_derivative;
+    std::vector<double> chirparray_integral;
     // Saving the corresponding t
     std::vector<double> timearray;
     // Helper variables/functions
@@ -34,6 +36,10 @@ class Chirp {
     void generate();
     void fileOutput( std::string filepath );
     double evaluate( double t );
+    double evaluate_derivative( double t );
+    double evaluate_integral( double t );
     double get( double t, bool force_evaluate = false );
+    double derivative( double t, bool force_evaluate = false );
+    double integral( double t, bool force_evaluate = false );
     void log();
 };

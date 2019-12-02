@@ -496,26 +496,6 @@ class System : public System_Parent {
             ret += B * R;
         }
         return A * before + parameters.t_step * parameters.t_step * ret;
-        /*dcomplex ret = 0;
-        double w1 = ( mode == 'h' ? parameters.p_omega_atomic_G_H : parameters.p_omega_atomic_G_V );
-        double w2 = ( mode == 'h' ? parameters.p_omega_atomic_H_B : parameters.p_omega_atomic_V_B );
-        double wc = ( mode == 'h' ? parameters.p_omega_cavity_H : parameters.p_omega_cavity_V );
-        double sigma1 = parameters.p_omega_pure_dephasing + parameters.p_omega_decay;
-        double sigma2 = parameters.p_omega_pure_dephasing + 3. * parameters.p_omega_decay;
-        SparseMat op = operatorMatrices.atom_sigmaminus_G_B * ( mode == 'h' ? operatorMatrices.photon_create_H : operatorMatrices.photon_create_V );
-        for ( double td = 0; td < t; td += parameters.t_step ) {
-            dcomplex A = std::exp( -parameters.p_omega_cavity_loss * ( t - td ) );
-            dcomplex B, R;
-            for ( SaveState savestate : past_rhos ) {
-                double tdd = savestate.t;
-                if ( tdd < td ) {
-                    B = std::exp( -1i * ( w2 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma2 ) ) * ( td - tdd ) ) - std::exp( -1i * ( w1 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma1 ) ) * ( td - tdd ) );
-                    R = dgl_expectationvalue<SparseMat, dcomplex>( savestate.mat, ( op * ( mode == 'h' ? std::conj( pulse_H.get( tdd ) ) : std::conj( pulse_V.get( tdd ) ) ) ).eval(), tdd );
-                    ret += A * B * R;
-                }
-            }
-        }
-        return 2.0 * parameters.t_step * parameters.t_step * parameters.p_omega_coupling * ret;*/
     }
 
     void expectationValues( const SparseMat &rho, const double t, const std::vector<SaveState> &pastrhos ) {

@@ -21,10 +21,20 @@ Chirp::Chirp( Chirp::Inputs &inputs ) : inputs( inputs ) {
 double Chirp::evaluate( double t ) {
     return interpolant.evaluate( t );
 }
+double Chirp::evaluate_derivative( double t ) {
+    return ( interpolant.evaluate( t ) - interpolant.evaluate( t - inputs.t_step ) ) / inputs.t_step;
+}
+double Chirp::evaluate_integral( double t ) {
+    if ( chirparray_integral.size() == 0 || t == 0.0 )
+        return interpolant.evaluate( t ) * inputs.t_step;
+    return chirparray_integral.at( std::max( (int)std::floor( t / inputs.t_step ), (int)chirparray_integral.size()-1 ) ) + interpolant.evaluate( t ) * inputs.t_step;
+}
 
 void Chirp::generate() {
     for ( double t1 = inputs.t_start; t1 < inputs.t_end + 10 * inputs.t_step; t1 += inputs.t_step / 2.0 ) {
         chirparray.push_back( evaluate( t1 ) );
+        chirparray_derivative.push_back( evaluate_derivative( t1 ) );
+        chirparray_integral.push_back( evaluate_integral( t1 ) );
         timearray.push_back( t1 );
     }
     chirparray.shrink_to_fit();
@@ -39,8 +49,9 @@ void Chirp::fileOutput( std::string filepath ) {
         logs.level2( "Failed to open outputfile for chirp!\n" );
         return;
     }
+    fmt::print( chirpfile, "Time\tChirp\tDerivative\tIntegral\n" );
     for ( long unsigned int i = 0; i < chirparray.size(); i++ ) {
-        std::fprintf( chirpfile, "%.10e\t%.10e\n", timearray.at( i ), chirparray.at( i ) );
+        fmt::print( chirpfile, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", timearray.at( i ), chirparray.at( i ), chirparray_derivative.at( i ), chirparray_integral.at( i ) );
     }
     std::fclose( chirpfile );
 }
@@ -72,7 +83,7 @@ double Chirp::get( double t, bool force_evaluate ) {
     while ( timearray.at( i ) < t ) {
         i++;
     }
-    if ( std::abs( timearray.at( i ) - t ) > 1E-14 ) {
+    if ( std::abs( timearray.at( i ) - t ) > 1E-15 ) {
         counter_evaluated++;
         return evaluate( t );
     }
@@ -82,6 +93,46 @@ double Chirp::get( double t, bool force_evaluate ) {
     }
     counter_returned++;
     return chirparray.at( i );
+}
+double Chirp::derivative( double t, bool force_evaluate ) {
+    if ( force_evaluate ) {
+        counter_evaluated++;
+        return evaluate_derivative( t );
+    }
+    int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
+    while ( timearray.at( i ) < t ) {
+        i++;
+    }
+    if ( std::abs( timearray.at( i ) - t ) > 1E-15 ) {
+        counter_evaluated++;
+        return evaluate_derivative( t );
+    }
+    if ( i < 0 || i >= size ) {
+        counter_evaluated++;
+        return evaluate_derivative( t );
+    }
+    counter_returned++;
+    return chirparray_derivative.at( i );
+}
+double Chirp::integral( double t, bool force_evaluate ) {
+    if ( force_evaluate ) {
+        counter_evaluated++;
+        return evaluate_integral( t );
+    }
+    int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
+    while ( timearray.at( i ) < t ) {
+        i++;
+    }
+    if ( std::abs( timearray.at( i ) - t ) > 1E-15 ) {
+        counter_evaluated++;
+        return evaluate_integral( t );
+    }
+    if ( i < 0 || i >= size ) {
+        counter_evaluated++;
+        return evaluate_integral( t );
+    }
+    counter_returned++;
+    return chirparray_integral.at( i );
 }
 
 void Chirp::log() {
