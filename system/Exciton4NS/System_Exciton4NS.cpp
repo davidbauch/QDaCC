@@ -516,7 +516,7 @@ class System : public System_Parent {
     }
 
     SparseMat dgl_getHamilton( const double t ) {
-        return dgl_timetrafo( parameters.p_phonon_b * ( operatorMatrices.H_used + dgl_chirp( t ) + dgl_pulse( t ) ), t );
+        return dgl_timetrafo( parameters.p_phonon_b * ( operatorMatrices.H_used + dgl_pulse( t ) ) + dgl_chirp( t ), t ); //FIXME: anders für ohne RWA und so lel
     }
 
     bool calculate_spectrum() {
