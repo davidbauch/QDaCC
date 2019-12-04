@@ -118,8 +118,8 @@ class System : public System_Parent {
         // Photon losses
         if ( parameters.p_omega_cavity_loss != 0.0 ) {
             //ret += parameters.p_omega_cavity_loss / 2.0 * ( 2 * operatorMatrices.photon_annihilate_H * rho * operatorMatrices.photon_create_H - dgl_antikommutator( operatorMatrices.photon_n_H, rho ) );
-            ret += parameters.p_omega_cavity_loss * dgl_lindblad( rho, operatorMatrices.photon_annihilate_H, operatorMatrices.photon_create_H );
-            ret += parameters.p_omega_cavity_loss * dgl_lindblad( rho, operatorMatrices.photon_annihilate_V, operatorMatrices.photon_create_V );
+            ret += parameters.p_omega_cavity_loss / 2.0 * dgl_lindblad( rho, operatorMatrices.photon_annihilate_H, operatorMatrices.photon_create_H ); //BUGFIX: kappa/2.0
+            ret += parameters.p_omega_cavity_loss / 2.0 * dgl_lindblad( rho, operatorMatrices.photon_annihilate_V, operatorMatrices.photon_create_V ); //BUGFIX: kappa/2.0
         }
         // Pure Dephasing
         if ( parameters.p_omega_pure_dephasing != 0.0 ) {
