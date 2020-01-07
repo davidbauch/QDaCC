@@ -17,8 +17,11 @@
 #include <unsupported/Eigen/MatrixFunctions>
 #include <omp.h> // -fopenmp
 #include <iostream>
+#include <sstream>
+#include <fstream>
 #include <functional>
 #include <limits>
+#include <filesystem>
 
 std::string PREFIX_PERCENT = "@#PERCENT#@";
 std::string PREFIX_PERCENT_TIME = "@#PERCENTTIME#@";

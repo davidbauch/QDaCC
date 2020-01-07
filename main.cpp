@@ -1,12 +1,5 @@
-#define SYSTEM4LS
-
 #include "global.h"
-#ifdef SYSTEM2LS
-#include "system/Exciton2NS/System_Exciton2NS.cpp"
-#endif
-#ifdef SYSTEM4LS
 #include "system/Exciton4NS/System_Exciton4NS.cpp"
-#endif
 #include "chirp.cpp"
 #include "pulse.cpp"
 #include "solver.cpp"
@@ -23,52 +16,118 @@ int main( int argc, char* argv[] ) {
         Parameters::help();
         exit( 0 );
     }
-    logs = Log( std::string( argv[argc - 1] ) + "logfile.log", vec_find_str( "-advLog", inputs ) != -1 );
 
-    // System
-    System system = System( inputs );
-    // Solver
-    ODESolver solver = ODESolver( system );
-    // Normal Time direction
-    solver.calculate_t_direction( system );
-
-// Spectrum
-#ifdef SYSTEM2LS
-    if ( system.calculate_spectrum() ) {
-        solver.calculate_g1( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
-        solver.calculate_spectrum( system );
-    }
-    if ( system.calculate_g2() ) {
-        solver.calculate_g2_0( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
-    }
-#endif
-#ifdef SYSTEM4LS
-    if ( system.calculate_spectrum() ) {
-        if ( system.calculate_spectrum_H() ) {
-            solver.calculate_spectrum( system,system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "spectrum_H.txt" );
+    // Check for Multifile, if true parse all settings
+    std::vector<std::vector<std::string>> sets;
+    if ( vec_find_str( "--file", inputs ) != -1 ) {
+        // Multifile mode: Program will read inputfile from --file and execute all lines that dont start with '#'
+        auto params = Parse_Parameters( inputs, {"--file", "--Threads", "-advLog", "-noHandler"}, {1,1,1,1}, "Global Parameters" );
+        std::string filename = params.get( 0, "" );
+        if ( filename.size() > 1 ) {
+            // Catch global parameters
+            std::vector<std::string> globalparams;
+            if (params.get(1, "").compare("") != 0) {
+                globalparams.emplace_back("--Threads");
+                globalparams.emplace_back(params.get(1,""));
+            }
+            if (params.get(2)) {
+                globalparams.emplace_back("-advLog");
+            }
+            if (params.get(3)) {
+                globalparams.emplace_back("-noHandler");
+            }
+            // Parse file and save to sets vector
+            std::ifstream file( filename );
+            std::string line;
+            std::getline( file, line );
+            fmt::print( "Line = {}\n", line );
+            std::string outputname = splitline( line ).at( 1 );
+            fmt::print( "Filename = {}\n", outputname );
+            std::ofstream fileout( inputs.back() + "settings_" + outputname + ".txt", std::ofstream::out );
+            std::vector<std::string> set;
+            int counter = 0;
+            while ( std::getline( file, line ) ) {
+                fileout << line << std::endl;
+                if ( line.size() > 5 && line.at( 0 ) != '#' && line.at( 0 ) != ' ' && line.at( 0 ) != '\t' ) {
+                    set = splitline( line );
+                    for ( auto i = set.begin(); i != set.end(); i++ )
+                        if ( ( *i ).compare( "#" ) == 0 ) {
+                            set = std::vector<std::string>( set.begin(), i );
+                            break;
+                        }
+                }
+                if ( set.size() > 0 ) {
+                    if ( set.at( 0 ).compare( "#" ) != 0 && vec_find_str( "python3", set ) == -1 ) {
+                        //set.erase( set.begin() );
+                        if ( set.size() > 1 ) {
+                            // Append global parameters. Second calls wont overwrite these, so global parameters ALWAYS overwrite local parameters
+                            set.insert(set.begin(),globalparams.begin(),globalparams.end());
+                            // Append final path info
+                            set.emplace_back( inputs.back() + outputname + "/" + outputname + "_" + toStr( counter++ ) + "/" );
+                            sets.emplace_back( set );
+                        }
+                    }
+                    set.clear();
+                }
+            }
+            fileout.close();
         }
-        if ( system.calculate_spectrum_V() ) {
-            solver.calculate_spectrum( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V,"spectrum_V.txt" );
+        //for ( auto a : sets ) {
+        //    for ( auto b : a )
+        //        fmt::print( "{} | ", b );
+        //    fmt::print( "\n" );
+        //}
+        //exit(1);
+    } else {
+        // Single file mode: Program will only execute passed parameterset
+        sets.emplace_back( inputs );
+    }
+
+
+    for (auto set : sets) {
+        inputs = set;
+        const std::string fp = inputs.back();
+        std::filesystem::create_directories(fp);
+        // Logfile
+        logs = Log( std::string( inputs.back() ) + "logfile.log", vec_find_str( "-advLog", inputs ) != -1 );
+
+        // System
+        System system = System( inputs );
+        // Solver
+        ODESolver solver = ODESolver( system );
+        // Normal Time direction
+        solver.calculate_t_direction( system );
+
+        // Spectrum
+        if ( system.calculate_spectrum() ) {
+            if ( system.calculate_spectrum_H() ) {
+                solver.calculate_spectrum( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "spectrum_H.txt" );
+            }
+            if ( system.calculate_spectrum_V() ) {
+                solver.calculate_spectrum( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "spectrum_V.txt" );
+            }
         }
-    }
-    if ( system.calculate_g2() ) {
-        solver.calculate_advanced_photon_statistics( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H,system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "advanced_photon_statistics.txt" );
-    }
-#endif
+        if ( system.calculate_g2() ) {
+            solver.calculate_advanced_photon_statistics( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "advanced_photon_statistics.txt" );
+        }
 
-    // Finalizing all calculations
-    system.exit_system();
+        // Finalizing all calculations
+        system.exit_system();
 
-    double finalTime = Timer::summary();
-    logs( "\nStartcommand: " );
-    for ( int ii = 0; ii < argc; ii++ )
-        logs( "{} ", std::string( argv[ii] ) );
-    logs( "\n\n" + system.terminate_message + "\n" );
+        double finalTime = Timer::summary();
+        logs( "\nStartcommand: " );
+        //for ( int ii = 0; ii < argc; ii++ )
+        //    logs( "{} ", std::string( argv[ii] ) );
+        for (auto ii : inputs)
+            logs("{} ", ii);
+        logs( "\n\n" + system.terminate_message + "\n" );
 
-    logs.close();
-    if ( system.output_handlerstrings() ) {
-        fmt::print( "\n{0} {1:.1f}\n", PREFIX_PERCENT_TIME_FINAL, finalTime );
-        fmt::print( "{0} Done in {1}\n", PREFIX_SUFFIX, Timer::format( finalTime ) );
+        logs.close();
+        if ( system.output_handlerstrings() ) {
+            fmt::print( "\n{0} {1:.1f}\n", PREFIX_PERCENT_TIME_FINAL, finalTime );
+            fmt::print( "{0} Done in {1}\n", PREFIX_SUFFIX, Timer::format( finalTime ) );
+        }
+        Timer::reset();
     }
     exit( EXIT_SUCCESS );
 }

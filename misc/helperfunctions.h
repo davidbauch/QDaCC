@@ -339,3 +339,17 @@ Eigen::SparseMatrix<T> project_matrix_sparse( const Eigen::SparseMatrix<T> &inpu
     ret.setFromTriplets( ret_v.begin(), ret_v.end() );
     return ret;
 }
+
+std::vector<std::string> splitline(const std::string &input = "") {
+    std::string token, subtoken;
+    std::vector<std::string> set;
+    std::istringstream iss(input);
+    while(std::getline(iss, subtoken, '\t')) {
+        std::istringstream subiss(subtoken);
+        while(std::getline(subiss, token, ' '))
+            if (token.size() > 0) {
+                set.push_back(token);
+            }
+    }
+    return set;
+}

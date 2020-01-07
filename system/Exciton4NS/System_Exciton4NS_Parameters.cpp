@@ -53,6 +53,7 @@ class Parameters : public Parameters_Parent {
     bool numerics_use_saved_hamiltons;
     long unsigned int numerics_saved_coefficients_cutoff; // True: Only save last few coefficients (only viable for T-direction, not for G1/2)
     long unsigned int numerics_saved_coefficients_max_size;
+    int logfilecounter;
 
     Parameters(){};
     Parameters( const std::vector<std::string> &arguments ) : Parameters_Parent() {
@@ -136,8 +137,8 @@ class Parameters : public Parameters_Parent {
         numerics_calculate_spectrum_V = params.get( 4 ) || params.get( 6 );
 
         // Look for (-RK4), -RK5, (-RK4T), (-RK4Tau), -RK5T, -RK5Tau
-        params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale", "-disableMatrixCaching", "-disableHamiltonCaching", "-disableMainProgramThreading", "-noRaman"}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
-        numerics_calculate_g2 = params.get( 0 );
+        params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale", "-disableMatrixCaching", "-disableHamiltonCaching", "-disableMainProgramThreading", "-noRaman", "-g2s", "--lfc"}, {1, 1,1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
+        numerics_calculate_g2 = params.get( 0 ) || params.get( 19 );
         numerics_order_t = ( params.get( 1 ) || params.get( 2 ) ) ? 5 : 4;
         numerics_order_tau = ( params.get( 1 ) || params.get( 3 ) ) ? 5 : 4;
         numerics_order_highest = numerics_order_t;
@@ -156,6 +157,8 @@ class Parameters : public Parameters_Parent {
         numerics_use_saved_hamiltons = !params.get( 16 );
         numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !params.get( 17 ) ) ? numerics_maximum_threads : 1;
         numerics_output_raman_population = !params.get( 18 );
+        numerics_use_simplified_g2 = params.get( 19 );
+        logfilecounter = params.get<int>( 20, "-1" );
 
         // Phonon Parameters
         params = Parse_Parameters( arguments, {"--phonons", "--temperature", "-phonons", "--phononorder", "-noMarkov", "-phononcoeffs", "-noPhononAdjust"}, {5, 1, 1, 1, 1, 1, 1} );
@@ -313,30 +316,30 @@ class Parameters : public Parameters_Parent {
         logs.wrapInBar( "Parameters" );
         logs( "\n" );
         logs.wrapInBar( "Time borders and t_step", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
-        logs( "Timeborder left t_start = {} s\n", t_start );
-        logs( "Timeborder right t_end = {} s\n", t_end );
-        logs( "Timeborder t_step delta t = {} s (auto: {}s, minimum possible: {}s)\n", t_step, getIdealTimestep(), std::numeric_limits<double>::epsilon() );
+        logs( "Timeborder left t_start = {:.8e} s\n", t_start );
+        logs( "Timeborder right t_end = {:.8e} s\n", t_end );
+        logs( "Timeborder t_step delta t = {:.8e} s (auto: {:.8e}s, minimum possible: {:.8e}s)\n", t_step, getIdealTimestep(), std::numeric_limits<double>::epsilon() );
         logs( "Time iterations (main loop) = {}\n", iterations_t_max );
         logs.wrapInBar( "System Parameters", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
-        logs( "Exciton delta E = {} -> {} mueV\n", p_deltaE, Hz_to_eV( p_deltaE ) * 1E6 );
-        logs( "Biexciton binding energy = {} -> {} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
-        logs( "Energy Level difference |X_H><X_H| - |G><G| = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_G_H, Hz_to_eV( p_omega_atomic_G_H ), Hz_to_wavelength( p_omega_atomic_G_H ) );
-        logs( "Energy Level difference |X_V><X_V| - |G><G| = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_G_V, Hz_to_eV( p_omega_atomic_G_V ), Hz_to_wavelength( p_omega_atomic_G_V ) );
-        logs( "Energy Level difference |B><B| - |X_H><X_H| = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_H_B, Hz_to_eV( p_omega_atomic_H_B ), Hz_to_wavelength( p_omega_atomic_H_B ) );
-        logs( "Energy Level difference |B><B| - |X_V><X_V| = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_V_B, Hz_to_eV( p_omega_atomic_V_B ), Hz_to_wavelength( p_omega_atomic_V_B ) );
-        logs( "Two Photon Resonance = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_B / 2.0, Hz_to_eV( p_omega_atomic_B / 2.0 ), Hz_to_wavelength( p_omega_atomic_B / 2.0 ) );
-        logs( "Biexciton Resonance = {:.8e} Hz -> {:.8} eV -> {:.8e} nm\n", p_omega_atomic_B, Hz_to_eV( p_omega_atomic_B ), Hz_to_wavelength( p_omega_atomic_B ) );
-        logs( "Cavity Frequency w_c_H = {} Hz -> {} eV -> {} nm\n", p_omega_cavity_H, Hz_to_eV( p_omega_cavity_H ), Hz_to_wavelength( p_omega_cavity_H ) );
-        logs( "Cavity Frequency w_c_V = {} Hz -> {} eV -> {} nm\n", p_omega_cavity_V, Hz_to_eV( p_omega_cavity_V ), Hz_to_wavelength( p_omega_cavity_V ) );
-        logs( "Coupling strengh g = {} Hz -> {} mueV\n", p_omega_coupling, Hz_to_eV( p_omega_coupling ) * 1E6 );
-        logs( "Photon loss rate k = {} Hz -> {} mueV -> Q = {:.2f}\n", p_omega_cavity_loss, Hz_to_eV( p_omega_cavity_loss ) * 1E6, p_omega_cavity_H / p_omega_cavity_loss );
-        logs( "Atomic dephasing rate gamma_pure = {} Hz -> {} mueV\n", p_omega_pure_dephasing, Hz_to_eV( p_omega_pure_dephasing ) * 1E6 );
-        logs( "RAD rate gamma = {} Hz -> {} mueV\n", p_omega_decay, Hz_to_eV( p_omega_decay ) * 1E6 );
+        logs( "Exciton delta E = {:.8e} -> {:.8} mueV\n", p_deltaE, Hz_to_eV( p_deltaE ) * 1E6 );
+        logs( "Biexciton binding energy = {:.8e} -> {:.8} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
+        logs( "Energy Level difference |X_H><X_H| - |G><G| = {:.8e} Hz -> {:.8} eV -> {:.8} nm\n", p_omega_atomic_G_H, Hz_to_eV( p_omega_atomic_G_H ), Hz_to_wavelength( p_omega_atomic_G_H ) );
+        logs( "Energy Level difference |X_V><X_V| - |G><G| = {:.8e} Hz -> {:.8} eV -> {:.8} nm\n", p_omega_atomic_G_V, Hz_to_eV( p_omega_atomic_G_V ), Hz_to_wavelength( p_omega_atomic_G_V ) );
+        logs( "Energy Level difference |B><B| - |X_H><X_H| = {:.8e} Hz -> {:.8} eV -> {:.8} nm\n", p_omega_atomic_H_B, Hz_to_eV( p_omega_atomic_H_B ), Hz_to_wavelength( p_omega_atomic_H_B ) );
+        logs( "Energy Level difference |B><B| - |X_V><X_V| = {:.8e} Hz -> {:.8} eV -> {:.8} nm\n", p_omega_atomic_V_B, Hz_to_eV( p_omega_atomic_V_B ), Hz_to_wavelength( p_omega_atomic_V_B ) );
+        logs( "Two Photon Resonance = {:.8e} Hz -> {:.8} eV -> {:.8} nm\n", p_omega_atomic_B / 2.0, Hz_to_eV( p_omega_atomic_B / 2.0 ), Hz_to_wavelength( p_omega_atomic_B / 2.0 ) );
+        logs( "Biexciton Resonance = {:.8e} Hz -> {:.8} eV -> {:.8} nm\n", p_omega_atomic_B, Hz_to_eV( p_omega_atomic_B ), Hz_to_wavelength( p_omega_atomic_B ) );
+        logs( "Cavity Frequency w_c_H = {:.8e} Hz -> {:.8} eV -> {:.8} nm\n", p_omega_cavity_H, Hz_to_eV( p_omega_cavity_H ), Hz_to_wavelength( p_omega_cavity_H ) );
+        logs( "Cavity Frequency w_c_V = {:.8e} Hz -> {:.8} eV -> {:.8} nm\n", p_omega_cavity_V, Hz_to_eV( p_omega_cavity_V ), Hz_to_wavelength( p_omega_cavity_V ) );
+        logs( "Coupling strengh g = {:.8e} Hz -> {:.8} mueV\n", p_omega_coupling, Hz_to_eV( p_omega_coupling ) * 1E6 );
+        logs( "Photon loss rate k = {:.8e} Hz -> {:.8} mueV -> Q = {:.2f}\n", p_omega_cavity_loss, Hz_to_eV( p_omega_cavity_loss ) * 1E6, p_omega_cavity_H / p_omega_cavity_loss );
+        logs( "Atomic dephasing rate gamma_pure = {:.8e} Hz -> {:.8} mueV\n", p_omega_pure_dephasing, Hz_to_eV( p_omega_pure_dephasing ) * 1E6 );
+        logs( "RAD rate gamma = {:.8e} Hz -> {:.8} mueV\n", p_omega_decay, Hz_to_eV( p_omega_decay ) * 1E6 );
         logs( "Initial state rho0 = |{0}><{0}| with maximum number of {1} photons\n\n", info.at( p_initial_state ), p_max_photon_number );
         logs.wrapInBar( "Excitation Pulse", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         if ( pulse_amp.size() > 0 && pulse_center.at( 0 ) != -1 && pulse_amp.at( 0 ) != 0 ) {
             for ( int i = 0; i < (int)pulse_amp.size(); i++ ) {
-                logs( "Exiting system at t_0 = {}\nAmplitude {:.10e} ({} meV, {:.2f} pi)\nFrequency {:.10e} ({}eV)\nFWHM {}\n", pulse_center.at( i ), pulse_amp.at( i ), Hz_to_eV( pulse_amp.at( i ) ) * 1E3, pulse_amp.at( i ) / ( M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) ) / 2.0 ), pulse_omega.at( i ), Hz_to_eV( pulse_omega.at( i ) ), pulse_sigma.at( i ) * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ) );
+                logs( "Exiting system at t_0 = {:.8e}\nAmplitude {:.10e} ({:.8} meV, {:.2f} pi)\nFrequency {:.10e} ({:.8}eV)\nFWHM {:.8e}\n", pulse_center.at( i ), pulse_amp.at( i ), Hz_to_eV( pulse_amp.at( i ) ) * 1E3, pulse_amp.at( i ) / ( M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) ) / 2.0 ), pulse_omega.at( i ), Hz_to_eV( pulse_omega.at( i ) ), pulse_sigma.at( i ) * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ) );
                 logs( "Used pulse_type - {}\nUsed pulse_pol on mode {}", pulse_type.at( i ), pulse_pol.at( i ) );
             }
             logs( "\n" );
@@ -347,35 +350,35 @@ class Parameters : public Parameters_Parent {
             double total = 0;
             for ( int i = 0; i < (int)chirp_t.size() - 1; i++ ) {
                 if ( chirp_y.at( i + 1 ) - chirp_y.at( i ) != 0.0 ) {
-                    logs( "Chirp between t0 = {} ps\nt1 = {} ps\nTotal Chirp: {} mueV\n-> average rate {} mueV/ps\n", chirp_t.at( i ), chirp_t.at( i + 1 ), Hz_to_eV( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) * 1E6, Hz_to_eV( ( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) ) * 1E6 / 1E12 / ( chirp_t.at( i + 1 ) - chirp_t.at( i ) ) );
+                    logs( "Chirp {0:} between t0 = {1:.8e} ps\nt1 = {2:.8e} ps\nTotal Chirp {0:}: {3:.8} mueV\n-> average rate Chirp {0:}: {4:.8} mueV/ps\n",i, chirp_t.at( i ), chirp_t.at( i + 1 ), Hz_to_eV( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) * 1E6, Hz_to_eV( ( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) ) * 1E6 / 1E12 / ( chirp_t.at( i + 1 ) - chirp_t.at( i ) ) );
                     total += chirp_y.at( i + 1 ) - chirp_y.at( i );
                 }
             }
             if ( chirp_type.compare( "none" ) != 0 )
                 logs( "\nChirpfile of type '" + chirp_type + "' is used!\n" );
-            logs( "Total Chirp = {} mueV\n", Hz_to_eV( total ) * 1E6 );
+            logs( "Total Chirp = {:.8} mueV\n", Hz_to_eV( total ) * 1E6 );
         } else
             logs( "Not using chirp" );
         logs( "\n\n" );
 
         logs.wrapInBar( "Caluclated Frequencies" );
-        logs( "\nInitial detuning |X_H><X_H| - |G><G| - w_c_H = {} Hz -> {} mueV\n", init_detuning_G_H, Hz_to_eV( init_detuning_G_H ) * 1E6 );
-        logs( "Maximum detuning |X_H><X_H| - |G><G| - w_c_H = {} Hz -> {} mueV\n", max_detuning_G_H, Hz_to_eV( max_detuning_G_H ) * 1E6 );
-        logs( "Initial detuning |X_V><X_V| - |G><G| - w_c_V = {} Hz -> {} mueV\n", init_detuning_G_V, Hz_to_eV( init_detuning_G_V ) * 1E6 );
-        logs( "Maximum detuning |X_V><X_V| - |G><G| - w_c_V = {} Hz -> {} mueV\n", max_detuning_G_V, Hz_to_eV( max_detuning_G_V ) * 1E6 );
-        logs( "Initial detuning |B><B| - |X_H><X_H| - w_c_H = {} Hz -> {} mueV\n", init_detuning_H_B, Hz_to_eV( init_detuning_H_B ) * 1E6 );
-        logs( "Maximum detuning |B><B| - |X_H><X_H| - w_c_H = {} Hz -> {} mueV\n", max_detuning_H_B, Hz_to_eV( max_detuning_H_B ) * 1E6 );
-        logs( "Initial detuning |B><B| - |X_V><X_V| - w_c_V = {} Hz -> {} mueV\n", init_detuning_V_B, Hz_to_eV( init_detuning_V_B ) * 1E6 );
-        logs( "Maximum detuning |B><B| - |X_V><X_V| - w_c_V = {} Hz -> {} mueV\n\n", max_detuning_V_B, Hz_to_eV( max_detuning_V_B ) * 1E6 );
+        logs( "\nInitial detuning |X_H><X_H| - |G><G| - w_c_H = {:.8e} Hz -> {:.8} mueV\n", init_detuning_G_H, Hz_to_eV( init_detuning_G_H ) * 1E6 );
+        logs( "Maximum detuning |X_H><X_H| - |G><G| - w_c_H = {:.8e} Hz -> {:.8} mueV\n", max_detuning_G_H, Hz_to_eV( max_detuning_G_H ) * 1E6 );
+        logs( "Initial detuning |X_V><X_V| - |G><G| - w_c_V = {:.8e} Hz -> {:.8} mueV\n", init_detuning_G_V, Hz_to_eV( init_detuning_G_V ) * 1E6 );
+        logs( "Maximum detuning |X_V><X_V| - |G><G| - w_c_V = {:.8e} Hz -> {:.8} mueV\n", max_detuning_G_V, Hz_to_eV( max_detuning_G_V ) * 1E6 );
+        logs( "Initial detuning |B><B| - |X_H><X_H| - w_c_H = {:.8e} Hz -> {:.8} mueV\n", init_detuning_H_B, Hz_to_eV( init_detuning_H_B ) * 1E6 );
+        logs( "Maximum detuning |B><B| - |X_H><X_H| - w_c_H = {:.8e} Hz -> {:.8} mueV\n", max_detuning_H_B, Hz_to_eV( max_detuning_H_B ) * 1E6 );
+        logs( "Initial detuning |B><B| - |X_V><X_V| - w_c_V = {:.8e} Hz -> {:.8} mueV\n", init_detuning_V_B, Hz_to_eV( init_detuning_V_B ) * 1E6 );
+        logs( "Maximum detuning |B><B| - |X_V><X_V| - w_c_V = {:.8e} Hz -> {:.8} mueV\n\n", max_detuning_V_B, Hz_to_eV( max_detuning_V_B ) * 1E6 );
 
-        logs( "Initial Rabi Frequency |X_H><X_H| - |G><G| = {} Hz -> {} mueV\n", init_rabifrequenz_G_H, Hz_to_eV( init_rabifrequenz_G_H ) * 1E6 );
-        logs( "Maximum Rabi Frequency |X_H><X_H| - |G><G| = {} Hz -> {} mueV\n", max_rabifrequenz_G_H, Hz_to_eV( max_rabifrequenz_G_H ) * 1E6 );
-        logs( "Initial Rabi Frequency |X_V><X_V| - |G><G| = {} Hz -> {} mueV\n", init_rabifrequenz_G_V, Hz_to_eV( init_rabifrequenz_G_V ) * 1E6 );
-        logs( "Maximum Rabi Frequency |X_V><X_V| - |G><G| = {} Hz -> {} mueV\n", max_rabifrequenz_G_V, Hz_to_eV( max_rabifrequenz_G_V ) * 1E6 );
-        logs( "Initial Rabi Frequency |B><B| - |X_H><X_H| = {} Hz -> {} mueV\n", init_rabifrequenz_H_B, Hz_to_eV( init_rabifrequenz_H_B ) * 1E6 );
-        logs( "Maximum Rabi Frequency |B><B| - |X_H><X_H| = {} Hz -> {} mueV\n", max_rabifrequenz_H_B, Hz_to_eV( max_rabifrequenz_H_B ) * 1E6 );
-        logs( "Initial Rabi Frequency |B><B| - |X_V><X_V| = {} Hz -> {} mueV\n", init_rabifrequenz_V_B, Hz_to_eV( init_rabifrequenz_V_B ) * 1E6 );
-        logs( "Maximum Rabi Frequency |B><B| - |X_V><X_V| = {} Hz -> {} mueV\n\n", max_rabifrequenz_V_B, Hz_to_eV( max_rabifrequenz_V_B ) * 1E6 );
+        logs( "Initial Rabi Frequency |X_H><X_H| - |G><G| = {:.8e} Hz -> {:.8} mueV\n", init_rabifrequenz_G_H, Hz_to_eV( init_rabifrequenz_G_H ) * 1E6 );
+        logs( "Maximum Rabi Frequency |X_H><X_H| - |G><G| = {:.8e} Hz -> {:.8} mueV\n", max_rabifrequenz_G_H, Hz_to_eV( max_rabifrequenz_G_H ) * 1E6 );
+        logs( "Initial Rabi Frequency |X_V><X_V| - |G><G| = {:.8e} Hz -> {:.8} mueV\n", init_rabifrequenz_G_V, Hz_to_eV( init_rabifrequenz_G_V ) * 1E6 );
+        logs( "Maximum Rabi Frequency |X_V><X_V| - |G><G| = {:.8e} Hz -> {:.8} mueV\n", max_rabifrequenz_G_V, Hz_to_eV( max_rabifrequenz_G_V ) * 1E6 );
+        logs( "Initial Rabi Frequency |B><B| - |X_H><X_H| = {:.8e} Hz -> {:.8} mueV\n", init_rabifrequenz_H_B, Hz_to_eV( init_rabifrequenz_H_B ) * 1E6 );
+        logs( "Maximum Rabi Frequency |B><B| - |X_H><X_H| = {:.8e} Hz -> {:.8} mueV\n", max_rabifrequenz_H_B, Hz_to_eV( max_rabifrequenz_H_B ) * 1E6 );
+        logs( "Initial Rabi Frequency |B><B| - |X_V><X_V| = {:.8e} Hz -> {:.8} mueV\n", init_rabifrequenz_V_B, Hz_to_eV( init_rabifrequenz_V_B ) * 1E6 );
+        logs( "Maximum Rabi Frequency |B><B| - |X_V><X_V| = {:.8e} Hz -> {:.8} mueV\n\n", max_rabifrequenz_V_B, Hz_to_eV( max_rabifrequenz_V_B ) * 1E6 );
 
         int works = 1;
         if ( ( init_rabifrequenz != 0.0 ) && ( 3. * t_step > 2. * M_PI / init_rabifrequenz ) )
@@ -389,8 +392,8 @@ class Parameters : public Parameters_Parent {
         logs.wrapInBar( "Spectrum" );
         if ( numerics_calculate_spectrum_H || numerics_calculate_spectrum_V ) {
             logs( "\nCalcluating spectrum for {}\n", ( numerics_calculate_spectrum_H && numerics_calculate_spectrum_V ? "cavities H and V" : fmt::format( "cavity {}", numerics_calculate_spectrum_H ? "H" : "V" ) ) );
-            logs( "Center Frequency: {} Hz -> {} eV\n", spectrum_frequency_center, Hz_to_eV( spectrum_frequency_center ) );
-            logs( "Frequency Range: +/- {} Hz -> +/- {} mueV\n", spectrum_frequency_range, Hz_to_eV( spectrum_frequency_range ) * 1E6 );
+            logs( "Center Frequency: {:.8e} Hz -> {:.8} eV\n", spectrum_frequency_center, Hz_to_eV( spectrum_frequency_center ) );
+            logs( "Frequency Range: +/- {:.8e} Hz -> +/- {:.8} mueV\n", spectrum_frequency_range, Hz_to_eV( spectrum_frequency_range ) * 1E6 );
             logs( "Anticipated tau-grid resolution is {}x{} resulting in {} skips per timestep\nMaximum w-vector resolution is {}\n\n", iterations_tau_resolution, iterations_tau_resolution, iterations_t_skip, iterations_w_resolution );
         } else {
             logs( "\nNot calculating spectrum\n\n" );
@@ -407,6 +410,7 @@ class Parameters : public Parameters_Parent {
         logs.wrapInBar( "Numerics" );
         logs( "\nOrder of Runge-Kutta used: Time: RK{}, Spectrum: RK{}\n", numerics_order_t, numerics_order_tau );
         logs( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
+        logs( "Calculate advanced statistics? - {}\n", numerics_calculate_g2 ? fmt::format( "YES{}", ( numerics_use_simplified_g2 ? " (simplified)" : "" ) ) : "NO" );
         logs( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture == 1 ) ? "YES" : "NO" ) );
         logs( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) ? "Analytic" : "Matrix Exponential" ) );
         logs( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\n", numerics_phonons_maximum_threads, numerics_maximum_threads );
@@ -414,6 +418,8 @@ class Parameters : public Parameters_Parent {
         if ( p_phonon_T )
             logs( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? fmt::format( "Yes (maximum {} matrices saved)", ( numerics_saved_coefficients_cutoff > 0 ) ? numerics_saved_coefficients_cutoff : numerics_saved_coefficients_max_size ) : "No" ) );
         logs( "\n" );
+        if (logfilecounter >= 0)
+            logs( "Logfile ident number: {}\n",logfilecounter );
         logs.wrapInBar( "Program Log:", LOG_SIZE_FULL, LOG_LEVEL_2 );
         logs( "\n" );
         logs.level2( "OutputHandlerStrings: {}\n", output_handlerstrings );

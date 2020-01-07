@@ -9,7 +9,7 @@ class Parameters_Parent {
     // Mandatory Variables
    public:
     std::string subfolder;
-    bool numerics_calculate_spectrum, numerics_calculate_g2, numerics_use_interactionpicture, numerics_use_rwa;
+    bool numerics_calculate_spectrum, numerics_calculate_g2, numerics_use_simplified_g2, numerics_use_interactionpicture, numerics_use_rwa;
     int numerics_order_timetrafo;
     int numerics_order_t, numerics_order_tau, numerics_order_highest;
     int output_advanced_log, output_handlerstrings, output_operators, output_coefficients;

@@ -43,6 +43,7 @@ class Timer {
     std::string getName();
     static double summary( bool output );
     static std::string format( double in );
+    static void reset();
 };
 
 std::vector<Timer> allTimers;
@@ -156,6 +157,10 @@ std::string Timer::format( double in ) {
     int s = std::floor( ( in - 3600 * h - 60 * m ) );
     double ms = ( in - std::floor( in ) ) * 1000;
     return fmt::format( "{}{}{}{}{}{}{:.3f}{}", h > 0 ? toStr( h ) : "", h > 0 ? "h:" : "", m > 0 ? toStr( m ) : "", m > 0 ? "m:" : "", s > 0 ? toStr( s ) : "", s > 0 ? "s:" : "", ms, "ms" );
+}
+
+void Timer::reset() {
+    allTimers.clear();
 }
 
 // returns total time taken
