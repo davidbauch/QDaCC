@@ -26,15 +26,10 @@ int main( int argc, char* argv[] ) {
         if ( filename.size() > 1 ) {
             // Catch global parameters
             std::vector<std::string> globalparams;
-            if (params.get(1, "").compare("") != 0) {
-                globalparams.emplace_back("--Threads");
-                globalparams.emplace_back(params.get(1,""));
-            }
-            if (params.get(2)) {
-                globalparams.emplace_back("-advLog");
-            }
-            if (params.get(3)) {
-                globalparams.emplace_back("-noHandler");
+            for (unsigned int i = 0; i < inputs.size()-1; i++) {
+                if (inputs.at(i).compare("--file") != 0 && (i > 0 && inputs.at(i-1).compare("--file") != 0)) {
+                    globalparams.emplace_back(inputs.at(i));
+                }
             }
             // Parse file and save to sets vector
             std::ifstream file( filename );
@@ -58,10 +53,9 @@ int main( int argc, char* argv[] ) {
                 }
                 if ( set.size() > 0 ) {
                     if ( set.at( 0 ).compare( "#" ) != 0 && vec_find_str( "python3", set ) == -1 ) {
-                        //set.erase( set.begin() );
                         if ( set.size() > 1 ) {
                             // Append global parameters. Second calls wont overwrite these, so global parameters ALWAYS overwrite local parameters
-                            set.insert(set.begin(),globalparams.begin(),globalparams.end());
+                            set.insert(set.begin()+1,globalparams.begin(),globalparams.end());
                             // Append final path info
                             set.emplace_back( inputs.back() + outputname + "/" + outputname + "_" + toStr( counter++ ) + "/" );
                             sets.emplace_back( set );
@@ -72,12 +66,12 @@ int main( int argc, char* argv[] ) {
             }
             fileout.close();
         }
-        //for ( auto a : sets ) {
-        //    for ( auto b : a )
-        //        fmt::print( "{} | ", b );
-        //    fmt::print( "\n" );
-        //}
-        //exit(1);
+        for ( auto a : sets ) {
+            for ( auto b : a )
+                fmt::print( "{} | ", b );
+            fmt::print( "\n" );
+        }
+        exit(1);
     } else {
         // Single file mode: Program will only execute passed parameterset
         sets.emplace_back( inputs );
