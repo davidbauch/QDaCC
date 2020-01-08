@@ -4,7 +4,7 @@
 #include "pulse.cpp"
 #include "solver.cpp"
 
-// g++-8 '/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/main.cpp' -o /Users/davidbauch/bin/QDLC-2LS-1.0.out misc/ALGLIB/MAC/*.o -std=c++1y -O3 -DFMT_HEADER_ONLY -fopenmp -Wall
+// g++-8 '/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/main.cpp' -o /Users/davidbauch/bin/QDLC-2LS-1.0.out misc/ALGLIB/MAC/*.o -std=c++1y -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -Wall
 // test
 // last input: workpath
 int main( int argc, char* argv[] ) {
@@ -35,10 +35,9 @@ int main( int argc, char* argv[] ) {
             std::ifstream file( filename );
             std::string line;
             std::getline( file, line );
-            fmt::print( "Line = {}\n", line );
             std::string outputname = splitline( line ).at( 1 );
-            fmt::print( "Filename = {}\n", outputname );
-            std::ofstream fileout( inputs.back() + "settings_" + outputname + ".txt", std::ofstream::out );
+            std::filesystem::create_directories(inputs.back() + outputname);
+            std::ofstream fileout( inputs.back() + outputname + "/settings_" + outputname + ".txt", std::ofstream::out );
             std::vector<std::string> set;
             int counter = 0;
             while ( std::getline( file, line ) ) {
