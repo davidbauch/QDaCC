@@ -66,18 +66,18 @@ int main( int argc, char* argv[] ) {
             }
             fileout.close();
         }
-        for ( auto a : sets ) {
-            for ( auto b : a )
-                fmt::print( "{} | ", b );
-            fmt::print( "\n" );
-        }
-        exit(1);
+        //for ( auto a : sets ) {
+        //    for ( auto b : a )
+        //        fmt::print( "{} | ", b );
+        //    fmt::print( "\n" );
+        //}
+        //exit(1);
     } else {
         // Single file mode: Program will only execute passed parameterset
         sets.emplace_back( inputs );
     }
 
-
+    // Main Program
     for (auto set : sets) {
         inputs = set;
         const std::string fp = inputs.back();
