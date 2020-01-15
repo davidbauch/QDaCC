@@ -34,7 +34,10 @@ class ODESolver {
 
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
     int dim;
-
+    // Few Temporary Matrices
+    DenseMat temp1 = DenseMat::Zero(1,1);
+    DenseMat temp2 = DenseMat::Zero(1,1);
+    // Remaining
     std::vector<SaveState> savedStates;    // Vector for saved matrix-time tuples for densitymatrix
     std::vector<SaveState> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
     void saveState( const MatType &mat, const double t, std::vector<SaveState> &savedStates );
@@ -57,7 +60,7 @@ class ODESolver {
     MatType iterate( const MatType &rho, System_Parent &s, const double t, std::vector<SaveState> &savedStates, const int dir );
     bool calculate_t_direction( System_Parent &s );
     //bool calculate_g2_0( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName ); //moved to advancedPhotonStatistics
-    bool calculate_spectrum( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName );
+    bool calculate_spectrum( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName, const int cache_index );
     bool calculate_advanced_photon_statistics( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName );
     template <typename T>
     static MatType iterate_definite_integral( const MatType &rho, T rungefunction, const double t, const double step );

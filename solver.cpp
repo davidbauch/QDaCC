@@ -371,7 +371,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
 // @param s: [&System] Class providing set of system functions
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
-bool ODESolver::calculate_spectrum( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName = "spectrum.txt" ) {
+bool ODESolver::calculate_spectrum( System_Parent &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName = "spectrum.txt", const int cache_index = 1 ) {
     // Send system command to change to single core mainprogram, because this memberfunction is already using multithreading
     s.command( ODESolver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Cache matrix. Saves complex double entries of G1(t,tau)
@@ -426,6 +426,15 @@ bool ODESolver::calculate_spectrum( System_Parent &s, const MatType &op_creator,
     }
     std::fclose( spectrumfile );
     logs.level2( "Done!\n" );
+    // Check if we need to save calculated g-functions
+    if ( s.calculate_g2() ) {
+        logs.level2( "Saving g1 to temporary matrix {}", cache_index );
+        if ( cache_index == 1 )
+            temp1 = akf_mat;
+        else if ( cache_index == 2 )
+            temp2 = akf_mat;
+        logs.level2( " succesfull\n" );
+    }
     // Sucessfull
     return true;
 }
@@ -485,8 +494,9 @@ bool ODESolver::calculate_g2( System_Parent &s, const MatType &op_creator_1, con
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
 bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName ) {
-    bool calculate_full_g2_of_tau = !s.parameters.numerics_use_simplified_g2;
+    //bool calculate_full_g2_of_tau = !s.parameters.numerics_use_simplified_g2;
     bool output_full_g2 = false;
+    bool output_full_ind = false;
     bool calculate_concurrence_with_g2_of_zero = s.parameters.numerics_use_simplified_g2;
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
     s.command( ODESolver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
@@ -499,7 +509,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
     DenseMat akf_mat_22 = DenseMat::Zero( dim, dim );
     DenseMat akf_mat_12 = DenseMat::Zero( dim, dim );
     // Calculate G2(t,tau) with given operator matrices
-    if ( calculate_full_g2_of_tau ) {
+    if ( !calculate_concurrence_with_g2_of_zero ) {
         logs.level2( "Calculating 3 seperate G2(t,tau) matrices...\n" );
         calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, akf_mat_11, "Mode 11" );
         calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_2, op_annihilator_2, akf_mat_22, "Mode 22" );
@@ -520,10 +530,10 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
         g2_22_zero.push_back( 0 );
         g2_12_zero.push_back( 0 );
     }
-    MatType M1,M2,M3,rho;
+    MatType M1, M2, M3, rho;
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
         int k = i / s.getIterationSkip();
-        if ( calculate_full_g2_of_tau ) {
+        if ( !calculate_concurrence_with_g2_of_zero ) {
             for ( int t = 0; t < deltaT; t++ ) {
                 g2_11.at( k ) += akf_mat_11( t, k ) * deltaT;
                 g2_22.at( k ) += akf_mat_22( t, k ) * deltaT;
@@ -534,20 +544,20 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
         rho = getRhoAt( i );
         M1 = op_creator_1 * op_creator_1 * op_annihilator_1 * op_annihilator_1;
         M2 = op_creator_1 * op_annihilator_1;
-        g2_22_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t );// / std::pow( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ), 2 );
+        g2_22_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t ); // / std::pow( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ), 2 );
         M1 = op_creator_2 * op_creator_2 * op_annihilator_2 * op_annihilator_2;
         M2 = op_creator_2 * op_annihilator_2;
-        g2_11_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t );// / std::pow( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ), 2 );
+        g2_11_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t ); // / std::pow( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ), 2 );
         M1 = op_creator_1 * op_creator_1 * op_annihilator_2 * op_annihilator_2;
         M2 = op_creator_1 * op_annihilator_1;
         M3 = op_creator_2 * op_creator_2;
-        g2_12_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t );// / ( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ) * s.dgl_expectationvalue<MatType, dcomplex>( rho, M3, t_t ) );
+        g2_12_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t ); // / ( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ) * s.dgl_expectationvalue<MatType, dcomplex>( rho, M3, t_t ) );
         outputProgress( s.parameters.output_handlerstrings, timer_g2, progressbar, (int)savedStates.size(), "G2(tau): " );
         timer_g2.iterate();
     }
     // Calculating Concurrence
-    Timer &timer = createTimer( "Concurrence" );
-    timer.start();
+    Timer &timer_c = createTimer( "Concurrence" );
+    timer_c.start();
     logs.level2( "Calculating Concurrence... " );
     // Prepare output vector
     std::vector<dcomplex> rho_11, rho_22, rho_12;
@@ -575,13 +585,66 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
                 rho_22.at( t ) += g2_22_zero.at( k ) * deltaT;
                 rho_12.at( t ) += g2_12_zero.at( k ) * deltaT;
             }
-            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, (int)savedStates.size(), "Concurrence: " );
+            outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, (int)savedStates.size(), "Concurrence: " );
         }
-        timer.iterate();
+        timer_c.iterate();
     }
     // Final output and timer end
-    outputProgress( s.parameters.output_handlerstrings, timer, progressbar, (int)savedStates.size(), "Concurrence", PROGRESS_FORCE_OUTPUT );
-    timer.end();
+    outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, (int)savedStates.size(), "Concurrence", PROGRESS_FORCE_OUTPUT );
+    timer_c.end();
+    // Calculating indistinguishability
+    DenseMat akf_mat_g1_1 = DenseMat::Zero( dim, dim );
+    DenseMat akf_mat_g1_2 = DenseMat::Zero( dim, dim );
+    std::vector<double> p1, p2;
+    for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
+        p1.push_back( 0 );
+        p2.push_back( 0 );
+    }
+    if ( !calculate_concurrence_with_g2_of_zero ) {
+        M1 = op_creator_1 * op_annihilator_1;
+        M2 = op_creator_2 * op_annihilator_2;
+        if ( !temp1.isZero() )
+            akf_mat_g1_1 = temp1;
+        else
+            calculate_g1( s, op_creator_1, op_annihilator_1, akf_mat_g1_1, "g1_1" );
+        if ( !temp2.isZero() )
+            akf_mat_g1_2 = temp2;
+        else
+            calculate_g1( s, op_creator_2, op_annihilator_2, akf_mat_g1_2, "g1_2" );
+        Timer &timer = createTimer( "Indistinguishability" ); //TODO: indistingusads with G2(t=0)
+        timer.start();
+        int tstart = output_full_ind ? 0 : (int)savedStates.size() - s.getIterationSkip();
+#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
+        for ( int T = tstart; T < (int)savedStates.size(); T += s.getIterationSkip() ) {
+            dcomplex top_1 = 0;
+            dcomplex top_2 = 0;
+            dcomplex bottom_1 = 0;
+            dcomplex bottom_2 = 0;
+            for ( int i = 0; i < T; i += s.getIterationSkip() ) {
+                int k = i / s.getIterationSkip();
+                auto rho = getRhoAt( i );
+                double t = getTimeAt( i );
+                for ( int j = 0; j < T && j + i < (int)savedStates.size(); j += s.getIterationSkip() ) {
+                    int l = j / s.getIterationSkip();
+                    auto rho_tau = getRhoAt( i + j );
+                    auto t_tau = getTimeAt( i + j );
+                    dcomplex gpop_1 = s.dgl_expectationvalue<SparseMat, dcomplex>( rho, M1, t ) * s.dgl_expectationvalue<SparseMat, dcomplex>( rho_tau, M1, t_tau );
+                    dcomplex gpop_2 = s.dgl_expectationvalue<SparseMat, dcomplex>( rho, M2, t ) * s.dgl_expectationvalue<SparseMat, dcomplex>( rho_tau, M2, t_tau );
+                    dcomplex gbot_1 = s.dgl_expectationvalue<SparseMat, dcomplex>( rho_tau, op_annihilator_1, t_tau ) * s.dgl_expectationvalue<SparseMat, dcomplex>( rho, op_creator_1, t );
+                    dcomplex gbot_2 = s.dgl_expectationvalue<SparseMat, dcomplex>( rho_tau, op_annihilator_2, t_tau ) * s.dgl_expectationvalue<SparseMat, dcomplex>( rho, op_creator_2, t );
+                    top_1 += 0.5 * ( gpop_1 + akf_mat_11( k, l ) - std::abs( akf_mat_g1_1( k, l ) ) * std::abs( akf_mat_g1_1( k, l ) ) );
+                    bottom_1 += 2.0 * gpop_1 - std::abs( gbot_1 ) * std::abs( gbot_1 );
+                    top_2 += 0.5 * ( gpop_2 + akf_mat_22( k, l ) - std::abs( akf_mat_g1_2( k, l ) ) * std::abs( akf_mat_g1_2( k, l ) ) );
+                    bottom_2 += 2.0 * gpop_2 - std::abs( gbot_2 ) * std::abs( gbot_2 );
+                }
+            }
+            p1.at( T / s.getIterationSkip() ) = ( 1.0 - std::real( top_1 / bottom_1 ) );
+            p2.at( T / s.getIterationSkip() ) = ( 1.0 - std::real( top_2 / bottom_2 ) );
+            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, (int)( savedStates.size() / s.getIterationSkip() ), "Indistinguishability: " );
+            timer.iterate();
+        }
+        timer.end();
+    }
     // Save output
     logs.level2( "Done, saving to {}... ", fileOutputName );
     std::string filepath = s.parameters.subfolder + fileOutputName;
@@ -590,19 +653,21 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
         logs.level2( "Failed to open outputfile for advanced photon statistics!\n" );
         return false;
     }
-    fmt::print( concurrencefile, "Time\tMatrixelement_11\tMatrixelement_22\tConcurrence\tG2_11(tau)\tG2_22(tau)\tG2_12(tau)\tG2(tau=0)_11\tG2(tau=0)_22\tG2(tau=0)_12\n" );
+    fmt::print( concurrencefile, "Time\tMatrixelement_11\tMatrixelement_22\tConcurrence\tG2_11(tau)\tG2_22(tau)\tG2_12(tau)\tG2(tau=0)_11\tG2(tau=0)_22\tG2(tau=0)_12\tI_1\tI_2\n" );
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
         int k = i / s.getIterationSkip();
-        fmt::print( concurrencefile, "{:.5e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( i ), std::abs( rho_11.at( k ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::abs( rho_22.at( k ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::abs( 2.0 * std::abs( rho_12.at( k ) ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::real(g2_11.at( k )), std::real(g2_22.at( k )), std::real(g2_12.at( k )), std::real(g2_11_zero.at( k )), std::real(g2_22_zero.at( k )), std::real(g2_12_zero.at( k )) );
+        fmt::print( concurrencefile, "{:.5e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( i ), std::abs( rho_11.at( k ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::abs( rho_22.at( k ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::abs( 2.0 * std::abs( rho_12.at( k ) ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::real( g2_11.at( k ) ), std::real( g2_22.at( k ) ), std::real( g2_12.at( k ) ), std::real( g2_11_zero.at( k ) ), std::real( g2_22_zero.at( k ) ), std::real( g2_12_zero.at( k ) ), p1.at( k ), p2.at( k ) );
     }
     std::fclose( concurrencefile );
     logs.level2( "Done!\n" );
     logs( "Final Concurrence: {}\n", std::real( 2.0 * std::abs( rho_12.back() ) / ( rho_11.back() + rho_22.back() ) ) );
+    if ( output_full_ind )
+        logs( "Final Indistinguishability: {} H, {} V\n", p1.back(), p2.back() );
     //if ()
     //logs( "Final G2(0): {}\n", std::real( 2.0 * std::abs( rho_12.back() ) / ( rho_11.back() + rho_22.back() ) ) );
 
-    if (output_full_g2) {
-        logs.level2("Saving full, non integrated G2(t,tau) matrices... ");
+    if ( output_full_g2 ) {
+        logs.level2( "Saving full, non integrated G2(t,tau) matrices... " );
         FILE *ganz = std::fopen( ( s.parameters.subfolder + "g2(ttau)_matrix.txt" ).c_str(), "w" );
         fmt::print( ganz, "t\ttau\tG2_11(t,tau)\tG2_22(t,tau)\tG2_12(t,tau)\n" );
         for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
@@ -614,7 +679,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
             fmt::print( ganz, "\n" );
         }
         std::fclose( ganz );
-        logs.level2("Done!\n");
+        logs.level2( "Done!\n" );
     }
     // Sucessfull
     return true;

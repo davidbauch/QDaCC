@@ -21,14 +21,14 @@ int main( int argc, char* argv[] ) {
     std::vector<std::vector<std::string>> sets;
     if ( vec_find_str( "--file", inputs ) != -1 ) {
         // Multifile mode: Program will read inputfile from --file and execute all lines that dont start with '#'
-        auto params = Parse_Parameters( inputs, {"--file", "--Threads", "-advLog", "-noHandler"}, {1,1,1,1}, "Global Parameters" );
+        auto params = Parse_Parameters( inputs, {"--file", "--Threads", "-advLog", "-noHandler"}, {1, 1, 1, 1}, "Global Parameters" );
         std::string filename = params.get( 0, "" );
         if ( filename.size() > 1 ) {
             // Catch global parameters
             std::vector<std::string> globalparams;
-            for (unsigned int i = 0; i < inputs.size()-1; i++) {
-                if (inputs.at(i).compare("--file") != 0 && (i > 0 && inputs.at(i-1).compare("--file") != 0)) {
-                    globalparams.emplace_back(inputs.at(i));
+            for ( unsigned int i = 0; i < inputs.size() - 1; i++ ) {
+                if ( inputs.at( i ).compare( "--file" ) != 0 && ( i > 0 && inputs.at( i - 1 ).compare( "--file" ) != 0 ) ) {
+                    globalparams.emplace_back( inputs.at( i ) );
                 }
             }
             // Parse file and save to sets vector
@@ -36,7 +36,7 @@ int main( int argc, char* argv[] ) {
             std::string line;
             std::getline( file, line );
             std::string outputname = splitline( line ).at( 1 );
-            std::filesystem::create_directories(inputs.back() + outputname);
+            std::filesystem::create_directories( inputs.back() + outputname );
             std::ofstream fileout( inputs.back() + outputname + "/settings_" + outputname + ".txt", std::ofstream::out );
             std::vector<std::string> set;
             int counter = 0;
@@ -54,7 +54,7 @@ int main( int argc, char* argv[] ) {
                     if ( set.at( 0 ).compare( "#" ) != 0 && vec_find_str( "python3", set ) == -1 ) {
                         if ( set.size() > 1 ) {
                             // Append global parameters. Second calls wont overwrite these, so global parameters ALWAYS overwrite local parameters
-                            set.insert(set.begin()+1,globalparams.begin(),globalparams.end());
+                            set.insert( set.begin() + 1, globalparams.begin(), globalparams.end() );
                             // Append final path info
                             set.emplace_back( inputs.back() + outputname + "/" + outputname + "_" + toStr( counter++ ) + "/" );
                             sets.emplace_back( set );
@@ -77,10 +77,10 @@ int main( int argc, char* argv[] ) {
     }
 
     // Main Program
-    for (auto set : sets) {
+    for ( auto set : sets ) {
         inputs = set;
         const std::string fp = inputs.back();
-        std::filesystem::create_directories(fp);
+        std::filesystem::create_directories( fp );
         // Logfile
         logs = Log( std::string( inputs.back() ) + "logfile.log", vec_find_str( "-advLog", inputs ) != -1 );
 
@@ -94,10 +94,10 @@ int main( int argc, char* argv[] ) {
         // Spectrum
         if ( system.calculate_spectrum() ) {
             if ( system.calculate_spectrum_H() ) {
-                solver.calculate_spectrum( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "spectrum_H.txt" );
+                solver.calculate_spectrum( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "spectrum_H.txt", 1 );
             }
             if ( system.calculate_spectrum_V() ) {
-                solver.calculate_spectrum( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "spectrum_V.txt" );
+                solver.calculate_spectrum( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "spectrum_V.txt", 2 );
             }
         }
         if ( system.calculate_g2() ) {
@@ -109,10 +109,8 @@ int main( int argc, char* argv[] ) {
 
         double finalTime = Timer::summary();
         logs( "\nStartcommand: " );
-        //for ( int ii = 0; ii < argc; ii++ )
-        //    logs( "{} ", std::string( argv[ii] ) );
-        for (auto ii : inputs)
-            logs("{} ", ii);
+        for ( auto ii : inputs )
+            logs( "{} ", ii );
         logs( "\n\n" + system.terminate_message + "\n" );
 
         logs.close();
