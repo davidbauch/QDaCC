@@ -661,7 +661,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
     std::fclose( concurrencefile );
     logs.level2( "Done!\n" );
     logs( "Final Concurrence: {}\n", std::real( 2.0 * std::abs( rho_12.back() ) / ( rho_11.back() + rho_22.back() ) ) );
-    if ( output_full_ind )
+    if ( !calculate_concurrence_with_g2_of_zero )
         logs( "Final Indistinguishability: {} H, {} V\n", p1.back(), p2.back() );
     //if ()
     //logs( "Final G2(0): {}\n", std::real( 2.0 * std::abs( rho_12.back() ) / ( rho_11.back() + rho_22.back() ) ) );
