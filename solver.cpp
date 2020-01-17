@@ -534,10 +534,10 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
         int k = i / s.getIterationSkip();
         if ( !calculate_concurrence_with_g2_of_zero ) {
-            for ( int t = 0; t < deltaT; t++ ) {
-                g2_11.at( k ) += akf_mat_11( t, k ) * deltaT;
-                g2_22.at( k ) += akf_mat_22( t, k ) * deltaT;
-                g2_12.at( k ) += akf_mat_12( t, k ) * deltaT;
+            for ( int t = 0; t < akf_mat_11.cols(); t++ ) {
+                g2_11.at( k ) += akf_mat_11( k, t ) * deltaT;
+                g2_22.at( k ) += akf_mat_22( k, t ) * deltaT;
+                g2_12.at( k ) += akf_mat_12( k, t ) * deltaT;
             }
         }
         double t_t = getTimeAt( i );
