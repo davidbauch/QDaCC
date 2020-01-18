@@ -147,6 +147,8 @@ class Parameters : public Parameters_Parent {
         numerics_use_interactionpicture = params.get( 4 ) ? 0 : 1;
         numerics_use_rwa = params.get( 5 ) ? 0 : 1;
         numerics_maximum_threads = params.get<int>( 6, "1" );
+        if (numerics_maximum_threads == -1)
+            numerics_maximum_threads = omp_get_max_threads();
         output_handlerstrings = params.get( 7 ) ? 0 : 1;
         output_operators = params.get( 8 ) ? 2 : ( params.get( 9 ) ? 1 : ( params.get( 10 ) ? 3 : 0 ) );
         numerics_order_timetrafo = params.get( 11 ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
