@@ -470,11 +470,14 @@ class System : public System_Parent {
         SparseMat op = operatorMatrices.atom_sigmaminus_G_B * ( mode == 'h' ? operatorMatrices.photon_create_H : operatorMatrices.photon_create_V );
         double A = std::exp( -parameters.p_omega_cavity_loss * parameters.t_step );
         dcomplex B, R;
-        for ( SaveState savestate : past_rhos ) {
-            double tdd = savestate.t;
+#pragma omp parallel for ordered schedule( dynamic ) shared( past_rhos ) num_threads( parameters.numerics_phonons_maximum_threads )
+        for ( long unsigned int i = 0; i < past_rhos.size(); i++ ) {
+        //for ( SaveState savestate : past_rhos ) {
+            double tdd = past_rhos.at(i).t;
             B = std::exp( -1i * ( w2 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma2 ) ) * ( t - tdd ) ) - std::exp( -1i * ( w1 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma1 ) ) * ( t - tdd ) );
-            R = dgl_expectationvalue<SparseMat, dcomplex>( savestate.mat, op, tdd ) * ( mode == 'h' ? std::conj( pulse_H.get( tdd ) ) : std::conj( pulse_V.get( tdd ) ) );
+            R = dgl_expectationvalue<SparseMat, dcomplex>( past_rhos.at(i).mat, op, tdd ) * ( mode == 'h' ? std::conj( pulse_H.get( tdd ) ) : std::conj( pulse_V.get( tdd ) ) );
             //fmt::print("t = {}, tau = {}, A = {}, B = {}, R = {}\n",t,tdd,A,B,R);
+#pragma omp critical
             ret += B * R;
         }
         return A * before + parameters.t_step * parameters.t_step * ret;
