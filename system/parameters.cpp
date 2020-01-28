@@ -22,7 +22,7 @@ Parameters_Parent::Parameters_Parent() {
 
 void Parameters_Parent::init( const std::vector<std::string> &arguments ) {
     // Parsing input:
-    Timer &timer_parseInput = createTimer( "Parsing parameters" );
+    Timer &timer_parseInput = createTimer( "Parsing parameters", true, false );
     logs.wrapInBar( "Conversion of input variables", LOG_SIZE_FULL, LOG_LEVEL_2, LOG_BAR_0 );
     logs.level2( "\n" );
     logs.level2( "Parsing input variables... " );
@@ -43,7 +43,7 @@ void Parameters_Parent::init( const std::vector<std::string> &arguments ) {
     }
 
     // Adjusting inputs:
-    Timer &timer_adjustInput = createTimer( "Adjusting parameters" );
+    Timer &timer_adjustInput = createTimer( "Adjusting parameters", true, false );
     logs.level2( "Adjusting input variables... " );
     timer_adjustInput.start();
     if ( !adjustInput() ) {

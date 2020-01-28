@@ -21,9 +21,9 @@ dcomplex Pulse::evaluate( double t ) {
     dcomplex ret = 0;
     for ( int i = 0; i < (int)inputs.amp.size(); i++ ) {
         if ( inputs.type.at( i ).compare( "cw" ) == 0 && t >= inputs.center.at( i ) )
-            ret += inputs.amp.at( i ) * std::exp( -1i * inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) );
+            ret += inputs.amp.at( i ) * std::exp( -1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + inputs.omega_chirp.at( i ) * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
         else if ( inputs.type.at( i ).compare( "gauss" ) == 0 )
-            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / inputs.sigma.at( i ), 2. ) - 1i * inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) );
+            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / inputs.sigma.at( i ), 2. ) - 1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + inputs.omega_chirp.at( i ) * std::pow( ( t - inputs.center.at( i ) - inputs.sigma.at(i)*4.0 ), 2.0 ) ) );
     }
     return ret;
 }
@@ -71,16 +71,17 @@ void Pulse::fileOutput( std::string filepath ) {
     std::fclose( pulsefile );
 }
 
-void Pulse::Inputs::add( double _center, double _amp, double _sigma, double _omega, std::string _type ) { //,double chirp = 0) {
+void Pulse::Inputs::add( double _center, double _amp, double _sigma, double _omega, double _omega_chirp, std::string _type ) { //,double chirp = 0) {
     center.emplace_back( _center );
     amp.emplace_back( _amp );
     sigma.emplace_back( _sigma );
     omega.emplace_back( _omega );
+    omega_chirp.emplace_back( _omega_chirp );
     type.emplace_back( _type );
-    logs.level2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, type = {}. No filter was used.\n", _center, _amp, _sigma, _omega, _type );
+    logs.level2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center, _amp, _sigma, _omega, _omega_chirp, _type );
 }
 
-void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp, std::vector<double> &_sigma, std::vector<double> &_omega, std::vector<std::string> &_type, std::complex<double> amp_scaling ) {
+void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp, std::vector<double> &_sigma, std::vector<double> &_omega, std::vector<double> &_omega_chirp, std::vector<std::string> &_type, std::complex<double> amp_scaling ) {
     if ( !( _center.size() == _amp.size() && _sigma.size() == _omega.size() && _amp.size() == _sigma.size() && _sigma.size() == _type.size() ) ) {
         logs.level2( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
         return;
@@ -90,12 +91,13 @@ void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp
         amp.emplace_back( _amp.at( i ) );
         sigma.emplace_back( _sigma.at( i ) );
         omega.emplace_back( _omega.at( i ) );
+        omega_chirp.emplace_back( _omega_chirp.at( i ) );
         type.emplace_back( _type.at( i ) );
-        logs.level2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, type = {}. No filter was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _type.at( i ) );
+        logs.level2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ) );
     }
 }
-void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp, std::vector<double> &_sigma, std::vector<double> &_omega, std::vector<std::string> &_type, std::vector<std::string> &_filter, std::string to_match, std::complex<double> amp_scaling ) {
-    if ( !( _center.size() == _amp.size() && _sigma.size() == _omega.size() && _amp.size() == _sigma.size() && _sigma.size() == _type.size() && _type.size() == _filter.size() ) ) {
+void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp, std::vector<double> &_sigma, std::vector<double> &_omega, std::vector<double> &_omega_chirp, std::vector<std::string> &_type, std::vector<std::string> &_filter, std::string to_match, std::complex<double> amp_scaling ) {
+    if ( !( _center.size() == _amp.size() && _sigma.size() == _omega.size() && _amp.size() == _sigma.size() && _sigma.size() == _type.size() && _type.size() == _filter.size() && _filter.size() == _omega_chirp.size() ) ) {
         logs.level2( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
         return;
     }
@@ -105,8 +107,9 @@ void Pulse::Inputs::add( std::vector<double> &_center, std::vector<double> &_amp
             amp.emplace_back( _amp.at( i ) * amp_scaling );
             sigma.emplace_back( _sigma.at( i ) );
             omega.emplace_back( _omega.at( i ) );
+            omega_chirp.emplace_back( _omega_chirp.at( i ) );
             type.emplace_back( _type.at( i ) );
-            logs.level2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, type = {}. Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _type.at( i ), to_match );
+            logs.level2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ), to_match );
         } else {
             //logs.level2( "Failed to add Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, type = {}. Mismatched Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _type.at( i ), to_match );
         }
@@ -196,7 +199,7 @@ void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
         fmt::print( pulsefile, "{:.8e}\t", pulses.at( 0 ).timearray.at( i ) );
         for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
             if ( i < pulses.at( p ).timearray.size() ) {
-                fmt::print( pulsefile, "{:.8e}\t", std::abs( pulses.at( p ).pulsearray.at( i ) ) );
+                fmt::print( pulsefile, "{:.8e}\t", std::real( pulses.at( p ).pulsearray.at( i ) ) );
             }
         }
         fmt::print( pulsefile, "\n" );

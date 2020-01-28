@@ -23,11 +23,11 @@ class Timer {
     double outputMod;
     double outputLast;
     std::string name;
-    bool addtoTotalStatistic;
+    bool addtoTotalStatistic, printToSummary;
 
    public:
     Timer();
-    Timer( const std::string &_name, bool _addtoTotalStatistic );
+    Timer( const std::string &_name, bool _addtoTotalStatistic, bool _printToSummary );
     void start();
     void end();
     void iterate();
@@ -48,15 +48,15 @@ class Timer {
 
 std::vector<Timer> allTimers;
 
-Timer &createTimer( std::string _name = "Generic timer", bool _addtoTotalStatistic = true ) {
-    allTimers.push_back( Timer( _name, _addtoTotalStatistic ) );
+Timer &createTimer( std::string _name = "Generic timer", bool _addtoTotalStatistic = true, bool _printToSummary = true ) {
+    allTimers.push_back( Timer( _name, _addtoTotalStatistic, _printToSummary ) );
     logs.level2( "Created timer with name '{}'{}.\n", _name, ( _addtoTotalStatistic ? " which will be added to total statistics" : "" ) );
     return allTimers.back();
 }
 
 // Constructor
-Timer::Timer() : Timer::Timer( "Generic Timer", true ){};
-Timer::Timer( const std::string &_name, bool _addtoTotalStatistic = true ) {
+Timer::Timer() : Timer::Timer( "Generic Timer", true, true ){};
+Timer::Timer( const std::string &_name, bool _addtoTotalStatistic = true, bool _printToSummary = true ) {
     wallTimeStarted = omp_get_wtime();
     wallTimeEnded = wallTimeStarted;
     totalWallTime = 0;
@@ -69,6 +69,7 @@ Timer::Timer( const std::string &_name, bool _addtoTotalStatistic = true ) {
     outputLast = 0;
     name = _name;
     addtoTotalStatistic = _addtoTotalStatistic;
+    printToSummary = _printToSummary;
     if ( allTimers.size() < 10 )
         allTimers.reserve( 15 );
 }
@@ -179,13 +180,15 @@ double Timer::summary( bool output = true ) {
                 totalWallTime += timer.getWallTime();
                 totalCPUTime += timer.getCPUTime();
             }
-            logs( "{:<{}}: Walltime: {} ", timer.getName(), len, Timer::format( timer.getWallTime() ) );
-            if ( timer.getTotalIterationNumber() > 1 )
-                logs( "CPUTime: {} Iterations: {} Average Time per Iteration: {}", ( timer.getCPUTime() != 0 ) ? Timer::format( timer.getCPUTime() ) : "--", timer.getTotalIterationNumber(), Timer::format( timer.getAverageIterationTime() ) );
-            logs( "\n" );
+            if ( timer.printToSummary ) {
+                logs( "{:<{}}: Walltime: {} ", timer.getName(), len, Timer::format( timer.getWallTime() ) );
+                if ( timer.getTotalIterationNumber() > 1 )
+                    logs( "CPUTime: {} Iterations: {} Average Time per Iteration: {}", ( timer.getCPUTime() != 0 ) ? Timer::format( timer.getCPUTime() ) : "--", timer.getTotalIterationNumber(), Timer::format( timer.getAverageIterationTime() ) );
+                logs( "\n" );
+            }
         }
         logs.bar( LOG_SIZE_FULL, LOG_LEVEL_1, LOG_BAR_1 );
-        logs( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0  ? Timer::format( totalCPUTime ) : "--" ) );
+        logs( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0 ? Timer::format( totalCPUTime ) : "--" ) );
         logs.bar();
     }
     return totalWallTime;

@@ -3,7 +3,7 @@
 void System_Parent::init() {
     terminate_message = global_message_normaltermination;
     // Adjusting inputs:
-    Timer &timer_systeminit = createTimer( "System Initialization" );
+    Timer &timer_systeminit = createTimer( "System Initialization", true, false );
     logs.level2( "System initialization... " );
     timer_systeminit.start();
     if ( !init_system() ) {

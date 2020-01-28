@@ -61,14 +61,14 @@ class System : public System_Parent {
 
         // Arbitrary number of pulses onto single atomic level. As of now, only a single pulse input is supported via input.
         Pulse::Inputs pulseinputs_H( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_order_highest );
-        pulseinputs_H.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_type, parameters.pulse_pol, "H" );
-        pulseinputs_H.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_type, parameters.pulse_pol, "+", 1.0 / std::sqrt( 2.0 ) );
-        pulseinputs_H.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_type, parameters.pulse_pol, "-", 1.0 / std::sqrt( 2.0 ) );
+        pulseinputs_H.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_omega_chirp, parameters.pulse_type, parameters.pulse_pol, "H" );
+        pulseinputs_H.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_omega_chirp, parameters.pulse_type, parameters.pulse_pol, "+", 1.0 / std::sqrt( 2.0 ) );
+        pulseinputs_H.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_omega_chirp, parameters.pulse_type, parameters.pulse_pol, "-", 1.0 / std::sqrt( 2.0 ) );
         pulse_H = Pulse( pulseinputs_H );
         Pulse::Inputs pulseinputs_V( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_order_highest );
-        pulseinputs_V.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_type, parameters.pulse_pol, "V" );
-        pulseinputs_V.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_type, parameters.pulse_pol, "+", 1i / std::sqrt( 2.0 ) );
-        pulseinputs_V.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_type, parameters.pulse_pol, "-", -1i / std::sqrt( 2.0 ) );
+        pulseinputs_V.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_omega_chirp, parameters.pulse_type, parameters.pulse_pol, "V" );
+        pulseinputs_V.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_omega_chirp, parameters.pulse_type, parameters.pulse_pol, "+", 1i / std::sqrt( 2.0 ) );
+        pulseinputs_V.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_omega_chirp, parameters.pulse_type, parameters.pulse_pol, "-", -1i / std::sqrt( 2.0 ) );
         pulse_V = Pulse( pulseinputs_V );
         if ( parameters.pulse_amp.at( 0 ) != 0 ) {
             Pulse::fileOutput( parameters.subfolder + "pulse.txt", {pulse_H, pulse_V} );
@@ -233,7 +233,7 @@ class System : public System_Parent {
         if ( mode == 'L' ) {
             double bpulsesquared, delta, nu;
             if ( level == 'H' ) {
-                bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse_H.get( t ) ), 2.0 );
+                bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse_H.get( t ) ), 2.0 ); //TODO: chirp correction for omega_atomic!!!!
                 delta = parameters.pulse_omega.at( 0 ) - omega_atomic; //FIXME : different pulse frequencies
             } else {
                 bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse_V.get( t ) ), 2.0 );
