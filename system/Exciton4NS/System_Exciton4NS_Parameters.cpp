@@ -234,7 +234,7 @@ class Parameters : public Parameters_Parent {
         for ( int i = 0; i < (int)pulse_amp.size(); i++ )
             if ( pulse_type.at( i ).compare( "gauss_pi" ) == 0 ) {
                 if ( pulse_amp.at( i ) < 500 )
-                    pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) ) / 2.0;
+                    pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI * pulse_sigma.at( i ) * std::sqrt( std::pow( pulse_omega_chirp.at( i ) / pulse_sigma.at( i ), 2.0 ) + std::pow( pulse_sigma.at( i ), 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
                 pulse_type.at( i ) = "gauss";
             }
 
@@ -391,9 +391,10 @@ class Parameters : public Parameters_Parent {
             int current = 0;
             for ( int i = 0; i < (int)chirp_t.size() - 1; i++ ) {
                 if ( chirp_y.at( i + 1 ) - chirp_y.at( i ) != 0.0 ) {
-                    logs.inBar( "Chirp " + toStr( current++ ) );
-                    logs( "between t0 = {1:.8e} ps\nt1 = {2:.8e} ps\nTotal Chirp {0:}: {3:.8} mueV\n-> average rate Chirp {0:}: {4:.8} mueV/ps\n", chirp_t.at( i ), chirp_t.at( i + 1 ), Hz_to_eV( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) * 1E6, Hz_to_eV( ( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) ) * 1E6 / 1E12 / ( chirp_t.at( i + 1 ) - chirp_t.at( i ) ) );
+                    //logs.inBar( "Chirp " + toStr( current++ ) );
+                    logs( "Chirp {0:} between t0 = {1:.8e} ps\nChirp {0:} t1 = {2:.8e} ps\nTotal Chirp {0:}: {3:.8} mueV\n-> average rate Chirp {0:}: {4:.8} mueV/ps\n",current, chirp_t.at( i ), chirp_t.at( i + 1 ), Hz_to_eV( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) * 1E6, Hz_to_eV( ( chirp_y.at( i + 1 ) - chirp_y.at( i ) ) ) * 1E6 / 1E12 / ( chirp_t.at( i + 1 ) - chirp_t.at( i ) ) );
                     total += chirp_y.at( i + 1 ) - chirp_y.at( i );
+                    current++;
                 }
             }
             if ( chirp_type.compare( "none" ) != 0 )

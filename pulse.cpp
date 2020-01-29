@@ -20,10 +20,12 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
 dcomplex Pulse::evaluate( double t ) {
     dcomplex ret = 0;
     for ( int i = 0; i < (int)inputs.amp.size(); i++ ) {
+        double amp = std::sqrt( std::pow( inputs.omega_chirp.at( i ) / inputs.sigma.at( i ), 2.0 ) + std::pow( inputs.sigma.at( i ), 2.0 ) );
+        double freq = inputs.omega_chirp.at( i ) / ( std::pow( inputs.omega_chirp.at( i ), 2.0 ) + std::pow( inputs.sigma.at( i ), 4.0 ) );
         if ( inputs.type.at( i ).compare( "cw" ) == 0 && t >= inputs.center.at( i ) )
             ret += inputs.amp.at( i ) * std::exp( -1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + inputs.omega_chirp.at( i ) * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
         else if ( inputs.type.at( i ).compare( "gauss" ) == 0 )
-            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / inputs.sigma.at( i ), 2. ) - 1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + inputs.omega_chirp.at( i ) * std::pow( ( t - inputs.center.at( i ) - inputs.sigma.at(i)*4.0 ), 2.0 ) ) );
+            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / amp, 2. ) - 1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + 0.5 * freq * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
     }
     return ret;
 }
