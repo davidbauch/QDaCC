@@ -179,6 +179,7 @@ bool ODESolver::calculate_t_direction( System_Parent &s ) {
             return false;
         }
     }
+    outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, "T-Direction: ", PROGRESS_FORCE_OUTPUT );
     rkTimer.end();
     logs.level2( "Done! Saved {} states, cached {} hamilton matrices.\n", savedStates.size(), savedHamiltons.size() );
     return true;
@@ -315,6 +316,7 @@ bool ODESolver::calculate_g1( System_Parent &s, const MatType &op_creator, const
             outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
         }
     }
+    outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
     logs.level2( "G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return true;
@@ -482,6 +484,7 @@ bool ODESolver::calculate_g2( System_Parent &s, const MatType &op_creator_1, con
             outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
         }
     }
+    outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
     logs.level2( "G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return true;
@@ -496,14 +499,15 @@ bool ODESolver::calculate_g2( System_Parent &s, const MatType &op_creator_1, con
 bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName ) {
     //bool calculate_full_g2_of_tau = !s.parameters.numerics_use_simplified_g2;
     bool output_full_g2 = false;
-    bool output_full_ind = false;
+    bool output_full_ind = true;
     bool calculate_concurrence_with_g2_of_zero = s.parameters.numerics_use_simplified_g2;
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
     s.command( ODESolver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Calculate T-Step
     double deltaT = s.getTimeStep() * ( 1.0 * s.getIterationSkip() );
+    int pbsize = (int)savedStates.size() / s.getIterationSkip();
     // Progress
-    ProgressBar progressbar = ProgressBar( (int)savedStates.size() );
+    ProgressBar progressbar = ProgressBar( pbsize );
     // Cache matrix. Saves complex double entries of G1(t,tau). Will be created even if they are not needed
     DenseMat akf_mat_11 = DenseMat::Zero( dim, dim );
     DenseMat akf_mat_22 = DenseMat::Zero( dim, dim );
@@ -552,7 +556,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
         M2 = op_creator_1 * op_annihilator_1;
         M3 = op_creator_2 * op_creator_2;
         g2_12_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t ); // / ( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ) * s.dgl_expectationvalue<MatType, dcomplex>( rho, M3, t_t ) );
-        outputProgress( s.parameters.output_handlerstrings, timer_g2, progressbar, (int)savedStates.size(), "G2(tau): " );
+        outputProgress( s.parameters.output_handlerstrings, timer_g2, progressbar, pbsize, "G2(tau): " );
         timer_g2.iterate();
     }
     // Calculating Concurrence
@@ -585,12 +589,12 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
                 rho_22.at( t ) += g2_22_zero.at( k ) * deltaT;
                 rho_12.at( t ) += g2_12_zero.at( k ) * deltaT;
             }
-            outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, (int)savedStates.size(), "Concurrence: " );
+            outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence: " );
         }
         timer_c.iterate();
     }
     // Final output and timer end
-    outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, (int)savedStates.size(), "Concurrence", PROGRESS_FORCE_OUTPUT );
+    outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence", PROGRESS_FORCE_OUTPUT );
     timer_c.end();
     // Calculating indistinguishability
     DenseMat akf_mat_g1_1 = DenseMat::Zero( dim, dim );
@@ -640,9 +644,11 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
             }
             p1.at( T / s.getIterationSkip() ) = ( 1.0 - std::real( top_1 / bottom_1 ) );
             p2.at( T / s.getIterationSkip() ) = ( 1.0 - std::real( top_2 / bottom_2 ) );
-            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, (int)( savedStates.size() / s.getIterationSkip() ), "Indistinguishability: " );
+            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability: " );
             timer.iterate();
         }
+        // Final output and timer end
+        outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability: ", PROGRESS_FORCE_OUTPUT );
         timer.end();
     }
     // Save output
@@ -660,7 +666,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
     }
     std::fclose( concurrencefile );
     logs.level2( "Done!\n" );
-    logs( "Final Concurrence: {}\n", std::real( 2.0 * std::abs( rho_12.back() ) / ( rho_11.back() + rho_22.back() ) ) );
+    logs( "Final Concurrence: {}\n", 2.0 * std::abs( rho_12.back() / ( rho_11.back() + rho_22.back() ) ) );
     if ( !calculate_concurrence_with_g2_of_zero )
         logs( "Final Indistinguishability: {} H, {} V\n", p1.back(), p2.back() );
     //if ()
