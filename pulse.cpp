@@ -68,7 +68,7 @@ void Pulse::fileOutput( std::string filepath ) {
         return;
     }
     for ( long unsigned int i = 0; i < timearray.size() - steps.size(); i += steps.size() ) {
-        fmt::print( pulsefile, "{:.10e}\t{:.10e}\n", timearray.at( i ), std::abs( pulsearray.at( i ) ) );
+        fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\n", timearray.at( i ), std::abs( pulsearray.at( i ) ), std::real( pulsearray.at( i ) ) );
     }
     std::fclose( pulsefile );
 }
@@ -201,7 +201,7 @@ void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
         fmt::print( pulsefile, "{:.8e}\t", pulses.at( 0 ).timearray.at( i ) );
         for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
             if ( i < pulses.at( p ).timearray.size() ) {
-                fmt::print( pulsefile, "{:.8e}\t", std::real( pulses.at( p ).pulsearray.at( i ) ) );
+                fmt::print( pulsefile, "{:.8e}\t{:.8e}\t", std::abs( pulses.at( p ).pulsearray.at( i ) ), std::real( pulses.at( p ).pulsearray.at( i ) ) );
             }
         }
         fmt::print( pulsefile, "\n" );
