@@ -348,7 +348,7 @@ class Parameters : public Parameters_Parent {
 
         logs.wrapInBar( "Base Energies", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Biexciton binding energy: {:.8e} Hz - {:.8} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
-        logs( "Exciton fine structure splitting: {:.8e} Hz - {:.8} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
+        logs( "Exciton fine structure splitting: {:.8e} Hz - {:.8} meV\n", p_deltaE, Hz_to_eV( p_deltaE ) * 1E3 );
         logs( "Transition Energy H - G: {:.8e} Hz - {:.8} eV - {:.8} nm\n", p_omega_atomic_G_H, Hz_to_eV( p_omega_atomic_G_H ), Hz_to_wavelength( p_omega_atomic_G_H ) );
         logs( "Transition Energy V - G: {:.8e} Hz - {:.8} eV - {:.8} nm\n", p_omega_atomic_G_V, Hz_to_eV( p_omega_atomic_G_V ), Hz_to_wavelength( p_omega_atomic_G_V ) );
         logs( "Transition Energy B - H: {:.8e} Hz - {:.8} eV - {:.8} nm\n", p_omega_atomic_H_B, Hz_to_eV( p_omega_atomic_H_B ), Hz_to_wavelength( p_omega_atomic_H_B ) );
