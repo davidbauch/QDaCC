@@ -30,7 +30,7 @@ class Timer {
     Timer( const std::string &_name, bool _addtoTotalStatistic, bool _printToSummary );
     void start();
     void end();
-    void iterate();
+    void iterate(int num = 1);
     void add( time_t cpu, double wall );
     double getWallTime( int scale = TIMER_SECONDS );
     double getWallTimeOnce( int scale = TIMER_SECONDS );
@@ -74,8 +74,8 @@ Timer::Timer( const std::string &_name, bool _addtoTotalStatistic = true, bool _
         allTimers.reserve( 15 );
 }
 // Iterate Timer, can be used instead of using start/stop if the range of the timer includes the whole mainloop.
-void Timer::iterate() {
-    totalIterationNum++;
+void Timer::iterate(int num) {
+    totalIterationNum+=num;
 }
 // Start Timer
 void Timer::start() {
