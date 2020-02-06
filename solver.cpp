@@ -499,7 +499,7 @@ bool ODESolver::calculate_g2( System_Parent &s, const MatType &op_creator_1, con
 bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName ) {
     //bool calculate_full_g2_of_tau = !s.parameters.numerics_use_simplified_g2;
     bool output_full_g2 = false;
-    bool output_full_ind = true;
+    bool output_full_ind = s.parameters.numerics_calculate_timeresolution_indistinguishability;
     bool calculate_concurrence_with_g2_of_zero = s.parameters.numerics_use_simplified_g2;
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
     s.command( ODESolver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
@@ -640,6 +640,11 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
                     bottom_1 += 2.0 * gpop_1 - std::abs( gbot_1 ) * std::abs( gbot_1 );
                     top_2 += 0.5 * ( gpop_2 + akf_mat_22( k, l ) - std::abs( akf_mat_g1_2( k, l ) ) * std::abs( akf_mat_g1_2( k, l ) ) );
                     bottom_2 += 2.0 * gpop_2 - std::abs( gbot_2 ) * std::abs( gbot_2 );
+                }
+                // If we dont output the full time resoluted indistinguishability, we instead output the time resoluted integral for T = T_max
+                if (!output_full_ind) {
+                    p1.at( i / s.getIterationSkip() ) = ( 1.0 - std::real( top_1 / bottom_1 ) );
+                    p2.at( i / s.getIterationSkip() ) = ( 1.0 - std::real( top_2 / bottom_2 ) );        
                 }
             }
             p1.at( T / s.getIterationSkip() ) = ( 1.0 - std::real( top_1 / bottom_1 ) );
