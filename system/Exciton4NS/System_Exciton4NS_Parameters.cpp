@@ -165,7 +165,7 @@ class Parameters : public Parameters_Parent {
         numerics_output_raman_population = !params.get( 18 );
         numerics_use_simplified_g2 = params.get( 19 );
         logfilecounter = params.get<int>( 20, "-1" );
-        numerics_calculate_timeresolution_indistinguishability = !params.get( 21 );
+        numerics_calculate_timeresolution_indistinguishability = params.get( 21 );
 
         // Phonon Parameters
         params = Parse_Parameters( arguments, {"--phonons", "--temperature", "-phonons", "--phononorder", "-noMarkov", "-phononcoeffs", "-noPhononAdjust"}, {5, 1, 1, 1, 1, 1, 1} );
@@ -420,6 +420,8 @@ class Parameters : public Parameters_Parent {
         logs( "\n" );
         logs.wrapInBar( "G2 Settings", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Calculate advanced statistics? - {}\n", numerics_calculate_g2 ? fmt::format( "YES{}", ( numerics_use_simplified_g2 ? " (simplified)" : "" ) ) : "NO" );
+        logs(" Calculated full indistinguishability? - {}\n", numerics_calculate_timeresolution_indistinguishability ? "YES" : "NO");
+        logs("\n");
 
         logs.wrapInBar( "Phonons", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         if ( p_phonon_T ) {
