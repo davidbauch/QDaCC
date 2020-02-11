@@ -420,8 +420,8 @@ class Parameters : public Parameters_Parent {
         logs( "\n" );
         logs.wrapInBar( "G2 Settings", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Calculate advanced statistics? - {}\n", numerics_calculate_g2 ? fmt::format( "YES{}", ( numerics_use_simplified_g2 ? " (simplified)" : "" ) ) : "NO" );
-        logs(" Calculated full indistinguishability? - {}\n", numerics_calculate_timeresolution_indistinguishability ? "YES" : "NO");
-        logs("\n");
+        logs( "Calculated full indistinguishability? - {}\n", numerics_calculate_timeresolution_indistinguishability ? "YES" : "NO" );
+        logs( "\n" );
 
         logs.wrapInBar( "Phonons", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         if ( p_phonon_T ) {
