@@ -2,7 +2,7 @@
 #include "../global.h"
 
 #ifndef M_PI
-#define M_PI 3.1415926535
+#    define M_PI 3.1415926535
 #endif
 
 int delta( int i, int j ) {
@@ -340,16 +340,25 @@ Eigen::SparseMatrix<T> project_matrix_sparse( const Eigen::SparseMatrix<T> &inpu
     return ret;
 }
 
-std::vector<std::string> splitline(const std::string &input = "") {
+std::vector<std::string> splitline( const std::string &input = "" ) {
     std::string token, subtoken;
     std::vector<std::string> set;
-    std::istringstream iss(input);
-    while(std::getline(iss, subtoken, '\t')) {
-        std::istringstream subiss(subtoken);
-        while(std::getline(subiss, token, ' '))
-            if (token.size() > 0) {
-                set.push_back(token);
+    std::istringstream iss( input );
+    while ( std::getline( iss, subtoken, '\t' ) ) {
+        std::istringstream subiss( subtoken );
+        while ( std::getline( subiss, token, ' ' ) )
+            if ( token.size() > 0 ) {
+                set.push_back( token );
             }
     }
     return set;
+}
+
+template <typename T>
+void init_sparsevector( std::vector<Eigen::SparseMatrix<T>> &mat, int dim, int count ) {
+    mat.clear();
+    Eigen::SparseMatrix<T> fill = Eigen::SparseMatrix<T>( dim, dim );
+    for ( int i = 0; i < count; i++ ) {
+        mat.emplace_back( fill );
+    }
 }

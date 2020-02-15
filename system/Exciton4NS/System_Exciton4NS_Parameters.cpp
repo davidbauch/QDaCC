@@ -44,7 +44,7 @@ class Parameters : public Parameters_Parent {
     std::string chirp_type;
 
     // AKF & Spectrum
-    int numerics_maximum_threads, iterations_w_resolution, numerics_phonon_approximation_1, numerics_phonon_approximation_2;
+    int numerics_maximum_threads, iterations_w_resolution, numerics_phonon_approximation_markov1, numerics_phonon_approximation_order;
     double akf_deltaWmax, spectrum_frequency_center, spectrum_frequency_range;
     bool numerics_calculate_spectrum_H, numerics_calculate_spectrum_V;
     bool numerics_use_saved_coefficients;
@@ -173,8 +173,8 @@ class Parameters : public Parameters_Parent {
         p_phonon_wcutoff = params.get<double>( 1, "1meV" );
         p_phonon_tcutoff = params.get<double>( 2, "4ps" );
         p_phonon_T = params.get( 6 ) ? params.get<double>( 5, "3" ) : params.get<double>( {3, 5}, "0" );
-        numerics_phonon_approximation_2 = params.get<int>( {4, 7}, std::to_string( PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) ); // Second Markov / Transformation method
-        numerics_phonon_approximation_1 = params.get( 8 ) ? 0 : 1;                                                              // First Markov
+        numerics_phonon_approximation_order = params.get<int>( {4, 7}, std::to_string( PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) ); // Second Markov / Transformation method
+        numerics_phonon_approximation_markov1 = params.get( 8 ) ? 0 : 1;                                                              // First Markov
         output_coefficients = params.get( 9 ) ? 1 : 0;
         p_phonon_adjust = !params.get( 10 );
 
@@ -346,7 +346,7 @@ class Parameters : public Parameters_Parent {
     */
     void log( const std::vector<std::string> &info ) {
         logs.wrapInBar( "System Parameters" );
-        logs( "Version: 1.2.3\n\n" );
+        logs( "Version: 1.2.4\n\n" );
 
         logs.wrapInBar( "Base Energies", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Biexciton binding energy: {:.8e} Hz - {:.8} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
@@ -425,8 +425,8 @@ class Parameters : public Parameters_Parent {
 
         logs.wrapInBar( "Phonons", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         if ( p_phonon_T ) {
-            std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism"};
-            logs( "Temperature = {}k\nCutoff energy = {}meV\nCutoff Time = {}ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n\n", p_phonon_T, Hz_to_eV( p_phonon_wcutoff ) * 1E3, p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_2, approximations.at( numerics_phonon_approximation_2 ) );
+            std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed"};
+            logs( "Temperature = {}k\nCutoff energy = {}meV\nCutoff Time = {}ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n\n", p_phonon_T, Hz_to_eV( p_phonon_wcutoff ) * 1E3, p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
         } else {
             logs( "Not using phonons\n\n" );
         }

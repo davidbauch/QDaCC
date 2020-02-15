@@ -213,11 +213,11 @@ class System : public System_Parent {
 
         DenseMat rho_used = rho;
 
-        if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) {
+        if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) {
             // Calculate Chi(t) backwards to Chi(t-tau)
             //std::vector<SaveState> chis = ODESolver::calculate_definite_integral_vec( chi, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( 0.0, t - parameters.p_phonon_tcutoff ), -parameters.t_step );
             for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) { //for ( auto chit : chis ) {
-                if ( !parameters.numerics_phonon_approximation_1 ) {
+                if ( !parameters.numerics_phonon_approximation_markov1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                     //fmt::print( "Current t = {} -> Matrix rho_used for t-tau = {}, rho_used.t = {}, time for past_rhos.back() = {}\n", t, t - tau, past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).t, past_rhos.back().t);
@@ -229,9 +229,9 @@ class System : public System_Parent {
                 ret -= ( integrant + integrant.adjoint().eval() ) * parameters.t_step;
             }
         }
-        if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
+        if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
             for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) {
-                if ( !parameters.numerics_phonon_approximation_1 ) {
+                if ( !parameters.numerics_phonon_approximation_markov1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }
@@ -241,9 +241,9 @@ class System : public System_Parent {
                 integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'g' ), ( dgl_phonons_chiToX( U * chi_tau * U.adjoint().eval(), 'g' ) * rho_used ).eval() );
                 ret -= ( integrant + integrant.adjoint().eval() ) * parameters.t_step;
             }
-        } else if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_TIMETRANSFORMATION ) {
+        } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_TIMETRANSFORMATION ) {
             for ( double tau = 0; tau < std::min( parameters.p_phonon_tcutoff, t ); tau += parameters.t_step ) {
-                if ( !parameters.numerics_phonon_approximation_1 ) {
+                if ( !parameters.numerics_phonon_approximation_markov1 ) {
                     int tau_index = tau / parameters.t_step;
                     rho_used = past_rhos.at( std::max( 0, (int)past_rhos.size() - 1 - tau_index ) ).mat;
                 }
@@ -252,7 +252,7 @@ class System : public System_Parent {
                 integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( dgl_phonons_chiToX( chi, 'g' ), ( dgl_phonons_chiToX( chi_tau, 'g' ) * rho_used ).eval() );
                 ret -= ( integrant + integrant.adjoint().eval() ) * parameters.t_step;
             }
-        } else if ( parameters.numerics_phonon_approximation_2 == PHONON_APPROXIMATION_LINDBLAD_FULL ) {
+        } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_LINDBLAD_FULL ) {
             ret += dgl_phonons_lindblad_coefficients( t, 'L', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus, operatorMatrices.atom_sigmaplus );
             ret += dgl_phonons_lindblad_coefficients( t, 'L', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus, operatorMatrices.atom_sigmaminus );
             ret += dgl_phonons_lindblad_coefficients( t, 'C', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus * operatorMatrices.photon_create, operatorMatrices.atom_sigmaplus * operatorMatrices.photon_annihilate );

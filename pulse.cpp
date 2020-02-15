@@ -5,6 +5,7 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     logs.level2( "Creating total pulse with {} individual pulses... ", inputs.amp.size() );
     counter_evaluated = 0;
     counter_returned = 0;
+    maximum = 0;
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 6.0 + 5 );
     pulsearray.reserve( n );
     timearray.reserve( n );
@@ -52,6 +53,8 @@ void Pulse::generate() {
             pulsearray_derivative.push_back( evaluate_derivative( t ) );
             pulsearray_integral.push_back( evaluate_integral( t ) );
             timearray.push_back( t );
+            if (std::real(val) > maximum)
+                maximum = std::real(val);
         }
     }
 

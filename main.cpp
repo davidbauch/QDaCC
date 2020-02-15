@@ -4,7 +4,7 @@
 #include "pulse.cpp"
 #include "solver.cpp"
 
-// g++-8 '/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/main.cpp' -o /Users/davidbauch/bin/QDLC-4LS-1.2.3.out misc/ALGLIB/MAC/*.o -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'/Users/davidbauch/OneDrive - Universita<0308>t Paderborn/Kot/BP/QDLC-C/' -Wall 2>&1  | tee fuck.txt
+// g++-8 '/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/main.cpp' -o /Users/davidbauch/bin/QDLC-4LS-1.2.4.out misc/ALGLIB/MAC/*.o -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'/Users/davidbauch/OneDrive - Universita<0308>t Paderborn/Kot/BP/QDLC-C/' -Wall 2>&1  | tee fuck.txt
 // g++ 'main.cpp' -o QDLC-4LS-1.2.3.out misc/ALGLIB/CLUSTER/*.o -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'.' -I'../fmt/include/' -Wall 2>&1  | tee fuck.txt
 // test
 // last input: workpath

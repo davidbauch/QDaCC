@@ -33,6 +33,7 @@ class Pulse {
     // Saving the corresponding t doesn't hurt
     std::vector<double> timearray;
     std::vector<double> steps;
+    double maximum;
     // Helper variables/functions
     Inputs inputs;
 

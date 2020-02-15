@@ -1,4 +1,4 @@
-    #pragma once
+#pragma once
 
 #include <cmath>
 #include <complex>
@@ -69,7 +69,7 @@ class Log {
         if ( !logLevel2 )
             return;
         fmt::vprint( ": " + s, fmt::make_format_args( args... ) );
-        fmt::vprint(file, ": " + s, fmt::make_format_args( args... ) );
+        fmt::vprint( file, ": " + s, fmt::make_format_args( args... ) );
     }
 
     void bar( int size = LOG_SIZE_FULL, int level = LOG_LEVEL_1, int _bar = LOG_BAR_0 ) const {
@@ -104,6 +104,9 @@ class Log {
 
     void debug( double i = -1, std::string suffix = "" ) {
         level2( "Currently at {} {}\n", ( i == -1 ) ? deVar++ : i, suffix );
+    }
+    void debug( std::string suffix = "" ) {
+        debug( -1, suffix );
     }
     void close() {
         level1( "[END OF LOGFILE]" );
