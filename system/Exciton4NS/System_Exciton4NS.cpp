@@ -234,7 +234,7 @@ class System : public System_Parent {
             double bpulsesquared, delta, nu;
             if ( level == 'H' ) {
                 bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse_H.get( t ) ), 2.0 ); //TODO: chirp correction for omega_atomic!!!!
-                delta = parameters.pulse_omega.at( 0 ) - omega_atomic; //FIXME : different pulse frequencies
+                delta = parameters.pulse_omega.at( 0 ) - omega_atomic;                                 //FIXME : different pulse frequencies
             } else {
                 bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse_V.get( t ) ), 2.0 );
                 delta = parameters.pulse_omega.at( 0 ) - omega_atomic; //FIXME : different pulse frequencies
@@ -355,7 +355,6 @@ class System : public System_Parent {
                     chi_tau_back_u = dgl_phonons_chiToX( chi_tau_back, 'u' );
                     chi_tau_back_g = dgl_phonons_chiToX( chi_tau_back, 'g' );
                     // If saving is used, save current chi(t-tau).
-                    //#pragma omp critical //--> move into dgl_savecoefficent after if clause!
                     dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, tau );
                 }
                 integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * ( parameters.numerics_phonon_approximation_1 ? rho : past_rhos.at( rho_index ).mat ) ).eval() );
@@ -472,10 +471,10 @@ class System : public System_Parent {
         dcomplex B, R;
 #pragma omp parallel for ordered schedule( dynamic ) shared( past_rhos ) num_threads( parameters.numerics_phonons_maximum_threads )
         for ( long unsigned int i = 0; i < past_rhos.size(); i++ ) {
-        //for ( SaveState savestate : past_rhos ) {
-            double tdd = past_rhos.at(i).t;
+            //for ( SaveState savestate : past_rhos ) {
+            double tdd = past_rhos.at( i ).t;
             B = std::exp( -1i * ( w2 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma2 ) ) * ( t - tdd ) ) - std::exp( -1i * ( w1 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma1 ) ) * ( t - tdd ) );
-            R = dgl_expectationvalue<SparseMat, dcomplex>( past_rhos.at(i).mat, op, tdd ) * ( mode == 'h' ? std::conj( pulse_H.get( tdd ) ) : std::conj( pulse_V.get( tdd ) ) );
+            R = dgl_expectationvalue<SparseMat, dcomplex>( past_rhos.at( i ).mat, op, tdd ) * ( mode == 'h' ? std::conj( pulse_H.get( tdd ) ) : std::conj( pulse_V.get( tdd ) ) );
             //fmt::print("t = {}, tau = {}, A = {}, B = {}, R = {}\n",t,tdd,A,B,R);
 #pragma omp critical
             ret += B * R;
