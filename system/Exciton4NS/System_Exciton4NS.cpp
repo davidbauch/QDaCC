@@ -334,7 +334,7 @@ class System : public System_Parent {
             return ( U * chi_tau * U.adjoint() ).eval();
         } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_MIXED ) {
             double error = std::abs( pulse_H.get( t ) + pulse_V.get( t ) );
-            if ( ( pulse_H.maximum > 0 && error > pulse_H.maximum * 0.1 ) || ( pulse_V.maximum > 0 && error > pulse_V.maximum * 0.1 ) ) {
+            if ( ( pulse_H.maximum > 0 && error > pulse_H.maximum * 0.1 ) || ( pulse_V.maximum > 0 && error > pulse_V.maximum * 0.1 ) || chirp.derivative(t) != 0) {
                 return ODESolver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
             }
             return chi_tau;
