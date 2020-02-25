@@ -59,7 +59,7 @@ class System : public System_Parent {
         if ( parameters.chirp_total != 0 )
             chirp.fileOutput( parameters.subfolder + "chirp.txt" );
 
-        // Arbitrary number of pulses onto single atomic level. As of now, only a single pulse input is supported via input.
+        // Arbitrary number of pulses onto single atomic level.
         Pulse::Inputs pulseinputs_H( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_order_highest );
         pulseinputs_H.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_omega_chirp, parameters.pulse_type, parameters.pulse_pol, "H" );
         pulseinputs_H.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_omega_chirp, parameters.pulse_type, parameters.pulse_pol, "+", 1.0 / std::sqrt( 2.0 ) );
