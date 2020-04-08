@@ -250,6 +250,45 @@ double getCoherent( double alpha, double N ) {
     return std::exp( -std::pow( alpha, 2.0 ) ) * std::pow( std::pow( alpha, 2.0 ), N ) / factorial( N );
 }
 
+std::string get_parameter(const std::string& key, const std::string& subkey = "") {
+    std::string arg = CommandlineArguments::cla.get(key,subkey);
+    return arg;
+}
+template <class T>
+T get_parameter(const std::string& key, const std::string& subkey = "") {
+    std::string arg = CommandlineArguments::cla.get(key,subkey);
+    return convertParam<T>(arg);
+}
+bool get_parameter_passed(const std::string& key, const std::string& subkey = "") {
+    return CommandlineArguments::cla.get(key,subkey).toBool();
+}
+template <class T>
+std::vector<T> get_parameter_vector(const std::string& key, const std::string& subkey = "") {
+    std::string arg = CommandlineArguments::cla.get(key,subkey);
+    // Check if input is not a vector, then output will be a new vector with only one element
+    if (arg.at(0) != '[') {
+        T elem = convertParam<T>(arg);
+        return std::vector<T>({elem});
+    }
+    return convertParam<T>( str_to_vec(arg) );
+}
+std::vector<std::string> get_parameter_vector(const std::string& key, const std::string& subkey = "") {
+    std::string arg = CommandlineArguments::cla.get(key,subkey);
+    // Check if input is not a vector, then output will be a new vector with only one element
+    if (arg.at(0) != '[') {
+        return std::vector<std::string>({arg});
+    }
+    return str_to_vec(arg);
+}
+
+// Map a vector onto comp, meaning that if in is shorter than comp, in will be filled with standard value
+template <typename T1, typename T2> 
+void map_vector_to_standard(const std::vector<T1>& comp, std::vector<T2>& in, const T2 standard) {
+    while (comp.size() > in.size()) {
+        in.emplace_back(standard);
+    }
+}
+
 class Parse_Parameters {
    private:
     std::vector<std::string> parameters;
