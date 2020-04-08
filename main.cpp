@@ -12,65 +12,53 @@
 int main( int argc, char* argv[] ) {
     // Commandline Arguments:
     CommandlineArguments::init(argc,argv);
-    //cla.get("time","tstep");
-    // Help
-    auto inputs = argv_to_vec( argc, argv );
-    //TODO BIG: für version 1.2.5 funktioniert bulk nicht mehr, da die inputs immer von cla gelesen werden. cla muss also unten immer aktualisiert werden über die inputs.
 
     // Check for Multifile, if true parse all settings
     std::vector<std::vector<std::string>> sets;
-    if ( vec_find_str( "--file", inputs ) != -1 ) {
+    std::string filename = get_parameter("--file");
+    auto inputs = argv_to_vec( argc, argv );
+    if ( filename.compare("none") != 0 ) {
         // Multifile mode: Program will read inputfile from --file and execute all lines that dont start with '#'
-        auto params = Parse_Parameters( inputs, {"--file", "--Threads", "-advLog", "-noHandler"}, {1, 1, 1, 1}, "Global Parameters" );
-        std::string filename = params.get( 0, "" );
-        if ( filename.size() > 1 ) {
-            // Catch global parameters
-            std::vector<std::string> globalparams;
-            for ( unsigned int i = 0; i < inputs.size() - 1; i++ ) {
-                if ( inputs.at( i ).compare( "--file" ) != 0 && ( i > 0 && inputs.at( i - 1 ).compare( "--file" ) != 0 ) ) {
-                    globalparams.emplace_back( inputs.at( i ) );
-                }
+        // Catch global parameters
+        std::vector<std::string> globalparams;
+        for ( unsigned int i = 0; i < inputs.size() - 1; i++ ) {
+            if ( inputs.at( i ).compare( "--file" ) != 0 && ( i > 0 && inputs.at( i - 1 ).compare( "--file" ) != 0 ) ) {
+                globalparams.emplace_back( inputs.at( i ) );
             }
-            // Parse file and save to sets vector
-            std::ifstream file( filename );
-            std::string line;
-            std::getline( file, line );
-            std::string outputname = splitline( line ).at( 1 );
-            std::filesystem::create_directories( inputs.back() + outputname );
-            std::ofstream fileout( inputs.back() + outputname + "/settings_" + outputname + ".txt", std::ofstream::out );
-            std::vector<std::string> set;
-            int counter = 0;
-            while ( std::getline( file, line ) ) {
-                fileout << line << std::endl;
-                if ( line.size() > 5 && line.at( 0 ) != '#' && line.at( 0 ) != ' ' && line.at( 0 ) != '\t' ) {
-                    set = splitline( line );
-                    for ( auto i = set.begin(); i != set.end(); i++ )
-                        if ( ( *i ).compare( "#" ) == 0 ) {
-                            set = std::vector<std::string>( set.begin(), i );
-                            break;
-                        }
-                }
-                if ( set.size() > 0 ) {
-                    if ( set.at( 0 ).compare( "#" ) != 0 && vec_find_str( "python3", set ) == -1 ) {
-                        if ( set.size() > 1 ) {
-                            // Append global parameters. Second calls wont overwrite these, so global parameters ALWAYS overwrite local parameters
-                            set.insert( set.begin() + 1, globalparams.begin(), globalparams.end() );
-                            // Append final path info
-                            set.emplace_back( inputs.back() + outputname + "/" + outputname + "_" + toStr( counter++ ) + "/" );
-                            sets.emplace_back( set );
-                        }
-                    }
-                    set.clear();
-                }
-            }
-            fileout.close();
         }
-        //for ( auto a : sets ) {
-        //    for ( auto b : a )
-        //        fmt::print( "{} | ", b );
-        //    fmt::print( "\n" );
-        //}
-        //exit(1);
+        // Parse file and save to sets vector
+        std::ifstream file( filename );
+        std::string line;
+        std::getline( file, line );
+        std::string outputname = splitline( line ).at( 1 );
+        std::filesystem::create_directories( inputs.back() + outputname );
+        std::ofstream fileout( inputs.back() + outputname + "/settings_" + outputname + ".txt", std::ofstream::out );
+        std::vector<std::string> set;
+        int counter = 0;
+        while ( std::getline( file, line ) ) {
+            fileout << line << std::endl;
+            if ( line.size() > 5 && line.at( 0 ) != '#' && line.at( 0 ) != ' ' && line.at( 0 ) != '\t' ) {
+                set = splitline( line );
+                for ( auto i = set.begin(); i != set.end(); i++ )
+                    if ( ( *i ).compare( "#" ) == 0 ) {
+                        set = std::vector<std::string>( set.begin(), i );
+                        break;
+                    }
+            }
+            if ( set.size() > 0 ) {
+                if ( set.at( 0 ).compare( "#" ) != 0 && vec_find_str( "python3", set ) == -1 ) {
+                    if ( set.size() > 1 ) {
+                        // Append global parameters. Second calls wont overwrite these, so global parameters ALWAYS overwrite local parameters
+                        set.insert( set.begin() + 1, globalparams.begin(), globalparams.end() );
+                        // Append final path info
+                        set.emplace_back( inputs.back() + outputname + "/" + outputname + "_" + toStr( counter++ ) + "/" );
+                        sets.emplace_back( set );
+                    }
+                }
+                set.clear();
+            }
+        }
+        fileout.close();
     } else {
         // Single file mode: Program will only execute passed parameterset
         sets.emplace_back( inputs );
@@ -123,33 +111,3 @@ int main( int argc, char* argv[] ) {
     }
     exit( EXIT_SUCCESS );
 }
-
-/*
-2NS:
-// Normal Time direction
-solver.calculate_t_direction( system );
-
-// Spectrum
-if ( system.calculate_spectrum() ) {
-    solver.calculate_g1( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
-    solver.calculate_spectrum( system );
-}
-if ( system.calculate_g2() ) {
-    solver.calculate_g2_0( system, system.operatorMatrices.photon_create, system.operatorMatrices.photon_annihilate );
-}
-*/
-
-/*
-4NS
-// Normal Time direction
-    solver.calculate_t_direction( system );
-
-    // Spectrum
-    if ( system.calculate_spectrum() ) {
-        solver.calculate_g1( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
-        solver.calculate_spectrum( system );
-    }
-    if ( system.calculate_g2() ) {
-        solver.calculate_g2_0( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H );
-    }
-*/
