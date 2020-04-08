@@ -27,6 +27,7 @@
 //namespace std {
 //namespace filesystem = std::experimental::filesystem::v1;
 //}
+
 std::string PREFIX_PERCENT = "@#PERCENT#@";
 std::string PREFIX_PERCENT_TIME = "@#PERCENTTIME#@";
 std::string PREFIX_PERCENT_TIME_FINAL = "@#PERCENTTIMEFINAL#@";
@@ -36,6 +37,7 @@ std::string PREFIX_DEBUG = "@#DEBUG#@";
 std::string PREFIX_OUTPUT = "@#OUTPUT#@";
 std::string PREFIX_SUFFIX = "@#SUFFIX#@";
 
+#include "misc/commandlinearguments.h"
 #include "misc/log.h"
 #include "misc/ProgressBar.h"
 #include "misc/helperfunctions.h"
