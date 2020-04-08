@@ -9,6 +9,7 @@ class Chirp {
         double t_start, t_end, t_step;
         std::vector<double> t, y, ddt;
         std::string type;
+        bool isSineChirp = false;
         int order;
         Inputs() {}
         Inputs( double t_start, double t_end, double t_step, std::string type, int order ) : t_start( t_start ), t_end( t_end ), t_step( t_step ), type( type ), order( order ) {}

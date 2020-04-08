@@ -1,6 +1,6 @@
 #include "chirp.h"
 
-Chirp::Chirp( Chirp::Inputs &inputs ) : inputs( inputs ) {
+Chirp::Chirp( Chirp::Inputs &_inputs ) : inputs( _inputs ) {
     counter_evaluated = 0;
     counter_returned = 0;
     logs.level2( "Creating Chirp with {} points of type {}... ", inputs.t.size(), inputs.type );
@@ -11,23 +11,35 @@ Chirp::Chirp( Chirp::Inputs &inputs ) : inputs( inputs ) {
     //    steps = { 0, 1./5.*p.t_step, 3./10.*p.t_step, 1./2.*p.t_step, 4./5.*p.t_step, 8./9.*p.t_step };
     //else
     steps = {0, 0.5 * inputs.t_step};
-    logs.level2( "Done initializing class, creating interpolant... " );
-    interpolant = Interpolant( inputs.t, inputs.y, inputs.ddt, inputs.type );
-    logs.level2( "Done creating interpolant, generating chirp... " );
+    if (inputs.type.compare("sine") != 0) {
+        logs.level2( "Done initializing class, creating interpolant... " );
+        interpolant = Interpolant( inputs.t, inputs.y, inputs.ddt, inputs.type );
+        logs.level2( "Done creating interpolant, generating chirp... " );
+    } else {
+        logs.level2( "No interpolant class used." );
+        inputs.isSineChirp = true;
+    }
     generate();
     logs.level2( "Done!\n" );
 }
 
 double Chirp::evaluate( double t ) {
+    if (inputs.isSineChirp) {
+        double ret = 0;
+        for (long unsigned int i = 0; i < inputs.y.size(); i++) {
+            ret += inputs.y.at(i)*std::sin(6.283*(t-inputs.t.at(i))*inputs.ddt.at(i));
+        }
+        return ret;
+    }
     return interpolant.evaluate( t );
 }
 double Chirp::evaluate_derivative( double t ) {
-    return ( interpolant.evaluate( t ) - interpolant.evaluate( t - inputs.t_step ) ) / inputs.t_step;
+    return ( evaluate( t ) - evaluate( t - inputs.t_step ) ) / inputs.t_step;
 }
 double Chirp::evaluate_integral( double t ) {
     if ( chirparray_integral.size() == 0 || t == 0.0 )
-        return interpolant.evaluate( t ) * inputs.t_step;
-    return chirparray_integral.at( std::max( (int)std::floor( t / inputs.t_step ), (int)chirparray_integral.size()-1 ) ) + interpolant.evaluate( t ) * inputs.t_step;
+        return evaluate( t ) * inputs.t_step;
+    return chirparray_integral.at( std::max( (int)std::floor( t / inputs.t_step ), (int)chirparray_integral.size()-1 ) ) + evaluate( t ) * inputs.t_step;
 }
 
 void Chirp::generate() {
