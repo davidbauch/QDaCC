@@ -27,7 +27,7 @@ double Chirp::evaluate( double t ) {
     if (inputs.isSineChirp) {
         double ret = 0;
         for (long unsigned int i = 0; i < inputs.y.size(); i++) {
-            ret += inputs.y.at(i)*std::sin(6.283*(t-inputs.t.at(i))*inputs.ddt.at(i));
+            ret += inputs.y.at(i)*std::sin(6.283*t*inputs.ddt.at(i) + 6.283*inputs.t.at(i));
         }
         return ret;
     }
