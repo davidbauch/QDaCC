@@ -74,109 +74,93 @@ class Parameters : public Parameters_Parent {
     bool parseInput( const std::vector<std::string> &arguments ) {
         Parse_Parameters params;
         // Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
-        params = Parse_Parameters( arguments, {"--time", "--tstart", "--tend", "--tstep"}, {3, 1, 1, 1}, "Timeparameters" );
-        t_start = params.get<double>( {0, 3}, "0.0" );
-        t_end = params.get<double>( {1, 4}, "1.0ns" );
-        t_step = params.get<double>( {2, 5}, "-1" );
+        t_start = get_parameter<double>("--time","tstart");
+        t_end = get_parameter<double>("--time","tend");
+        t_step = get_parameter<double>("--time","tstep");
 
-        // Look for --system, if not found, standard system is used (g=66mueV, k=66mueV, p_omega_pure_dephasing = 3mueV, p_omega_decay = 1mueV)
-        params = Parse_Parameters( arguments, {"--system", "--we", "--wcH", "--wcV", "--coupling", "--kappa", "--gammapure", "--gamma", "--deltaE", "--excitonBindEnergy"}, {9, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Systemparameters" );
-        p_omega_atomic_G_H = params.get<double>( {0, 9}, "1.366eV" );
-        p_omega_cavity_V = params.get<double>( {1, 10}, "1.366eV" );
-        p_omega_cavity_H = params.get<double>( {2, 11}, "1.366eV" );
-        p_omega_coupling = params.get<double>( {3, 12}, "66mueV" );
-        p_omega_cavity_loss = params.get<double>( {4, 13}, "66mueV" );
-        p_omega_pure_dephasing = params.get<double>( {5, 14}, "3mueV" );
-        p_omega_decay = params.get<double>( {6, 15}, "1mueV" );
-        p_deltaE = params.get<double>( {7, 16}, "2mueV" );
-        p_biexciton_bindingenergy = params.get<double>( {8, 17}, "3meV" );
+        // Look for --system, if not found, standard system is used
+        p_omega_atomic_G_H = get_parameter<double>("--system","we");
+        p_omega_cavity_V = get_parameter<double>("--system","wcV");
+        p_omega_cavity_H = get_parameter<double>("--system","wcH");
+        p_omega_coupling = get_parameter<double>("--system","coupling");
+        p_omega_cavity_loss = get_parameter<double>("--system","kappa");
+        p_omega_pure_dephasing = get_parameter<double>("--system","gammapure");
+        p_omega_decay = get_parameter<double>("--system","gamma");
+        p_deltaE = get_parameter<double>("--system","deltaE");
+        p_biexciton_bindingenergy = get_parameter<double>("--system","excitonBindEnergy");
 
         // Look for --chirp, if not found, standard system is used (no chirp, everything zero)
-        params = Parse_Parameters( arguments, {"--chirp", "--chirpT", "--chirpY", "--chirpDDT", "--chirpType"}, {4, 1, 1, 1, 1}, "Chirpparameters" );
-        chirp_t = convertParam<double>( str_to_vec( params.get( {0, 4}, "[0,1E-9]" ) ) );
-        chirp_y = convertParam<double>( str_to_vec( params.get( {1, 5}, "[0,0]" ) ) );
-        chirp_ddt = convertParam<double>( str_to_vec( params.get( {2, 6}, "[0,0]" ) ) );
-        chirp_type = params.get( {3, 7}, "monotone" );
+        chirp_t = get_parameter_vector<double>("--chirp","chirpT");
+        chirp_y = get_parameter_vector<double>("--chirp","chirpY");
+        chirp_ddt = get_parameter_vector<double>("--chirp","chirpDDT");
+        chirp_type = get_parameter("--chirp","chirpType");
+        // Adjust length if they are not passed
+        map_vector_to_standard(chirp_y, chirp_t, 0.0);
+        map_vector_to_standard(chirp_y, chirp_ddt, 0.0);
 
         // Look for --pulse, if not found, standard system is used (no pulse, everything zero)
-        params = Parse_Parameters( arguments, {"--pulse", "--pulseCenter", "--pulseAmp", "--pulseFreq", "--pulseSigma", "--pulseType", "--pulsePol", "--pulseChirp", "-pulse"}, {7, 1, 1, 1, 1, 1, 1, 1, 1}, "Pulseparameters" );
-        if ( params.get( 0, "Empty" ).at( 0 ) == '[' ) {
-            pulse_center = convertParam<double>( str_to_vec( params.get( {0, 7}, "[0]" ) ) );
-            pulse_amp = convertParam<double>( str_to_vec( params.get( {1, 8}, "[0]" ) ) );
-            pulse_omega = convertParam<double>( str_to_vec( params.get( {2, 9}, "[0]" ) ) );
-            pulse_sigma = convertParam<double>( str_to_vec( params.get( {3, 10}, "[1]" ) ) );
-            pulse_type = str_to_vec( params.get( {4, 11}, "[cw]" ) );
-            pulse_pol = str_to_vec( params.get( {5, 12}, "[H]" ) );
-            pulse_omega_chirp = convertParam<double>( str_to_vec( params.get( {6, 13}, "[0]" ) ) );
-        } else if ( params.get( 14 ) || params.get( 0 ) ) {
-            pulse_center.emplace_back( params.get<double>( {0, 7}, "100ps" ) );
-            pulse_amp.emplace_back( params.get<double>( {1, 8}, "4" ) );
-            pulse_omega.emplace_back( params.get<double>( {2, 9}, "1.366eV" ) );
-            pulse_sigma.emplace_back( params.get<double>( {3, 10}, "20ps" ) );
-            pulse_type.emplace_back( params.get( {4, 11}, "gauss_pi" ) );
-            pulse_pol.emplace_back( params.get( {4, 12}, "H" ) );
-            pulse_omega_chirp.emplace_back( params.get<double>( {4, 13}, "0" ) );
-        } else {
-            pulse_center.emplace_back( convertParam<double>( "0" ) );
-            pulse_amp.emplace_back( convertParam<double>( "0" ) );
-            pulse_omega.emplace_back( convertParam<double>( "0" ) );
-            pulse_sigma.emplace_back( convertParam<double>( "1" ) );
-            pulse_type.emplace_back( "cw" );
-            pulse_pol.emplace_back( "H" );
-            pulse_omega_chirp.emplace_back( convertParam<double>( "0" ) );
-        }
+        pulse_center = get_parameter_vector<double>("--pulse","pulseCenter");
+        pulse_amp = get_parameter_vector<double>("--pulse","pulseAmp");
+        pulse_omega = get_parameter_vector<double>("--pulse","pulseFreq");
+        pulse_sigma = get_parameter_vector<double>("--pulse","pulseSigma");
+        pulse_type = get_parameter_vector("--pulse","pulseType");
+        pulse_pol = get_parameter_vector("--pulse","pulsePol");
+        pulse_omega_chirp = get_parameter_vector<double>("--pulse","pulseChirp");
+        // Adjust length if they are not passed
+        map_vector_to_standard(pulse_amp, pulse_center, pulse_center.at(0));
+        map_vector_to_standard(pulse_amp, pulse_omega, pulse_omega.at(0));
+        map_vector_to_standard(pulse_amp, pulse_sigma, pulse_sigma.at(0));
+        map_vector_to_standard(pulse_amp, pulse_type, pulse_type.at(0));
+        map_vector_to_standard(pulse_amp, pulse_pol, pulse_pol.at(0));
+        map_vector_to_standard(pulse_amp, pulse_omega_chirp, pulse_omega_chirp.at(0));
 
         // Look for --dimensions, if not found, standard system is used (maxphotons = 0, starting state = |g,0>)
-        params = Parse_Parameters( arguments, {"--maxPhotons", "--initState"}, {1, 3}, "Initial State parameters" );
-        p_max_photon_number = params.get<int>( 0, "2" );
-        p_initial_state = instr( "ghvb", params.get( 1, "b" ) ) + 4 * ( p_max_photon_number + 1 ) * params.get<int>( 2, "0" ) + 4 * params.get<int>( 3, "0" );
+        p_max_photon_number = get_parameter<int>("--maxPhotons");
+        p_initial_state = instr( "ghvb", get_parameter("--initState", "initElectronicState") ) + 4 * ( p_max_photon_number + 1 ) * get_parameter<int>("--initState", "initHorizontalPhotons") + 4 * get_parameter<int>("--initState", "initVerticalPhotons");
 
         // Look for --spectrum, if not found, no spectrum is evaluated
-        params = Parse_Parameters( arguments, {"--specTauRes", "--specCenter", "--specRange", "--specWRes", "-spectrum", "-spectrumH", "-spectrumV"}, {1, 1, 1, 1, 1, 1, 1}, "Spectrum Parameters" );
-        iterations_tau_resolution = params.get<int>( 0, "250" );
-        spectrum_frequency_center = params.get<double>( 1, std::to_string( p_omega_cavity_H ) );
-        spectrum_frequency_range = params.get<double>( 2, std::to_string( ( p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing ) * 10.0 ) );
-        iterations_w_resolution = params.get<int>( 3, "500" );
-        numerics_calculate_spectrum_H = params.get( 4 ) || params.get( 5 );
-        numerics_calculate_spectrum_V = params.get( 4 ) || params.get( 6 );
+        iterations_tau_resolution = get_parameter<int>("--spectrum", "specTauRes");
+        spectrum_frequency_center = get_parameter<double>("--spectrum", "specCenter");
+        spectrum_frequency_range = get_parameter<double>("--spectrum", "specRange");
+        iterations_w_resolution = get_parameter<int>("--spectrum", "specWRes");
+        numerics_calculate_spectrum_H = get_parameter_passed("-spectrum") || get_parameter_passed("-spectrumH");
+        numerics_calculate_spectrum_V = get_parameter_passed("-spectrum") || get_parameter_passed("-spectrumV");
 
         // Look for (-RK4), -RK5, (-RK4T), (-RK4Tau), -RK5T, -RK5Tau
-        params = Parse_Parameters( arguments, {"-g2", "-RK5", "-RK5T", "-RK5Tau", "-noInteractionpic", "-noRWA", "--Threads", "-noHandler", "-outputOperators", "-outputHamiltons", "-outputOperatorsStop", "-timeTrafoMatrixExponential", "-startCoherent", "-fullDM", "-scale", "-disableMatrixCaching", "-disableHamiltonCaching", "-disableMainProgramThreading", "-noRaman", "-g2s", "--lfc", "-timedepInd"}, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, "Other parameters" );
-        numerics_calculate_g2 = params.get( 0 ) || params.get( 19 );
-        numerics_order_t = ( params.get( 1 ) || params.get( 2 ) ) ? 5 : 4;
-        numerics_order_tau = ( params.get( 1 ) || params.get( 3 ) ) ? 5 : 4;
+        numerics_calculate_g2 = get_parameter_passed("-g2") || get_parameter_passed("-g2s");
+        numerics_order_t = (get_parameter_passed("-RK5") || get_parameter_passed("-RK5T") ? 5 : 4);
+        numerics_order_tau = (get_parameter_passed("-RK5") || get_parameter_passed("-RK5Tau") ? 5 : 4);
         numerics_order_highest = numerics_order_t;
         if ( numerics_order_tau > numerics_order_highest )
             numerics_order_highest = numerics_order_tau;
-        numerics_use_interactionpicture = params.get( 4 ) ? 0 : 1;
-        numerics_use_rwa = params.get( 5 ) ? 0 : 1;
-        numerics_maximum_threads = params.get<int>( 6, "1" );
+        numerics_use_interactionpicture = get_parameter_passed("-noInteractionpic") ? 0 : 1;
+        numerics_use_rwa = get_parameter_passed("-noRWA") ? 0 : 1;
+        numerics_maximum_threads = get_parameter<int>("--Threads");
         if ( numerics_maximum_threads == -1 )
             numerics_maximum_threads = omp_get_max_threads();
-        output_handlerstrings = params.get( 7 ) ? 0 : 1;
-        output_operators = params.get( 8 ) ? 2 : ( params.get( 9 ) ? 1 : ( params.get( 10 ) ? 3 : 0 ) );
-        numerics_order_timetrafo = params.get( 11 ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
-        startCoherent = params.get( 12 );
-        output_full_dm = params.get( 13 );
-        scale_parameters = params.get( 14 );
-        numerics_use_saved_coefficients = !params.get( 15 );
-        numerics_use_saved_hamiltons = !params.get( 16 );
-        numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !params.get( 17 ) ) ? numerics_maximum_threads : 1;
-        numerics_output_raman_population = !params.get( 18 );
-        numerics_use_simplified_g2 = params.get( 19 );
-        logfilecounter = params.get<int>( 20, "-1" );
-        numerics_calculate_timeresolution_indistinguishability = params.get( 21 );
+        output_handlerstrings = get_parameter_passed("-noHandler") ? 0 : 1;
+        output_operators = get_parameter_passed("-outputOp") ? 2 : ( get_parameter_passed("-outputHamiltons") ? 1 : ( get_parameter_passed("-outputOpStop") ? 3 : 0 ) );
+        numerics_order_timetrafo = get_parameter_passed("-timeTrafoMatrixExponential") ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
+        startCoherent = get_parameter_passed("-startCoherent");
+        output_full_dm = get_parameter_passed("-fullDM");
+        scale_parameters = get_parameter_passed("-scale");
+        numerics_use_saved_coefficients = !get_parameter_passed("-disableMatrixCaching");
+        numerics_use_saved_hamiltons = !get_parameter_passed("-disableHamiltonCaching");
+        numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !get_parameter_passed("-disableMainProgramThreading") ) ? numerics_maximum_threads : 1;
+        numerics_output_raman_population = get_parameter_passed("-raman");
+        numerics_use_simplified_g2 = get_parameter_passed("-g2s");
+        logfilecounter = get_parameter<int>("--lfc");
+        numerics_calculate_timeresolution_indistinguishability = get_parameter_passed("-timedepInd");
 
         // Phonon Parameters
-        params = Parse_Parameters( arguments, {"--phonons", "--temperature", "-phonons", "--phononorder", "-noMarkov", "-phononcoeffs", "-noPhononAdjust"}, {5, 1, 1, 1, 1, 1, 1} );
-        p_phonon_alpha = params.get<double>( 0, "0.03E-24" );
-        p_phonon_wcutoff = params.get<double>( 1, "1meV" );
-        p_phonon_tcutoff = params.get<double>( 2, "4ps" );
-        p_phonon_T = params.get( 6 ) ? params.get<double>( 5, "3" ) : params.get<double>( {3, 5}, "0" );
-        numerics_phonon_approximation_order = params.get<int>( {4, 7}, std::to_string( PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) ); // Second Markov / Transformation method
-        numerics_phonon_approximation_markov1 = params.get( 8 ) ? 0 : 1;                                                              // First Markov
-        output_coefficients = params.get( 9 ) ? 1 : 0;
-        p_phonon_adjust = !params.get( 10 );
+        p_phonon_alpha = get_parameter<double>("--phonons","phononalpha");
+        p_phonon_wcutoff = get_parameter<double>("--phonons","phononwcutoff");
+        p_phonon_tcutoff = get_parameter<double>("--phonons","phonontcutoff");
+        p_phonon_T = get_parameter<double>("--phonons","temperature");
+        numerics_phonon_approximation_order = get_parameter<double>("--phonons","phononorder");
+        numerics_phonon_approximation_markov1 = get_parameter_passed("-noMarkov") ? 0 : 1;                                                              // First Markov
+        output_coefficients = get_parameter_passed("-phononcoeffs") ? 1 : 0;
+        p_phonon_adjust = !get_parameter_passed("-noPhononAdjust");
 
         subfolder = arguments.back();
         return true;
@@ -294,7 +278,7 @@ class Parameters : public Parameters_Parent {
         if ( spectrum_frequency_center == -1 )
             spectrum_frequency_center = p_omega_cavity_H;
         if ( spectrum_frequency_range == -1 )
-            spectrum_frequency_range = ( std::abs( max_detuning ) + p_omega_coupling + p_omega_cavity_loss / 2. ) * 3.;
+            spectrum_frequency_range = ( std::abs( max_detuning*3 ) + ( p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing ) * 10.0 );
 
         // Calculate phonon stuff
         p_phonon_b = 1.0;
@@ -319,34 +303,9 @@ class Parameters : public Parameters_Parent {
         return true;
     }
 
-    /*
-        New Parameter Log:
-        System Parameters
-        - Base Energies
-        - Couplings
-        - Init State
-        - Detunings
-        - Pulse
-        -- Different Pulses
-        - Chirp
-        -- Different Chirps
-        Phonon Parameters
-        Photon Statistics
-        - G1
-        -- Spectrum
-        - G2
-        -- all other photon statistics and if they are calculated
-        Numerical Parameters
-        - Time
-        - Used stuff
-        unterpunkte mit
-        = Unterpunkt
-        == UnterUnterpunk (z.b. chirp parameter)
-        markieren für auswertunsgskritp
-    */
     void log( const std::vector<std::string> &info ) {
         logs.wrapInBar( "System Parameters" );
-        logs( "Version: 1.2.4\n\n" );
+        logs( "Version: 1.2.6 (sin Chirp)\n\n" );
 
         logs.wrapInBar( "Base Energies", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Biexciton binding energy: {:.8e} Hz - {:.8} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
@@ -400,7 +359,7 @@ class Parameters : public Parameters_Parent {
                 }
             }
             if ( chirp_type.compare( "none" ) != 0 )
-                logs( "\nChirpfile of type '" + chirp_type + "' is used!\n" );
+                logs( "\nChirp of type '" + chirp_type + "' is used!\n" );
             logs( "Total Chirp = {:.8} mueV\n\n", Hz_to_eV( total ) * 1E6 );
         } else
             logs( "Not using chirp\n\n" );

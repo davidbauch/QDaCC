@@ -6,17 +6,16 @@
 
 // g++-8 '/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/main.cpp' -o /Users/davidbauch/bin/QDLC-4LS-1.2.4.out misc/ALGLIB/MAC/*.o -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'/Users/davidbauch/OneDrive - Universita<0308>t Paderborn/Kot/BP/QDLC-C/' -Wall 2>&1  | tee fuck.txt
 // g++ 'main.cpp' -o QDLC-4LS-1.2.3.out misc/ALGLIB/CLUSTER/*.o -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'.' -I'../fmt/include/' -Wall 2>&1  | tee fuck.txt
+// g++ .\main.cpp -o ..\..\Threadhandler\QDLC-4LS-1.2.5.exe .\misc\ALGLIB\LAP\*.o -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -static -I'C:\msys64\mingw64\include\eigen3'  2>&1  | tee fuck.txt
 // test
 // last input: workpath
 int main( int argc, char* argv[] ) {
+    // Commandline Arguments:
+    CommandlineArguments::init(argc,argv);
+    //cla.get("time","tstep");
     // Help
     auto inputs = argv_to_vec( argc, argv );
-    if ( argc < 3 || vec_find_str( "--help", inputs ) != -1 || vec_find_str( "-help", inputs ) != -1 || vec_find_str( "-h", inputs ) != -1 ) {
-        if ( argc < 3 )
-            fmt::print( "Not enough input parameters!\n" );
-        Parameters::help();
-        exit( 0 );
-    }
+    //TODO BIG: für version 1.2.5 funktioniert bulk nicht mehr, da die inputs immer von cla gelesen werden. cla muss also unten immer aktualisiert werden über die inputs.
 
     // Check for Multifile, if true parse all settings
     std::vector<std::vector<std::string>> sets;
@@ -79,6 +78,7 @@ int main( int argc, char* argv[] ) {
 
     // Main Program
     for ( auto set : sets ) {
+        CommandlineArguments::init(set); //TODO: remove redundacys
         inputs = set;
         const std::string fp = inputs.back();
         std::filesystem::create_directories( fp );

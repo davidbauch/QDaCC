@@ -1,0 +1,649 @@
+# Sections or 'splitts' the commandline argument from its designated value
+CLA_SPLIT = '='
+
+# Width of helper function in characters
+CLA_WIDTH = '230'
+
+# Single or dual hyphen reserved commands
+CLA_ADD_PARAMETER = 'add'
+CLA_REMOVE_PARAMETER = 'rem'
+CLA_EDIT_PARAMETER = 'mod'
+
+# All Configured Parameters:
+
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'time'
+	description = 'All temporal parameters'
+	group = 'Timeparameter'
+	CLA_PARAMETER = {
+		subkey = 'tstart'
+		value = '0.0'
+		datatype = 'string'
+		description = 'Starting time'
+	}
+	CLA_PARAMETER = {
+		subkey = 'tend'
+		value = '1ns'
+		datatype = 'string'
+		description = 'Maximum time'
+	}
+	CLA_PARAMETER = {
+		subkey = 'tstep'
+		value = '-1'
+		datatype = 'string'
+		description = 'Timestep'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'system'
+	description = 'All system parameters'
+	group = 'Systemparameter'
+	CLA_PARAMETER = {
+		subkey = 'we'
+		value = '1.366eV'
+		datatype = 'string'
+		description = 'Electronic transition frequency'
+	}
+	CLA_PARAMETER = {
+		subkey = 'wcH'
+		value = '1.366eV'
+		datatype = 'string'
+		description = 'Horizontally polarized cavity transition frequency'
+	}
+	CLA_PARAMETER = {
+		subkey = 'wcV'
+		value = '1.366eV'
+		datatype = 'string'
+		description = 'Vertically polarized cavity transition frequency'
+	}
+	CLA_PARAMETER = {
+		subkey = 'coupling'
+		value = '66mueV'
+		datatype = 'string'
+		description = 'Exciton - Cavity coupling g'
+	}
+	CLA_PARAMETER = {
+		subkey = 'kappa'
+		value = '66mueV'
+		datatype = 'string'
+		description = 'Photonic loss'
+	}
+	CLA_PARAMETER = {
+		subkey = 'gamma'
+		value = '1mueV'
+		datatype = 'string'
+		description = 'Radiative Decay'
+	}
+	CLA_PARAMETER = {
+		subkey = 'gammapure'
+		value = '3mueV'
+		datatype = 'string'
+		description = 'Electronic pure dephasing'
+	}
+	CLA_PARAMETER = {
+		subkey = 'deltaE'
+		value = '2mueV'
+		datatype = 'string'
+		description = 'Exciton finestructure splitting'
+	}
+	CLA_PARAMETER = {
+		subkey = 'excitonBindEnergy'
+		value = '3meV'
+		datatype = 'string'
+		description = 'Biexciton binding energy'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'pulse'
+	description = 'All chirp parameters'
+	group = 'Pulseparameters'
+	CLA_PARAMETER = {
+		subkey = 'pulseCenter'
+		value = '20ps'
+		datatype = 'string'
+		description = 'Pulse center'
+	}
+	CLA_PARAMETER = {
+		subkey = 'pulseAmp'
+		value = '0'
+		datatype = 'string'
+		description = 'Pulse amplitute'
+	}
+	CLA_PARAMETER = {
+		subkey = 'pulseFreq'
+		value = '1.366eV'
+		datatype = 'string'
+		description = 'Pulse frequency'
+	}
+	CLA_PARAMETER = {
+		subkey = 'pulseSigma'
+		value = '5ps'
+		datatype = 'string'
+		description = 'Pulse sigma'
+	}
+	CLA_PARAMETER = {
+		subkey = 'pulseType'
+		value = 'gauss_pi'
+		datatype = 'string'
+		description = 'Pulse type'
+	}
+	CLA_PARAMETER = {
+		subkey = 'pulsePol'
+		value = 'H'
+		datatype = 'string'
+		description = 'Pulse polarization'
+	}
+	CLA_PARAMETER = {
+		subkey = 'pulseChirp'
+		value = '0'
+		datatype = 'string'
+		description = 'Pulse chirp'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'chirp'
+	description = 'All chirp parameters. These can be vectors [a1,a2,...]. If only e.g. chirp values are given, rest of vectors will be assumed to be 0. A vector of this type needs at least 2 entries'
+	group = 'Chirpparameters'
+	CLA_PARAMETER = {
+		subkey = 'chirpT'
+		value = '[0,1]'
+		datatype = 'string'
+		description = 'Chirp Time'
+	}
+	CLA_PARAMETER = {
+		subkey = 'chirpY'
+		value = '[0,0]'
+		datatype = 'string'
+		description = 'Chirp Value'
+	}
+	CLA_PARAMETER = {
+		subkey = 'chirpDDT'
+		value = '[0,0]'
+		datatype = 'string'
+		description = 'Chirp Differential'
+	}
+	CLA_PARAMETER = {
+		subkey = 'chirpType'
+		value = 'monotone'
+		datatype = 'string'
+		description = 'Chirp Type. This cannot be a vector'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'initState'
+	description = 'Initial State Parameters'
+	group = 'InitialStateParams'
+	CLA_PARAMETER = {
+		subkey = 'initElectronicState'
+		value = 'g'
+		datatype = 'string'
+		description = 'Initial Electronic state. Can be g,h,v,b'
+	}
+	CLA_PARAMETER = {
+		subkey = 'initHorizontalPhotons'
+		value = '0'
+		datatype = 'int'
+		description = 'Positive Integer'
+	}
+	CLA_PARAMETER = {
+		subkey = 'initVerticalPhotons'
+		value = '0'
+		datatype = 'int'
+		description = 'Positive Integer'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'maxPhotons'
+	description = 'Set global maximum photon number.'
+	group = 'InitialStateParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = '2'
+		datatype = 'int'
+		description = 'Positive Integer'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'spectrum'
+	description = 'Spectral properties.'
+	group = 'SpectrumParams'
+	CLA_PARAMETER = {
+		subkey = 'specTauRes'
+		value = '250'
+		datatype = 'int'
+		description = 'Positive Integer. Resolution for t'-calculation'
+	}
+	CLA_PARAMETER = {
+		subkey = 'specCenter'
+		value = '-1'
+		datatype = 'string'
+		description = 'Center for spectrum calculation. -1 maps this value onto the cavity'
+	}
+	CLA_PARAMETER = {
+		subkey = 'specRange'
+		value = '-1'
+		datatype = 'string'
+		description = 'Range for spectrum calculation. -1 maps this value onto the different transition frequencies and couplings used.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'specWRes'
+		value = '500'
+		datatype = 'int'
+		description = 'Positive Integer. Resolution of w-calculation'
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'spectrum'
+	description = 'Enable general spectrum calculation. Edit parameters via --spectrum subkeys.'
+	group = 'SpectrumParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'spectrumH'
+	description = 'Enable spectrum calculation for horizontal polarization only. Edit parameters via --spectrum subkeys.'
+	group = 'SpectrumParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'spectrumV'
+	description = 'Enable spectrum calculation for vertical polarization only. Edit parameters via --spectrum subkeys.'
+	group = 'SpectrumParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'phonons'
+	description = 'Phonon properties.'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = 'temperature'
+		value = '0'
+		datatype = 'double'
+		description = 'Assumed temperature'
+	}
+	CLA_PARAMETER = {
+		subkey = 'phononorder'
+		value = '4'
+		datatype = 'int'
+		description = 'Integer between 0 and 4 where 0 is full contribution, 1 is matrixtransformation, 2 is no backtransformation, 3 is analytical contribution and 4 is hybrid.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'phononalpha'
+		value = '0.03E-24'
+		datatype = 'double'
+		description = 'Phonon alpha'
+	}
+	CLA_PARAMETER = {
+		subkey = 'phononwcutoff'
+		value = '1meV'
+		datatype = 'string'
+		description = 'Phonon Cutoff energy'
+	}
+	CLA_PARAMETER = {
+		subkey = 'phonontcutoff'
+		value = '4ps'
+		datatype = 'string'
+		description = 'Phonon Cutoff time'
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'phonons'
+	description = 'Enable general phonon contribution. Edit parameters via --phonons subkeys'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'noMarkov'
+	description = 'Disable first Markov Approximation. Note: This slows down g1 and g2 calculation.'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'phononcoeffs'
+	description = 'Enable phonon coefficient output.'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'noPhononAdjust'
+	description = 'Disable the adjustments done on (pure-)dephasing if phonons are active.'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'g2'
+	description = 'Enables g2 statistic calculations'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'RK5'
+	description = 'Use Runge Kutta of order 5 for all calculations'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'RK5T'
+	description = 'Use Runge Kutta of order 5 for all t-direction only'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'RK5Tau'
+	description = 'Use Runge Kutta of order 5 for all tau-direction only'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'noInteractionpic'
+	description = 'Disables interaction picture approximation. Don't use this.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'noRWA'
+	description = 'Disables rotating frame approximation. Don't use this.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'Threads'
+	description = 'Number of threads to use for all calculations.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = '1'
+		datatype = 'int'
+		description = 'Positive Integer'
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'noHandler'
+	description = 'Disables handler output and instead outputs direct progress into the console'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'outputOp'
+	description = 'Enables outputting operators'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'outputHamiltons'
+	description = 'Enables outputting Hamilton operators'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'outputOpStop'
+	description = 'Enables outputting all operators, exitting the program afterwards'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'timeTrafoMatrixExponential'
+	description = 'Use numerical matrix exponential instead of analytical'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'startCoherent'
+	description = 'Start in a coherent state (broken)'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'fullDM'
+	description = 'Output full densitymatrix instead of only diagonal elements'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'scale'
+	description = 'Enables parameter scaling (SI->scaled units)'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'disableMatrixCaching'
+	description = 'Disables saving of phonon matrices for later calculations. Using this will require much less ram at the cost of a lot of calculation time.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'disableHamiltonCaching'
+	description = 'Disables saving of Hamilton matrices for later calculations. Using this will require much less ram at the cost of a lot of calculation time.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'disableMainProgramThreading'
+	description = 'Disables using multithreading for phonon calculations. For g1/g2 calculations multithreading is still used.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'raman'
+	description = 'Enables calculation of raman population.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'g2s'
+	description = 'Enables simple g2 calculations.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'timedepInd'
+	description = 'Enables time dependant output of indistinguishability. This increases calculation time by a lot.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'lfc'
+	description = 'Logfile number counter.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = '-1'
+		datatype = 'int'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'advLog'
+	description = 'Advanced logging.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'file'
+	description = 'Input file. If none given, arguments from commandline are taken.'
+	group = 'Input'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'none'
+		datatype = 'string'
+		description = ''
+	}
+}
