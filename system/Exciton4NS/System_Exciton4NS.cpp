@@ -178,7 +178,7 @@ class System : public System_Parent {
     SparseMat dgl_chirp( const double t ) {
         if ( parameters.chirp_total == 0 )
             return SparseMat( parameters.maxStates, parameters.maxStates );
-        return ( operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_H + operatorMatrices.atom_state_V ) * chirp.get( t );
+        return ( 2.0*operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_H + operatorMatrices.atom_state_V ) * chirp.get( t ); //Experimental; corrected chirp
     }
 
     SparseMat dgl_pulse( const double t ) {
