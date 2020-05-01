@@ -373,6 +373,42 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '1hyphen'
+	key = 'g2H'
+	description = 'Enables g2 statistic calculations for only the H-mode'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'g2V'
+	description = 'Enables g2 statistic calculations for only the V-mode'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'g2C'
+	description = 'Enables g2 statistic calculations for concurrence'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
 	key = 'RK5'
 	description = 'Use Runge Kutta of order 5 for all calculations'
 	group = 'General'

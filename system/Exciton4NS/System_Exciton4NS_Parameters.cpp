@@ -47,6 +47,7 @@ class Parameters : public Parameters_Parent {
     int numerics_maximum_threads, iterations_w_resolution, numerics_phonon_approximation_markov1, numerics_phonon_approximation_order;
     double akf_deltaWmax, spectrum_frequency_center, spectrum_frequency_range;
     bool numerics_calculate_spectrum_H, numerics_calculate_spectrum_V;
+    bool numerics_calculate_g2_H, numerics_calculate_g2_V, numerics_calculate_g2_C;
     bool numerics_use_saved_coefficients;
     bool numerics_output_raman_population;
     bool numerics_calculate_timeresolution_indistinguishability;
@@ -127,7 +128,10 @@ class Parameters : public Parameters_Parent {
         numerics_calculate_spectrum_V = get_parameter_passed("-spectrum") || get_parameter_passed("-spectrumV");
 
         // Look for (-RK4), -RK5, (-RK4T), (-RK4Tau), -RK5T, -RK5Tau
-        numerics_calculate_g2 = get_parameter_passed("-g2") || get_parameter_passed("-g2s");
+        numerics_calculate_g2 = get_parameter_passed("-g2") || get_parameter_passed("-g2s") || get_parameter_passed("-g2H") || get_parameter_passed("-g2V") || get_parameter_passed("-g2C");
+        numerics_calculate_g2_H = get_parameter_passed("-g2H") || get_parameter_passed("-g2");
+        numerics_calculate_g2_V = get_parameter_passed("-g2V") || get_parameter_passed("-g2");
+        numerics_calculate_g2_C = get_parameter_passed("-g2C") || get_parameter_passed("-g2");
         numerics_order_t = (get_parameter_passed("-RK5") || get_parameter_passed("-RK5T") ? 5 : 4);
         numerics_order_tau = (get_parameter_passed("-RK5") || get_parameter_passed("-RK5Tau") ? 5 : 4);
         numerics_order_highest = numerics_order_t;
@@ -257,8 +261,9 @@ class Parameters : public Parameters_Parent {
         iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
 
         // Mandatory: rescale chirp ddt into chirp/ps
-        for ( long unsigned i = 0; i < chirp_ddt.size(); i++ )
-            chirp_ddt.at( i ) = chirp_ddt.at( i ) * 1E12;
+        if (chirp_type.compare("sine") != 0)
+            for ( long unsigned i = 0; i < chirp_ddt.size(); i++ )
+                chirp_ddt.at( i ) = chirp_ddt.at( i ) * 1E12;
         // Calculate values for chirp:
         chirp_total = vec_max( chirp_y );
 
@@ -305,7 +310,7 @@ class Parameters : public Parameters_Parent {
 
     void log( const std::vector<std::string> &info ) {
         logs.wrapInBar( "System Parameters" );
-        logs( "Version: 1.2.6 (sin Chirp)\n\n" );
+        logs( "Version: 1.2.7 (H,V g2 seperated)\n\n" );
 
         logs.wrapInBar( "Base Energies", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Biexciton binding energy: {:.8e} Hz - {:.8} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );

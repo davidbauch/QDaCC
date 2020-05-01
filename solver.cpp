@@ -515,9 +515,12 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
     // Calculate G2(t,tau) with given operator matrices
     if ( !calculate_concurrence_with_g2_of_zero ) {
         logs.level2( "Calculating 3 seperate G2(t,tau) matrices...\n" );
-        calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, akf_mat_g2_11, "Mode 11" );
-        calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_2, op_annihilator_2, akf_mat_g2_22, "Mode 22" );
-        calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_1, op_annihilator_2, akf_mat_g2_12, "Mode 12" );
+        if ( s.parameters.numerics_calculate_g2_H || s.parameters.numerics_calculate_g2_C )
+            calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, akf_mat_g2_11, "Mode 11" );
+        if ( s.parameters.numerics_calculate_g2_V || s.parameters.numerics_calculate_g2_C )
+            calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_2, op_annihilator_2, akf_mat_g2_22, "Mode 22" );
+        if ( s.parameters.numerics_calculate_g2_C )
+            calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_1, op_annihilator_2, akf_mat_g2_12, "Mode 12" );
     }
     // Calculating G2(tau)
     Timer &timer_g2 = createTimer( "G2(tau integral" );
@@ -546,57 +549,65 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
         }
         double t_t = getTimeAt( i );
         rho = getRhoAt( i );
-        M1 = op_creator_1 * op_creator_1 * op_annihilator_1 * op_annihilator_1;
-        M2 = op_creator_1 * op_annihilator_1;
-        g2_11_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t ); // / std::pow( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ), 2 );
-        M1 = op_creator_2 * op_creator_2 * op_annihilator_2 * op_annihilator_2;
-        M2 = op_creator_2 * op_annihilator_2;
-        g2_22_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t ); // / std::pow( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ), 2 );
-        M1 = op_creator_1 * op_creator_1 * op_annihilator_2 * op_annihilator_2;
-        M2 = op_creator_1 * op_annihilator_1;
-        M3 = op_creator_2 * op_creator_2;
-        g2_12_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t ); // / ( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ) * s.dgl_expectationvalue<MatType, dcomplex>( rho, M3, t_t ) );
+        if ( s.parameters.numerics_calculate_g2_H ) {
+            M1 = op_creator_1 * op_creator_1 * op_annihilator_1 * op_annihilator_1;
+            M2 = op_creator_1 * op_annihilator_1;
+            g2_11_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t ); // / std::pow( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ), 2 );
+        }
+        if ( s.parameters.numerics_calculate_g2_V ) {
+            M1 = op_creator_2 * op_creator_2 * op_annihilator_2 * op_annihilator_2;
+            M2 = op_creator_2 * op_annihilator_2;
+            g2_22_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t ); // / std::pow( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ), 2 );
+        }
+        if ( s.parameters.numerics_calculate_g2_C || s.parameters.numerics_calculate_g2_V || s.parameters.numerics_calculate_g2_H ) {
+            M1 = op_creator_1 * op_creator_1 * op_annihilator_2 * op_annihilator_2;
+            M2 = op_creator_1 * op_annihilator_1;
+            M3 = op_creator_2 * op_creator_2;
+            g2_12_zero.at( k ) = s.dgl_expectationvalue<MatType, dcomplex>( rho, M1, t_t ); // / ( s.dgl_expectationvalue<MatType, dcomplex>( rho, M2, t_t ) * s.dgl_expectationvalue<MatType, dcomplex>( rho, M3, t_t ) );
+        }
         outputProgress( s.parameters.output_handlerstrings, timer_g2, progressbar, pbsize, "G2(tau): " );
         timer_g2.iterate();
     }
     timer_g2.end();
     // Calculating Concurrence
-    Timer &timer_c = createTimer( "Concurrence" );
-    timer_c.start();
-    logs.level2( "Calculating Concurrence... " );
-    // Prepare output vector
+    // Prepare Concurrence output vector
     std::vector<dcomplex> rho_11, rho_22, rho_12;
     for ( int i = 0; i < (int)savedStates.size(); i += s.getIterationSkip() ) {
         rho_11.push_back( 0 );
         rho_22.push_back( 0 );
         rho_12.push_back( 0 );
     }
-    // Main integral
-    logs.level2( "Concurrence integral timestep: {}\n", deltaT );
-    //#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( int T = 0; T < (int)savedStates.size(); T += s.getIterationSkip() ) {
-        int t = T / s.getIterationSkip();
-        for ( int i = 0; i < T; i += s.getIterationSkip() ) {
-            int k = i / s.getIterationSkip();
-            // Calculate for t
-            if ( !calculate_concurrence_with_g2_of_zero ) {
-                for ( int tau = 0; tau < t - k; tau++ ) {
-                    rho_11.at( t ) += akf_mat_g2_11( k, tau ) * deltaT * deltaT;
-                    rho_22.at( t ) += akf_mat_g2_22( k, tau ) * deltaT * deltaT;
-                    rho_12.at( t ) += akf_mat_g2_12( k, tau ) * deltaT * deltaT;
+    if ( s.parameters.numerics_calculate_g2_C ) {
+        Timer &timer_c = createTimer( "Concurrence" );
+        timer_c.start();
+        logs.level2( "Calculating Concurrence... " );
+        // Main integral
+        logs.level2( "Concurrence integral timestep: {}\n", deltaT );
+        //#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
+        for ( int T = 0; T < (int)savedStates.size(); T += s.getIterationSkip() ) {
+            int t = T / s.getIterationSkip();
+            for ( int i = 0; i < T; i += s.getIterationSkip() ) {
+                int k = i / s.getIterationSkip();
+                // Calculate for t
+                if ( !calculate_concurrence_with_g2_of_zero ) {
+                    for ( int tau = 0; tau < t - k; tau++ ) {
+                        rho_11.at( t ) += akf_mat_g2_11( k, tau ) * deltaT * deltaT;
+                        rho_22.at( t ) += akf_mat_g2_22( k, tau ) * deltaT * deltaT;
+                        rho_12.at( t ) += akf_mat_g2_12( k, tau ) * deltaT * deltaT;
+                    }
+                } else {
+                    rho_11.at( t ) += g2_11_zero.at( k ) * deltaT;
+                    rho_22.at( t ) += g2_22_zero.at( k ) * deltaT;
+                    rho_12.at( t ) += g2_12_zero.at( k ) * deltaT;
                 }
-            } else {
-                rho_11.at( t ) += g2_11_zero.at( k ) * deltaT;
-                rho_22.at( t ) += g2_22_zero.at( k ) * deltaT;
-                rho_12.at( t ) += g2_12_zero.at( k ) * deltaT;
+                outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence: " );
             }
-            outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence: " );
+            timer_c.iterate();
         }
-        timer_c.iterate();
+        // Final output and timer end
+        outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence", PROGRESS_FORCE_OUTPUT );
+        timer_c.end();
     }
-    // Final output and timer end
-    outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence", PROGRESS_FORCE_OUTPUT );
-    timer_c.end();
     // Calculating indistinguishability
     DenseMat akf_mat_g1_1 = DenseMat::Zero( dim, dim );
     DenseMat akf_mat_g1_2 = DenseMat::Zero( dim, dim );
@@ -610,11 +621,11 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
         M2 = op_creator_2 * op_annihilator_2;
         if ( !temp1.isZero() )
             akf_mat_g1_1 = temp1;
-        else
+        else if ( s.parameters.numerics_calculate_g2_H )
             calculate_g1( s, op_creator_1, op_annihilator_1, akf_mat_g1_1, "g1_1" );
         if ( !temp2.isZero() )
             akf_mat_g1_2 = temp2;
-        else
+        else if ( s.parameters.numerics_calculate_g2_V )
             calculate_g1( s, op_creator_2, op_annihilator_2, akf_mat_g1_2, "g1_2" );
         Timer &timer = createTimer( "Indistinguishability" );
         timer.start();
