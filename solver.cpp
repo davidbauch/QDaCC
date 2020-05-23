@@ -621,7 +621,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System_Parent &s, const Ma
         M2 = op_creator_2 * op_annihilator_2;
         if ( !temp1.isZero() )
             akf_mat_g1_1 = temp1;
-        else if ( s.parameters.numerics_calculate_g2_H )
+        else if ( s.parameters.numerics_calculate_g2_H ) //TODO: hier vieleicht weg, nur g1 benutzen wenn auch das spektrum ausgerechnet wurde, sonst g1=0
             calculate_g1( s, op_creator_1, op_annihilator_1, akf_mat_g1_1, "g1_1" );
         if ( !temp2.isZero() )
             akf_mat_g1_2 = temp2;
