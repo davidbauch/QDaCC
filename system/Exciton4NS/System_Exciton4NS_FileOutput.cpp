@@ -50,7 +50,7 @@ FileOutput::FileOutput( const std::vector<std::string> filenames, const Paramete
 
 void FileOutput::close() {
     logs.level2( "Closing file outputs..." );
-    if ( output_no_dm ) {
+    if ( !output_no_dm ) {
         std::fclose( fp_densitymatrix );
     }
     std::fclose( fp_atomicinversion );
