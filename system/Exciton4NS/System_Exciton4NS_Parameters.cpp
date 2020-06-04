@@ -147,6 +147,7 @@ class Parameters : public Parameters_Parent {
         numerics_order_timetrafo = get_parameter_passed("-timeTrafoMatrixExponential") ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
         startCoherent = get_parameter_passed("-startCoherent");
         output_full_dm = get_parameter_passed("-fullDM");
+        output_no_dm = get_parameter_passed("-noDM");
         scale_parameters = get_parameter_passed("-scale");
         numerics_use_saved_coefficients = !get_parameter_passed("-disableMatrixCaching");
         numerics_use_saved_hamiltons = !get_parameter_passed("-disableHamiltonCaching");
@@ -310,7 +311,7 @@ class Parameters : public Parameters_Parent {
 
     void log( const std::vector<std::string> &info ) {
         logs.wrapInBar( "System Parameters" );
-        logs( "Version: 1.2.7 (H,V g2 seperated)\n\n" );
+        logs( "Version: 1.2.7.1 (-noDM, pulse ausgabe indiziert)\n\n" );
 
         logs.wrapInBar( "Base Energies", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         logs( "Biexciton binding energy: {:.8e} Hz - {:.8} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
@@ -345,8 +346,8 @@ class Parameters : public Parameters_Parent {
         logs.wrapInBar( "Pulse", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
         if ( pulse_amp.size() > 0 && pulse_center.at( 0 ) != -1 && pulse_amp.at( 0 ) != 0 ) {
             for ( int i = 0; i < (int)pulse_amp.size(); i++ ) {
-                logs( "Exiting system at t_0 = {:.8e}\nAmplitude {:.10e} ({:.8} meV, {:.2f} pi)\nFrequency {:.10e} ({:.8}eV)\nFWHM {:.8e}\nPulseChirp: {:.8e}\n", pulse_center.at( i ), pulse_amp.at( i ), Hz_to_eV( pulse_amp.at( i ) ) * 1E3, pulse_amp.at( i ) / ( M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) ) / 2.0 ), pulse_omega.at( i ), Hz_to_eV( pulse_omega.at( i ) ), pulse_sigma.at( i ) * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ), pulse_omega_chirp.at( i ) );
-                logs( "Used pulse_type - {}\nUsed pulse_pol on mode {}", pulse_type.at( i ), pulse_pol.at( i ) );
+                logs( "Exiting system at t_{0} = {1:.8e}\nAmplitude_{0} {2:.10e} ({3:.8} meV, {4:.2f} pi)\nFrequency_{0} {5:.10e} ({6:.8}eV)\nFWHM_{0} {7:.8e}\nPulseChirp_{0}: {8:.8e}\n", i, pulse_center.at( i ), pulse_amp.at( i ), Hz_to_eV( pulse_amp.at( i ) ) * 1E3, pulse_amp.at( i ) / ( M_PI / ( std::sqrt( 2.0 * M_PI ) * pulse_sigma.at( i ) ) / 2.0 ), pulse_omega.at( i ), Hz_to_eV( pulse_omega.at( i ) ), pulse_sigma.at( i ) * ( 2 * std::sqrt( 2 * std::log( 2 ) ) ), pulse_omega_chirp.at( i ) );
+                logs( "Used pulse_type_{0} - {1}\nUsed pulse_pol_{0} on mode {2}\n", i, pulse_type.at( i ), pulse_pol.at( i ) );
             }
             logs( "\n\n" );
         } else

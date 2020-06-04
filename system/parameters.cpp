@@ -18,6 +18,7 @@ Parameters_Parent::Parameters_Parent() {
     scale_value = 1E12;
     iterations_t_max = 1;
     output_full_dm = false;
+    output_no_dm = false;
 }
 
 void Parameters_Parent::init( const std::vector<std::string> &arguments ) {

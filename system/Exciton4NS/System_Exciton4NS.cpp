@@ -495,16 +495,18 @@ class System : public System_Parent {
         else
             fmt::print( fileoutput.fp_photonpopulation, "\n" );
 
-        fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", t );
-        if ( parameters.output_full_dm ) {
-            for ( int i = 0; i < parameters.maxStates; i++ )
-                for ( int j = 0; j < parameters.maxStates; j++ ) {
-                    fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", std::real( rho.coeff( i, j ) ) );
-                }
-        } else
-            for ( int j = 0; j < parameters.maxStates; j++ )
-                fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", std::real( rho.coeff( j, j ) ) );
-        fmt::print( fileoutput.fp_densitymatrix, "\n" );
+        if ( !parameters.output_no_dm ) {
+            fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", t );
+            if ( parameters.output_full_dm ) {
+                for ( int i = 0; i < parameters.maxStates; i++ )
+                    for ( int j = 0; j < parameters.maxStates; j++ ) {
+                        fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", std::real( rho.coeff( i, j ) ) );
+                    }
+            } else
+                for ( int j = 0; j < parameters.maxStates; j++ )
+                    fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", std::real( rho.coeff( j, j ) ) );
+            fmt::print( fileoutput.fp_densitymatrix, "\n" );
+        }
     }
 
     SparseMat dgl_getHamilton( const double t ) {

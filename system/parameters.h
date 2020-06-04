@@ -19,7 +19,7 @@ class Parameters_Parent {
     // Runtime parameters and other stuff
     int iterations_t_max;
     std::vector<double> trace;
-    bool output_full_dm;
+    bool output_full_dm, output_no_dm;
 
     // Functions
    public:
