@@ -216,7 +216,7 @@ CLA_ARGUMENT = {
 	group = 'SpectrumParams'
 	CLA_PARAMETER = {
 		subkey = 'specTauRes'
-		value = '250'
+		value = '500'
 		datatype = 'int'
 		description = 'Positive Integer. Resolution for t'-calculation'
 	}
@@ -555,6 +555,18 @@ CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'fullDM'
 	description = 'Output full densitymatrix instead of only diagonal elements'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'noDM'
+	description = 'Do not output densitymatrix'
 	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''
