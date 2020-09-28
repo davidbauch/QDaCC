@@ -695,3 +695,15 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'oElec'
+	description = 'Also output the electronic state emission through radiative decay'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}

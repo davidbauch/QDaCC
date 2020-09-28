@@ -1,13 +1,15 @@
 #include "global.h"
-#include "system/Exciton4NS/System_Exciton4NS.cpp"
-#include "chirp.cpp"
-#include "pulse.cpp"
-#include "solver.cpp"
+#include "chirp.h"
+#include "pulse.h"
+#include "system/system.h"
+#include "solver/solver.h"
 
 // g++-8 '/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/main.cpp' -o /Users/davidbauch/bin/QDLC-4LS-1.2.7.out misc/ALGLIB/MAC/*.o -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'/Users/davidbauch/OneDrive - Universita<0308>t Paderborn/Kot/BP/QDLC-C/' -Wall 2>&1  | tee fuck.txt
 // g++ 'main.cpp' -o QDLC-4LS-1.2.7.out misc/ALGLIB/CLUSTER/*.o -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'.' -I'../fmt/include/' -Wall 2>&1  | tee fuck.txt
 // g++ .\main.cpp -o ..\..\Threadhandler\QDLC-4LS-1.2.7.exe .\misc\ALGLIB\LAP\*.o -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -static -I'C:\msys64\mingw64\include\eigen3'  2>&1  | tee fuck.txt
 // test
+// 1 g++ -c source/solver/*.cpp source/system/*.cpp source/misc/*.cpp source/*.cpp -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'C:\msys2\myinclude' -I'include'
+// 2 g++ '.\main.cpp' -o main.exe obj/*.o include/misc/ALGLIB/WIN/*.o -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'C:\msys2\myinclude' -I'include' -g  2>&1  | tee fuck.txt
 // last input: workpath
 int main( int argc, char* argv[] ) {
     // Commandline Arguments:
@@ -81,15 +83,19 @@ int main( int argc, char* argv[] ) {
         solver.calculate_t_direction( system );
 
         // Spectrum
-        if ( system.calculate_spectrum() ) {
-            if ( system.calculate_spectrum_H() ) {
-                solver.calculate_spectrum( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "spectrum_H.txt", 1 );
-            }
-            if ( system.calculate_spectrum_V() ) {
-                solver.calculate_spectrum( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "spectrum_V.txt", 2 );
+        if ( system.parameters.numerics_calculate_spectrum_H ) {
+            solver.calculate_spectrum( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "spectrum_H.txt", 1 );
+            if ( system.parameters.numerics_output_electronic_emission ) {
+                solver.calculate_spectrum( system, system.operatorMatrices.atom_sigmaplus_G_H, system.operatorMatrices.atom_sigmaminus_G_H, "electronic_spectrum_H.txt", 0 );
             }
         }
-        if ( system.calculate_g2() ) {
+        if ( system.parameters.numerics_calculate_spectrum_V ) {
+            solver.calculate_spectrum( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "spectrum_V.txt", 2 );
+            if ( system.parameters.numerics_output_electronic_emission ) {
+                solver.calculate_spectrum( system, system.operatorMatrices.atom_sigmaplus_G_V, system.operatorMatrices.atom_sigmaminus_G_V, "electronic_spectrum_V.txt", 0 );
+            }
+        }
+        if ( system.parameters.numerics_calculate_g2 ) {
             solver.calculate_advanced_photon_statistics( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "advanced_photon_statistics.txt" );
         }
 
@@ -103,7 +109,7 @@ int main( int argc, char* argv[] ) {
         logs( "\n\n" + system.terminate_message + "\n" );
 
         logs.close();
-        if ( system.output_handlerstrings() ) {
+        if ( system.parameters.output_handlerstrings ) {
             fmt::print( "\n{0} {1:.1f}\n", PREFIX_PERCENT_TIME_FINAL, finalTime );
             fmt::print( "{0} Done in {1}\n", PREFIX_SUFFIX, Timer::format( finalTime ) );
         }
