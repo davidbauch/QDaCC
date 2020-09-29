@@ -1,4 +1,4 @@
-#include "solver.h"
+#include "solver/solver.h"
 
 // Description: Calculates the G1(tau) function. Uses akf_mat temporary variable to save the tau-direction expectation values. Calculates <b^+(t) * b(t+tau)> via quantum regression theorem. Logs and outputs progress.
 // Type: ODESolver public function
