@@ -7,7 +7,7 @@
 #include "system/operatormatrices.h"
 #include "chirp.h"
 #include "pulse.h"
-#include "solver/solver_sub.h"
+#include "solver/solver_definite_integral.h"
 
 class System : public Operatable {
     public:
@@ -110,6 +110,9 @@ class System : public Operatable {
         // Calculates the Lindbladian coefficients for the analytical phonon contributions using the polaron frame
         double dgl_phonons_lindblad_coefficients( double t, double omega_atomic, const char mode = 'L', const char level = 'H', const double sign = 1.0 );
 
+        // Initializes the polaron functions 
+        void initialize_polaron_frame_functions();
+
         // Determines the corresponding integer index for a given time tuple (t,tau)
         // Returns the index of the cached Chi(t,tau)
         int dgl_get_coefficient_index( const double t, const double tau = 0 );
@@ -125,7 +128,7 @@ class System : public Operatable {
         Sparse dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, double tau );
 
         // Calculates L_phonons(t)
-        Sparse dgl_phonons( const Sparse &rho, const double t, const std::vector<SaveState> &past_rhos );
+        Sparse dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<SaveState> &past_rhos );
 
         // ##### Template Functions #####
         

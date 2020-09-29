@@ -33,46 +33,7 @@ MatType ODESolver::getHamilton( System &s, const double t, bool use_saved_hamilt
     return s.dgl_getHamilton( t );
 }
 
-MatType ODESolver::iterateRungeKutta4( const MatType &rho, System &s, const double t, std::vector<SaveState> &savedStates ) {
-    // Verschiedene H's fuer k1-4 ausrechnen
-    MatType H_calc_k1 = getHamilton( s, t );
-    MatType H_calc_k23 = getHamilton( s, t + s.parameters.t_step * 0.5 );
-    MatType H_calc_k4 = getHamilton( s, t + s.parameters.t_step );
-    // k1-4 ausrechnen
-    MatType rk1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
-    MatType rk2 = s.dgl_rungeFunction( rho + s.parameters.t_step * 0.5 * rk1, H_calc_k23, t + s.parameters.t_step * 0.5, savedStates );
-    MatType rk3 = s.dgl_rungeFunction( rho + s.parameters.t_step * 0.5 * rk2, H_calc_k23, t + s.parameters.t_step * 0.5, savedStates );
-    MatType rk4 = s.dgl_rungeFunction( rho + s.parameters.t_step * rk3, H_calc_k4, t + s.parameters.t_step, savedStates );
-    // Dichtematrix
-    return rho + s.parameters.t_step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
-}
 
-MatType ODESolver::iterateRungeKutta5( const MatType &rho, System &s, const double t, std::vector<SaveState> &savedStates ) {
-    // Verschiedene H's fuer k1-6 ausrechnen
-    MatType H_calc_k1 = getHamilton( s, t );
-    MatType H_calc_k2 = getHamilton( s, t + a2 * s.parameters.t_step );
-    MatType H_calc_k3 = getHamilton( s, t + a3 * s.parameters.t_step );
-    MatType H_calc_k4 = getHamilton( s, t + a4 * s.parameters.t_step );
-    MatType H_calc_k5 = getHamilton( s, t + a5 * s.parameters.t_step );
-    MatType H_calc_k6 = getHamilton( s, t + a6 * s.parameters.t_step );
-    // k1-6 ausrechnen
-    MatType k1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
-    MatType k2 = s.dgl_rungeFunction( rho + s.parameters.t_step * b11 * k1, H_calc_k2, t + a2 * s.parameters.t_step, savedStates );
-    MatType k3 = s.dgl_rungeFunction( rho + s.parameters.t_step * ( b21 * k1 + b22 * k2 ), H_calc_k3, t + a3 * s.parameters.t_step, savedStates );
-    MatType k4 = s.dgl_rungeFunction( rho + s.parameters.t_step * ( b31 * k1 + b32 * k2 + b33 * k3 ), H_calc_k4, t + a4 * s.parameters.t_step, savedStates );
-    MatType k5 = s.dgl_rungeFunction( rho + s.parameters.t_step * ( b41 * k1 + b42 * k2 + b43 * k3 + b44 * k4 ), H_calc_k5, t + a5 * s.parameters.t_step, savedStates );
-    MatType k6 = s.dgl_rungeFunction( rho + s.parameters.t_step * ( b51 * k1 + b52 * k2 + b53 * k3 + b54 * k4 + b55 * k5 ), H_calc_k6, t + a6 * s.parameters.t_step, savedStates );
-    // Dichtematrix
-    return rho + s.parameters.t_step * ( b61 * k1 + b63 * k3 + b64 * k4 + b65 * k5 + b66 * k6 );
-}
-
-MatType ODESolver::iterate( const MatType &rho, System &s, const double t, std::vector<SaveState> &savedStates, const int dir ) {
-    int order = dir == DIR_T ? s.parameters.numerics_order_t : s.parameters.numerics_order_tau;
-    if ( order == 4 ) {
-        return iterateRungeKutta4( rho, s, t, savedStates );
-    }
-    return iterateRungeKutta5( rho, s, t, savedStates );
-}
 
 void ODESolver::saveState( const MatType &mat, const double t, std::vector<SaveState> &savedStates ) {
     savedStates.emplace_back( SaveState( mat, t ) );
@@ -178,106 +139,11 @@ MatType ODESolver::getRhoAt( int i ) {
     return savedStates.at( i ).mat;
 }
 
-// Description: Calculates the G1(tau) function. Uses akf_mat temporary variable to save the tau-direction expectation values. Calculates <b^+(t) * b(t+tau)> via quantum regression theorem. Logs and outputs progress.
-// Type: ODESolver public function
-// @param s: [&System] Class providing set of system functions
-// @param op_creator: [&MatType] Creator operator (adjunct of annihilator)
-// @param op_annihilator: [&MatType] Annihilator operator
-// @return: [bool] True if calculations were sucessfull, else false
-
-bool ODESolver::calculate_g1( System &s, const MatType &op_creator, const MatType &op_annihilator, Dense &cache, std::string purpose ) {
-    if ( !( (int)savedStates.size() > 0 ) ) {
-        logs( "Need to calculate t-direction first!\n" );
-        return false;
-    }
-    reset( s );
-    Timer &timer = createTimer( "RungeKutta-G1-Loop (" + purpose + ")" );
-    int totalIterations = getIterationNumberTau( s );
-    ProgressBar progressbar = ProgressBar( totalIterations );
-    timer.start();
-    logs.level2( "Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}... ", purpose, cache.rows(), cache.cols() );
-    std::string progressstring = "G1(" + purpose + "): ";
-#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( int i = 0; i < (int)savedStates.size(); i += s.parameters.iterations_t_skip ) {
-        std::vector<SaveState> past_rhos;
-        past_rhos.reserve( (int)( ( savedStates.size() - i ) / s.parameters.iterations_t_skip ) );
-        int k = i / s.parameters.iterations_t_skip;
-        double t_t = getTimeAt( i );
-        MatType rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
-        saveState( rho_tau, t_t, past_rhos );
-
-        cache( k, 0 ) = s.dgl_expectationvalue<MatType, Scalar>( rho_tau, op_creator, t_t );
-        int j = 1;
-        int curIt_tau = 1;
-        for ( double t_tau = t_t + s.parameters.t_step; t_tau < s.parameters.t_end; t_tau += s.parameters.t_step ) { // t + +s.parameters.t_step
-            rho_tau = iterate( rho_tau, s, t_tau, past_rhos, DIR_TAU );
-            saveState( rho_tau, t_tau, past_rhos );
-            timer.iterate();
-            if ( queueNow( s, curIt_tau ) ) {
-                cache( k, j ) = s.dgl_expectationvalue<MatType, Scalar>( rho_tau, op_creator, t_tau );
-                j++; // equivalent to s.parameters.akf_vecIndex
-            }
-            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
-        }
-    }
-    outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
-    timer.end();
-    logs.level2( "G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
-    return true;
-}
-
-// Description: Calculates the G2(tau=0) function. Calculates <b^+(t) * b^+(t) * b(t) * b(t)> / <b^+(t) * b(t)>^2 . Logs and outputs progress. Saves resulting function.
-// Type: ODESolver public function
-// @param s: [&System] Class providing set of system functions
-// @param op_creator: [&MatType] Creator operator (adjunct of annihilator)
-// @param op_annihilator: [&MatType] Annihilator operator
-// @param fileOutputName: [std::string] Name of output file
-// @return: [bool] True if calculations were sucessfull, else false
-/*bool ODESolver::calculate_g2_0( System &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName = "g2(0).txt" ) {
-    if ( !( (int)savedStates.size() > 0 ) ) {
-        logs( "Need to calculate t-direction first!\n" );
-        return false;
-    }
-
-    Timer &timer = createTimer( "G2-0-Loop" );
-    int totalIterations = (int)savedStates.size() / s.parameters.iterations_t_skip;
-    ProgressBar progressbar = ProgressBar( totalIterations);
-    timer.start();
-    logs.level2( "Calculating G2(0)... " );
-
-    std::vector<Scalar> g2Values;
-    g2Values.reserve( totalIterations );
-    for ( int i = 0; i < (int)savedStates.size(); i += s.parameters.iterations_t_skip ) {
-        double t_t = getTimeAt( i );
-        MatType rho = getRhoAt( i );
-        MatType M1 = op_creator * op_creator * op_annihilator * op_annihilator;
-        MatType M2 = op_creator * op_annihilator;
-        g2Values.emplace_back( s.dgl_expectationvalue<MatType,Scalar>( rho, M1, t_t ) / std::pow( s.dgl_expectationvalue<MatType,Scalar>( rho, M2, t_t ), 2 ) );
-        timer.iterate();
-        outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "G2: " );
-    }
-    timer.end();
-    logs.level2( "Done, saving to {}... ", fileOutputName );
-    std::string filepath = s.parameters.subfolder + fileOutputName;
-    FILE *g2file = std::fopen( filepath.c_str(), "w" );
-    if ( !g2file ) {
-        logs.level2( "Failed to open outputfile for g2(0)!\n" );
-        return false;
-    }
-    for ( int i = 0; i < totalIterations; i++ ) {
-        fmt::print( g2file, "{0:.15e}\t{1:.15e}\n", getTimeAt( i ), std::real( g2Values.at( i ) ) );
-    }
-    std::fclose( g2file );
-    logs.level2( "Done!\n" );
-    return true;
-}*/
-
 // Description: Calculates the Eberly-Wódkiewicz spectrum. Uses precalculated values from akf_mat
 // Type: ODESolver public function
 // @param s: [&System] Class providing set of system functions
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
-
 bool ODESolver::calculate_spectrum( System &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName, const int cache_index ) {
     // Send system command to change to single core mainprogram, because this memberfunction is already using multithreading
     s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
@@ -346,55 +212,6 @@ bool ODESolver::calculate_spectrum( System &s, const MatType &op_creator, const 
     return true;
 }
 
-
-bool ODESolver::calculate_g2( System &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, Dense &cache, std::string purpose ) {
-    // Ensuring T-Direction was calculated first
-    if ( !( (int)savedStates.size() > 0 ) ) {
-        logs( "Need to calculate t-direction first!\n" );
-        return false;
-    }
-    reset( s );
-    // Create Timer and Progresbar
-    Timer &timer = createTimer( "RungeKutta-G2-Loop (" + purpose + ")" );
-    int totalIterations = getIterationNumberTau( s );
-    ProgressBar progressbar = ProgressBar( totalIterations );
-    timer.start();
-    logs.level2( "Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}... ", purpose, cache.rows(), cache.cols() );
-    MatType evalOperator = op_creator_2 * op_annihilator_1;
-    std::string progressstring = "G2(" + purpose + "): ";
-    // Main G2 Loop
-#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( int i = 0; i < (int)savedStates.size(); i += s.parameters.iterations_t_skip ) {
-        // Create and reserve past rho's vector
-        std::vector<SaveState> past_rhos;
-        past_rhos.reserve( (int)( ( savedStates.size() - i ) / s.parameters.iterations_t_skip ) );
-        // Get index incrementing by 1 from global index
-        int k = i / s.parameters.iterations_t_skip;
-        // Get Time from saved State
-        double t_t = getTimeAt( i );
-        // Calculate rho_tau
-        MatType rho_tau = s.dgl_calc_rhotau_2( getRhoAt( i ), op_annihilator_2, op_creator_1, t_t );
-        saveState( rho_tau, t_t, past_rhos );
-
-        cache( k, 0 ) = s.dgl_expectationvalue<MatType, Scalar>( rho_tau, evalOperator, t_t );
-        int j = 1;
-        int curIt_tau = 1;
-        for ( double t_tau = t_t + s.parameters.t_step; t_tau < s.parameters.t_end; t_tau += s.parameters.t_step ) { // t + +s.parameters.t_step
-            rho_tau = iterate( rho_tau, s, t_tau, past_rhos, DIR_TAU );
-            saveState( rho_tau, t_tau, past_rhos );
-            timer.iterate();
-            if ( queueNow( s, curIt_tau ) ) {
-                cache( k, j ) = s.dgl_expectationvalue<MatType, Scalar>( rho_tau, evalOperator, t_tau );
-                j++;
-            }
-            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
-        }
-    }
-    outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
-    timer.end();
-    logs.level2( "G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
-    return true;
-}
 
 // Description: Calculates G2 photon statistics
 // Type: ODESolver public function

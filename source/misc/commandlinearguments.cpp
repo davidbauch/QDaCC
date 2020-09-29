@@ -68,4 +68,4 @@ void CommandlineArguments::init( const std::vector<std::string>& argv, std::stri
     cla = CommandlineArguments(argv, filepath);
 }
 
-CommandlineArguments::CommandlineArguments CommandlineArguments::cla = CommandlineArguments();
+CommandlineArguments::CommandlineArguments CommandlineArguments::cla = CommandlineArguments(); 
