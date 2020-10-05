@@ -89,6 +89,13 @@ class SaveStateTau {
     SaveStateTau( const MatType &mat1, const MatType &mat2, const double t, const double tau ) : mat1( mat1 ), mat2( mat2 ), t( t ), tau( tau ){};
     SaveStateTau( const MatType &mat, const double t ) : mat1( mat ), t( t ), tau( 0 ){};
 };
+class SaveScalar {
+   public:
+    Scalar scalar;
+    double t, tau;
+    //SaveScalarTuple( const MatType &mat1, const MatType &mat2, const double t, const double tau ) : mat1( mat1 ), mat2( mat2 ), t( t ), tau( tau ){};
+    SaveScalar( const Scalar &scalar, const double t, const double tau = 0.0 ) : scalar( scalar ), t( t ), tau( tau ){};
+};
 
 bool Save_State_sort_t(const SaveStateTau &ss1, const SaveStateTau &ss2);
 bool Save_State_sort_tau(const SaveStateTau &ss1, const SaveStateTau &ss2);

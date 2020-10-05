@@ -3,6 +3,7 @@
 import os
 import sys
 from time import sleep
+import subprocess
 
 def get_all_source_files( file_path = "/", source_path = "source", bin_path = "obj", exclude_dirs = [], extension_source = ".cpp", extension_obj = ".o" ):
     ret = []
@@ -27,11 +28,13 @@ def compile_all_object_files( data, bin_path = "obj", extension_obj = ".o", comp
             if file.endswith(extension_obj):
                 os.remove(os.path.join(bin_path,file))
         print("Done!")
+    if not os.path.exists(bin_path):
+        print("Bin path did not exist, creating '{}'".format(bin_path))
+        os.makedirs(bin_path)
     ret = []
     succesful = True
     for set in data:
         name,obj,path_src,path_obj = set[0], set[1], set[2], set[3]
-        add_to_compile = False
         src_time = os.path.getmtime( path_src )
         obj_time = 0
         if not os.path.exists( path_obj ):
@@ -49,9 +52,18 @@ def compile_all_object_files( data, bin_path = "obj", extension_obj = ".o", comp
         print("Compiling was {}.".format("succesful." if succesful else "unsuccesful!"))
     return succesful
 
-def compile_main_program( path = "", target = "main.cpp", name = "main.exe", extension_obj = ".o", bin_path = "obj", compiler = "g++", libs = "", args = "", copy_to = ""):
+def compile_main_program( path = "", target = "main.cpp", name = "main.o", extension_obj = ".o", bin_path = "obj", compiler = "g++", libs = "", args = "", copy_to = "", add_base_path_to_obj = True):
     print("Compiling {} into {} ... ".format(target,name),end="",flush=True)
-    os.system('{} "{}" -o "{}" "{}/*{}" {} {}'.format( compiler, os.path.join(path,target), os.path.join(path,name), os.path.join(path,bin_path), extension_obj, libs, args ))
+    final_bin_path = ""
+    if not isinstance(bin_path,list):
+        bin_path = list(bin_path)
+    for binpath in bin_path:
+        objpath = os.path.join(path,binpath) if add_base_path_to_obj else binpath
+        objpath = objpath + "/*"+extension_obj
+        objpath = objpath.replace("//","/")
+        final_bin_path += objpath + " "
+    #os.system('{} "{}" -o "{}" "{}" {} {}'.format( compiler, os.path.join(path,target), os.path.join(path,name), final_bin_path, libs, args ))
+    subprocess.Popen('{} "{}" -o "{}" {} {} {}'.format( compiler, os.path.join(path,target), os.path.join(path,name), final_bin_path, libs, args ), shell=True).wait()
     print("Done!",flush=True)
     if copy_to != "":
         print("Moving {} to {} ...".format(name,copy_to),end="")
@@ -62,9 +74,22 @@ def compile_main_program( path = "", target = "main.cpp", name = "main.exe", ext
 
 if __name__ == "__main__":
     path = os.path.dirname(os.path.realpath(__file__))
-    copy_to = "../../Threadhandler/QDLC-2.0.exe" if "-th" in sys.argv else ""
+    platform = sys.platform
+    print("Platform is {}".format(platform))
+    version = "2.0"
     force_recompile = True if "-frc" in sys.argv else False
-    f = get_all_source_files(path, exclude_dirs=["ALGLIB"])
-    succesful = compile_all_object_files(f, libs = "-std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs", args = '-I"C:\msys2\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include"', force_recompile=force_recompile)
+    bin_path = {'win32' : "obj/win", 'darwin' : "obj/MAC"}
+    compiler = {'win32' : "g++", 'darwin' : "g++-8"}
+    
+    f = get_all_source_files(path, exclude_dirs=["ALGLIB"], bin_path=bin_path[platform])
+    
+    copy_to = {'win32' : "../../Threadhandler/QDLC-"+version+".exe" if "-th" in sys.argv else "", 'darwin' : "/Users/davidbauch/bin/QDLC-"+version+".out"}
+    libs_obj = {'win32' : "-std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs", 'darwin' : "-std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
+    include_obj = {'win32' : '-I"C:\msys2\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include"', 'darwin' : "-I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include'"}
+
+    libs_final = {'win32' : '-std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs', 'darwin' : "-std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
+    bin_final = {'win32' : ["obj/win","obj/ALGLIB/WIN"], 'darwin' : ["obj/MAC","obj/ALGLIB/MAC"]}
+    succesful = compile_all_object_files(f, libs = libs_obj[platform], args = include_obj[platform], force_recompile=force_recompile, bin_path=bin_path[platform], compiler=compiler[platform])
     #if succesful:
-    compile_main_program(path=path, libs = '"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/obj/ALGLIB/WIN/*.o" -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs', args = '-I"C:\msys2\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include"', copy_to=copy_to)
+    add_basepath = {'win32' : False, 'darwin' : False}
+    compile_main_program(path=path, libs = libs_final[platform], args = include_obj[platform], copy_to=copy_to[platform], bin_path=bin_final[platform], compiler=compiler[platform], add_base_path_to_obj=add_basepath[platform])

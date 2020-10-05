@@ -5,10 +5,56 @@
 #include "misc/log.h"
 #include "misc/timer.h"
 
+template <typename T>
+class Parameter {
+    private:
+        T val_si;
+        T val_scaled;
+        bool scaled;
+        double scale_factor;
+        void update() {
+            if ( scale_factor != 0.0 ) {
+                val_scaled = val_si*scale_factor;
+                scaled = true;
+            }
+            else {
+                val_scaled = val_si;
+                scaled = false;
+            }
+        }
+    public:
+        Parameter( ) {};
+        Parameter( T val ) : val_si(val), scale_factor(0.0), scaled(false) {};
+        Parameter( T val, double scale_factor ) : val_si(val), scale_factor(scale_factor), scaled(true) {};
+        T get() {
+            return val_scaled;
+        }
+        T getSI() {
+            return val_si;
+        }
+        T set( T new_val, double scale = 0.0 ) {
+            if ( scale != 0.0 ) {
+                scale_factor = scale;
+            } 
+            val_si = new_val;
+            update();
+            return val_scaled;
+        }
+        T setScale( double scale = 0.0 ) {
+            return set(val_si, scale);
+        }
+        parameter =(T val) {
+            set(val);
+        }
+        friend std::ostream& operator <<( std::ostream &stream, const Parameter &param ) {
+            return stream << param.val_scaled;
+        }
+};
+
 class Parameters {
-    // Mandatory Variables
    public:
         // Numerical Parameters
+        Parameter<double> hbar, kb;
         std::string subfolder;
         bool numerics_calculate_spectrum, numerics_calculate_g2, numerics_use_simplified_g2, numerics_use_interactionpicture, numerics_use_rwa;
         // Also output electronic emission probabilities
@@ -17,6 +63,7 @@ class Parameters {
         int numerics_order_t, numerics_order_tau, numerics_order_highest;
         int output_advanced_log, output_handlerstrings, output_operators, output_coefficients;
         int iterations_t_skip, iterations_tau_resolution, iterations_w_resolution;
+        int iterations_wtau_skip;
         bool scale_parameters;
         double scale_value;
         // Runtime parameters and other stuff
@@ -35,6 +82,7 @@ class Parameters {
         long unsigned int numerics_saved_coefficients_cutoff; // True: Only save last few coefficients (only viable for T-direction, not for G1/2)
         long unsigned int numerics_saved_coefficients_max_size;
         int logfilecounter;
+        bool numerics_stretch_correlation_grid;
 
         // System Parameters
         // Time variables
@@ -47,21 +95,21 @@ class Parameters {
 
         // Non mandatory parameters, dependant on system chosen:
         // System Parameterss
-        double p_omega_atomic_G_V;
-        double p_omega_atomic_G_H;
-        double p_omega_atomic_V_B;
-        double p_omega_atomic_H_B;
-        double p_omega_atomic_B;
-        double p_omega_cavity_V;
-        double p_omega_cavity_H;
-        double p_omega_coupling;
-        double p_omega_cavity_loss;
-        double p_omega_pure_dephasing;
-        double p_omega_decay;
-        double p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff;
+        Parameter<double> p_omega_atomic_G_V;
+        Parameter<double> p_omega_atomic_G_H;
+        Parameter<double> p_omega_atomic_V_B;
+        Parameter<double> p_omega_atomic_H_B;
+        Parameter<double> p_omega_atomic_B;
+        Parameter<double> p_omega_cavity_V;
+        Parameter<double> p_omega_cavity_H;
+        Parameter<double> p_omega_coupling;
+        Parameter<double> p_omega_cavity_loss;
+        Parameter<double> p_omega_pure_dephasing;
+        Parameter<double> p_omega_decay;
+        Parameter<double> p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_pure_dephasing;
         bool p_phonon_adjust;
-        double p_deltaE;
-        double p_biexciton_bindingenergy;
+        Parameter<double> p_deltaE;
+        Parameter<double> p_biexciton_bindingenergy;
 
         // Calculated System properties:
         double init_detuning_G_H, init_detuning_G_V, init_detuning_H_B, init_detuning_V_B, max_detuning_G_H, max_detuning_G_V, max_detuning_H_B, max_detuning_V_B;
@@ -69,11 +117,11 @@ class Parameters {
         double init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
 
         // Chirp and Pulse properties:
-        std::vector<double> pulse_center, pulse_amp, pulse_omega, pulse_sigma, pulse_omega_chirp;
+        std::vector<Parameter<double>> pulse_center, pulse_amp, pulse_omega, pulse_sigma, pulse_omega_chirp;
         std::vector<std::string> pulse_type;
         std::vector<std::string> pulse_pol;
         double chirp_total;
-        std::vector<double> chirp_t, chirp_y, chirp_ddt;
+        std::vector<Parameter<double>> chirp_t, chirp_y, chirp_ddt;
         std::string chirp_type;
 
         // Constructor
@@ -105,8 +153,14 @@ class Parameters {
         // @param variable: Numerical value of variable to scale
         // @param scaling: Value to scale with, e.g. 1E12 for ps
         // @return Returns variable*scaling
-        double scaleVariable( const double variable, const double scaling );
-
+        template <typename T>
+        T scaleVariable( const T variable, const double scaling ) {
+            if ( scale_parameters ) {
+                return variable * scaling;
+            }
+            return variable;
+        }
+        
         // Converts a named state vector, e.g. |g,0,0> into a matrix index
         // @param mode: Element of G,H,V,E
         // @param state: Photon number, 0,1,...

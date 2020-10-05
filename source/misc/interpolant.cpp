@@ -1,14 +1,18 @@
 #include "misc/interpolant.h"
 
+// 1D
+
 // Takes X,Y[,Z], Values to return evaluations at
 Interpolant::Interpolant( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::string t = "linear" ) {
-    X = "";
-    Y = "";
-    Z = "";
+    X = "[";
+    Y = "[";
     for ( unsigned long i = 0; i < interpolationPointsX.size(); i++ ) {
-        X += std::to_string( interpolationPointsX.at( i ) );
-        Y += std::to_string( interpolationPointsY.at( i ) );
+        X += fmt::format( "{:.15e}", interpolationPointsX.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
+        Y += fmt::format( "{:.15e}", interpolationPointsY.at( i ) ) + ( i < interpolationPointsY.size() - 1 ? "," : "" );
     }
+    X += "]";
+    Y += "]";
+    Z = "[0]";
     generate( t );
 }
 
@@ -59,6 +63,57 @@ std::vector<double> Interpolant::evaluate( std::vector<double> &xar ) {
     ret.reserve( xar.size() );
     for ( double x : xar ) {
         ret.emplace_back( (double)alglib::spline1dcalc( p, x ) );
+    }
+    return ret;
+}
+
+
+// 2D
+template <class T>
+Interpolant2d<T>::Interpolant2d( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, T &interpolationPointsZ ) {
+    X = "[";
+    Y = "[";
+    Z = "[";
+    for ( unsigned long i = 0; i < interpolationPointsX.size(); i++ ) {
+        X += fmt::format( "{:.15e}", interpolationPointsX.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
+        Y += fmt::format( "{:.15e}", interpolationPointsY.at( i ) ) + ( i < interpolationPointsY.size() - 1 ? "," : "" );
+    }
+    for ( unsigned long i = 0; i < interpolationPointsY.size(); i++ ) {
+        for ( unsigned long j = 0; j < interpolationPointsX.size(); j++ ) {
+            Z += fmt::format( "{:.15e},", interpolationPointsZ( j, i ) );
+        }
+    }
+    X += "]";
+    Y += "]";
+    Z.back() = "]";
+    sx = interpolationPointsX.size();
+    sy = interpolationPointsY.size();
+    generate();
+}
+
+template <class T>
+void Interpolant2d<T>::generate() {
+    alglib::real_1d_array x = X.c_str();
+    alglib::real_1d_array y = Y.c_str();
+    alglib::real_1d_array z = Z.c_str();
+    alglib::spline2dbuildbilinearv( x, sx, y, sy, z, 1, p );
+}
+
+template <class T>
+double Interpolant2d<T>::evaluate( double x, double y ) const {
+    return (double)alglib::spline2dcalc( p, x, y );
+}
+
+template <class T>
+T Interpolant2d<T>::evaluate( std::vector<double> &xar, std::vector<double> &yar ) {
+    T ret;
+    T::Zero( xar.size(), yar.size() );
+    int i = 0;
+    for ( double x : xar ) {
+        int j = 0;
+        for ( double y : yar ) {
+            ret(i,j) = (double)alglib::spline2dcalc( p, x, y );
+        }
     }
     return ret;
 }

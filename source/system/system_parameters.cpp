@@ -149,6 +149,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     logfilecounter = get_parameter<int>("--lfc");
     numerics_calculate_timeresolution_indistinguishability = get_parameter_passed("-timedepInd");
     numerics_output_electronic_emission = get_parameter_passed("-oElec");
+    numerics_stretch_correlation_grid = false; //FIXME: Doesnt work right now
 
     // Phonon Parameters
     p_phonon_alpha = get_parameter<double>("--phonons","phononalpha");
@@ -159,6 +160,10 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_phonon_approximation_markov1 = get_parameter_passed("-noMarkov") ? 0 : 1;                                                              // First Markov
     output_coefficients = get_parameter_passed("-phononcoeffs") ? 1 : 0;
     p_phonon_adjust = !get_parameter_passed("-noPhononAdjust");
+    p_phonon_pure_dephasing = convertParam<double>( "1mueV" );
+
+    kb = 1.3806488E-23; // J/K, scaling needs to be for energy
+    hbar = 1.0545718E-34; // J/s, scaling will be 1
 
     subfolder = arguments.back();
     return true;
@@ -173,6 +178,8 @@ bool Parameters::scaleInputs( const double scaling ) {
     p_omega_atomic_G_V = scaleVariable( p_omega_atomic_G_V, 1.0 / scaling );
     p_omega_atomic_H_B = scaleVariable( p_omega_atomic_H_B, 1.0 / scaling );
     p_omega_atomic_V_B = scaleVariable( p_omega_atomic_V_B, 1.0 / scaling );
+    p_deltaE = scaleVariable( p_deltaE, 1.0 / scaling );
+    p_biexciton_bindingenergy = scaleVariable( p_biexciton_bindingenergy, 1.0 / scaling );
     p_omega_cavity_H = scaleVariable( p_omega_cavity_H, 1.0 / scaling );
     p_omega_cavity_V = scaleVariable( p_omega_cavity_V, 1.0 / scaling );
     p_omega_coupling = scaleVariable( p_omega_coupling, 1.0 / scaling );
@@ -187,21 +194,23 @@ bool Parameters::scaleInputs( const double scaling ) {
     }
     for ( int i = 0; i < (int)pulse_center.size(); i++ ) {
         pulse_center.at( i ) = scaleVariable( pulse_center.at( i ), scaling );
-        pulse_amp.at( i ) = scaleVariable( pulse_amp.at( i ), 1.0 / scaling );
+        if ( pulse_type.at( i ).compare( "gauss_pi" ) != 0 )
+            pulse_amp.at( i ) = scaleVariable( pulse_amp.at( i ), 1.0 / scaling );
         pulse_omega.at( i ) = scaleVariable( pulse_omega.at( i ), 1.0 / scaling );
         pulse_sigma.at( i ) = scaleVariable( pulse_sigma.at( i ), scaling );
+        pulse_omega_chirp.at( i ) = scaleVariable( pulse_omega_chirp.at( i ), scaling*scaling ); //right? ps^2
     }
     // Adjusting spectrum
     spectrum_frequency_center = scaleVariable( spectrum_frequency_center, 1.0 / scaling );
     spectrum_frequency_range = scaleVariable( spectrum_frequency_range, 1.0 / scaling );
+    // Phonons
+    //p_phonon_alpha = scaleVariable( p_phonon_alpha, 1.0 / scaling );
+    p_phonon_wcutoff = scaleVariable( p_phonon_wcutoff, 1.0 / scaling );
+    p_phonon_tcutoff = scaleVariable( p_phonon_tcutoff, scaling );
+    p_phonon_alpha = scaleVariable( p_phonon_alpha, scaling*scaling );
+    p_phonon_pure_dephasing = scaleVariable( p_phonon_pure_dephasing, 1.0 / scaling );
+    kb = scaleVariable(1.3806488E-23,1.0/scale_value);
     return true;
-}
-
-double Parameters::scaleVariable( const double variable, const double scaling ) {
-    if ( scale_parameters ) {
-        return variable * scaling;
-    }
-    return variable;
 }
 
 double Parameters::getIdealTimestep() {
@@ -217,8 +226,8 @@ bool Parameters::adjustInput() {
     // Adjust pulse area if pulse_type is "gauss_pi"
     for ( int i = 0; i < (int)pulse_amp.size(); i++ )
         if ( pulse_type.at( i ).compare( "gauss_pi" ) == 0 ) {
-            if ( pulse_amp.at( i ) < 500 )
-                pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI * pulse_sigma.at( i ) * std::sqrt( std::pow( pulse_omega_chirp.at( i ) / pulse_sigma.at( i ), 2.0 ) + std::pow( pulse_sigma.at( i ), 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+            //if ( pulse_amp.at( i ) < 500 )
+            pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI * pulse_sigma.at( i ) * std::sqrt( std::pow( pulse_omega_chirp.at( i ) / pulse_sigma.at( i ), 2.0 ) + std::pow( pulse_sigma.at( i ), 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
             pulse_type.at( i ) = "gauss";
         }
 
@@ -243,7 +252,7 @@ bool Parameters::adjustInput() {
 
     // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
     if ( t_step == -1 ) {
-        t_step = std::min( 1E-13, getIdealTimestep() );
+        t_step = std::min( scaleVariable(1E-13,scale_value), getIdealTimestep() );
         t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
     }
 
@@ -253,6 +262,7 @@ bool Parameters::adjustInput() {
     // Calculate stuff for RK
     iterations_t_max = (int)std::ceil( ( t_end - t_start ) / t_step );
     iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
+    iterations_wtau_skip = 1;//iterations_t_skip;
 
     // Mandatory: rescale chirp ddt into chirp/ps
     if (chirp_type.compare("sine") != 0)
@@ -277,7 +287,7 @@ bool Parameters::adjustInput() {
     if ( spectrum_frequency_center == -1 )
         spectrum_frequency_center = p_omega_cavity_H;
     if ( spectrum_frequency_range == -1 )
-        spectrum_frequency_range = ( std::abs( max_detuning*3 ) + ( p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing ) * 10.0 );
+        spectrum_frequency_range = ( std::abs( max_detuning*1.5 ) + ( p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing ) * 3.0 );
 
     // Calculate phonon stuff
     p_phonon_b = 1.0;
@@ -285,11 +295,11 @@ bool Parameters::adjustInput() {
         double integral = 0;
         double stepsize = 0.01 * p_phonon_wcutoff;
         for ( double w = stepsize; w < 10 * p_phonon_wcutoff; w += stepsize ) {
-            integral += stepsize * ( p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wcutoff / p_phonon_wcutoff ) / std::tanh( 1.0545718E-34 * w / 2.0 / 1.3806488E-23 / p_phonon_T ) );
+            integral += stepsize * ( p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wcutoff / p_phonon_wcutoff ) / std::tanh( hbar * w / 2.0 / kb / p_phonon_T ) );
         }
         p_phonon_b = std::exp( -0.5 * integral );
         if ( p_phonon_adjust ) {
-            p_omega_pure_dephasing = convertParam<double>( "1mueV" ) * p_phonon_T;
+            p_omega_pure_dephasing = p_phonon_pure_dephasing * p_phonon_T;
             p_omega_decay *= p_phonon_b * p_phonon_b;
         }
     }

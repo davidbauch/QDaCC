@@ -2,6 +2,7 @@
 
 #include "global.h"
 #include "system/system.h"
+#include "misc/interpolant.h"
 
 // Description: ODESolver class provides both Runge-Kutta functions of different orders and functions for different numerical operations
 class ODESolver {
@@ -36,10 +37,11 @@ class ODESolver {
 
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
     int dim;
-    // Few Temporary Matrices
-    Dense temp1 = Dense::Zero(1,1);
-    Dense temp2 = Dense::Zero(1,1);
-    // Remaining
+    // Cache Matrices that allow for variable time steps.
+    Dense cache1 = Dense::Zero(1,1);
+    Dense cache2 = Dense::Zero(1,1);
+
+    // Cached Entries
     std::vector<SaveState> savedStates;    // Vector for saved matrix-time tuples for densitymatrix
     std::vector<SaveState> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
 
@@ -87,7 +89,7 @@ class ODESolver {
     // @param s: [&System] Class providing set of system functions
     // @param t: [double] Time to return Hamiltonoperator at
     // @return: [MatType] hamilton matrix of type MatType
-    MatType getHamilton( System &s, const double t, bool use_saved_hamiltons = true );
+    MatType getHamilton( System &s, const double t, bool use_saved_hamiltons = false );
 
     // Description: Checks wether or not to save the current matrix for later calculations
     // Type: ODESolver private function
@@ -102,8 +104,11 @@ class ODESolver {
     // @return: [int] dimensions of temporary variables
     int reset( System &s );
 
-    bool calculate_g1( System &s, const MatType &op_creator, const MatType &op_annihilator, Dense &cache, std::string purpose = "unknown" );
+    bool calculate_g1( System &s, const MatType &op_creator, const MatType &op_annihilator, Dense &cache, std::string purpose = "unknown" ); //std::vector<std::vector<SaveScalar>>
     bool calculate_g2( System &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, Dense &cache, std::string purpose = "unknown" );
+
+    // Description: Stretches Data evaluated at various timesteps onto an equidistant grid, such that g1 and g2 can work with said grid.
+    bool scale_grid( System &s, Dense &cache, std::vector<std::vector<SaveScalar>> &cache_noneq );
 
    public:
     ODESolver(){};
@@ -131,6 +136,8 @@ class ODESolver {
     //static MatType iterate_definite_integral( const MatType &rho, T rungefunction, const double t, const double step );
     //static std::vector<SaveState> calculate_definite_integral_vec( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step );
     //static SaveState calculate_definite_integral( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step );
+
+    bool calculate_runge_kutta( MatType &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true);
 };
 
 /*
