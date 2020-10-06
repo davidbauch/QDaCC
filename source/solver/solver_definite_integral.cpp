@@ -1,4 +1,4 @@
-#include "solver/solver_definite_integral.h"
+#include "solver/solver.h"
 
 std::vector<SaveState> Solver::calculate_definite_integral_vec( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
     std::vector<SaveState> ret;

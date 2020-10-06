@@ -1,4 +1,4 @@
-#include "solver/solver.h"
+#include "solver/solver_ode.h"
 
 bool ODESolver::scale_grid( System &s, Dense &cache, std::vector<std::vector<SaveScalar>> &cache_noneq ) {
     logs.level2("Scaling grid... ");

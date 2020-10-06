@@ -1,4 +1,4 @@
-#include "solver/solver.h"
+#include "solver/solver_ode.h"
 
 MatType ODESolver::iterateRungeKutta4( const MatType &rho, System &s, const double t, std::vector<SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-4 ausrechnen

@@ -7,7 +7,7 @@
 #include "system/operatormatrices.h"
 #include "chirp.h"
 #include "pulse.h"
-#include "solver/solver_definite_integral.h"
+#include "solver/solver.h"
 
 class System : public Operatable {
     public:

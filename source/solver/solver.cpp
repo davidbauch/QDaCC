@@ -1,4 +1,4 @@
-#include "solver/solver.h"
+#include "solver/solver_ode.h"
 
 ODESolver::ODESolver( System &s ) {
     logs.level2( "Creating ODESolver Class... " );
@@ -75,10 +75,13 @@ bool ODESolver::calculate_t_direction( System &s ) {
     // Calculate Time evolution on time vector timestamps.
     calculate_runge_kutta( rho, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
 
+    // Interpolate Matrices?
+    auto interpolate_savedstates = Solver::calculate_smooth_curve( savedStates, s.parameters.t_start, s.parameters.t_end, 1000 );
+
     // Calculate expectation values
-    for ( long unsigned int i = 0; i < savedStates.size(); i++) {
-        s.traceValid( savedStates.at(i).mat, savedStates.at(i).t );
-        s.expectationValues( savedStates.at(i).mat, savedStates.at(i).t, savedStates );
+    for ( long unsigned int i = 0; i < interpolate_savedstates.size(); i++) {
+        s.traceValid( interpolate_savedstates.at(i).mat, interpolate_savedstates.at(i).t );
+        s.expectationValues( interpolate_savedstates.at(i).mat, interpolate_savedstates.at(i).t, interpolate_savedstates );
     }
     // Finalize
     outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, "T-Direction: ", PROGRESS_FORCE_OUTPUT );
