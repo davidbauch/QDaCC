@@ -4,57 +4,15 @@
 #include "misc/helperfunctions.h"
 #include "misc/log.h"
 #include "misc/timer.h"
+#include "system/parameter.h"
 
-template <typename T>
-class Parameter {
-    private:
-        T val_si;
-        T val_scaled;
-        bool scaled;
-        double scale_factor;
-        void update() {
-            if ( scale_factor != 0.0 ) {
-                val_scaled = val_si*scale_factor;
-                scaled = true;
-            }
-            else {
-                val_scaled = val_si;
-                scaled = false;
-            }
-        }
-    public:
-        Parameter( ) {};
-        Parameter( T val ) : val_si(val), scale_factor(0.0), scaled(false) {};
-        Parameter( T val, double scale_factor ) : val_si(val), scale_factor(scale_factor), scaled(true) {};
-        T get() {
-            return val_scaled;
-        }
-        T getSI() {
-            return val_si;
-        }
-        T set( T new_val, double scale = 0.0 ) {
-            if ( scale != 0.0 ) {
-                scale_factor = scale;
-            } 
-            val_si = new_val;
-            update();
-            return val_scaled;
-        }
-        T setScale( double scale = 0.0 ) {
-            return set(val_si, scale);
-        }
-        parameter =(T val) {
-            set(val);
-        }
-        friend std::ostream& operator <<( std::ostream &stream, const Parameter &param ) {
-            return stream << param.val_scaled;
-        }
-};
+#define GLOBAL_PROGRAM_VERSION 2.1
+#define GLOBAL_PROGRAM_LASTCHANGE "Parameter Subclass"
 
 class Parameters {
    public:
         // Numerical Parameters
-        Parameter<double> hbar, kb;
+        Parameter hbar, kb;
         std::string subfolder;
         bool numerics_calculate_spectrum, numerics_calculate_g2, numerics_use_simplified_g2, numerics_use_interactionpicture, numerics_use_rwa;
         // Also output electronic emission probabilities
@@ -71,7 +29,8 @@ class Parameters {
         std::vector<double> trace;
         bool output_full_dm, output_no_dm;
         int numerics_maximum_threads, numerics_phonon_approximation_markov1, numerics_phonon_approximation_order;
-        double akf_deltaWmax, spectrum_frequency_center, spectrum_frequency_range;
+        double akf_deltaWmax;
+        Parameter spectrum_frequency_center, spectrum_frequency_range;
         bool numerics_calculate_spectrum_H, numerics_calculate_spectrum_V;
         bool numerics_calculate_g2_H, numerics_calculate_g2_V, numerics_calculate_g2_C;
         bool numerics_use_saved_coefficients;
@@ -86,7 +45,7 @@ class Parameters {
 
         // System Parameters
         // Time variables
-        double t_start, t_end, t_step;
+        Parameter t_start, t_end, t_step;
         // System Dimensions
         int maxStates, p_max_photon_number;
         // Starting state:
@@ -95,33 +54,33 @@ class Parameters {
 
         // Non mandatory parameters, dependant on system chosen:
         // System Parameterss
-        Parameter<double> p_omega_atomic_G_V;
-        Parameter<double> p_omega_atomic_G_H;
-        Parameter<double> p_omega_atomic_V_B;
-        Parameter<double> p_omega_atomic_H_B;
-        Parameter<double> p_omega_atomic_B;
-        Parameter<double> p_omega_cavity_V;
-        Parameter<double> p_omega_cavity_H;
-        Parameter<double> p_omega_coupling;
-        Parameter<double> p_omega_cavity_loss;
-        Parameter<double> p_omega_pure_dephasing;
-        Parameter<double> p_omega_decay;
-        Parameter<double> p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_pure_dephasing;
+        Parameter p_omega_atomic_G_V;
+        Parameter p_omega_atomic_G_H;
+        Parameter p_omega_atomic_V_B;
+        Parameter p_omega_atomic_H_B;
+        Parameter p_omega_atomic_B;
+        Parameter p_omega_cavity_V;
+        Parameter p_omega_cavity_H;
+        Parameter p_omega_coupling;
+        Parameter p_omega_cavity_loss;
+        Parameter p_omega_pure_dephasing;
+        Parameter p_omega_decay;
+        Parameter p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_pure_dephasing;
         bool p_phonon_adjust;
-        Parameter<double> p_deltaE;
-        Parameter<double> p_biexciton_bindingenergy;
+        Parameter p_deltaE;
+        Parameter p_biexciton_bindingenergy;
 
         // Calculated System properties:
-        double init_detuning_G_H, init_detuning_G_V, init_detuning_H_B, init_detuning_V_B, max_detuning_G_H, max_detuning_G_V, max_detuning_H_B, max_detuning_V_B;
-        double init_rabifrequenz_G_H, init_rabifrequenz_G_V, init_rabifrequenz_H_B, init_rabifrequenz_V_B, max_rabifrequenz_G_H, max_rabifrequenz_G_V, max_rabifrequenz_H_B, max_rabifrequenz_V_B;
-        double init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
+        Parameter init_detuning_G_H, init_detuning_G_V, init_detuning_H_B, init_detuning_V_B, max_detuning_G_H, max_detuning_G_V, max_detuning_H_B, max_detuning_V_B;
+        Parameter init_rabifrequenz_G_H, init_rabifrequenz_G_V, init_rabifrequenz_H_B, init_rabifrequenz_V_B, max_rabifrequenz_G_H, max_rabifrequenz_G_V, max_rabifrequenz_H_B, max_rabifrequenz_V_B;
+        Parameter init_detuning, max_detuning, init_rabifrequenz, max_rabifrequenz;
 
         // Chirp and Pulse properties:
-        std::vector<Parameter<double>> pulse_center, pulse_amp, pulse_omega, pulse_sigma, pulse_omega_chirp;
+        std::vector<Parameter> pulse_center, pulse_amp, pulse_omega, pulse_sigma, pulse_omega_chirp;
         std::vector<std::string> pulse_type;
         std::vector<std::string> pulse_pol;
         double chirp_total;
-        std::vector<Parameter<double>> chirp_t, chirp_y, chirp_ddt;
+        std::vector<Parameter> chirp_t, chirp_y, chirp_ddt;
         std::string chirp_type;
 
         // Constructor

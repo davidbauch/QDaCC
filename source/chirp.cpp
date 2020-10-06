@@ -74,7 +74,7 @@ void Chirp::Inputs::add( double _t, double _y, double _ddt ) {
     ddt.emplace_back( _ddt );
 }
 
-void Chirp::Inputs::add( std::vector<double> &_t, std::vector<double> &_y, std::vector<double> &_ddt ) {
+void Chirp::Inputs::add( std::vector<Parameter> &_t, std::vector<Parameter> &_y, std::vector<Parameter> &_ddt ) {
     if ( !( _t.size() == _y.size() && _t.size() == _ddt.size() ) ) {
         logs.level2( "Input arrays don't have the same length! No Vectors are created, initializing interpolant will fail!\n" );
         return;

@@ -1,6 +1,7 @@
 #pragma once
 #include "global.h"
 #include "misc/interpolant.h"
+#include "system/parameter.h"
 
 class Chirp {
    public:
@@ -14,7 +15,7 @@ class Chirp {
         Inputs() {}
         Inputs( double t_start, double t_end, double t_step, std::string type, int order ) : t_start( t_start ), t_end( t_end ), t_step( t_step ), type( type ), order( order ) {}
         void add( double _t, double _y, double _ddt );
-        void add( std::vector<double> &_t, std::vector<double> &_y, std::vector<double> &_ddt );
+        void add( std::vector<Parameter> &_t, std::vector<Parameter> &_y, std::vector<Parameter> &_ddt );
     };
 
    private:

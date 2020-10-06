@@ -21,7 +21,7 @@ def get_all_source_files( file_path = "/", source_path = "source", bin_path = "o
                 ret.append([file, obj, src_path, obj_path])
     return ret
 
-def compile_all_object_files( data, bin_path = "obj", extension_obj = ".o", compiler = "g++", libs = "", args = "", force_recompile = False ):
+def compile_all_object_files( data, bin_path = "obj", extension_obj = ".o", compiler = "g++", libs = "", args = "", force_recompile = False, cerr_to_file = False ):
     if force_recompile:
         print("Removing old {} files ... ".format(extension_obj),end="")
         for file in os.listdir(bin_path):
@@ -33,8 +33,11 @@ def compile_all_object_files( data, bin_path = "obj", extension_obj = ".o", comp
         os.makedirs(bin_path)
     ret = []
     succesful = True
+    if cerr_to_file:
+        os.makedirs("error",exist_ok=True)
     for set in data:
         name,obj,path_src,path_obj = set[0], set[1], set[2], set[3]
+        cerr = "2>&1  | tee  error/{}_cerr.txt".format(name) if cerr_to_file else ""
         src_time = os.path.getmtime( path_src )
         obj_time = 0
         if not os.path.exists( path_obj ):
@@ -43,7 +46,7 @@ def compile_all_object_files( data, bin_path = "obj", extension_obj = ".o", comp
             obj_time = os.path.getmtime( path_obj )
         if ( obj_time < src_time ) or force_recompile:
             print("Compiling {} ... ".format(name),end="",flush=True)
-            cur = os.system('{} -c "{}" {} {}'.format(compiler,path_src,libs,args))
+            cur = os.system('{} -c "{}" {} {} {}'.format(compiler,path_src,libs,args,cerr))
             succesful = succesful and cur
             print("Moving object file ... ",end="",flush=True)
             os.replace(obj,path_obj)
@@ -76,8 +79,19 @@ if __name__ == "__main__":
     path = os.path.dirname(os.path.realpath(__file__))
     platform = sys.platform
     print("Platform is {}".format(platform))
-    version = "2.0"
+
+    # Get Program version
+    version = "0.0"
+    with open(os.path.join(path,"include/system/parameters.h")) as f:
+        data = f.readlines()
+        for line in data:
+            if "GLOBAL_PROGRAM_VERSION" in line:
+                version = line.split()[-1]
+    print("Will try to compile into version {}".format(version))
+
     force_recompile = True if "-frc" in sys.argv else False
+    cerr_to_file = True if "-cerr" in sys.argv else False
+
     bin_path = {'win32' : "obj/win", 'darwin' : "obj/MAC"}
     compiler = {'win32' : "g++", 'darwin' : "g++-8"}
     
@@ -89,7 +103,7 @@ if __name__ == "__main__":
 
     libs_final = {'win32' : '-std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs', 'darwin' : "-std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
     bin_final = {'win32' : ["obj/win","obj/ALGLIB/WIN"], 'darwin' : ["obj/MAC","obj/ALGLIB/MAC"]}
-    succesful = compile_all_object_files(f, libs = libs_obj[platform], args = include_obj[platform], force_recompile=force_recompile, bin_path=bin_path[platform], compiler=compiler[platform])
+    succesful = compile_all_object_files(f, libs = libs_obj[platform], args = include_obj[platform], force_recompile=force_recompile, bin_path=bin_path[platform], compiler=compiler[platform], cerr_to_file=cerr_to_file)
     #if succesful:
     add_basepath = {'win32' : False, 'darwin' : False}
     compile_main_program(path=path, libs = libs_final[platform], args = include_obj[platform], copy_to=copy_to[platform], bin_path=bin_final[platform], compiler=compiler[platform], add_base_path_to_obj=add_basepath[platform])

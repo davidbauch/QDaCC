@@ -199,10 +199,10 @@ std::vector<T> get_parameter_vector(const std::string& key, const std::string& s
 std::vector<std::string> get_parameter_vector(const std::string& key, const std::string& subkey = "");
 
 // Map a vector onto comp, meaning that if in is shorter than comp, in will be filled with standard value
-template <typename T1, typename T2> 
-void map_vector_to_standard(const std::vector<T1>& comp, std::vector<T2>& in, const T2 standard) {
+template <typename T1, typename T2, typename T3> 
+void map_vector_to_standard(const std::vector<T1>& comp, std::vector<T2>& in, const T3 standard) {
     while (comp.size() > in.size()) {
-        in.emplace_back(standard);
+        in.emplace_back((T2)standard);
     }
 }
 

@@ -1,5 +1,14 @@
 #include "system/parameters.h"
 
+namespace std {
+    double max( const Parameter &p1, const Parameter &p2 ) {
+        return max(p2.get(),p1.get());
+    }
+    double min( const Parameter &p1, const Parameter &p2 ) {
+        return min(p2.get(),p1.get());
+    }
+};
+
 Parameters::Parameters( const std::vector<std::string> &arguments ) {
     numerics_calculate_spectrum = 0;
     numerics_calculate_g2 = 0;
@@ -83,22 +92,22 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     p_biexciton_bindingenergy = get_parameter<double>("--system","excitonBindEnergy");
 
     // Look for --chirp, if not found, standard system is used (no chirp, everything zero)
-    chirp_t = get_parameter_vector<double>("--chirp","chirpT");
-    chirp_y = get_parameter_vector<double>("--chirp","chirpY");
-    chirp_ddt = get_parameter_vector<double>("--chirp","chirpDDT");
+    chirp_t = get_parameter_vector<Parameter>("--chirp","chirpT");
+    chirp_y = get_parameter_vector<Parameter>("--chirp","chirpY");
+    chirp_ddt = get_parameter_vector<Parameter>("--chirp","chirpDDT");
     chirp_type = get_parameter("--chirp","chirpType");
     // Adjust length if they are not passed
     map_vector_to_standard(chirp_y, chirp_t, 0.0);
     map_vector_to_standard(chirp_y, chirp_ddt, 0.0);
 
     // Look for --pulse, if not found, standard system is used (no pulse, everything zero)
-    pulse_center = get_parameter_vector<double>("--pulse","pulseCenter");
-    pulse_amp = get_parameter_vector<double>("--pulse","pulseAmp");
-    pulse_omega = get_parameter_vector<double>("--pulse","pulseFreq");
-    pulse_sigma = get_parameter_vector<double>("--pulse","pulseSigma");
+    pulse_center = get_parameter_vector<Parameter>("--pulse","pulseCenter");
+    pulse_amp = get_parameter_vector<Parameter>("--pulse","pulseAmp");
+    pulse_omega = get_parameter_vector<Parameter>("--pulse","pulseFreq");
+    pulse_sigma = get_parameter_vector<Parameter>("--pulse","pulseSigma");
     pulse_type = get_parameter_vector("--pulse","pulseType");
     pulse_pol = get_parameter_vector("--pulse","pulsePol");
-    pulse_omega_chirp = get_parameter_vector<double>("--pulse","pulseChirp");
+    pulse_omega_chirp = get_parameter_vector<Parameter>("--pulse","pulseChirp");
     // Adjust length if they are not passed
     map_vector_to_standard(pulse_amp, pulse_center, pulse_center.at(0));
     map_vector_to_standard(pulse_amp, pulse_omega, pulse_omega.at(0));
@@ -171,45 +180,44 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
 
 bool Parameters::scaleInputs( const double scaling ) {
     // Adjust normal parameters: time is multiplid by scaling, frequency divided
-    t_start = scaleVariable( t_start, scaling );
-    t_end = scaleVariable( t_end, scaling );
-    t_step = scaleVariable( t_step, scaling );
-    p_omega_atomic_G_H = scaleVariable( p_omega_atomic_G_H, 1.0 / scaling );
-    p_omega_atomic_G_V = scaleVariable( p_omega_atomic_G_V, 1.0 / scaling );
-    p_omega_atomic_H_B = scaleVariable( p_omega_atomic_H_B, 1.0 / scaling );
-    p_omega_atomic_V_B = scaleVariable( p_omega_atomic_V_B, 1.0 / scaling );
-    p_deltaE = scaleVariable( p_deltaE, 1.0 / scaling );
-    p_biexciton_bindingenergy = scaleVariable( p_biexciton_bindingenergy, 1.0 / scaling );
-    p_omega_cavity_H = scaleVariable( p_omega_cavity_H, 1.0 / scaling );
-    p_omega_cavity_V = scaleVariable( p_omega_cavity_V, 1.0 / scaling );
-    p_omega_coupling = scaleVariable( p_omega_coupling, 1.0 / scaling );
-    p_omega_cavity_loss = scaleVariable( p_omega_cavity_loss, 1.0 / scaling );
-    p_omega_pure_dephasing = scaleVariable( p_omega_pure_dephasing, 1.0 / scaling );
-    p_omega_decay = scaleVariable( p_omega_decay, 1.0 / scaling );
+    t_start.setScale( scaling, Parameter::SCALE_TIME );// = scaleVariable( t_start, scaling );
+    t_end.setScale( scaling, Parameter::SCALE_TIME );// = scaleVariable( t_end, scaling );
+    t_step.setScale( scaling, Parameter::SCALE_TIME );// = scaleVariable( t_step, scaling );
+    p_omega_atomic_G_H.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_omega_atomic_G_H, 1.0 / scaling );
+    p_omega_atomic_G_V.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_omega_atomic_G_V, 1.0 / scaling );
+    p_omega_atomic_H_B.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_omega_atomic_H_B, 1.0 / scaling );
+    p_omega_atomic_V_B.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_omega_atomic_V_B, 1.0 / scaling );
+    p_deltaE.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_deltaE, 1.0 / scaling );
+    p_biexciton_bindingenergy.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_biexciton_bindingenergy, 1.0 / scaling );
+    p_omega_cavity_H.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_omega_cavity_H, 1.0 / scaling );
+    p_omega_cavity_V.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_omega_cavity_V, 1.0 / scaling );
+    p_omega_coupling.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_omega_coupling, 1.0 / scaling );
+    p_omega_cavity_loss.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_omega_cavity_loss, 1.0 / scaling );
+    p_omega_pure_dephasing.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_omega_pure_dephasing, 1.0 / scaling );
+    p_omega_decay.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_omega_decay, 1.0 / scaling );
     // Adjust chirp and pulse
     for ( int i = 0; i < (int)chirp_t.size(); i++ ) {
-        chirp_t.at( i ) = scaleVariable( chirp_t.at( i ), scaling );
-        chirp_y.at( i ) = scaleVariable( chirp_y.at( i ), 1.0 / scaling );
-        chirp_ddt.at( i ) = scaleVariable( chirp_ddt.at( i ), 1.0 / scaling );
+        chirp_t.at( i ).setScale( scaling, Parameter::SCALE_TIME );// = scaleVariable( chirp_t.at( i ), scaling );
+        chirp_y.at( i ).setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( chirp_y.at( i ), 1.0 / scaling );
+        chirp_ddt.at( i ).setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( chirp_ddt.at( i ), 1.0 / scaling );
     }
     for ( int i = 0; i < (int)pulse_center.size(); i++ ) {
-        pulse_center.at( i ) = scaleVariable( pulse_center.at( i ), scaling );
+        pulse_center.at( i ).setScale( scaling, Parameter::SCALE_TIME );// = scaleVariable( pulse_center.at( i ), scaling );
         if ( pulse_type.at( i ).compare( "gauss_pi" ) != 0 )
             pulse_amp.at( i ) = scaleVariable( pulse_amp.at( i ), 1.0 / scaling );
-        pulse_omega.at( i ) = scaleVariable( pulse_omega.at( i ), 1.0 / scaling );
-        pulse_sigma.at( i ) = scaleVariable( pulse_sigma.at( i ), scaling );
-        pulse_omega_chirp.at( i ) = scaleVariable( pulse_omega_chirp.at( i ), scaling*scaling ); //right? ps^2
+        pulse_omega.at( i ).setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( pulse_omega.at( i ), 1.0 / scaling );
+        pulse_sigma.at( i ).setScale( scaling, Parameter::SCALE_TIME );// = scaleVariable( pulse_sigma.at( i ), scaling );
+        pulse_omega_chirp.at( i ).setScale( scaling*scaling, Parameter::SCALE_ENERGY );// = scaleVariable( pulse_omega_chirp.at( i ), scaling*scaling ); //right? ps^2
     }
     // Adjusting spectrum
-    spectrum_frequency_center = scaleVariable( spectrum_frequency_center, 1.0 / scaling );
-    spectrum_frequency_range = scaleVariable( spectrum_frequency_range, 1.0 / scaling );
+    spectrum_frequency_center.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( spectrum_frequency_center, 1.0 / scaling );
+    spectrum_frequency_range.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( spectrum_frequency_range, 1.0 / scaling );
     // Phonons
-    //p_phonon_alpha = scaleVariable( p_phonon_alpha, 1.0 / scaling );
-    p_phonon_wcutoff = scaleVariable( p_phonon_wcutoff, 1.0 / scaling );
-    p_phonon_tcutoff = scaleVariable( p_phonon_tcutoff, scaling );
-    p_phonon_alpha = scaleVariable( p_phonon_alpha, scaling*scaling );
-    p_phonon_pure_dephasing = scaleVariable( p_phonon_pure_dephasing, 1.0 / scaling );
-    kb = scaleVariable(1.3806488E-23,1.0/scale_value);
+    p_phonon_wcutoff.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_phonon_wcutoff, 1.0 / scaling );
+    p_phonon_tcutoff.setScale( scaling, Parameter::SCALE_TIME );// = scaleVariable( p_phonon_tcutoff, scaling );
+    p_phonon_alpha.setScale( scaling*scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_phonon_alpha, scaling*scaling );
+    p_phonon_pure_dephasing.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable( p_phonon_pure_dephasing, 1.0 / scaling );
+    kb.setScale( scaling, Parameter::SCALE_ENERGY );// = scaleVariable(1.3806488E-23,1.0/scale_value);
     return true;
 }
 
@@ -276,10 +284,10 @@ bool Parameters::adjustInput() {
     init_detuning_G_V = ( p_omega_atomic_G_V - p_omega_cavity_V );
     init_detuning_H_B = ( p_omega_atomic_H_B - p_omega_cavity_H );
     init_detuning_V_B = ( p_omega_atomic_V_B - p_omega_cavity_V );
-    max_detuning_G_H = ( init_detuning_G_H + chirp_total > init_detuning_G_H ) ? init_detuning_G_H + chirp_total : init_detuning_G_H;
-    max_detuning_G_V = ( init_detuning_G_V + chirp_total > init_detuning_G_V ) ? init_detuning_G_V + chirp_total : init_detuning_G_V;
-    max_detuning_H_B = ( init_detuning_H_B + chirp_total > init_detuning_H_B ) ? init_detuning_H_B + chirp_total : init_detuning_H_B;
-    max_detuning_V_B = ( init_detuning_V_B + chirp_total > init_detuning_V_B ) ? init_detuning_V_B + chirp_total : init_detuning_V_B;
+    max_detuning_G_H = ( (double)(init_detuning_G_H + chirp_total) > (double)init_detuning_G_H ) ? double(init_detuning_G_H + chirp_total) : (double)init_detuning_G_H;
+    max_detuning_G_V = ( (double)(init_detuning_G_V + chirp_total) > (double)init_detuning_G_V ) ? double(init_detuning_G_V + chirp_total) : (double)init_detuning_G_V;
+    max_detuning_H_B = ( (double)(init_detuning_H_B + chirp_total) > (double)init_detuning_H_B ) ? double(init_detuning_H_B + chirp_total) : (double)init_detuning_H_B;
+    max_detuning_V_B = ( (double)(init_detuning_V_B + chirp_total) > (double)init_detuning_V_B ) ? double(init_detuning_V_B + chirp_total) : (double)init_detuning_V_B;
     init_detuning = vec_max<double>( {init_detuning_G_H, init_detuning_G_V, init_detuning_H_B, init_detuning_V_B} );
     max_detuning = vec_max<double>( {max_detuning_G_H, max_detuning_G_V, max_detuning_H_B, max_detuning_V_B} );
 
@@ -300,7 +308,7 @@ bool Parameters::adjustInput() {
         p_phonon_b = std::exp( -0.5 * integral );
         if ( p_phonon_adjust ) {
             p_omega_pure_dephasing = p_phonon_pure_dephasing * p_phonon_T;
-            p_omega_decay *= p_phonon_b * p_phonon_b;
+            p_omega_decay = p_omega_decay * p_phonon_b * p_phonon_b;
         }
     }
     numerics_calculate_spectrum = numerics_calculate_spectrum_H || numerics_calculate_spectrum_V;
@@ -314,7 +322,7 @@ bool Parameters::adjustInput() {
 
 void Parameters::log( const std::vector<std::string> &info ) {
     logs.wrapInBar( "System Parameters" );
-    logs( "Version: 2.0 (restructure)\n\n" );
+    logs( "Version: {} ({})\n\n", GLOBAL_PROGRAM_VERSION, GLOBAL_PROGRAM_LASTCHANGE);
 
     logs.wrapInBar( "Base Energies", LOG_SIZE_HALF, LOG_LEVEL_1, LOG_BAR_1 );
     logs( "Biexciton binding energy: {:.8e} Hz - {:.8} meV\n", p_biexciton_bindingenergy, Hz_to_eV( p_biexciton_bindingenergy ) * 1E3 );
