@@ -53,6 +53,7 @@ bool ODESolver::scale_grid( System &s, Dense &cache, std::vector<std::vector<Sav
 // @param op_annihilator: [&MatType] Annihilator operator
 // @return: [bool] True if calculations were sucessfull, else false
 bool ODESolver::calculate_g1( System &s, const MatType &op_creator, const MatType &op_annihilator, Dense &cache, std::string purpose ) {
+    logs.level2(" : Preparing to calculate g1 correlation function...\n");
     if ( !( (int)savedStates.size() > 0 ) ) {
         logs( "Need to calculate t-direction first!\n" );
         return false;
@@ -62,14 +63,16 @@ bool ODESolver::calculate_g1( System &s, const MatType &op_creator, const MatTyp
     int totalIterations = getIterationNumberTau( s );
     ProgressBar progressbar = ProgressBar( totalIterations );
     timer.start();
-    logs.level2( "Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}... ", purpose, dim, dim );
+    logs.level2( " : Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}... ", purpose, dim, dim );
     std::string progressstring = "G1(" + purpose + "): ";
     // Reserve Cache Matrix/Vector
+    logs.level2(" : Preparing cache vector...\n");
     std::vector<std::vector<SaveScalar>> cache_noneq;
     cache_noneq.reserve( savedStates.size() );
     for ( long unsigned int j = 0; j < savedStates.size(); j+= s.parameters.iterations_t_skip) {
         cache_noneq.emplace_back(std::vector<SaveScalar>());
     }
+    logs.level2(" : Done! Calculating g1(t,tau)...\n");
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( long unsigned int i = 0; i < savedStates.size(); i += s.parameters.iterations_t_skip ) {
         std::vector<SaveState> savedRhos;
@@ -98,7 +101,7 @@ bool ODESolver::calculate_g1( System &s, const MatType &op_creator, const MatTyp
 
     outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
-    logs.level2( "G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    logs.level2( "Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return true;
 }
 

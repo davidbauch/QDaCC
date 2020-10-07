@@ -1,7 +1,7 @@
 #include "solver/solver.h"
 
 std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveState> &input, double t_start, double t_end, int num_of_points, bool output_handler ) {
-    logs.level2( "Setting up the smooth curve interpolator... \n" );
+    logs.level2( " : Setting up the smooth curve interpolator... \n" );
     int matrix_dimension = input.at(0).mat.rows()*input.at(0).mat.cols();
     Timer &timer = createTimer( "Interpolator" );
     int maximum_iterations = matrix_dimension*2 + num_of_points;
@@ -13,7 +13,7 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
     ret.reserve(num_of_points);
     double delta_t = (t_end-t_start)/((double)num_of_points);
 
-    logs.level2( " : Copying initial SaveStates into seperate vectors...\n" );
+    logs.level2( " : : Copying initial SaveStates into seperate vectors...\n" );
     // Generate N^2 vectors from the initial density matrices
     long unsigned int input_length = input.size();
     std::vector<std::vector<double>> raw_real;
@@ -42,7 +42,7 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
         }
     }
 
-    logs.level2( " : Interpolating vectors...\n" );
+    logs.level2( " : : Interpolating vectors...\n" );
     // Interpolate each vector on its own
     std::vector<std::vector<double>> interpolated_real;
     std::vector<std::vector<double>> interpolated_imag;
@@ -68,7 +68,7 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
         }
     }
 
-    logs.level2( " : Writing vectors back to matrices" );
+    logs.level2( " : : Writing vectors back to matrices" );
     // Write new vectors back into matices
     maximum_iterations = num_of_points;
     for ( int k = 0; k < num_of_points; k++) {
@@ -86,6 +86,6 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
     }
     outputProgress( output_handler, timer, progressbar, maximum_iterations, "Interpolator: ", PROGRESS_FORCE_OUTPUT );
     timer.end();
-    logs.level2( "Done!\n" );
+    logs.level2( " : Done!\n" );
     return ret;
 }

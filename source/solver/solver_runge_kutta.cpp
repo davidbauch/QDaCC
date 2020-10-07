@@ -44,6 +44,7 @@ MatType ODESolver::iterate( const MatType &rho, System &s, const double t, std::
 
 // Wenn timestamps leer ist (size = 0), dann einfach rk steps ausgeben
 bool ODESolver::calculate_runge_kutta( MatType &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output ) {
+    logs.level2( " : Setting up Runge-Kutta Solver...\n" );
     // Reserve Output Vector
     int t_iterations_max = (int)std::ceil( (t_end-t_start)/t_step_initial ) + 1;
     output.reserve( t_iterations_max );
@@ -51,6 +52,7 @@ bool ODESolver::calculate_runge_kutta( MatType &rho0, double t_start, double t_e
     saveState( rho0, t_start, output );
     // Calculate Remaining
     MatType rho = rho0;
+    logs.level2(" : : Calculating Runge-Kutta Loop...\n");
     for ( double t_t = t_start + t_step_initial; t_t <= t_end; t_t += t_step_initial ) {
         // Runge-Kutta iteration
         rho = iterate( rho, s, t_t, output );
@@ -62,5 +64,6 @@ bool ODESolver::calculate_runge_kutta( MatType &rho0, double t_start, double t_e
             outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, t_iterations_max, progressbar_name );
         }
     }
+    logs.level2(" : Done!");
     return true;
 }
