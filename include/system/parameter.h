@@ -60,7 +60,7 @@ class Parameter {
                 return value_si*6.582119516885722624E-10;
                 break;
             case UNIT_WAVELENGTH_NM:
-                return 299792458.0 * 2.0 * M_PI / value_si;
+                return 299792458.0 * 2.0 * M_PI / value_si*1E9;
                 break;
             case UNIT_TIME_NS:
                 return value_si*1E9;
