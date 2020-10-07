@@ -29,5 +29,5 @@ namespace Solver {
     // Description: Uses the interpolation class to monotone-cubic spline interpolate a given vector of saved states, resulting in much smoother output. Should probably not be used
     // Type: Solver public function
     // @return Returns a vector of interpolated SaveStates
-    std::vector<SaveState> calculate_smooth_curve( const std::vector<SaveState> &input, double t_start, double t_end, int num_of_points );
+    std::vector<SaveState> calculate_smooth_curve( const std::vector<SaveState> &input, double t_start, double t_end, int num_of_points, bool output_handler = true );
 };

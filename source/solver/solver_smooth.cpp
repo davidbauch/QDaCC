@@ -1,7 +1,13 @@
 #include "solver/solver.h"
 
-std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveState> &input, double t_start, double t_end, int num_of_points ) {
+std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveState> &input, double t_start, double t_end, int num_of_points, bool output_handler ) {
     logs.level2( "Setting up the smooth curve interpolator... \n" );
+    int matrix_dimension = input.at(0).mat.rows()*input.at(0).mat.cols();
+    Timer &timer = createTimer( "Interpolator" );
+    int maximum_iterations = matrix_dimension*2 + num_of_points;
+    ProgressBar progressbar = ProgressBar( maximum_iterations, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
+    timer.start();
+
     // Stuff
     std::vector<SaveState> ret;
     ret.reserve(num_of_points);
@@ -9,7 +15,6 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
 
     logs.level2( " : Copying initial SaveStates into seperate vectors...\n" );
     // Generate N^2 vectors from the initial density matrices
-    int matrix_dimension = input.at(0).mat.rows()*input.at(0).mat.cols();
     long unsigned int input_length = input.size();
     std::vector<std::vector<double>> raw_real;
     std::vector<std::vector<double>> raw_imag;
@@ -31,6 +36,9 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
             }
             raw_real.emplace_back( cur_real );
             raw_imag.emplace_back( cur_imag );
+            // Time
+            timer.iterate();
+            outputProgress( output_handler, timer, progressbar, maximum_iterations, "Interpolator: " );
         }
     }
 
@@ -54,11 +62,15 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
             interpolant_imag = Interpolant( time_raw, raw_imag.at( index ), "monotone" );
             interpolated_real.emplace_back( interpolant_real.evaluate( time_out ) );
             interpolated_imag.emplace_back( interpolant_imag.evaluate( time_out ) );
+            // Time
+            timer.iterate();
+            outputProgress( output_handler, timer, progressbar, maximum_iterations, "Interpolator: " );
         }
     }
 
     logs.level2( " : Writing vectors back to matrices" );
     // Write new vectors back into matices
+    maximum_iterations = num_of_points;
     for ( int k = 0; k < num_of_points; k++) {
         Dense cur( input.at(0).mat.rows(), input.at(0).mat.cols() );
         for (int i = 0; i < input.at(0).mat.rows(); i++) {
@@ -68,7 +80,12 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
             }
         }
         ret.emplace_back( SaveState( cur.sparseView(), time_out.at(k) ) );
+        // Time
+        timer.iterate();
+        outputProgress( output_handler, timer, progressbar, maximum_iterations, "Interpolator: " );
     }
+    outputProgress( output_handler, timer, progressbar, maximum_iterations, "Interpolator: ", PROGRESS_FORCE_OUTPUT );
+    timer.end();
     logs.level2( "Done!\n" );
     return ret;
 }

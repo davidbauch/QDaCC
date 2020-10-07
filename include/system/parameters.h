@@ -41,7 +41,7 @@ class Parameters {
         long unsigned int numerics_saved_coefficients_cutoff; // True: Only save last few coefficients (only viable for T-direction, not for G1/2)
         long unsigned int numerics_saved_coefficients_max_size;
         int logfilecounter;
-        bool numerics_stretch_correlation_grid;
+        bool numerics_stretch_correlation_grid, numerics_interpolate_outputs;
 
         // System Parameters
         // Time variables

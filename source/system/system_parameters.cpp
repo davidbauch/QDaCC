@@ -159,6 +159,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_calculate_timeresolution_indistinguishability = get_parameter_passed("-timedepInd");
     numerics_output_electronic_emission = get_parameter_passed("-oElec");
     numerics_stretch_correlation_grid = false; //FIXME: Doesnt work right now
+    numerics_interpolate_outputs = get_parameter_passed("-interpolate");
 
     // Phonon Parameters
     p_phonon_alpha = get_parameter<double>("--phonons","phononalpha");
@@ -434,6 +435,8 @@ void Parameters::log( const std::vector<std::string> &info ) {
     logs( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );
     if ( p_phonon_T )
         logs( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? fmt::format( "Yes (maximum {} matrices saved)", ( numerics_saved_coefficients_cutoff > 0 ) ? numerics_saved_coefficients_cutoff : numerics_saved_coefficients_max_size ) : "No" ) );
+    if ( numerics_interpolate_outputs )
+        logs( "WARNING: Temporal outputs are interpolated!\n" );
     logs( "\n\n" );
     if ( logfilecounter >= 0 )
         logs( "Logfile ident number: {}\n\n", logfilecounter );
