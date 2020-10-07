@@ -86,7 +86,7 @@ if __name__ == "__main__":
         data = f.readlines()
         for line in data:
             if "GLOBAL_PROGRAM_VERSION" in line:
-                version = line.split()[-1]
+                version = line.split()[-1][1:-1]
     print("Will try to compile into version {}".format(version))
 
     force_recompile = True if "-frc" in sys.argv else False
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     
     f = get_all_source_files(path, exclude_dirs=["ALGLIB"], bin_path=bin_path[platform])
     
-    copy_to = {'win32' : "../../Threadhandler/QDLC-"+version+".exe" if "-th" in sys.argv else "", 'darwin' : "/Users/davidbauch/bin/QDLC-"+version+".out"}
+    copy_to = {'win32' : "../../Threadhandler/QDLC-{}.exe".format(version) if "-th" in sys.argv else "", 'darwin' : "/Users/davidbauch/bin/QDLC-{}.out".format(version)}
     libs_obj = {'win32' : "-std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs", 'darwin' : "-std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
     include_obj = {'win32' : '-I"C:\msys2\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include"', 'darwin' : "-I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include'"}
 
