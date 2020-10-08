@@ -121,7 +121,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     p_initial_state_electronic = get_parameter("--initState", "initElectronicState").front();
     p_initial_state_photon_h = get_parameter<int>("--initState", "initHorizontalPhotons");
     p_initial_state_photon_v = get_parameter<int>("--initState", "initVerticalPhotons");
-    p_initial_state = instr( "ghvbc", std::to_string(p_initial_state_electronic) ) + 4 * ( p_max_photon_number + 1 ) * p_initial_state_photon_h + 4 * p_initial_state_photon_v;
+    p_initial_state = instr( "ghvbc", p_initial_state_electronic ) + 4 * ( p_max_photon_number + 1 ) * p_initial_state_photon_h + 4 * p_initial_state_photon_v;
 
     // Look for --spectrum, if not found, no spectrum is evaluated
     iterations_tau_resolution = get_parameter<int>("--spectrum", "specTauRes");
@@ -149,7 +149,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     output_handlerstrings = get_parameter_passed("-noHandler") ? 0 : 1;
     output_operators = get_parameter_passed("-outputOp") ? 2 : ( get_parameter_passed("-outputHamiltons") ? 1 : ( get_parameter_passed("-outputOpStop") ? 3 : 0 ) );
     numerics_order_timetrafo = get_parameter_passed("-timeTrafoMatrixExponential") ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
-    startCoherent = get_parameter_passed("-startCoherent") || ( p_initial_state_electronic == 'c' );
+    startCoherent = get_parameter_passed("-startCoherent") || ( p_initial_state_electronic.front() == 'c' );
     output_full_dm = get_parameter_passed("-fullDM");
     output_no_dm = get_parameter_passed("-noDM");
     scale_parameters = get_parameter_passed("-scale");

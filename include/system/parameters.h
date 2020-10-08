@@ -50,7 +50,7 @@ class Parameters {
         int maxStates, p_max_photon_number;
         // Starting state:
         int p_initial_state, p_initial_state_photon_h, p_initial_state_photon_v;
-        char p_initial_state_electronic;
+        std::string p_initial_state_electronic;
         bool startCoherent;
 
         // Non mandatory parameters, dependant on system chosen:
