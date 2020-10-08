@@ -243,14 +243,24 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     if ( !p.startCoherent )
         rho.coeffRef( p.p_initial_state, p.p_initial_state ) = 1;
     else {
-        double trace_rest = 1.0;
+        double trace_rest_h = 1.0;
+        double trace_rest_v = 1.0;
         for ( int i = 0; i < p.p_max_photon_number; i++ ) {
-            rho.coeffRef( i * 4, i * 4 ) = getCoherent( p.p_initial_state, i ); // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
-            trace_rest -= getCoherent( p.p_initial_state, i );
-            logs( "Coherent state at N = {} with coefficient {}\n", i, getCoherent( p.p_initial_state, i ) );
+            auto coherent_h = getCoherent( std::sqrt(p.p_initial_state_photon_h), i );
+            auto coherent_v = 0.0;//getCoherent( std::sqrt(p.p_initial_state_photon_v), i );
+            int state_h = 4 * ( p.p_max_photon_number + 1 ) * i;
+            int state_v = 4 * i;
+            rho.coeffRef( state_h, state_h ) = coherent_h; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
+            //rho.coeffRef( state_v, state_v ) = coherent_v; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
+            trace_rest_h -= coherent_h;
+            trace_rest_v -= coherent_v;
+            logs.level2( "Coherent state at N = {} with coefficient H = {}, V = {}\n", i, coherent_h, coherent_v );
         }
-        rho.coeffRef( p.p_max_photon_number * 2, p.p_max_photon_number * 2 ) = trace_rest;
-        logs( "Coherent state at N = {} with coefficient {}\n", p.p_max_photon_number, trace_rest );
+        int final_h = 4 * ( p.p_max_photon_number + 1 ) * p.p_max_photon_number;
+        int final_v = 4 * p.p_max_photon_number;
+        rho.coeffRef( final_h, final_h ) = trace_rest_h;
+        //rho.coeffRef( final_v, final_v ) = trace_rest_v;
+        logs.level2( "Coherent state at N = {} with coefficient H = {}, V = {}\n", p.p_max_photon_number, trace_rest_h, trace_rest_v );
     }
     return true;
 }

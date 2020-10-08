@@ -30,11 +30,20 @@ bool ODESolver::calculate_t_direction( System &s ) {
     }
 
     // Calculate expectation values
+    Timer &evalTimer = createTimer( "Expectation-Value-Loop" );
+    std::string pbname = "Expectation Values: ";
+    ProgressBar progressbar2 = ProgressBar( interpolate_savedstates.size(), 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
+    evalTimer.start();
     logs.level2("Calculating expectation values...\n");
     for ( long unsigned int i = 0; i < interpolate_savedstates.size(); i++) {
         s.traceValid( interpolate_savedstates.at(i).mat, interpolate_savedstates.at(i).t );
         s.expectationValues( interpolate_savedstates.at(i).mat, interpolate_savedstates.at(i).t, interpolate_savedstates );
+        evalTimer.iterate();
+        outputProgress( s.parameters.output_handlerstrings, evalTimer, progressbar2, interpolate_savedstates.size(), pbname );
     }
+    outputProgress( s.parameters.output_handlerstrings, evalTimer, progressbar2, interpolate_savedstates.size(), pbname, PROGRESS_FORCE_OUTPUT );
+    evalTimer.end();
     logs.level2("Done!\n");
+
     return true;
 }

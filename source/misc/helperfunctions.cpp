@@ -94,7 +94,7 @@ std::vector<std::string> argv_to_vec( int argc, char **argv ) {
     return ret;
 }
 
-double factorial( double n ) {
+inline double factorial( double n ) {
     return ( n == 1.0 || n == 0.0 ) ? 1.0 : factorial( n - 1.0 ) * n;
 }
 

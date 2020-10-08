@@ -16,9 +16,18 @@ class Operatable {
     // Functions to determine numerical matrix trace from sparse input types not supporting .trace()
     // @param &mat: Input sparse matrix
     // @return Matrix trace of type T
-    template <typename T, typename M>
-    inline T getTrace( const Eigen::SparseMatrix<M> &mat ) const {
-        return getTrace<T>( Dense( mat ) );
+    template <typename T>
+    inline T getTrace( const Sparse &mat ) const {
+        //return getTrace<T>( Dense( mat ) );
+        T ret = (T)0.0;
+        for (int k=0; k<mat.outerSize(); ++k) {
+            for (Sparse::InnerIterator it(mat,k); it; ++it) {
+                if ( it.row() == it.col() ) {
+                    ret += it.value();
+                }
+            }
+        }
+        return ret;
     }
 
     // Calculates the Kommutator of two matrices of identical type
