@@ -38,8 +38,8 @@ class ODESolver {
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
     int dim;
     // Cache Matrices that allow for variable time steps.
-    Dense cache1 = Dense::Zero(1,1);
-    Dense cache2 = Dense::Zero(1,1);
+    Dense cache1 = Dense::Zero( 1, 1 );
+    Dense cache2 = Dense::Zero( 1, 1 );
 
     // Cached Entries
     std::vector<SaveState> savedStates;    // Vector for saved matrix-time tuples for densitymatrix
@@ -47,32 +47,32 @@ class ODESolver {
 
     // Description: Saves a tuple of a complex (density-)matrix and time, ensuring times and matrices don't get mixed up
     // Type: ODESolver private function
-    // @param mat: [&MatType] Matrix to save
+    // @param mat: [&Sparse] Matrix to save
     // @param t: [double] Corresponding time
     // @return: [void]
-    void saveState( const MatType &mat, const double t, std::vector<SaveState> &savedStates );
+    void saveState( const Sparse &mat, const double t, std::vector<SaveState> &savedStates );
 
     // Description: Saves a tuple of a complex (Hamilton-)matrix and time, ensuring times and matrices don't get mixed up
     // Type: ODESolver private function
-    // @param mat: [&MatType] Matrix to save
+    // @param mat: [&Sparse] Matrix to save
     // @param t: [double] Corresponding time
     // @return [void]
-    void saveHamilton( const MatType &mat, const double t );
+    void saveHamilton( const Sparse &mat, const double t );
 
     // Description: Iterates Runge-Kutta of order 4 at time t onto rho using the systems hamilton operator.
     // Type: ODESolver private function
-    // @param rho: [&MatType] Input (density-) matrix
+    // @param rho: [&Sparse] Input (density-) matrix
     // @param s: [&System] Class providing set of system functions
     // @param t: [double] Time to iterate at
-    // @return: [MatType] rho at time t+t_step
-    MatType iterateRungeKutta4( const MatType &rho, System &s, const double t, std::vector<SaveState> &savedStates );
+    // @return: [Sparse] rho at time t+t_step
+    Sparse iterateRungeKutta4( const Sparse &rho, System &s, const double t, std::vector<SaveState> &savedStates );
     // Description: Iterates Runge-Kutta of order 5 at time t onto rho using the systems hamilton operator.
     // Type: ODESolver private function
-    // @param rho: [&MatType] Input (density-) matrix
+    // @param rho: [&Sparse] Input (density-) matrix
     // @param s: [&System] Class providing set of system functions
     // @param t: [double] Time to iterate at
-    // @return: [MatType] rho at time t+t_step
-    MatType iterateRungeKutta5( const MatType &rho, System &s, const double t, std::vector<SaveState> &savedStates );
+    // @return: [Sparse] rho at time t+t_step
+    Sparse iterateRungeKutta5( const Sparse &rho, System &s, const double t, std::vector<SaveState> &savedStates );
 
     // Desciption: Function to calculate the number of iterations used for tau direction calculations
     // Type: ODESolver private function
@@ -82,14 +82,14 @@ class ODESolver {
 
     int getIterationNumberSpectrum( System &s );
     double getTimeAt( int i );
-    MatType getRhoAt( int i );
+    Sparse getRhoAt( int i );
 
     // Description: Gatheres a Hamiltonoperator using a systems get_hamilton() function. This workaround enables the saving of already calculated matrices for dublicate uses. Seems to have almost no influence on runtime.
     // Type: ODESolver private function
     // @param s: [&System] Class providing set of system functions
     // @param t: [double] Time to return Hamiltonoperator at
-    // @return: [MatType] hamilton matrix of type MatType
-    MatType getHamilton( System &s, const double t, bool use_saved_hamiltons = false );
+    // @return: [Sparse] hamilton matrix of type Sparse
+    Sparse getHamilton( System &s, const double t, bool use_saved_hamiltons = false );
 
     // Description: Checks wether or not to save the current matrix for later calculations
     // Type: ODESolver private function
@@ -104,8 +104,8 @@ class ODESolver {
     // @return: [int] dimensions of temporary variables
     int reset( System &s );
 
-    bool calculate_g1( System &s, const MatType &op_creator, const MatType &op_annihilator, Dense &cache, std::string purpose = "unknown" ); //std::vector<std::vector<SaveScalar>>
-    bool calculate_g2( System &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, Dense &cache, std::string purpose = "unknown" );
+    bool calculate_g1( System &s, const Sparse &op_creator, const Sparse &op_annihilator, Dense &cache, std::string purpose = "unknown" ); //std::vector<std::vector<SaveScalar>>
+    bool calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, Dense &cache, std::string purpose = "unknown" );
 
     // Description: Stretches Data evaluated at various timesteps onto an equidistant grid, such that g1 and g2 can work with said grid.
     bool scale_grid( System &s, Dense &cache, std::vector<std::vector<SaveScalar>> &cache_noneq );
@@ -116,12 +116,12 @@ class ODESolver {
 
     // Description: Iterates Runge-Kutta with given order depending on the systems settings.
     // Type: ODESolver public function
-    // @param rho: [&MatType] Input (density-) matrix
+    // @param rho: [&Sparse] Input (density-) matrix
     // @param s: [&System] Class providing set of system functions
     // @param t: [double] Time to iterate at
     // @param dir: [int] Time direction. Solver order can differ in both t and tau direction, depending on the systems settings. Default value is DIR_T
-    // @return: [MatType] rho at time t+t_step
-    MatType iterate( const MatType &rho, System &s, const double t, std::vector<SaveState> &savedStates, const int dir = DIR_T );
+    // @return: [Sparse] rho at time t+t_step
+    Sparse iterate( const Sparse &rho, System &s, const double t, std::vector<SaveState> &savedStates, const int dir = DIR_T );
 
     // Description: Calculates the normal t-direction via solving the von-Neumann equation for rho. May save some of the density matrices for later uses. Logs the calculation and outputs progress.
     // Type: ODESolver public function
@@ -129,15 +129,15 @@ class ODESolver {
     // @return: [bool] True if calculations are sucessfull, else false
     bool calculate_t_direction( System &s );
 
-    //bool calculate_g2_0( System &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName ); //moved to advancedPhotonStatistics
-    bool calculate_spectrum( System &s, const MatType &op_creator, const MatType &op_annihilator, std::string fileOutputName, const int cache_index );
-    bool calculate_advanced_photon_statistics( System &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName );
+    //bool calculate_g2_0( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string fileOutputName ); //moved to advancedPhotonStatistics
+    bool calculate_spectrum( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string fileOutputName, const int cache_index );
+    bool calculate_advanced_photon_statistics( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string fileOutputName );
     //template <typename T>
-    //static MatType iterate_definite_integral( const MatType &rho, T rungefunction, const double t, const double step );
-    //static std::vector<SaveState> calculate_definite_integral_vec( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step );
-    //static SaveState calculate_definite_integral( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step );
+    //static Sparse iterate_definite_integral( const Sparse &rho, T rungefunction, const double t, const double step );
+    //static std::vector<SaveState> calculate_definite_integral_vec( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step );
+    //static SaveState calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step );
 
-    bool calculate_runge_kutta( MatType &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true);
+    bool calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true );
 };
 
 /*

@@ -67,7 +67,6 @@ std::vector<double> Interpolant::evaluate( std::vector<double> &xar ) {
     return ret;
 }
 
-
 // 2D
 template <class T>
 Interpolant2d<T>::Interpolant2d( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, T &interpolationPointsZ ) {
@@ -112,7 +111,7 @@ T Interpolant2d<T>::evaluate( std::vector<double> &xar, std::vector<double> &yar
     for ( double x : xar ) {
         int j = 0;
         for ( double y : yar ) {
-            ret(i,j) = (double)alglib::spline2dcalc( p, x, y );
+            ret( i, j ) = (double)alglib::spline2dcalc( p, x, y );
         }
     }
     return ret;

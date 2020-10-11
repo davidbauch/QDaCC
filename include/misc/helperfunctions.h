@@ -29,7 +29,7 @@ std::vector<std::string> str_to_vec( std::string input = "[]" );
 template <typename T>
 T lerp( T a, T b, double c ) {
     if ( c < 0 || c > 1 ) {
-        //logs("Warning: Invalid lerp delta! delta = {:e}\n",c);
+        //Log::L1("Warning: Invalid lerp delta! delta = {:e}\n",c);
         return a;
     }
     return ( 1.0 - c ) * a + c * b;
@@ -43,26 +43,26 @@ T convertParam( const std::string input ) {
     double value = 0;
     double conversion = 1;
     int index;
-    logs.level2( "Attempting to convert '{}'... ", input );
+    Log::L2( "Attempting to convert '{}'... ", input );
     if ( -1 != ( index = instr( input, "eV" ) ) ) {
         // Found 'eV' as unit (energy), now check for scaling
         if ( input.at( index - 1 ) == 'm' ) {
             // meV
-            logs.level2( "from meV to Hz..." );
+            Log::L2( "from meV to Hz..." );
             value = eV_to_Hz( std::stod( input.substr( 0, index - 1 ) ) );
             conversion = 1E-3;
         } else if ( input.at( index - 2 ) == 'm' && input.at( index - 1 ) == 'u' ) {
             // mueV
-            logs.level2( "from mueV to Hz..." );
+            Log::L2( "from mueV to Hz..." );
             value = eV_to_Hz( std::stod( input.substr( 0, index - 2 ) ) );
             conversion = 1E-6;
         } else if ( is_number( input.substr( index - 1, 1 ) ) ) {
             // eV
-            logs.level2( "from eV to Hz..." );
+            Log::L2( "from eV to Hz..." );
             value = eV_to_Hz( std::stod( input.substr( 0, index ) ) );
             conversion = 1.0;
         } else {
-            logs.level2( "Conversion of input '{}' from eV failed!\n", input );
+            Log::L2( "Conversion of input '{}' from eV failed!\n", input );
             return (T)0.0;
         }
     } else if ( -1 != ( index = instr( input, "s" ) ) ) {
@@ -70,53 +70,53 @@ T convertParam( const std::string input ) {
         //fmt::print("\n {} {} {} {}\n",index, input.at(index-1)=='n',input.compare(index-1,1,"n") ,input.at(index-1));
         if ( input.at( index - 1 ) == 'n' ) {
             // ns
-            logs.level2( "from ns to s..." );
+            Log::L2( "from ns to s..." );
             value = std::stod( input.substr( 0, index - 1 ) );
             conversion = 1E-9;
         } else if ( input.at( index - 1 ) == 'p' ) {
             // ps
-            logs.level2( "from ps to s..." );
+            Log::L2( "from ps to s..." );
             value = std::stod( input.substr( 0, index - 1 ) );
             conversion = 1E-12; //fmt::print("{} {} ... ", value, conversion);
         } else if ( is_number( input.substr( index - 1, 1 ) ) ) {
             // s
-            logs.level2( "from s to s..." );
+            Log::L2( "from s to s..." );
             value = std::stod( input.substr( 0, index ) );
             conversion = 1.0;
         } else {
-            logs.level2( "Conversion from input '{}' from time failed!\n", input );
+            Log::L2( "Conversion from input '{}' from time failed!\n", input );
             return (T)0.0;
         }
     } else if ( -1 != ( index = instr( input, "Hz" ) ) ) {
         // Found 'Hz' as unit (Frequency)
-        logs.level2( "from Hz to Hz..." );
+        Log::L2( "from Hz to Hz..." );
         if ( is_number( input.substr( index - 1, 1 ) ) ) {
             value = std::stod( input.substr( 0, index - 1 ) );
             conversion = 1.0;
         } else {
-            logs.level2( "Conversion from input '{}' from frequency failed!\n", input );
+            Log::L2( "Conversion from input '{}' from frequency failed!\n", input );
             return (T)0.0;
         }
     } else if ( -1 != ( index = instr( input, "pi" ) ) ) {
         // Found 'Hz' as unit (Frequency)
-        logs.level2( "from Xpi to rad..." );
+        Log::L2( "from Xpi to rad..." );
         if ( is_number( input.substr( index - 1, 1 ) ) ) {
             value = std::stod( input.substr( 0, index - 1 ) );
             conversion = 1.0;
         } else {
-            logs.level2( "Conversion from input '{}' from frequency failed!\n", input );
+            Log::L2( "Conversion from input '{}' from frequency failed!\n", input );
             return (T)0.0;
         }
     } else if ( is_number( input ) ) {
         // Assuming Frequency input
-        logs.level2( "no conversion..." );
+        Log::L2( "no conversion..." );
         value = std::stod( input );
     } else {
         // Input type is unknown
-        logs.level2( "Input Type of input '{}' is unkown!\n", input );
+        Log::L2( "Input Type of input '{}' is unkown!\n", input );
         return (T)0.0;
     }
-    logs.level2( "done, final value = {}!\n", value * conversion );
+    Log::L2( "done, final value = {}!\n", value * conversion );
     return ( T )( value * conversion );
 }
 
@@ -131,7 +131,7 @@ std::vector<T> convertParam( const std::vector<std::string> input ) {
 
 template <typename T>
 T getNextInput( const std::vector<std::string> &arguments, const std::string name, int &index ) {
-    logs.level2( "Trying to convert input named '{}' at index '{}' to '{}'...", name, index, arguments.at( index ) );
+    Log::L2( "Trying to convert input named '{}' at index '{}' to '{}'...", name, index, arguments.at( index ) );
     return convertParam<T>( arguments.at( index++ ) );
 }
 
@@ -139,7 +139,7 @@ std::string getNextInputString( const std::vector<std::string> &arguments, const
 
 template <typename T>
 std::vector<T> getNextInputVector( const std::vector<std::string> &arguments, const std::string name, int &index ) {
-    logs.level2( "Trying to convert input named '{}' at index '{}' to '{}'...", name, index, arguments.at( index ) );
+    Log::L2( "Trying to convert input named '{}' at index '{}' to '{}'...", name, index, arguments.at( index ) );
     return convertParam<T>( str_to_vec( arguments.at( index++ ) ) );
 }
 
@@ -175,34 +175,34 @@ double factorial( double n );
 
 double getCoherent( double alpha, double N );
 
-std::string get_parameter(const std::string& key, const std::string& subkey = "");
+std::string get_parameter( const std::string &key, const std::string &subkey = "" );
 
 template <class T>
-T get_parameter(const std::string& key, const std::string& subkey = "") {
-    std::string arg = CommandlineArguments::cla.get(key,subkey);
-    return convertParam<T>(arg);
+T get_parameter( const std::string &key, const std::string &subkey = "" ) {
+    std::string arg = CommandlineArguments::cla.get( key, subkey );
+    return convertParam<T>( arg );
 }
 
-bool get_parameter_passed(const std::string& key, const std::string& subkey = "");
+bool get_parameter_passed( const std::string &key, const std::string &subkey = "" );
 
 template <class T>
-std::vector<T> get_parameter_vector(const std::string& key, const std::string& subkey = "") {
-    std::string arg = CommandlineArguments::cla.get(key,subkey);
+std::vector<T> get_parameter_vector( const std::string &key, const std::string &subkey = "" ) {
+    std::string arg = CommandlineArguments::cla.get( key, subkey );
     // Check if input is not a vector, then output will be a new vector with only one element
-    if (arg.at(0) != '[') {
-        T elem = convertParam<T>(arg);
-        return std::vector<T>({elem});
+    if ( arg.at( 0 ) != '[' ) {
+        T elem = convertParam<T>( arg );
+        return std::vector<T>( {elem} );
     }
-    return convertParam<T>( str_to_vec(arg) );
+    return convertParam<T>( str_to_vec( arg ) );
 }
 
-std::vector<std::string> get_parameter_vector(const std::string& key, const std::string& subkey = "");
+std::vector<std::string> get_parameter_vector( const std::string &key, const std::string &subkey = "" );
 
 // Map a vector onto comp, meaning that if in is shorter than comp, in will be filled with standard value
-template <typename T1, typename T2, typename T3> 
-void map_vector_to_standard(const std::vector<T1>& comp, std::vector<T2>& in, const T3 standard) {
-    while (comp.size() > in.size()) {
-        in.emplace_back((T2)standard);
+template <typename T1, typename T2, typename T3>
+void map_vector_to_standard( const std::vector<T1> &comp, std::vector<T2> &in, const T3 standard ) {
+    while ( comp.size() > in.size() ) {
+        in.emplace_back( (T2)standard );
     }
 }
 
@@ -214,10 +214,10 @@ class Parse_Parameters {
     Parse_Parameters(){};
     Parse_Parameters( const std::vector<std::string> &arguments, const std::vector<std::string> &flags, const std::vector<int> &number_of_parameters_per_flag, std::string name = "" ) {
         if ( flags.size() != number_of_parameters_per_flag.size() ) {
-            logs.level2( "Error: Flag input vector and number vector have different sizes!\n" );
+            Log::L2( "Error: Flag input vector and number vector have different sizes!\n" );
         }
         if ( name.size() > 0 )
-            logs.level2( "Parsing input block '{}'\n", name );
+            Log::L2( "Parsing input block '{}'\n", name );
         int i = 0;
         for ( auto flag : flags ) {
             int index = vec_find_str( flag, arguments );
@@ -231,7 +231,7 @@ class Parse_Parameters {
             }
             i++;
         }
-        //logs.level2( "Parameters to read: {}\nRead Parameters: {}\nReturned Parameters: {}\n", fmt::join( flags, ", " ), fmt::join( arguments, ", " ), fmt::join( parameters, ", " ) );
+        //Log::L2( "Parameters to read: {}\nRead Parameters: {}\nReturned Parameters: {}\n", fmt::join( flags, ", " ), fmt::join( arguments, ", " ), fmt::join( parameters, ", " ) );
     }
     // Returns a parsed parameter at position [at]. If this parameter could not be parsed, the passed standard parameter is returned instead.
     std::string get( int at, std::string standard ) {

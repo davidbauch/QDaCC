@@ -1,15 +1,15 @@
 #include "solver/solver_ode.h"
 
 ODESolver::ODESolver( System &s ) {
-    logs.level2( "Creating ODESolver Class... " );
+    Log::L2( "Creating ODESolver Class... " );
     reset( s );
     savedStates.clear();
     savedStates.reserve( dim );
-    logs.level2( "Done!\n" );
+    Log::L2( "Done!\n" );
 }
 
-MatType ODESolver::getHamilton( System &s, const double t, bool use_saved_hamiltons ) {
-    if ( s.parameters.numerics_use_saved_hamiltons ) {////|| use_saved_hamiltons ) {
+Sparse ODESolver::getHamilton( System &s, const double t, bool use_saved_hamiltons ) {
+    if ( s.parameters.numerics_use_saved_hamiltons ) { ////|| use_saved_hamiltons ) {
         if ( savedHamiltons.size() == 0 || t > savedHamiltons.back().t ) {
             track_gethamilton_calcattempt++;
             // Calculate new Hamilton for t, save it, return it
@@ -18,7 +18,7 @@ MatType ODESolver::getHamilton( System &s, const double t, bool use_saved_hamilt
             return savedHamiltons.back().mat;
         } else {
             long unsigned int approx = std::floor( t / s.parameters.t_step / 2.0 );
-            if ( !(approx > savedHamiltons.size() || approx < 0) ) {
+            if ( !( approx > savedHamiltons.size() || approx < 0 ) ) {
                 // Look for corresponding Hamilton. t-direction has to be calculated first if used with multiple threads
                 while ( t > savedHamiltons.at( approx ).t )
                     approx++;
@@ -35,14 +35,12 @@ MatType ODESolver::getHamilton( System &s, const double t, bool use_saved_hamilt
     return s.dgl_getHamilton( t );
 }
 
-
-
-void ODESolver::saveState( const MatType &mat, const double t, std::vector<SaveState> &savedStates ) {
-    savedStates.emplace_back( SaveState( mat, t ) );
+void ODESolver::saveState( const Sparse &mat, const double t, std::vector<SaveState> &savedStates ) {
+    savedStates.emplace_back( mat, t );
 }
 
-void ODESolver::saveHamilton( const MatType &mat, const double t ) {
-    savedHamiltons.emplace_back( SaveState( mat, t ) );
+void ODESolver::saveHamilton( const Sparse &mat, const double t ) {
+    savedHamiltons.emplace_back( mat, t );
 }
 
 bool ODESolver::queueNow( System &s, int &curIt ) {
@@ -60,7 +58,7 @@ int ODESolver::reset( System &s ) {
     track_gethamilton_write = 0;
     track_gethamilton_calc = 0;
     track_gethamilton_calcattempt = 0;
-    dim = (int)std::ceil((s.parameters.t_end-s.parameters.t_start)/s.parameters.t_step)+10;//(int)( s.parameters.iterations_t_max / s.parameters.iterations_t_skip ) + 10;
+    dim = (int)std::ceil( ( s.parameters.t_end - s.parameters.t_start ) / s.parameters.t_step ) + 10; //(int)( s.parameters.iterations_t_max / s.parameters.iterations_t_skip ) + 10;
     return dim;
 }
 
@@ -102,8 +100,8 @@ double ODESolver::getTimeAt( int i ) {
 // Description: Function to extract the matrix corresponding to a certain iteration of saved states
 // Type: ODESolver private function
 // @param i: [int] Iteration number
-// @return: [MatType] (Density-) Matrix corresponding to iteration number i
+// @return: [Sparse] (Density-) Matrix corresponding to iteration number i
 
-MatType ODESolver::getRhoAt( int i ) {
+Sparse ODESolver::getRhoAt( int i ) {
     return savedStates.at( i ).mat;
 }

@@ -33,12 +33,12 @@ void System::initialize_polaron_frame_functions() {
 }
 
 Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
-    double chirpcorrection = chirp.get( t ) + t * ( chirp.get( t ) - parameters.scaleVariable(chirp.derivative( t ),parameters.scale_value) );
+    double chirpcorrection = chirp.get( t ) + t * ( chirp.get( t ) - parameters.scaleVariable( chirp.derivative( t ), parameters.scale_value ) );
     // FIX: für w_b-w_xi muss da -chirpcorrection statt +chirpcorrection!
     //FIXME: E_B(tau)!! -> 2de3lta - delta -> +delta statt -delta für B-X
-    Sparse explicit_time = 1i * ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H + 1i * ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B + 1i * ( ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B + ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H - parameters.p_omega_cavity_H * operatorMatrices.projector_atom_sigmaplus_G_H - parameters.p_omega_cavity_H * operatorMatrices.projector_atom_sigmaplus_H_B ) * operatorMatrices.projector_photon_annihilate_H + parameters.scaleVariable(pulse_H.derivative( t ),parameters.scale_value) * ( operatorMatrices.projector_atom_sigmaplus_G_H + operatorMatrices.projector_atom_sigmaplus_H_B );
-    explicit_time += 1i * ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V + 1i * ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + 1i * ( ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_V_B ) * operatorMatrices.projector_photon_annihilate_V + parameters.scaleVariable(pulse_V.derivative( t ),parameters.scale_value) * ( operatorMatrices.projector_atom_sigmaplus_G_V + operatorMatrices.projector_atom_sigmaplus_V_B );
-    explicit_time = parameters.scaleVariable(explicit_time, 1.0/parameters.scale_value);
+    Sparse explicit_time = 1i * ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H + 1i * ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B + 1i * ( ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B + ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H - parameters.p_omega_cavity_H * operatorMatrices.projector_atom_sigmaplus_G_H - parameters.p_omega_cavity_H * operatorMatrices.projector_atom_sigmaplus_H_B ) * operatorMatrices.projector_photon_annihilate_H + parameters.scaleVariable( pulse_H.derivative( t ), parameters.scale_value ) * ( operatorMatrices.projector_atom_sigmaplus_G_H + operatorMatrices.projector_atom_sigmaplus_H_B );
+    explicit_time += 1i * ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V + 1i * ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + 1i * ( ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_V_B ) * operatorMatrices.projector_photon_annihilate_V + parameters.scaleVariable( pulse_V.derivative( t ), parameters.scale_value ) * ( operatorMatrices.projector_atom_sigmaplus_G_V + operatorMatrices.projector_atom_sigmaplus_V_B );
+    explicit_time = parameters.scaleVariable( explicit_time, 1.0 / parameters.scale_value );
 
     Sparse hamilton = dgl_getHamilton( t );
 
@@ -135,16 +135,16 @@ int System::dgl_get_coefficient_index( const double t, const double tau ) {
                 approx--;
                 tries++;
             }
-            //logs.level2("Approx = {}, size = {}\n",approx,savedCoefficients.size());
+            //Log::L2("Approx = {}, size = {}\n",approx,savedCoefficients.size());
             if ( approx < (int)savedCoefficients.size() ) {
                 if ( t != savedCoefficients.at( approx ).t || tau != savedCoefficients.at( approx ).tau ) {
                     // This situation may occur during multithreading.
                     track_getcoefficient_read_but_unequal++;
-                    //logs.level2( "Coefficient time mismatch! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
+                    //Log::L2( "Coefficient time mismatch! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
                 } else {
                     track_getcoefficient_read++;
                     globaltries += tries;
-                    //logs.level2( "Coefficient time match! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
+                    //Log::L2( "Coefficient time match! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
                     return approx;
                 }
             }
@@ -164,7 +164,7 @@ void System::dgl_save_coefficient( const Sparse &coefficient1, const Sparse &coe
 #pragma omp critical
             savedCoefficients.erase( savedCoefficients.begin() );
         }
-        //logs.level2("Saved coefficient for t = {}, tau = {}\n",t,tau);
+        //Log::L2("Saved coefficient for t = {}, tau = {}\n",t,tau);
     }
 }
 
@@ -180,7 +180,7 @@ Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, 
         return ( U * chi_tau * U.adjoint() ).eval();
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_MIXED ) {
         double error = std::abs( pulse_H.get( t ) + pulse_V.get( t ) );
-        if ( ( pulse_H.maximum > 0 && error > pulse_H.maximum * 0.1 ) || ( pulse_V.maximum > 0 && error > pulse_V.maximum * 0.1 ) || chirp.derivative(t) != 0) {
+        if ( ( pulse_H.maximum > 0 && error > pulse_H.maximum * 0.1 ) || ( pulse_V.maximum > 0 && error > pulse_V.maximum * 0.1 ) || chirp.derivative( t ) != 0 ) {
             return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
         }
         return chi_tau;
@@ -201,24 +201,24 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
         int _taumax = (int)std::min( parameters.p_phonon_tcutoff / parameters.t_step, t / parameters.t_step );
         // Index vector for thread ordering
         std::vector<int> thread_index;
-        thread_index.reserve(_taumax);
-        int thread_increment = std::ceil(_taumax/parameters.numerics_maximum_threads);
-        for ( int thread = 0; thread < parameters.numerics_maximum_threads; thread++) {
-            for ( int cur = 0; cur < parameters.numerics_maximum_threads; cur++) {
-                int vec_index = thread + cur*parameters.numerics_maximum_threads;
-                if ( vec_index < _taumax) {
-                    thread_index.emplace_back(vec_index);
+        thread_index.reserve( _taumax );
+        int thread_increment = std::ceil( _taumax / parameters.numerics_maximum_threads );
+        for ( int thread = 0; thread < parameters.numerics_maximum_threads; thread++ ) {
+            for ( int cur = 0; cur < parameters.numerics_maximum_threads; cur++ ) {
+                int vec_index = thread + cur * parameters.numerics_maximum_threads;
+                if ( vec_index < _taumax ) {
+                    thread_index.emplace_back( vec_index );
                 } else {
                     break;
                 }
             }
         }
         // debug
-        //logs.level2("Vec index:\n");
+        //Log::L2("Vec index:\n");
         //for ( auto &a : thread_index) {
-        //    logs.level2("{}, ",a);
+        //    Log::L2("{}, ",a);
         //}
-        //logs.level2("\nVec index done!\n");
+        //Log::L2("\nVec index done!\n");
         // Use markov approximation
         if ( parameters.numerics_phonon_approximation_markov1 ) {
             // Temporary variables
@@ -236,8 +236,8 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 init_sparsevector( threadmap_2, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
                 // Calculate backwards integral and sum it into threadmaps. Threadmaps will later be summed into one coefficient matrix.
 #pragma omp parallel for ordered schedule( dynamic ) shared( savedCoefficients ) num_threads( parameters.numerics_phonons_maximum_threads )
-                for ( int cur_thread = 0; cur_thread < parameters.numerics_phonons_maximum_threads; cur_thread++) {
-                    for ( int cur = 0; cur < _taumax; cur+=parameters.numerics_phonons_maximum_threads) {
+                for ( int cur_thread = 0; cur_thread < parameters.numerics_phonons_maximum_threads; cur_thread++ ) {
+                    for ( int cur = 0; cur < _taumax; cur += parameters.numerics_phonons_maximum_threads ) {
                         int _tau = cur_thread + cur;
                         //for ( int _tau = 0; _tau < _taumax; _tau++ ) {
                         Sparse chi_tau_back_u, chi_tau_back_g, chi_tau, chi_tau_back;
@@ -266,8 +266,8 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             init_sparsevector( threadmap_1, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
             // Dont use markov approximation; Full integral
 #pragma omp parallel for ordered schedule( dynamic ) shared( savedCoefficients ) num_threads( parameters.numerics_phonons_maximum_threads )
-            for ( int cur_thread = 0; cur_thread < parameters.numerics_phonons_maximum_threads; cur_thread++) {
-                for ( int cur = 0; cur < _taumax; cur+=parameters.numerics_phonons_maximum_threads) {
+            for ( int cur_thread = 0; cur_thread < parameters.numerics_phonons_maximum_threads; cur_thread++ ) {
+                for ( int cur = 0; cur < _taumax; cur += parameters.numerics_phonons_maximum_threads ) {
                     int _tau = cur_thread + cur;
                     //for ( int _tau = 0; _tau < _taumax; _tau++ ) {
                     Sparse chi_tau_back_u, chi_tau_back_g, chi_tau, chi_tau_back, integrant;

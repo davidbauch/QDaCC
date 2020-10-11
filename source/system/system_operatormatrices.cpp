@@ -1,21 +1,22 @@
 #include "system/operatormatrices.h"
+#include "system/operatormatrices_text.h"
 
 OperatorMatrices::OperatorMatrices( const Parameters &p ) {
-    Timer &timer_operatormatrices = createTimer( "Operator Matrices", true, false );
+    Timer &timer_operatormatrices = Timers::create( "Operator Matrices", true, false );
     timer_operatormatrices.start();
-    logs.level2( "Generating operator matrices... " );
+    Log::L2( "Generating operator matrices... " );
     if ( !generateOperators( p ) ) {
-        logs.level2( "Generating operator matrices failed! Exitting program...\n" );
-        logs.close();
+        Log::L2( "Generating operator matrices failed! Exitting program...\n" );
+        Log::close();
         exit( EXIT_FAILURE );
     }
     timer_operatormatrices.end();
-    logs.level2( "successful. Elapsed time is {}ms\n", timer_operatormatrices.getWallTime( TIMER_MILLISECONDS ) );
+    Log::L2( "successful. Elapsed time is {}ms\n", timer_operatormatrices.getWallTime( TIMER_MILLISECONDS ) );
 }
 
 bool OperatorMatrices::generateOperators( const Parameters &p ) {
     // Zeroing Hamiltons (redundant at this point)
-    logs.level2( "Creating operator matrices, dimension = {}\nCreating base matrices... ", p.maxStates );
+    Log::L2( "Creating operator matrices, dimension = {}\nCreating base matrices... ", p.maxStates );
     H = Sparse( p.maxStates, p.maxStates );
     H_0 = Sparse( p.maxStates, p.maxStates );
     H_I = Sparse( p.maxStates, p.maxStates );
@@ -35,13 +36,13 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     }
     base = tensor( tensor( base1, base2 ), base3 );
 
-    logs.level2( "Operator Base: (size {}) ", base.size() );
+    Log::L3( "Operator Base: (size {}) ", base.size() );
     for ( auto b : base )
-        logs.level2( "|{}> ", b );
-    logs.level2( "\n" );
+        Log::L3( "|{}> ", b );
+    Log::L3( "\n" );
 
     // Initializing bare matrices:
-    logs.level2( "Initializing base matrices... " );
+    Log::L2( "Initializing base matrices... " );
     // Atomic state operators
     bare_atom_state_ground = Dense::Zero( 4, 4 );
     bare_atom_state_ground << 1, 0, 0, 0,
@@ -143,7 +144,7 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     bare_photon_n_V = bare_photon_create_V * bare_photon_annihilate_V;
 
     // Expanding both states
-    logs.level2( "Expanding single state matrices... " );
+    Log::L2( "Expanding single state matrices... " );
     atom_state_ground = tensor( m_base1, m_base2, bare_atom_state_ground ).sparseView();
     atom_state_biexciton = tensor( m_base1, m_base2, bare_atom_state_biexciton ).sparseView();
     atom_state_H = tensor( m_base1, m_base2, bare_atom_state_H ).sparseView();
@@ -169,7 +170,7 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     photon_annihilate_V = tensor( m_base1, bare_photon_annihilate_V, m_base3 ).sparseView();
     photon_n_H = tensor( bare_photon_n_H, m_base2, m_base3 ).sparseView();
     photon_n_V = tensor( m_base1, bare_photon_n_V, m_base3 ).sparseView();
-    
+
     // Compressing
     atom_state_ground.makeCompressed();
     atom_state_biexciton.makeCompressed();
@@ -212,56 +213,59 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     projector_photon_annihilate_V = project_matrix_sparse( photon_annihilate_V );
 
     // All possible Hamiltonions
-    logs.level2( "Done! Creating Hamiltonoperator... " );
+    Log::L2( "Done! Creating Hamiltonoperator... " );
     // H_0
     H_0 = p.p_omega_atomic_G_H * atom_state_H + p.p_omega_atomic_G_V * atom_state_V + p.p_omega_atomic_B * atom_state_biexciton + p.p_omega_cavity_H * photon_n_H + p.p_omega_cavity_V * photon_n_V;
     //H_0 = p.p_omega_atomic_G_H / 2.0 * atom_inversion_G_H + p.p_omega_atomic_G_V / 2.0 * atom_inversion_G_V + p.p_omega_atomic_H_B / 2.0 * atom_inversion_H_B + p.p_omega_atomic_V_B / 2.0 * atom_inversion_V_B + p.p_omega_cavity_H * photon_n_H + p.p_omega_cavity_V * photon_n_V;
     // H_I
     // RWA
     if ( p.numerics_use_rwa ) {
-        logs.level2( "using RWA... " );
+        Log::L2( "using RWA... " );
         H_I = p.p_omega_coupling * ( atom_sigmaplus_G_H * photon_annihilate_H + atom_sigmaminus_G_H * photon_create_H + atom_sigmaplus_G_V * photon_annihilate_V + atom_sigmaminus_G_V * photon_create_V + atom_sigmaplus_H_B * photon_annihilate_H + atom_sigmaminus_H_B * photon_create_H + atom_sigmaplus_V_B * photon_annihilate_V + atom_sigmaminus_V_B * photon_create_V );
     }
     // non RWA
     if ( !p.numerics_use_rwa ) {
-        logs.level2( "NOT using RWA... " );
+        Log::L2( "NOT using RWA... " );
         H_I = p.p_omega_coupling * ( atom_sigmaplus_G_H * photon_create_H + atom_sigmaplus_G_H * photon_annihilate_H + atom_sigmaminus_G_H * photon_create_H + atom_sigmaminus_G_H * photon_annihilate_H + atom_sigmaplus_G_V * photon_create_V + atom_sigmaplus_G_V * photon_annihilate_V + atom_sigmaminus_G_V * photon_create_V + atom_sigmaminus_G_V * photon_annihilate_V + atom_sigmaplus_H_B * photon_create_H + atom_sigmaplus_H_B * photon_annihilate_H + atom_sigmaminus_H_B * photon_create_H + atom_sigmaminus_H_B * photon_annihilate_H + atom_sigmaplus_V_B * photon_create_V + atom_sigmaplus_V_B * photon_annihilate_V + atom_sigmaminus_V_B * photon_create_V + atom_sigmaminus_V_B * photon_annihilate_V );
     }
     // H
     H = H_0 + H_I;
     // Interaction picture
     if ( p.numerics_use_interactionpicture ) {
-        logs.level2( "using interaction picture... " );
+        Log::L2( "using interaction picture... " );
         H_used = H_I;
     }
     if ( !p.numerics_use_interactionpicture ) {
-        logs.level2( "NOT using interaction picture... " );
+        Log::L2( "NOT using interaction picture... " );
         H_used = H;
     }
-    logs.level2( "Hamiltonoperator done! Used:\n{}\nSetting initial rho as pure state with rho_0 = {}... ", Dense( H_used ), p.p_initial_state );
+    Log::L2( "Hamiltonoperator done!\n" );
     // rho, experimental: start with coherent state. in this case, always start in ground state.
-    if ( !p.startCoherent )
+    if ( !p.startCoherent ) {
+        Log::L2( "Setting initial rho as pure state with rho_0 = {}... \n", p.p_initial_state );
         rho.coeffRef( p.p_initial_state, p.p_initial_state ) = 1;
-    else {
+    } else {
+        Log::L2( "Setting initial rho as pure coherent state with alpha_h = {}, alpha_v = ... \n", p.p_initial_state_photon_h, p.p_initial_state_photon_v );
         double trace_rest_h = 1.0;
         double trace_rest_v = 1.0;
         for ( int i = 0; i < p.p_max_photon_number; i++ ) {
-            auto coherent_h = getCoherent( std::sqrt(p.p_initial_state_photon_h), i );
-            auto coherent_v = 0.0;//getCoherent( std::sqrt(p.p_initial_state_photon_v), i );
+            auto coherent_h = getCoherent( std::sqrt( p.p_initial_state_photon_h ), i );
+            auto coherent_v = 0.0; //getCoherent( std::sqrt(p.p_initial_state_photon_v), i );
             int state_h = 4 * ( p.p_max_photon_number + 1 ) * i;
             int state_v = 4 * i;
             rho.coeffRef( state_h, state_h ) = coherent_h; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
             //rho.coeffRef( state_v, state_v ) = coherent_v; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
             trace_rest_h -= coherent_h;
             trace_rest_v -= coherent_v;
-            logs.level2( "Coherent state at N = {} with coefficient H = {}, V = {}\n", i, coherent_h, coherent_v );
+            Log::L3( "Coherent state at N = {} with coefficient H = {}, V = {}\n", i, coherent_h, coherent_v );
         }
         int final_h = 4 * ( p.p_max_photon_number + 1 ) * p.p_max_photon_number;
         int final_v = 4 * p.p_max_photon_number;
         rho.coeffRef( final_h, final_h ) = trace_rest_h;
         //rho.coeffRef( final_v, final_v ) = trace_rest_v;
-        logs.level2( "Coherent state at N = {} with coefficient H = {}, V = {}\n", p.p_max_photon_number, trace_rest_h, trace_rest_v );
+        Log::L3( "Coherent state at N = {} with coefficient H = {}, V = {}\n", p.p_max_photon_number, trace_rest_h, trace_rest_v );
     }
+    Log::L2( "Done!\n" );
     return true;
 }
 
@@ -328,7 +332,10 @@ void OperatorMatrices::outputOperators( const Parameters &p ) {
         out << "rho\n"
             << Dense( rho ).format( CleanFmt ) << std::endl;
         //out << "test1\n" << test1.format(CleanFmt)<< "\ntest2\n" << test2.format(CleanFmt) << std::endl;
-        logs.level2( out.str() );
+        Log::L2( out.str() );
+        Log::L2( "Outputting String Matrices...\n" );
+        OperatorMatricesText test = OperatorMatricesText();
+        test.generateOperators( p );
         if ( p.output_operators == 3 )
             exit( 0 );
     }

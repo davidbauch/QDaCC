@@ -1,6 +1,6 @@
 #include "solver/solver.h"
 
-std::vector<SaveState> Solver::calculate_definite_integral_vec( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
+std::vector<SaveState> Solver::calculate_definite_integral_vec( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
     std::vector<SaveState> ret;
     //ret.reserve( std::ceil( std::abs( t1 - t0 ) / std::abs( step ) ) );
     ret.emplace_back( SaveState( rho, t0 ) );
@@ -17,7 +17,7 @@ std::vector<SaveState> Solver::calculate_definite_integral_vec( MatType rho, std
     return ret;
 }
 
-SaveState Solver::calculate_definite_integral( MatType rho, std::function<MatType( const MatType &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
+SaveState Solver::calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
     //ret.reserve( std::ceil( std::abs( t1 - t0 ) / std::abs( step ) ) );
     if ( step > 0 )
         for ( double t = t0; t < t1; t += step ) {

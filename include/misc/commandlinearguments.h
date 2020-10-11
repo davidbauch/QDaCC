@@ -37,7 +37,7 @@ class CommandlineArguments {
     int cla_width = 50;
     std::string cla_add_param = "add";
     std::string cla_remove_param = "rem"; //TODO
-    std::string cla_edit_param = "mod"; //TODO
+    std::string cla_edit_param = "mod";   //TODO
     std::string version = "1.2.2";
 
     class Parameter {
@@ -149,29 +149,29 @@ class CommandlineArguments {
         std::string group;
         std::vector<Parameter> parameter;
         Datastructure(){};
-        Datastructure( const Datastructure& other ) : key( other.key ), description( other.description ), type( other.type ), parameter( other.parameter ), group(other.group){};
-        Datastructure( std::vector<std::string> key, std::string description, std::string type, std::vector<Parameter> parameter, std::string group ) : key(key), description(description), type(type), parameter(parameter), group(group){};
+        Datastructure( const Datastructure& other ) : key( other.key ), description( other.description ), type( other.type ), parameter( other.parameter ), group( other.group ){};
+        Datastructure( std::vector<std::string> key, std::string description, std::string type, std::vector<Parameter> parameter, std::string group ) : key( key ), description( description ), type( type ), parameter( parameter ), group( group ){};
 
         // Checks if key used comparse to this datastructure. if use_hyphens is True, it is assumed that kk is passed as with either - or -- prefix
         bool validkey( std::string kk, bool use_hyphens = false ) const {
             for ( const auto& k : key ) {
-                if ( kk.compare( (use_hyphens ? (type.compare("1hyphen") == 0 ? "-" : "--") : "") + k ) == 0 ) return true;
+                if ( kk.compare( ( use_hyphens ? ( type.compare( "1hyphen" ) == 0 ? "-" : "--" ) : "" ) + k ) == 0 ) return true;
             }
             return false;
         }
 
         // Looks for keyword filter
-        bool validfilter( std::string filter ) const{
-            if (validkey(filter) || key.at(0).find(filter) != std::string::npos) return true;
-            if (group.compare(filter) == 0 || group.find(filter) != std::string::npos) return true;
-            for (const auto& word : splitString(description)) {
-                if (word.compare(filter) == 0 || word.find(filter) != std::string::npos) return true;
+        bool validfilter( std::string filter ) const {
+            if ( validkey( filter ) || key.at( 0 ).find( filter ) != std::string::npos ) return true;
+            if ( group.compare( filter ) == 0 || group.find( filter ) != std::string::npos ) return true;
+            for ( const auto& word : splitString( description ) ) {
+                if ( word.compare( filter ) == 0 || word.find( filter ) != std::string::npos ) return true;
             }
-            for (const auto& param : parameter) {
-                if (param.validkey(filter) || param.subkey.find(filter) != std::string::npos) return true;
-                if (param.datatype.compare(filter) == 0 || param.datatype.find(filter) != std::string::npos) return true;
-                for (const auto& word : splitString(param.description)) {
-                    if (word.compare(filter) == 0 || word.find(filter) != std::string::npos) return true;
+            for ( const auto& param : parameter ) {
+                if ( param.validkey( filter ) || param.subkey.find( filter ) != std::string::npos ) return true;
+                if ( param.datatype.compare( filter ) == 0 || param.datatype.find( filter ) != std::string::npos ) return true;
+                for ( const auto& word : splitString( param.description ) ) {
+                    if ( word.compare( filter ) == 0 || word.find( filter ) != std::string::npos ) return true;
                 }
             }
             return false;
@@ -197,7 +197,7 @@ class CommandlineArguments {
                     int newlen = len2 - prefix.size();
                     bool doneFirstOutput = false;
                     for ( int i = 0; i < (int)( param.description.size() / newlen ) + 1; i++ ) {
-                        std::string desline = tail( (!doneFirstOutput ? (param.subkey.length() > 0 ? "  --" : "")+param.subkey : ""), len1 ) + div + ( i == 0 ? prefix : trail( "", prefix.size() ) ) + param.description.substr( i * newlen, newlen );
+                        std::string desline = tail( ( !doneFirstOutput ? ( param.subkey.length() > 0 ? "  --" : "" ) + param.subkey : "" ), len1 ) + div + ( i == 0 ? prefix : trail( "", prefix.size() ) ) + param.description.substr( i * newlen, newlen );
                         lines.emplace_back( desline );
                         doneFirstOutput = true;
                     }
@@ -298,16 +298,16 @@ class CommandlineArguments {
         return true;
     }
 
-    bool help(std::string filter = "") {
+    bool help( std::string filter = "" ) {
         std::cout << "Help Commandline Arguments v." << version << std::endl;
         int detlen = 50;
-        for (const auto& ds : cla_datastructures) {
-            if (filter.size() > 0 && !ds.validfilter(filter)) continue;
-            int detlen1 = 5 + ds.key.at(0).length();
-            for (const auto& p : ds.parameter) {
+        for ( const auto& ds : cla_datastructures ) {
+            if ( filter.size() > 0 && !ds.validfilter( filter ) ) continue;
+            int detlen1 = 5 + ds.key.at( 0 ).length();
+            for ( const auto& p : ds.parameter ) {
                 detlen1 += 1 + p.datatype.length();
             }
-            detlen = std::max(detlen,detlen1);
+            detlen = std::max( detlen, detlen1 );
         }
         int len1 = std::max( (int)( cla_width / 3 ), detlen );
         std::string div = "|     ";
@@ -315,15 +315,15 @@ class CommandlineArguments {
         std::cout << tail( "", cla_width, "=" ) << std::endl;
         std::string current_group = "";
         bool first = true;
-        if (cla_datastructures.size() > 0)
-            current_group = cla_datastructures.at(0).group;
+        if ( cla_datastructures.size() > 0 )
+            current_group = cla_datastructures.at( 0 ).group;
         for ( const auto& datastructure : cla_datastructures ) {
-            if (filter.size() > 0 && !datastructure.validfilter(filter)) continue;
-            if (datastructure.group.compare(current_group) != 0) {
+            if ( filter.size() > 0 && !datastructure.validfilter( filter ) ) continue;
+            if ( datastructure.group.compare( current_group ) != 0 ) {
                 std::cout << tail( "", cla_width, "-" ) << std::endl;
                 current_group = datastructure.group;
-            } else if (!first) {
-                std::cout << tail("",len1) + "-" + tail("",len2+div.size()-1) << std::endl;//<< tail( "", cla_width, " . " ) << std::endl;
+            } else if ( !first ) {
+                std::cout << tail( "", len1 ) + "-" + tail( "", len2 + div.size() - 1 ) << std::endl; //<< tail( "", cla_width, " . " ) << std::endl;
             }
             datastructure.identify( len1, len2, div );
             first = false;
@@ -334,19 +334,19 @@ class CommandlineArguments {
     // Parses the cla arguments from commandline and replaces parameters values.
     bool parseCLA_Arguments( std::vector<std::string>& cla_vector, std::string filepath ) {
         for ( long unsigned int i = 0; i < cla_vector.size(); i++ ) {
-            auto str = cla_vector.at(i);
+            auto str = cla_vector.at( i );
             if ( str.compare( "-h" ) == 0 || str.compare( "--help" ) == 0 ) {
                 std::string key = "";
-                if (str.compare( "--help" ) == 0 && cla_vector.size() > i+1) {
-                    key = cla_vector.at(i+1);
+                if ( str.compare( "--help" ) == 0 && cla_vector.size() > i + 1 ) {
+                    key = cla_vector.at( i + 1 );
                 }
-                help(key);
+                help( key );
                 exit( 1 );
             }
         }
         for ( const auto& str : cla_vector ) {
             if ( str.compare( "--" + cla_add_param ) == 0 || str.compare( "-" + cla_add_param ) == 0 ) {
-                cla_wizzard_add(filepath);
+                cla_wizzard_add( filepath );
                 exit( 1 );
             }
         }
@@ -470,55 +470,67 @@ class CommandlineArguments {
 
     // Handles Add/Remove/Edit of parameters
     bool cla_wizzard_add( std::string filepath ) {
-        std::string description,type,group,jn;
+        std::string description, type, group, jn;
         std::vector<std::string> key;
         std::vector<Parameter> parameter;
         bool done = true;
         std::cout << "Enter type (-/--) ";
         std::string temp;
-        std::getline(std::cin,temp);
-        if (temp.at(0) == '-' && temp.size() > 1 && temp.at(1) == '-')
+        std::getline( std::cin, temp );
+        if ( temp.at( 0 ) == '-' && temp.size() > 1 && temp.at( 1 ) == '-' )
             type = "2hyphen";
-        else type = "1hyphen";
+        else
+            type = "1hyphen";
         do {
             std::string temp;
             std::cout << "Enter a key:";
-            std::getline(std::cin,temp);
+            std::getline( std::cin, temp );
             //TODO: Check if key already exists
-            key.emplace_back(temp);
-            std::cout << "Do you want to add another alias? [j/n] "; 
-            std::getline(std::cin,jn);
-            if (jn.size() > 0 && jn.at(0) == 'j') {done = false;} else done=true;
-        } while (!done);
+            key.emplace_back( temp );
+            std::cout << "Do you want to add another alias? [j/n] ";
+            std::getline( std::cin, jn );
+            if ( jn.size() > 0 && jn.at( 0 ) == 'j' ) {
+                done = false;
+            } else
+                done = true;
+        } while ( !done );
         std::cout << "Enter a groupname" << std::endl;
-        std::getline(std::cin,group);
+        std::getline( std::cin, group );
         std::cout << "Enter general description" << std::endl;
-        std::getline(std::cin,description);
-        if (type.compare("1hyphen") == 0 ) {
-            parameter.emplace_back(param_bool);
+        std::getline( std::cin, description );
+        if ( type.compare( "1hyphen" ) == 0 ) {
+            parameter.emplace_back( param_bool );
         } else {
             done = true;
-            std::string datatype,key,description,value;
+            std::string datatype, key, description, value;
             do {
                 std::string temp;
-                std::cout << "Adding Parameter " << (parameter.size()+1) << "\nEnter a datatype: ";
-                std::getline(std::cin,datatype);
+                std::cout << "Adding Parameter " << ( parameter.size() + 1 ) << "\nEnter a datatype: ";
+                std::getline( std::cin, datatype );
                 std::cout << "Enter standard value: ";
-                std::getline(std::cin,value);
+                std::getline( std::cin, value );
                 std::cout << "Enter identification key: ";
-                std::getline(std::cin,key);
+                std::getline( std::cin, key );
                 std::cout << "Enter description: ";
-                std::getline(std::cin,description);
-                parameter.emplace_back(Parameter(key,value,datatype,description));
-                std::cout << "Do you want to add another parameter? (" + std::to_string(parameter.size()) + " total now) [j/n]";
-                std::getline(std::cin,jn);
-                if (jn.size() > 0 && jn.at(0) == 'j') {done = false; } else done=true;
-            } while (!done);
+                std::getline( std::cin, description );
+                parameter.emplace_back( Parameter( key, value, datatype, description ) );
+                std::cout << "Do you want to add another parameter? (" + std::to_string( parameter.size() ) + " total now) [j/n]";
+                std::getline( std::cin, jn );
+                if ( jn.size() > 0 && jn.at( 0 ) == 'j' ) {
+                    done = false;
+                } else
+                    done = true;
+            } while ( !done );
         }
-        cla_datastructures.emplace_back(Datastructure(key,description,type,parameter,group));
+        cla_datastructures.emplace_back( Datastructure( key, description, type, parameter, group ) );
         std::cout << "Save? [j/n] ";
-        std::getline(std::cin,jn);
-        if (jn.size() > 0 && jn.at(0) == 'j') {writeConfigfile( filepath ); std::cout << "New Structure was saved\n";} else {std::cout << "Structure dismissed.\n";}
+        std::getline( std::cin, jn );
+        if ( jn.size() > 0 && jn.at( 0 ) == 'j' ) {
+            writeConfigfile( filepath );
+            std::cout << "New Structure was saved\n";
+        } else {
+            std::cout << "Structure dismissed.\n";
+        }
         return true;
     }
 
@@ -541,8 +553,8 @@ class CommandlineArguments {
     }
 
    public:
-    CommandlineArguments() {};
-    CommandlineArguments( int argc, char* argv[], std::string filepath) {
+    CommandlineArguments(){};
+    CommandlineArguments( int argc, char* argv[], std::string filepath ) {
         convert_argv( argc, argv );
         if ( !readConfigFile( filepath ) ) {
             std::cerr << "No Configfile read/generated, exitting..." << std::endl;
@@ -552,7 +564,7 @@ class CommandlineArguments {
         readCLA_ArgumentsFromConfig();
         parseCLA_Arguments( commandlinearguments, filepath );
     }
-    CommandlineArguments( const std::vector<std::string>& argv, std::string filepath) {
+    CommandlineArguments( const std::vector<std::string>& argv, std::string filepath ) {
         commandlinearguments = argv;
         if ( !readConfigFile( filepath ) ) {
             std::cerr << "No Configfile read/generated, exitting..." << std::endl;
@@ -588,7 +600,7 @@ class CommandlineArguments {
 
 extern CommandlineArguments cla;
 
-void init( );
+void init();
 void init( int argc, char* argv[], std::string filepath = "" );
 void init( const std::vector<std::string>& argv, std::string filepath = "" );
 

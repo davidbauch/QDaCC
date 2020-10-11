@@ -3,7 +3,7 @@
 System::System( const std::vector<std::string> &input ) : Operatable() {
     // Set Name of this system.
     name = "Biexciton (4NS)";
-    logs.level2( "Creating System Class for '{}'\n", name );
+    Log::L2( "Creating System Class for '{}'\n", name );
     // Initialize all subclasses with the input vector
     parameters = Parameters( input );
     operatorMatrices = OperatorMatrices( parameters );
@@ -14,15 +14,15 @@ System::System( const std::vector<std::string> &input ) : Operatable() {
     fileoutput = FileOutput( {"densitymatrix.txt", "atomicinversion.txt", "photonpopulation.txt"}, parameters, operatorMatrices );
     // Initialize / Adjust the remaining system class
     terminate_message = global_message_normaltermination;
-    Timer &timer_systeminit = createTimer( "System Initialization", true, false );
-    logs.level2( "System initialization... " );
+    Timer &timer_systeminit = Timers::create( "System Initialization", true, false );
+    Log::L2( "System initialization... " );
     timer_systeminit.start();
     if ( !init_system() ) {
-        logs.level2( "System initialization failed! Exitting program...\n" );
-        logs.close();
+        Log::L2( "System initialization failed! Exitting program...\n" );
+        Log::close();
         exit( EXIT_FAILURE );
     }
-    logs.level2( "successful. Elapsed time is {}ms\n", timer_systeminit.getWallTime( TIMER_MILLISECONDS ) );
+    Log::L2( "successful. Elapsed time is {}ms\n", timer_systeminit.getWallTime( TIMER_MILLISECONDS ) );
     timer_systeminit.end();
 }
 
@@ -54,14 +54,14 @@ bool System::init_system() {
 
     // Output Phonon functions if phonons are active //TODO: initialize_polaron_frame_functions
     initialize_polaron_frame_functions();
-    
+
     // Time Transformation
-    timeTrafoMatrix = ( Dense( 1i * operatorMatrices.H_0 ).exp() ).sparseView().pruned();
+    timeTrafoMatrix = ( Dense( 1i * operatorMatrices.H_0 ).exp() ).sparseView(); //.pruned();
     // Check time trafo
     Sparse ttrafo = ( Dense( 1i * operatorMatrices.H_0 * 125E-12 ).exp() * operatorMatrices.H_used * Dense( -1i * operatorMatrices.H_0 * 125E-12 ).exp() ).sparseView();
     Sparse temp = dgl_timetrafo( operatorMatrices.H_used, 125E-12 ) - ttrafo;
     if ( std::abs( Dense( temp ).sum() / parameters.p_omega_atomic_G_H ) >= 0.0001 ) {
-        logs( "Unitary timetransformation error is bigger than 0.01% of atomic transition energy!\n\n" );
+        Log::L1( "Unitary timetransformation error is bigger than 0.01% of atomic transition energy!\n\n" );
     }
 
     return true;
@@ -93,7 +93,7 @@ Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const doub
     if ( parameters.p_phonon_T != 0.0 ) {
         ret += dgl_phonons_pmeq( rho, t, past_rhos );
     }
-    return ret.pruned();
+    return ret; //.pruned();
 }
 
 Sparse System::dgl_timetrafo( const Sparse &A, const double t ) {
@@ -132,7 +132,7 @@ Sparse System::dgl_timetrafo( const Sparse &A, const double t ) {
 Sparse System::dgl_chirp( const double t ) {
     if ( parameters.chirp_total == 0 )
         return Sparse( parameters.maxStates, parameters.maxStates );
-    return ( 2.0*operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_H + operatorMatrices.atom_state_V ) * chirp.get( t ); //Experimental; corrected chirp
+    return ( 2.0 * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_H + operatorMatrices.atom_state_V ) * chirp.get( t ); //Experimental; corrected chirp
 }
 
 Sparse System::dgl_pulse( const double t ) {
@@ -187,7 +187,7 @@ void System::expectationValues( const Sparse &rho, const double t, const std::ve
     fmt::print( fileoutput.fp_atomicinversion, "{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\n", t, std::real( dgl_expectationvalue<Sparse, Scalar>( rho, operatorMatrices.atom_state_ground, t ) ), ev_operators_electronic_H, ev_operators_electronic_V, std::real( dgl_expectationvalue<Sparse, Scalar>( rho, operatorMatrices.atom_state_biexciton, t ) ) );
     fmt::print( fileoutput.fp_photonpopulation, "{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}", t, exp_photon_H, exp_photon_V, photonemissionprob_integral_H, photonemissionprob_integral_V );
     if ( parameters.numerics_output_raman_population ) {
-        fmt::print( fileoutput.fp_photonpopulation, "\t{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}", std::real(ramanphotonpopulation_integral_H), std::real(ramanphotonpopulation_integral_V), ramanphotonemissionprob_integral_H, ramanphotonemissionprob_integral_V );
+        fmt::print( fileoutput.fp_photonpopulation, "\t{:.5e}\t{:.5e}\t{:.5e}\t{:.5e}", std::real( ramanphotonpopulation_integral_H ), std::real( ramanphotonpopulation_integral_V ), ramanphotonemissionprob_integral_H, ramanphotonemissionprob_integral_V );
     }
 
     if ( parameters.numerics_output_electronic_emission ) {
@@ -196,9 +196,9 @@ void System::expectationValues( const Sparse &rho, const double t, const std::ve
         fmt::print( fileoutput.fp_photonpopulation, "\t{:.5e}\t{:.5e}", electronic_emissionprob_integral_H, electronic_emissionprob_integral_V );
     }
     fmt::print( fileoutput.fp_photonpopulation, "\n" );
- 
+
     if ( !parameters.output_no_dm ) {
-        fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", t );
+        fmt::print( fileoutput.fp_densitymatrix, "{:.5e}", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
         if ( parameters.output_full_dm ) {
             for ( int i = 0; i < parameters.maxStates; i++ )
                 for ( int j = 0; j < parameters.maxStates; j++ ) {
@@ -219,13 +219,13 @@ bool System::command( unsigned int index ) {
     // The only reason for classes using this system class to set the main programs maximum threads to 1 is, if the usual T-direction is already done.
     if ( index == Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM ) {
         parameters.numerics_phonons_maximum_threads = 1;
-        logs.level2( "Set maximum number of Threads for primary calculations to {}\n", parameters.numerics_phonons_maximum_threads );
+        Log::L2( "Set maximum number of Threads for primary calculations to {}\n", parameters.numerics_phonons_maximum_threads );
         if ( parameters.numerics_use_saved_coefficients ) {
             // Sort after t
-            logs.level2( "Sorting saved coefficients by t... " );
+            Log::L2( "Sorting saved coefficients by t... " );
             std::sort( savedCoefficients.begin(), savedCoefficients.end(), Save_State_sort_t );
             // Sort after tau
-            logs.level2( "Done, sorting saved coefficients chunkwise by tau... " );
+            Log::L2( "Done, sorting saved coefficients chunkwise by tau... " );
             int current_start = 0;
             int i;
             for ( i = 0; i < (int)savedCoefficients.size(); i++ ) {
@@ -239,11 +239,11 @@ bool System::command( unsigned int index ) {
             // Just in case, test coefficients:
             //for ( i = 0; i < (int)savedCoefficients.size() - 1; i++ ) {
             //    if ( ( savedCoefficients.at( i ).t == savedCoefficients.at( i + 1 ).t && ( savedCoefficients.at( i ).tau >= savedCoefficients.at( i + 1 ).tau ) ) || savedCoefficients.at( i ).t > savedCoefficients.at( i + 1 ).t ) {
-            //        logs.level2( "Coefficient mismatch after sorting! i = {}, t = {}, tau = {}, i+1 = {}, t = {}, tau = {}\n", i, savedCoefficients.at( i ).t, savedCoefficients.at( i ).tau, i + 1, savedCoefficients.at( i + 1 ).t, savedCoefficients.at( i + 1 ).tau );
+            //        Log::L2( "Coefficient mismatch after sorting! i = {}, t = {}, tau = {}, i+1 = {}, t = {}, tau = {}\n", i, savedCoefficients.at( i ).t, savedCoefficients.at( i ).tau, i + 1, savedCoefficients.at( i + 1 ).t, savedCoefficients.at( i + 1 ).tau );
             //    }
-            //logs.level2( "T = {}, tau 0 {}\n", savedCoefficients.at( i ).t, savedCoefficients.at( i ).tau );
+            //Log::L2( "T = {}, tau 0 {}\n", savedCoefficients.at( i ).t, savedCoefficients.at( i ).tau );
             //}
-            logs.level2( "Done!\n" );
+            Log::L2( "Done!\n" );
         }
     }
     return true;
@@ -253,14 +253,14 @@ bool System::exit_system( const int failure ) {
     pulse_H.log();
     pulse_V.log();
     chirp.log();
-    logs.level2( "Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
-    logs.level2( "Number of approx+/- adjustments: {}\n", globaltries );
-    logs( "Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
+    Log::L2( "Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
+    Log::L2( "Number of approx+/- adjustments: {}\n", globaltries );
+    Log::L1( "Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
     fileoutput.close();
     return true;
 }
 
-bool System::traceValid( MatType &rho, double t_hit, bool force ) {
+bool System::traceValid( Sparse &rho, double t_hit, bool force ) {
     double trace = std::real( getTrace<Scalar>( rho ) );
     parameters.trace.emplace_back( trace );
     if ( trace < 0.99 || trace > 1.01 || force ) {

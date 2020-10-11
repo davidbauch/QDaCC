@@ -28,6 +28,8 @@ def compile_all_object_files( data, bin_path = "obj", extension_obj = ".o", comp
             if file.endswith(extension_obj):
                 os.remove(os.path.join(bin_path,file))
         print("Done!")
+    if "-g" in args or "-g" in compiler:
+        print("Compiling with debug information!")
     if not os.path.exists(bin_path):
         print("Bin path did not exist, creating '{}'".format(bin_path))
         os.makedirs(bin_path)
@@ -91,6 +93,7 @@ if __name__ == "__main__":
 
     force_recompile = True if "-frc" in sys.argv else False
     cerr_to_file = True if "-cerr" in sys.argv else False
+    debug_info = " -g " if "-g" in sys.argv else ""
 
     bin_path = {'win32' : "obj/win", 'darwin' : "obj/MAC"}
     compiler = {'win32' : "g++", 'darwin' : "g++-8"}
@@ -103,7 +106,7 @@ if __name__ == "__main__":
 
     libs_final = {'win32' : '-std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs', 'darwin' : "-std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
     bin_final = {'win32' : ["obj/win","obj/ALGLIB/WIN"], 'darwin' : ["obj/MAC","obj/ALGLIB/MAC"]}
-    succesful = compile_all_object_files(f, libs = libs_obj[platform], args = include_obj[platform], force_recompile=force_recompile, bin_path=bin_path[platform], compiler=compiler[platform], cerr_to_file=cerr_to_file)
+    succesful = compile_all_object_files(f, libs = libs_obj[platform], args = include_obj[platform], force_recompile=force_recompile, bin_path=bin_path[platform], compiler=compiler[platform]+debug_info, cerr_to_file=cerr_to_file)
     #if succesful:
     add_basepath = {'win32' : False, 'darwin' : False}
-    compile_main_program(path=path, libs = libs_final[platform], args = include_obj[platform], copy_to=copy_to[platform], bin_path=bin_final[platform], compiler=compiler[platform], add_base_path_to_obj=add_basepath[platform])
+    compile_main_program(path=path, libs = libs_final[platform], args = include_obj[platform], copy_to=copy_to[platform], bin_path=bin_final[platform], compiler=compiler[platform]+debug_info, add_base_path_to_obj=add_basepath[platform])

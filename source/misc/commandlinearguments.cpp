@@ -14,28 +14,28 @@ std::vector<std::string> CommandlineArguments::strip( std::vector<std::string> i
 }
 
 std::string CommandlineArguments::trail( std::string input, int totallength, std::string pre, int dir ) {
-    if (pre.size() == 0)
+    if ( pre.size() == 0 )
         return input;
-    int remaining = (totallength - input.size())/pre.size();
-    int trailing = (totallength - input.size())%pre.size();
+    int remaining = ( totallength - input.size() ) / pre.size();
+    int trailing = ( totallength - input.size() ) % pre.size();
     for ( int i = 0; i < remaining; i++ )
         if ( dir == 0 )
             input = pre + input;
         else
             input = input + pre;
     if ( dir == 0 )
-            input = pre.substr(0,trailing) + input;
-        else
-            input = input + pre.substr(0,trailing);
+        input = pre.substr( 0, trailing ) + input;
+    else
+        input = input + pre.substr( 0, trailing );
     return input;
 }
 
-std::string CommandlineArguments::tail( std::string input, int totallength, std::string pre ) { 
-    return trail( input, totallength, pre, 1 ); 
+std::string CommandlineArguments::tail( std::string input, int totallength, std::string pre ) {
+    return trail( input, totallength, pre, 1 );
 }
 
-bool CommandlineArguments::startswith( std::string input, std::string find ) { 
-    return input.substr( 0, find.size() ).compare( find ) == 0; 
+bool CommandlineArguments::startswith( std::string input, std::string find ) {
+    return input.substr( 0, find.size() ).compare( find ) == 0;
 }
 
 std::vector<std::string> CommandlineArguments::splitString( std::string input, std::string lit ) {
@@ -58,14 +58,14 @@ std::vector<std::string> CommandlineArguments::splitString( std::string input, s
     return ret;
 }
 
-void CommandlineArguments::init( ) {
+void CommandlineArguments::init() {
     cla = CommandlineArguments();
 }
 void CommandlineArguments::init( int argc, char* argv[], std::string filepath ) {
-    cla = CommandlineArguments(argc, argv, filepath);
+    cla = CommandlineArguments( argc, argv, filepath );
 }
 void CommandlineArguments::init( const std::vector<std::string>& argv, std::string filepath ) {
-    cla = CommandlineArguments(argv, filepath);
+    cla = CommandlineArguments( argv, filepath );
 }
 
-CommandlineArguments::CommandlineArguments CommandlineArguments::cla = CommandlineArguments(); 
+CommandlineArguments::CommandlineArguments CommandlineArguments::cla = CommandlineArguments();

@@ -1,7 +1,7 @@
 #include "pulse.h"
 
 Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
-    logs.level2( "Creating total pulse with {} individual pulses... ", inputs.amp.size() );
+    Log::L2( "Creating total pulse with {} individual pulses... ", inputs.amp.size() );
     counter_evaluated = 0;
     counter_returned = 0;
     maximum = 0;
@@ -12,9 +12,9 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
         steps = {0, 1. / 5. * inputs.t_step, 3. / 10. * inputs.t_step, 1. / 2. * inputs.t_step, 4. / 5. * inputs.t_step, 8. / 9. * inputs.t_step};
     else
         steps = {0, 0.5 * inputs.t_step};
-    logs.level2( "Done initializing class, creating precalculated chirp... " );
+    Log::L2( "Done initializing class, creating precalculated chirp... " );
     generate();
-    logs.level2( "Done!\n" );
+    Log::L2( "Done!\n" );
 }
 
 Scalar Pulse::evaluate( double t ) {
@@ -42,7 +42,7 @@ Scalar Pulse::evaluate_integral( double t ) {
 
 // Generate array of energy-values corresponding to the Pulse
 void Pulse::generate() {
-    //logs.level2( "generating type " + inputs.pulse_type + "... " );
+    //Log::L2( "generating type " + inputs.pulse_type + "... " );
     double t;
     for ( double t1 = inputs.t_start; t1 < inputs.t_end + inputs.t_step * steps.size(); t1 += inputs.t_step ) {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
@@ -52,21 +52,21 @@ void Pulse::generate() {
             pulsearray_derivative.push_back( evaluate_derivative( t ) );
             pulsearray_integral.push_back( evaluate_integral( t ) );
             timearray.push_back( t );
-            if (std::real(val) > maximum)
-                maximum = std::real(val);
+            if ( std::real( val ) > maximum )
+                maximum = std::real( val );
         }
     }
 
     pulsearray.shrink_to_fit();
     timearray.shrink_to_fit();
     size = pulsearray.size();
-    logs.level2( "pulsearray.size() = {}... ", size );
+    Log::L2( "pulsearray.size() = {}... ", size );
 }
 
 void Pulse::fileOutput( std::string filepath ) {
     FILE *pulsefile = std::fopen( filepath.c_str(), "w" );
     if ( !pulsefile ) {
-        logs.level2( "Failed to open outputfile for Pulse!\n" );
+        Log::L2( "Failed to open outputfile for Pulse!\n" );
         return;
     }
     for ( long unsigned int i = 0; i < timearray.size() - steps.size(); i += steps.size() ) {
@@ -82,12 +82,12 @@ void Pulse::Inputs::add( double _center, double _amp, double _sigma, double _ome
     omega.emplace_back( _omega );
     omega_chirp.emplace_back( _omega_chirp );
     type.emplace_back( _type );
-    logs.level2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center, _amp, _sigma, _omega, _omega_chirp, _type );
+    Log::L2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center, _amp, _sigma, _omega, _omega_chirp, _type );
 }
 
 void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<std::string> &_type, std::complex<double> amp_scaling ) {
     if ( !( _center.size() == _amp.size() && _sigma.size() == _omega.size() && _amp.size() == _sigma.size() && _sigma.size() == _type.size() ) ) {
-        logs.level2( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
+        Log::L2( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
         return;
     }
     for ( int i = 0; i < (int)_amp.size(); i++ ) {
@@ -97,12 +97,12 @@ void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter>
         omega.emplace_back( _omega.at( i ) );
         omega_chirp.emplace_back( _omega_chirp.at( i ) );
         type.emplace_back( _type.at( i ) );
-        logs.level2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ) );
+        Log::L2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ) );
     }
 }
 void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<std::string> &_type, std::vector<std::string> &_filter, std::string to_match, std::complex<double> amp_scaling ) {
     if ( !( _center.size() == _amp.size() && _sigma.size() == _omega.size() && _amp.size() == _sigma.size() && _sigma.size() == _type.size() && _type.size() == _filter.size() && _filter.size() == _omega_chirp.size() ) ) {
-        logs.level2( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
+        Log::L2( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
         return;
     }
     for ( int i = 0; i < (int)_amp.size(); i++ ) {
@@ -113,9 +113,9 @@ void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter>
             omega.emplace_back( _omega.at( i ) );
             omega_chirp.emplace_back( _omega_chirp.at( i ) );
             type.emplace_back( _type.at( i ) );
-            logs.level2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ), to_match );
+            Log::L2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ), to_match );
         } else {
-            //logs.level2( "Failed to add Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, type = {}. Mismatched Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _type.at( i ), to_match );
+            //Log::L2( "Failed to add Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, type = {}. Mismatched Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _type.at( i ), to_match );
         }
     }
 }
@@ -135,7 +135,7 @@ Scalar Pulse::get( double t, bool force_evaluate ) {
         return evaluate( t );
     }
     if ( i < 0 || i >= size ) {
-        logs.level2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
+        Log::L2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
         counter_evaluated++;
         return evaluate( t );
     }
@@ -158,7 +158,7 @@ Scalar Pulse::derivative( double t, bool force_evaluate ) {
         return evaluate_derivative( t );
     }
     if ( i < 0 || i >= size ) {
-        logs.level2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
+        Log::L2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
         counter_evaluated++;
         return evaluate_derivative( t );
     }
@@ -181,7 +181,7 @@ Scalar Pulse::integral( double t, bool force_evaluate ) {
         return evaluate_integral( t );
     }
     if ( i < 0 || i >= size ) {
-        logs.level2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
+        Log::L2( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
         counter_evaluated++;
         return evaluate_integral( t );
     }
@@ -190,13 +190,13 @@ Scalar Pulse::integral( double t, bool force_evaluate ) {
 }
 
 void Pulse::log() {
-    logs.level2( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
+    Log::L2( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
 }
 
 void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
     FILE *pulsefile = std::fopen( filepath.c_str(), "w" );
     if ( !pulsefile ) {
-        logs.level2( "Failed to open outputfile for Pulse!\n" );
+        Log::L2( "Failed to open outputfile for Pulse!\n" );
         return;
     }
     for ( long unsigned int i = 0; i < pulses.at( 0 ).timearray.size() - pulses.at( 0 ).steps.size(); i += pulses.at( 0 ).steps.size() ) {

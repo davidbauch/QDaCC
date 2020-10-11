@@ -13,13 +13,13 @@
 // last input: workpath
 int main( int argc, char* argv[] ) {
     // Commandline Arguments:
-    CommandlineArguments::init(argc,argv);
+    CommandlineArguments::init( argc, argv );
 
     // Check for Multifile, if true parse all settings
     std::vector<std::vector<std::string>> sets;
-    std::string filename = get_parameter("--file");
+    std::string filename = get_parameter( "--file" );
     auto inputs = argv_to_vec( argc, argv );
-    if ( filename.compare("none") != 0 ) {
+    if ( filename.compare( "none" ) != 0 ) {
         // Multifile mode: Program will read inputfile from --file and execute all lines that dont start with '#'
         // Catch global parameters
         std::vector<std::string> globalparams;
@@ -68,12 +68,13 @@ int main( int argc, char* argv[] ) {
 
     // Main Program
     for ( auto set : sets ) {
-        CommandlineArguments::init(set); //TODO: remove redundacys
+        CommandlineArguments::init( set ); //TODO: remove redundacys
         inputs = set;
         const std::string fp = inputs.back();
         std::filesystem::create_directories( fp );
         // Logfile
-        logs = Log( std::string( inputs.back() ) + "logfile.log", vec_find_str( "-advLog", inputs ) != -1 );
+        int loglevel = ( vec_find_str( "-advLog", inputs ) != -1 || vec_find_str( "-L2", inputs ) != -1 ? 2 : ( vec_find_str( "-L3", inputs ) != -1 ? 3 : 1 ) );
+        Log::init( std::string( inputs.back() ) + "logfile.log", loglevel );
 
         // System
         System system = System( inputs );
@@ -102,18 +103,18 @@ int main( int argc, char* argv[] ) {
         // Finalizing all calculations
         system.exit_system();
 
-        double finalTime = Timer::summary();
-        logs( "\nStartcommand: " );
+        double finalTime = Timers::summary();
+        Log::L1( "\nStartcommand: " );
         for ( auto ii : inputs )
-            logs( "{} ", ii );
-        logs( "\n\n" + system.terminate_message + "\n" );
+            Log::L1( "{} ", ii );
+        Log::L1( "\n\n" + system.terminate_message + "\n" );
 
-        logs.close();
+        Log::close();
         if ( system.parameters.output_handlerstrings ) {
             fmt::print( "\n{0} {1:.1f}\n", PREFIX_PERCENT_TIME_FINAL, finalTime );
             fmt::print( "{0} Done in {1}\n", PREFIX_SUFFIX, Timer::format( finalTime ) );
         }
-        Timer::reset();
+        Timers::reset();
     }
     exit( EXIT_SUCCESS );
 }

@@ -7,7 +7,7 @@
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
 
-bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &op_creator_1, const MatType &op_annihilator_1, const MatType &op_creator_2, const MatType &op_annihilator_2, std::string fileOutputName ) {
+bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string fileOutputName ) {
     //bool calculate_full_g2_of_tau = !s.parameters.numerics_use_simplified_g2;
     bool output_full_g2 = false;
     bool output_full_ind = s.parameters.numerics_calculate_timeresolution_indistinguishability;
@@ -23,7 +23,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &
     Dense akf_mat_g2_12 = Dense::Zero( dim, dim );
     // Calculate G2(t,tau) with given operator matrices
     if ( !calculate_concurrence_with_g2_of_zero ) {
-        logs.level2( "Calculating 3 seperate G2(t,tau) matrices...\n" );
+        Log::L2( "Calculating 3 seperate G2(t,tau) matrices...\n" );
         if ( s.parameters.numerics_calculate_g2_H || s.parameters.numerics_calculate_g2_C )
             calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, akf_mat_g2_11, "Mode 11" );
         if ( s.parameters.numerics_calculate_g2_V || s.parameters.numerics_calculate_g2_C )
@@ -32,14 +32,14 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &
             calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_1, op_annihilator_2, akf_mat_g2_12, "Mode 12" );
     }
     // Modified Dimension Step. If Upscaling of G1/G2 is active, step for matrices are i instead of t_skip
-    int mat_step = (s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip);
-    logs.level2("Using mat_step = {}\n",mat_step);
+    int mat_step = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );
+    Log::L2( "Using mat_step = {}\n", mat_step );
     // Modified T-Step
     double deltaT = s.parameters.t_step * ( 1.0 * mat_step );
     // Calculating G2(tau)
-    Timer &timer_g2 = createTimer( "G2(tau integral" );
+    Timer &timer_g2 = Timers::create( "G2(tau integral" );
     timer_g2.start();
-    logs.level2( "Calculating G2(tau)... " );
+    Log::L2( "Calculating G2(tau)... " );
     // Prepare output vector
     std::vector<Scalar> g2_11, g2_22, g2_12;
     std::vector<Scalar> g2_11_zero, g2_22_zero, g2_12_zero;
@@ -51,7 +51,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &
         g2_22_zero.push_back( 0 );
         g2_12_zero.push_back( 0 );
     }
-    MatType M1, M2, M3, rho;
+    Sparse M1, M2, M3, rho;
     for ( long unsigned int i = 0; i < savedStates.size(); i += mat_step ) {
         int k = i / mat_step;
         if ( !calculate_concurrence_with_g2_of_zero ) {
@@ -66,20 +66,20 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &
         if ( s.parameters.numerics_calculate_g2_H ) {
             M1 = op_creator_1 * op_creator_1 * op_annihilator_1 * op_annihilator_1;
             M2 = op_creator_1 * op_annihilator_1;
-            g2_11_zero.at( k ) = s.dgl_expectationvalue<MatType, Scalar>( rho, M1, t_t ); // / std::pow( s.dgl_expectationvalue<MatType, Scalar>( rho, M2, t_t ), 2 );
+            g2_11_zero.at( k ) = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( rho, M2, t_t ), 2 );
         }
         if ( s.parameters.numerics_calculate_g2_V ) {
             M1 = op_creator_2 * op_creator_2 * op_annihilator_2 * op_annihilator_2;
             M2 = op_creator_2 * op_annihilator_2;
-            g2_22_zero.at( k ) = s.dgl_expectationvalue<MatType, Scalar>( rho, M1, t_t ); // / std::pow( s.dgl_expectationvalue<MatType, Scalar>( rho, M2, t_t ), 2 );
+            g2_22_zero.at( k ) = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( rho, M2, t_t ), 2 );
         }
         if ( s.parameters.numerics_calculate_g2_C || s.parameters.numerics_calculate_g2_V || s.parameters.numerics_calculate_g2_H ) {
             M1 = op_creator_1 * op_creator_1 * op_annihilator_2 * op_annihilator_2;
             M2 = op_creator_1 * op_annihilator_1;
             M3 = op_creator_2 * op_creator_2;
-            g2_12_zero.at( k ) = s.dgl_expectationvalue<MatType, Scalar>( rho, M1, t_t ); // / ( s.dgl_expectationvalue<MatType, Scalar>( rho, M2, t_t ) * s.dgl_expectationvalue<MatType, Scalar>( rho, M3, t_t ) );
+            g2_12_zero.at( k ) = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ); // / ( s.dgl_expectationvalue<Sparse, Scalar>( rho, M2, t_t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, M3, t_t ) );
         }
-        outputProgress( s.parameters.output_handlerstrings, timer_g2, progressbar, pbsize, "G2(tau): " );
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer_g2, progressbar, pbsize, "G2(tau): " );
         timer_g2.iterate();
     }
     timer_g2.end();
@@ -92,15 +92,15 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &
         rho_12.push_back( 0 );
     }
     if ( s.parameters.numerics_calculate_g2_C ) {
-        Timer &timer_c = createTimer( "Concurrence" );
+        Timer &timer_c = Timers::create( "Concurrence" );
         timer_c.start();
-        logs.level2( "Calculating Concurrence... " );
+        Log::L2( "Calculating Concurrence... " );
         // Main integral
-        logs.level2( "Concurrence integral timestep: {}\n", deltaT );
+        Log::L2( "Concurrence integral timestep: {}\n", deltaT );
         //#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
         for ( long unsigned int T = 0; T < savedStates.size(); T += mat_step ) {
             int t = T / mat_step;
-            for ( int i = 0; i < T; i+= mat_step ) { ////+= s.parameters.iterations_t_skip
+            for ( int i = 0; i < T; i += mat_step ) { ////+= s.parameters.iterations_t_skip
                 ////int k = i / s.parameters.iterations_t_skip;
                 // Calculate for t
                 if ( !calculate_concurrence_with_g2_of_zero ) {
@@ -115,12 +115,12 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &
                     rho_22.at( t ) += g2_22_zero.at( k ) * deltaT;
                     rho_12.at( t ) += g2_12_zero.at( k ) * deltaT;
                 }
-                outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence: " );
+                Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence: " );
             }
             timer_c.iterate();
         }
         // Final output and timer end
-        outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence", PROGRESS_FORCE_OUTPUT );
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence", PROGRESS_FORCE_OUTPUT );
         timer_c.end();
     }
     // Calculating indistinguishability
@@ -142,7 +142,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &
             akf_mat_g1_2 = cache2;
         else if ( s.parameters.numerics_calculate_g2_V )
             calculate_g1( s, op_creator_2, op_annihilator_2, akf_mat_g1_2, "g1_2" );
-        Timer &timer = createTimer( "Indistinguishability" );
+        Timer &timer = Timers::create( "Indistinguishability" );
         timer.start();
         long unsigned int tstart = output_full_ind ? 0 : savedStates.size() - mat_step;
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
@@ -173,25 +173,25 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &
                 if ( !output_full_ind ) {
                     p1.at( i / mat_step ) = ( 1.0 - std::abs( top_1 / bottom_1 ) );
                     p2.at( i / mat_step ) = ( 1.0 - std::abs( top_2 / bottom_2 ) );
-                    outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (Simplified): " );
+                    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (Simplified): " );
                     timer.iterate();
                 }
             }
             p1.at( T / mat_step ) = ( 1.0 - std::real( top_1 / bottom_1 ) );
             p2.at( T / mat_step ) = ( 1.0 - std::real( top_2 / bottom_2 ) );
-            outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (Full): " );
+            Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (Full): " );
             timer.iterate();
         }
         // Final output and timer end
-        outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability: ", PROGRESS_FORCE_OUTPUT );
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability: ", PROGRESS_FORCE_OUTPUT );
         timer.end();
     }
     // Save output
-    logs.level2( "Done, saving to {}... ", fileOutputName );
+    Log::L2( "Done, saving to {}... ", fileOutputName );
     std::string filepath = s.parameters.subfolder + fileOutputName;
     FILE *concurrencefile = std::fopen( filepath.c_str(), "w" );
     if ( !concurrencefile ) {
-        logs.level2( "Failed to open outputfile for advanced photon statistics!\n" );
+        Log::L2( "Failed to open outputfile for advanced photon statistics!\n" );
         return false;
     }
     fmt::print( concurrencefile, "Time\tMatrixelement_11\tMatrixelement_22\tConcurrence\tG2_11(tau)\tG2_22(tau)\tG2_12(tau)\tG2(tau=0)_11\tG2(tau=0)_22\tG2(tau=0)_12\tI_1\tI_2\n" );
@@ -200,15 +200,15 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &
         fmt::print( concurrencefile, "{:.5e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( i ), std::abs( rho_11.at( k ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::abs( rho_22.at( k ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::abs( 2.0 * std::abs( rho_12.at( k ) ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::real( g2_11.at( k ) ), std::real( g2_22.at( k ) ), std::real( g2_12.at( k ) ), std::real( g2_11_zero.at( k ) ), std::real( g2_22_zero.at( k ) ), std::real( g2_12_zero.at( k ) ), p1.at( k ), p2.at( k ) );
     }
     std::fclose( concurrencefile );
-    logs.level2( "Done!\n" );
-    logs( "Final Concurrence: {}\n", 2.0 * std::abs( rho_12.back() / ( rho_11.back() + rho_22.back() ) ) );
+    Log::L2( "Done!\n" );
+    Log::L1( "Final Concurrence: {}\n", 2.0 * std::abs( rho_12.back() / ( rho_11.back() + rho_22.back() ) ) );
     if ( !calculate_concurrence_with_g2_of_zero )
-        logs( "Final Indistinguishability: {} H, {} V\n", p1.back(), p2.back() );
+        Log::L1( "Final Indistinguishability: {} H, {} V\n", p1.back(), p2.back() );
     //if ()
-    //logs( "Final G2(0): {}\n", std::real( 2.0 * std::abs( rho_12.back() ) / ( rho_11.back() + rho_22.back() ) ) );
+    //Log::L1( "Final G2(0): {}\n", std::real( 2.0 * std::abs( rho_12.back() ) / ( rho_11.back() + rho_22.back() ) ) );
 
     if ( output_full_g2 ) {
-        logs.level2( "Saving full, non integrated G2(t,tau) matrices... " );
+        Log::L2( "Saving full, non integrated G2(t,tau) matrices... " );
         FILE *ganz = std::fopen( ( s.parameters.subfolder + "g2(ttau)_matrix.txt" ).c_str(), "w" );
         fmt::print( ganz, "t\ttau\tG2_11(t,tau)\tG2_22(t,tau)\tG2_12(t,tau)\n" );
         for ( long unsigned int i = 0; i < savedStates.size(); i += mat_step ) {
@@ -220,7 +220,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const MatType &
             fmt::print( ganz, "\n" );
         }
         std::fclose( ganz );
-        logs.level2( "Done!\n" );
+        Log::L2( "Done!\n" );
     }
     // Sucessfull
     return true;

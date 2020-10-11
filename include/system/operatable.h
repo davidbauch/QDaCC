@@ -2,7 +2,7 @@
 
 // Includes standard numerical operations such as Kommutator, Lindbladian, ...
 class Operatable {
-   public:  
+   public:
     // Constructor
     Operatable(){};
 
@@ -20,8 +20,8 @@ class Operatable {
     inline T getTrace( const Sparse &mat ) const {
         //return getTrace<T>( Dense( mat ) );
         T ret = (T)0.0;
-        for (int k=0; k<mat.outerSize(); ++k) {
-            for (Sparse::InnerIterator it(mat,k); it; ++it) {
+        for ( int k = 0; k < mat.outerSize(); ++k ) {
+            for ( Sparse::InnerIterator it( mat, k ); it; ++it ) {
                 if ( it.row() == it.col() ) {
                     ret += it.value();
                 }

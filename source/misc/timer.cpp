@@ -1,11 +1,5 @@
 #include "misc/timer.h"
 
-Timer &createTimer( std::string _name, bool _addtoTotalStatistic, bool _printToSummary ) {
-    allTimers.push_back( Timer( _name, _addtoTotalStatistic, _printToSummary ) );
-    logs.level2( "Created timer with name '{}'{}.\n", _name, ( _addtoTotalStatistic ? " which will be added to total statistics" : "" ) );
-    return allTimers.back();
-}
-
 // Constructor
 Timer::Timer() : Timer::Timer( "Generic Timer", true, true ){};
 Timer::Timer( const std::string &_name, bool _addtoTotalStatistic, bool _printToSummary ) {
@@ -22,8 +16,6 @@ Timer::Timer( const std::string &_name, bool _addtoTotalStatistic, bool _printTo
     name = _name;
     addtoTotalStatistic = _addtoTotalStatistic;
     printToSummary = _printToSummary;
-    if ( allTimers.size() < 10 )
-        allTimers.reserve( 15 );
 }
 // Iterate Timer, can be used instead of using start/stop if the range of the timer includes the whole mainloop.
 void Timer::iterate( int num ) {
@@ -31,22 +23,22 @@ void Timer::iterate( int num ) {
 }
 // Start Timer
 void Timer::start() {
-    //logs.level2("Starting timer '{}'... ",name);
+    //Log::L2("Starting timer '{}'... ",name);
     wallTimeStarted = omp_get_wtime();
     cpuTimeStarted = clock();
     running = true;
-    //logs.level2("Done!\n");
+    //Log::L2("Done!\n");
 }
 // End Timer
 void Timer::end() {
-    //logs.level2("Ending timer '{}'... ",name);
+    //Log::L2("Ending timer '{}'... ",name);
     wallTimeEnded = omp_get_wtime();
     cpuTimeEnded = clock();
     running = false;
     totalCPUTime = getCPUTimeOnce();
     totalWallTime = getWallTimeOnce();
     iterate();
-    //logs.level2("Done!\n");
+    //Log::L2("Done!\n");
 }
 // Add time
 void Timer::add( time_t cpu, double wall ) {
@@ -112,49 +104,43 @@ std::string Timer::format( double in ) {
     return fmt::format( "{}{}{}{}{}{}{:.3f}{}", h > 0 ? toStr( h ) : "", h > 0 ? "h:" : "", m > 0 ? toStr( m ) : "", m > 0 ? "m:" : "", s > 0 ? toStr( s ) : "", s > 0 ? "s:" : "", ms, "ms" );
 }
 
-void Timer::reset() {
-    allTimers.clear();
-}
-
 // returns total time taken
-double Timer::summary( bool output ) {
+double Timers::Isummary( bool output ) {
     int len = 0;
     double totalWallTime = 0;
     double totalCPUTime = 0;
-    for ( Timer timer : allTimers ) {
+    for ( Timer timer : timers ) {
         if ( (int)timer.getName().size() > len )
             len = timer.getName().size();
     }
     if ( output ) {
-        logs.inBar( "Timer" );
-        for ( Timer timer : allTimers ) {
+        Log::inBar( "Timer" );
+        for ( Timer timer : timers ) {
             if ( timer.addtoTotalStatistic ) {
                 totalWallTime += timer.getWallTime();
                 totalCPUTime += timer.getCPUTime();
             }
             if ( timer.printToSummary ) {
-                logs( "{:<{}}: Walltime: {} ", timer.getName(), len, Timer::format( timer.getWallTime() ) );
+                Log::L1( "{:<{}}: Walltime: {} ", timer.getName(), len, Timer::format( timer.getWallTime() ) );
                 if ( timer.getTotalIterationNumber() > 1 )
-                    logs( "CPUTime: {} Iterations: {} Average Time per Iteration: {}", ( timer.getCPUTime() != 0 ) ? Timer::format( timer.getCPUTime() ) : "--", timer.getTotalIterationNumber(), Timer::format( timer.getAverageIterationTime() ) );
-                logs( "\n" );
+                    Log::L1( "CPUTime: {} Iterations: {} Average Time per Iteration: {}", ( timer.getCPUTime() != 0 ) ? Timer::format( timer.getCPUTime() ) : "--", timer.getTotalIterationNumber(), Timer::format( timer.getAverageIterationTime() ) );
+                Log::L1( "\n" );
             }
         }
-        logs.bar( LOG_SIZE_FULL, LOG_LEVEL_1, LOG_BAR_1 );
-        logs( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0 ? Timer::format( totalCPUTime ) : "--" ) );
-        logs.bar();
+        Log::Bar( Log::BAR_SIZE_FULL, Log::LEVEL_1, Log::BAR_1 );
+        Log::L1( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0 ? Timer::format( totalCPUTime ) : "--" ) );
+        Log::Bar();
     }
     return totalWallTime;
 }
 
-void outputTimeStrings( Timer &t, const long unsigned int maxItTotal, std::string suffix, int final ) {
-    if ( t.doOutput() || final ) {
-        fmt::print( "{0}\t{1:.2f}\n", PREFIX_PERCENT, ( t.getTotalIterationNumber() / (double)maxItTotal * 100. ) );
-        fmt::print( "{0}\t{1:.0f}\n", PREFIX_PERCENT_TIME, ( (double)maxItTotal - t.getTotalIterationNumber() ) * t.getAverageIterationTime() );
-        fmt::print( "{0}\t{1}\n", PREFIX_SUFFIX, suffix );
-    }
+void Timers::IoutputProgress( bool handler, Timer &t, ProgressBar &p, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
+    if ( handler )
+        outputTimeStrings( t, maxItTotal, suffix, final );
+    else
+        outputProgressBar( t, p, maxItTotal, suffix, final );
 }
-
-void outputProgressBar( Timer &t, ProgressBar &p, const long unsigned int maxItTotal, std::string suffix, int final ) {
+void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
         if ( !final )
             p.print( t.getTotalIterationNumber(), fmt::format( "T - {}", Timer::format( ( (double)maxItTotal - t.getTotalIterationNumber() ) * t.getAverageIterationTime() ) ), suffix );
@@ -164,13 +150,10 @@ void outputProgressBar( Timer &t, ProgressBar &p, const long unsigned int maxItT
         }
     }
 }
-
-void outputProgress( int handler, Timer &t, ProgressBar &p, const long unsigned int maxItTotal, std::string suffix, int final ) {
-    //logs.level2("Timer: {}, doOutput: {}\n",t.getName(),t.doOutput());
-    if ( handler )
-        outputTimeStrings( t, maxItTotal, suffix, final );
-    else
-        outputProgressBar( t, p, maxItTotal, suffix, final );
+void Timers::IoutputTimeStrings( Timer &t, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
+    if ( t.doOutput() || final ) {
+        fmt::print( "{0}\t{1:.2f}\n", PREFIX_PERCENT, ( t.getTotalIterationNumber() / (double)maxItTotal * 100. ) );
+        fmt::print( "{0}\t{1:.0f}\n", PREFIX_PERCENT_TIME, ( (double)maxItTotal - t.getTotalIterationNumber() ) * t.getAverageIterationTime() );
+        fmt::print( "{0}\t{1}\n", PREFIX_SUFFIX, suffix );
+    }
 }
-
-std::vector<Timer> allTimers = std::vector<Timer>();

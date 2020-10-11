@@ -102,18 +102,18 @@ double getCoherent( double alpha, double N ) {
     return std::exp( -std::pow( alpha, 2.0 ) ) * std::pow( std::pow( alpha, 2.0 ), N ) / factorial( N );
 }
 
-std::string get_parameter( const std::string& key, const std::string& subkey ) {
-    std::string arg = CommandlineArguments::cla.get(key,subkey);
+std::string get_parameter( const std::string &key, const std::string &subkey ) {
+    std::string arg = CommandlineArguments::cla.get( key, subkey );
     return arg;
 }
 
-std::vector<std::string> get_parameter_vector( const std::string& key, const std::string& subkey ) {
-    std::string arg = CommandlineArguments::cla.get(key,subkey);
+std::vector<std::string> get_parameter_vector( const std::string &key, const std::string &subkey ) {
+    std::string arg = CommandlineArguments::cla.get( key, subkey );
     // Check if input is not a vector, then output will be a new vector with only one element
-    if (arg.at(0) != '[') {
-        return std::vector<std::string>({arg});
+    if ( arg.at( 0 ) != '[' ) {
+        return std::vector<std::string>( {arg} );
     }
-    return str_to_vec(arg);
+    return str_to_vec( arg );
 }
 
 Eigen::MatrixXcd project_matrix( const Eigen::MatrixXcd &input ) {
@@ -141,11 +141,11 @@ std::vector<std::string> splitline( const std::string &input ) {
     return set;
 }
 
-bool get_parameter_passed(const std::string& key, const std::string& subkey) {
-    return CommandlineArguments::cla.get(key,subkey).toBool();
+bool get_parameter_passed( const std::string &key, const std::string &subkey ) {
+    return CommandlineArguments::cla.get( key, subkey ).toBool();
 }
 
 std::string getNextInputString( const std::vector<std::string> &arguments, const std::string name, int &index ) {
-    logs.level2( "Trying to convert input named '{}' at index '{}' to '{}'... done\n", name, index, arguments.at( index ) );
+    Log::L2( "Trying to convert input named '{}' at index '{}' to '{}'... done\n", name, index, arguments.at( index ) );
     return arguments.at( index++ );
 }

@@ -39,7 +39,6 @@ extern std::string PREFIX_SUFFIX;
 
 #include "misc/commandlinearguments.h"
 #include "misc/log.h"
-extern Log logs;
 #include "misc/ProgressBar.h"
 #include "misc/helperfunctions.h"
 #include "misc/timer.h"
@@ -71,31 +70,30 @@ extern std::string global_message_error_wrong_number_input;
 #define PHONON_APPROXIMATION_MIXED 4
 
 typedef std::complex<double> Scalar;
-typedef Eigen::SparseMatrix<Scalar> Sparse;
 typedef Eigen::MatrixXcd Dense;
-typedef Eigen::SparseMatrix<Scalar> MatType;
+typedef Eigen::SparseMatrix<Scalar> Sparse;
 
 // Vector for mat/time, tuple
 class SaveState {
    public:
-    MatType mat;
+    Sparse mat;
     double t;
-    SaveState( const MatType &mat, const double time ) : mat( mat ), t( time ){};
+    SaveState( const Sparse &mat, const double time ) : mat( mat ), t( time ){};
 };
 class SaveStateTau {
    public:
-    MatType mat1, mat2;
+    Sparse mat1, mat2;
     double t, tau;
-    SaveStateTau( const MatType &mat1, const MatType &mat2, const double t, const double tau ) : mat1( mat1 ), mat2( mat2 ), t( t ), tau( tau ){};
-    SaveStateTau( const MatType &mat, const double t ) : mat1( mat ), t( t ), tau( 0 ){};
+    SaveStateTau( const Sparse &mat1, const Sparse &mat2, const double t, const double tau ) : mat1( mat1 ), mat2( mat2 ), t( t ), tau( tau ){};
+    SaveStateTau( const Sparse &mat, const double t ) : mat1( mat ), t( t ), tau( 0 ){};
 };
 class SaveScalar {
    public:
     Scalar scalar;
     double t, tau;
-    //SaveScalarTuple( const MatType &mat1, const MatType &mat2, const double t, const double tau ) : mat1( mat1 ), mat2( mat2 ), t( t ), tau( tau ){};
+    //SaveScalarTuple( const Sparse &mat1, const Sparse &mat2, const double t, const double tau ) : mat1( mat1 ), mat2( mat2 ), t( t ), tau( tau ){};
     SaveScalar( const Scalar &scalar, const double t, const double tau = 0.0 ) : scalar( scalar ), t( t ), tau( tau ){};
 };
 
-bool Save_State_sort_t(const SaveStateTau &ss1, const SaveStateTau &ss2);
-bool Save_State_sort_tau(const SaveStateTau &ss1, const SaveStateTau &ss2);
+bool Save_State_sort_t( const SaveStateTau &ss1, const SaveStateTau &ss2 );
+bool Save_State_sort_tau( const SaveStateTau &ss1, const SaveStateTau &ss2 );
