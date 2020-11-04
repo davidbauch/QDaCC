@@ -169,7 +169,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     p_phonon_wcutoff = get_parameter<double>( "--phonons", "phononwcutoff" );
     p_phonon_tcutoff = get_parameter<double>( "--phonons", "phonontcutoff" );
     p_phonon_T = get_parameter<double>( "--phonons", "temperature" );
-    numerics_phonon_approximation_order = get_parameter<double>( "--phonons", "phononorder" );
+    numerics_phonon_approximation_order = get_parameter<int>( "--phonons", "phononorder" );
     numerics_phonon_approximation_markov1 = get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
     output_coefficients = get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
     p_phonon_adjust = !get_parameter_passed( "-noPhononAdjust" );
@@ -405,8 +405,8 @@ void Parameters::log( const std::vector<std::string> &info ) {
 
     Log::wrapInBar( "Phonons", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( p_phonon_T ) {
-        std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed"};
-        Log::L1( "Temperature = {}k\nCutoff energy = {}meV\nCutoff Time = {}ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n\n", p_phonon_T, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ), p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
+        std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral"};
+        Log::L1( "Temperature = {} k\nCutoff energy = {} meV\nCutoff Time = {} ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n\n", p_phonon_T, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ), p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
     } else {
         Log::L1( "Not using phonons\n\n" );
     }

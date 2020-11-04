@@ -10,8 +10,12 @@ bool ODESolver::calculate_t_direction( System &s ) {
     Log::L2( "Calculating t-direction from {} to {} at stepsize {}... ", s.parameters.t_start, s.parameters.t_end, s.parameters.t_step );
 
     // Calculate Time evolution on time vector timestamps.
-    calculate_runge_kutta( rho, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
-
+    //TODO: if pathintegral then calculate_path_integral else calculate_runge_kutta
+    if ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
+        calculate_path_integral( rho, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
+    } else {
+        calculate_runge_kutta( rho, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
+    }
     // Finalize
     Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, "T-Direction: ", PROGRESS_FORCE_OUTPUT );
     rkTimer.end();
@@ -35,7 +39,9 @@ bool ODESolver::calculate_t_direction( System &s ) {
     evalTimer.start();
     Log::L2( "Calculating expectation values...\n" );
     for ( long unsigned int i = 0; i < interpolate_savedstates.size(); i++ ) {
-        s.traceValid( interpolate_savedstates.at( i ).mat, interpolate_savedstates.at( i ).t );
+        //if ( !s.traceValid( interpolate_savedstates.at( i ).mat, interpolate_savedstates.at( i ).t ) ) {
+        //    return false;
+        //}
         s.expectationValues( interpolate_savedstates.at( i ).mat, interpolate_savedstates.at( i ).t, interpolate_savedstates );
         evalTimer.iterate();
         Timers::outputProgress( s.parameters.output_handlerstrings, evalTimer, progressbar2, interpolate_savedstates.size(), pbname );

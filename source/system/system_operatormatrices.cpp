@@ -16,7 +16,7 @@ OperatorMatrices::OperatorMatrices( const Parameters &p ) {
 
 bool OperatorMatrices::generateOperators( const Parameters &p ) {
     // Zeroing Hamiltons (redundant at this point)
-    Log::L2( "Creating operator matrices, dimension = {}\nCreating base matrices... ", p.maxStates );
+    Log::L2( "Creating operator matrices, dimension = {}\nCreating base matrices...\n", p.maxStates );
     H = Sparse( p.maxStates, p.maxStates );
     H_0 = Sparse( p.maxStates, p.maxStates );
     H_I = Sparse( p.maxStates, p.maxStates );
@@ -42,7 +42,7 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     Log::L3( "\n" );
 
     // Initializing bare matrices:
-    Log::L2( "Initializing base matrices... " );
+    Log::L2( "Initializing base matrices...\n" );
     // Atomic state operators
     bare_atom_state_ground = Dense::Zero( 4, 4 );
     bare_atom_state_ground << 1, 0, 0, 0,
@@ -144,7 +144,7 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     bare_photon_n_V = bare_photon_create_V * bare_photon_annihilate_V;
 
     // Expanding both states
-    Log::L2( "Expanding single state matrices... " );
+    Log::L2( "Expanding single state matrices...\n" );
     atom_state_ground = tensor( m_base1, m_base2, bare_atom_state_ground ).sparseView();
     atom_state_biexciton = tensor( m_base1, m_base2, bare_atom_state_biexciton ).sparseView();
     atom_state_H = tensor( m_base1, m_base2, bare_atom_state_H ).sparseView();
@@ -213,7 +213,7 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     projector_photon_annihilate_V = project_matrix_sparse( photon_annihilate_V );
 
     // All possible Hamiltonions
-    Log::L2( "Done! Creating Hamiltonoperator... " );
+    Log::L2( "Done! Creating Hamiltonoperator...\n" );
     // H_0
     H_0 = p.p_omega_atomic_G_H * atom_state_H + p.p_omega_atomic_G_V * atom_state_V + p.p_omega_atomic_B * atom_state_biexciton + p.p_omega_cavity_H * photon_n_H + p.p_omega_cavity_V * photon_n_V;
     //H_0 = p.p_omega_atomic_G_H / 2.0 * atom_inversion_G_H + p.p_omega_atomic_G_V / 2.0 * atom_inversion_G_V + p.p_omega_atomic_H_B / 2.0 * atom_inversion_H_B + p.p_omega_atomic_V_B / 2.0 * atom_inversion_V_B + p.p_omega_cavity_H * photon_n_H + p.p_omega_cavity_V * photon_n_V;
@@ -232,11 +232,11 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     H = H_0 + H_I;
     // Interaction picture
     if ( p.numerics_use_interactionpicture ) {
-        Log::L2( "using interaction picture... " );
+        Log::L2( "using interaction picture...\n" );
         H_used = H_I;
     }
     if ( !p.numerics_use_interactionpicture ) {
-        Log::L2( "NOT using interaction picture... " );
+        Log::L2( "NOT using interaction picture...\n" );
         H_used = H;
     }
     Log::L2( "Hamiltonoperator done!\n" );
@@ -334,8 +334,8 @@ void OperatorMatrices::outputOperators( const Parameters &p ) {
         //out << "test1\n" << test1.format(CleanFmt)<< "\ntest2\n" << test2.format(CleanFmt) << std::endl;
         Log::L2( out.str() );
         Log::L2( "Outputting String Matrices...\n" );
-        OperatorMatricesText test = OperatorMatricesText();
-        test.generateOperators( p );
+        //OperatorMatricesText test = OperatorMatricesText();
+        //test.generateOperators( p );
         if ( p.output_operators == 3 )
             exit( 0 );
     }

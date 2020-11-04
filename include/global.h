@@ -15,6 +15,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/MatrixFunctions>
+#include <unsupported/Eigen/CXX11/Tensor>
 #include <omp.h> // -fopenmp
 #include <iostream>
 #include <sstream>
@@ -43,6 +44,7 @@ extern std::string PREFIX_SUFFIX;
 #include "misc/helperfunctions.h"
 #include "misc/timer.h"
 #include "misc/sysinfo.h"
+#include "misc/FixedSizeSparseMap.h"
 
 //using Eigen::MatrixXcd;
 //using Eigen::MatrixXd;
@@ -68,6 +70,7 @@ extern std::string global_message_error_wrong_number_input;
 #define PHONON_APPROXIMATION_TIMETRANSFORMATION 2
 #define PHONON_APPROXIMATION_LINDBLAD_FULL 3
 #define PHONON_APPROXIMATION_MIXED 4
+#define PHONON_PATH_INTEGRAL 5
 
 typedef std::complex<double> Scalar;
 typedef Eigen::MatrixXcd Dense;

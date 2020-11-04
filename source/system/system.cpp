@@ -15,14 +15,14 @@ System::System( const std::vector<std::string> &input ) : Operatable() {
     // Initialize / Adjust the remaining system class
     terminate_message = global_message_normaltermination;
     Timer &timer_systeminit = Timers::create( "System Initialization", true, false );
-    Log::L2( "System initialization... " );
+    Log::L2( "System initialization...\n" );
     timer_systeminit.start();
     if ( !init_system() ) {
         Log::L2( "System initialization failed! Exitting program...\n" );
         Log::close();
         exit( EXIT_FAILURE );
     }
-    Log::L2( "successful. Elapsed time is {}ms\n", timer_systeminit.getWallTime( TIMER_MILLISECONDS ) );
+    Log::L2( "Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( TIMER_MILLISECONDS ) );
     timer_systeminit.end();
 }
 
@@ -53,8 +53,11 @@ bool System::init_system() {
         savedCoefficients.reserve( parameters.numerics_saved_coefficients_max_size );
 
     // Output Phonon functions if phonons are active //TODO: initialize_polaron_frame_functions
-    initialize_polaron_frame_functions();
-
+    if ( parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
+        initialize_path_integral_functions();
+    } else {
+        initialize_polaron_frame_functions();
+    }
     // Time Transformation
     timeTrafoMatrix = ( Dense( 1i * operatorMatrices.H_0 ).exp() ).sparseView(); //.pruned();
     // Check time trafo
@@ -90,7 +93,7 @@ Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const doub
         ret += parameters.p_omega_decay / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B, operatorMatrices.atom_sigmaplus_H_B );
         ret += parameters.p_omega_decay / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B, operatorMatrices.atom_sigmaplus_V_B );
     }
-    if ( parameters.p_phonon_T != 0.0 ) {
+    if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T != 0.0 ) {
         ret += dgl_phonons_pmeq( rho, t, past_rhos );
     }
     return ret; //.pruned();
@@ -198,11 +201,11 @@ void System::expectationValues( const Sparse &rho, const double t, const std::ve
     fmt::print( fileoutput.fp_photonpopulation, "\n" );
 
     if ( !parameters.output_no_dm ) {
-        fmt::print( fileoutput.fp_densitymatrix, "{:.5e}", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
+        fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
         if ( parameters.output_full_dm ) {
             for ( int i = 0; i < parameters.maxStates; i++ )
                 for ( int j = 0; j < parameters.maxStates; j++ ) {
-                    fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", std::real( rho.coeff( i, j ) ) );
+                    fmt::print( fileoutput.fp_densitymatrix, "{:.10e}\t", std::real( rho.coeff( i, j ) ) );
                 }
         } else
             for ( int j = 0; j < parameters.maxStates; j++ )
@@ -212,7 +215,8 @@ void System::expectationValues( const Sparse &rho, const double t, const std::ve
 }
 
 Sparse System::dgl_getHamilton( const double t ) {
-    return dgl_timetrafo( parameters.p_phonon_b * ( operatorMatrices.H_used + dgl_pulse( t ) ) + dgl_chirp( t ), t );
+    double local_b = ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL ? 1.0 * parameters.p_phonon_b : 1.0 );
+    return dgl_timetrafo( local_b * ( operatorMatrices.H_used + dgl_pulse( t ) ) + dgl_chirp( t ), t );
 }
 
 bool System::command( unsigned int index ) {
