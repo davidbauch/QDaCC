@@ -200,7 +200,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                                     result += val;
                                     // Indexing is time-upwards, meaning t_n, t_n-1, t_n-2, t_n-3
                                     if ( std::abs( val ) != 0 ) {
-                                        adms.addTripletTo( i_n, i_n_m1, i_n_m2, i_n_m3, j_n, j_n_m1, j_n_m2, j_n_m3, val, cpu_caches.at( omp_get_thread_num() ) );
+                                        adms.addTripletTo( {i_n, i_n_m1, i_n_m2, i_n_m3}, {j_n, j_n_m1, j_n_m2, j_n_m3}, val, cpu_caches.at( omp_get_thread_num() ) );
                                     }
                                 }
                             }
@@ -276,7 +276,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                         double abs = std::abs( val );
                         if ( abs <= 1E-10 ) continue;
                         cur_min = cur_min < abs ? cur_min : abs;
-                        adms.addTriplet( i_n, i_n_m1, i_n_m2, i_n_m3, j_n, j_n_m1, j_n_m2, j_n_m3, val );
+                        adms.addTriplet( {i_n, i_n_m1, i_n_m2, i_n_m3}, {j_n, j_n_m1, j_n_m2, j_n_m3}, val );
                     }
                 }
             }
