@@ -62,6 +62,20 @@ class FixedSizeSparseMap {
         //return {i, i1, i2, i3};
     }
 
+    std::vector<long long int> shiftVector( const Scalar &i, std::vector<long long int> &input ) {
+        std::vector<long long int> ret{i};
+        ret.insert( ret.begin(), input.begin(), input.end() - 1 );
+        std::cout << "input = ";
+        for ( auto &a : input )
+            std::cout << a << " ";
+        std::cout << " -> Output = ";
+        for ( auto &a : ret )
+            std::cout << a << " ";
+        std::cout << std::endl;
+        exit( 0 );
+        return ret;
+    }
+
     // For now, hardcode get(numvar)template<typename... IndexTypes>
     //inline const Scalar &operator()( Index firstIndex, Index secondIndex, IndexTypes... otherIndices ) const {
     //    // The number of indices used to access a tensor coefficient must be equal to the rank of the tensor.

@@ -255,15 +255,8 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
             for ( Sparse::InnerIterator it( adms.mat(), k ); it; ++it ) {
                 auto indices_i = adms.indexToIndices( it.row() );
                 auto indices_j = adms.indexToIndices( it.col() );
-                int i_n_m1 = indices_i.at( 0 );
-                int i_n_m2 = indices_i.at( 1 );
-                int i_n_m3 = indices_i.at( 2 );
-                int i_n_m4 = indices_i.at( 3 );
-                int j_n_m1 = indices_j.at( 0 );
-                int j_n_m2 = indices_j.at( 1 );
-                int j_n_m3 = indices_j.at( 2 );
-                int j_n_m4 = indices_j.at( 3 );
                 for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
+                    shiftVector( i_n, indices_i );
                     for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
                         Scalar phonon_s = 0.0;
                         for ( int l = 0; l <= n_c_max; l++ ) {
