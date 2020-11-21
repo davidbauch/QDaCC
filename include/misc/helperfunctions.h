@@ -297,3 +297,13 @@ void init_sparsevector( std::vector<Eigen::SparseMatrix<T>> &mat, int dim, int c
         mat.emplace_back( fill );
     }
 }
+
+template <typename T>
+std::string vec_to_str( const std::vector<T> &input ) {
+    std::string ret = "[";
+    for ( auto &element : input ) {
+        ret += std::to_string( element ) + ",";
+    }
+    ret.back() = ']';
+    return ret;
+}

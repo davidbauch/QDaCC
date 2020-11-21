@@ -2,142 +2,146 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
+using int128 = __uint128_t;
+
+//std::ostream &operator<<( std::ostream &os, const int128 i ) noexcept {
+//    std::ostream::sentry s( os );
+//    if ( s ) {
+//        unsigned __int128 tmp = i < 0 ? -i : i;
+//        char buffer[128];
+//        char *d = std::end( buffer );
+//        do {
+//            --d;
+//            *d = "0123456789"[tmp % 10];
+//            tmp /= 10;
+//        } while ( tmp != 0 );
+//        if ( i < 0 ) {
+//            --d;
+//            *d = '-';
+//        }
+//        int len = std::end( buffer ) - d;
+//        if ( os.rdbuf()->sputn( d, len ) != len ) {
+//            os.setstate( std::ios_base::badbit );
+//        }
+//    }
+//    return os;
+//}
+
 template <typename Scalar>
 class FixedSizeSparseMap {
+   public:
+    class SparseMapTriplet {
+       public:
+        std::vector<int> indicesX, indicesY;
+        int128 sparse_index;
+        Scalar value;
+        SparseMapTriplet(){};
+        SparseMapTriplet( const SparseMapTriplet &other ) : indicesX( other.indicesX ), indicesY( other.indicesY ), sparse_index( other.sparse_index ), value( other.value ){};
+        SparseMapTriplet( const Scalar &value, const std::vector<int> &indicesX, const std::vector<int> &indicesY, const std::vector<int128> &dimensions_scaled ) : value( value ), indicesX( indicesX ), indicesY( indicesY ) {
+            //if ( std::real( value ) != 0 || std::imag( value ) != 0 ) {
+            sparse_index = indicesX[0];
+            for ( int i = 1; i < indicesX.size(); i++ ) {
+                sparse_index += indicesX[i] * dimensions_scaled[i - 1];
+            }
+            for ( int i = 0; i < indicesY.size(); i++ ) {
+                sparse_index += indicesY[i] * dimensions_scaled[indicesX.size() + i];
+            }
+            //}
+        }
+        bool operator>( const SparseMapTriplet &other ) const {
+            return sparse_index > other.sparse_index;
+        }
+        bool operator>=( const SparseMapTriplet &other ) const {
+            return sparse_index >= other.sparse_index;
+        }
+        bool operator<( const SparseMapTriplet &other ) const {
+            return sparse_index < other.sparse_index;
+        }
+        bool operator<=( const SparseMapTriplet &other ) const {
+            return sparse_index <= other.sparse_index;
+        }
+        bool operator==( const SparseMapTriplet &other ) const {
+            return sparse_index == other.sparse_index;
+            //bool first = true;
+            //bool second = true;
+            //if ( sparse_index != other.sparse_index ) first = false;
+            //for ( int i = 0; i < indicesX.size(); i++ ) {
+            //    if ( indicesX[i] != other.indicesX[i] ) {
+            //        second = false;
+            //        if ( first != second ) std::cout << "FUCK\n";
+            //        return false;
+            //    }
+            //    if ( indicesY[i] != other.indicesY[i] ) {
+            //        second = false;
+            //        if ( first != second ) std::cout << "FUCK\n";
+            //        return false;
+            //    }
+            //}
+            //if ( first != second ) std::cout << "FUCK\n";
+            //return true;
+        }
+    };
+
    private:
-    Eigen::SparseMatrix<Scalar> cache;
+    std::vector<SparseMapTriplet> cache;
+    std::vector<SparseMapTriplet> triplets;
     std::vector<int> dimensions;
-    std::vector<int> dimensions_scaled;
-    long long int sparse_matrix_dimension;
-    std::vector<Eigen::Triplet<Scalar>> triplets;
+    std::vector<int128> dimensions_scaled;
+    int128 sparse_matrix_dimension;
 
    public:
     FixedSizeSparseMap(){};
     FixedSizeSparseMap( const std::vector<int> &init_dimensions ) {
         sparse_matrix_dimension = 1;
+        // X
         for ( int dim : init_dimensions ) {
             sparse_matrix_dimension *= dim;
             dimensions_scaled.emplace_back( sparse_matrix_dimension );
         }
+        // Y
+        for ( int dim : init_dimensions ) {
+            sparse_matrix_dimension *= dim;
+            dimensions_scaled.emplace_back( sparse_matrix_dimension );
+        }
+        std::cout << "Sparse Elements: " << (long long)( sparse_matrix_dimension ) << std::endl;
         dimensions = init_dimensions;
-        cache = Eigen::SparseMatrix<Scalar>( sparse_matrix_dimension, sparse_matrix_dimension );
     }
 
-    Eigen::SparseMatrix<Scalar> &mat() {
+    std::vector<SparseMapTriplet> &get() {
         return cache;
     }
 
-    std::vector<long long int> indexToIndices( long long int i ) {
-        //std::vector<int> ret;
-        //ret.reserve( dimensions.size() );
-        //std::cout << "Input index = " << i << " -> ";
-        //for ( int k = dimensions.size() - 1; k > 0; k-- ) {
-        //    int current = std::floor( 1.0 * i / dimensions_scaled[k - 1] );
-        //    ret.emplace_back( current );
-        //    i -= current * dimensions_scaled[k];
-        //    //std::cout << current << " ";
-        //}
-        //ret.emplace_back( i );
-        ////std::cout << std::endl;
-        //std::reverse( ret.begin(), ret.end() );
-
-        std::vector<long long int> ret;
-        ret.reserve( dimensions_scaled.size() );
-        for ( int k = dimensions_scaled.size() - 2; k >= 0; k-- ) {
-            auto val = std::floor( i / dimensions_scaled[k] );
-            ret.emplace_back( val );
-            i -= val * dimensions_scaled[k];
-        }
-        ret.emplace_back( i );
-        std::reverse( ret.begin(), ret.end() );
-        return ret;
-
-        //auto ii = i;
-        //int i3 = std::floor( i / dimensions_scaled[2] );
-        //i -= i3 * dimensions_scaled[2];
-        //int i2 = std::floor( i / dimensions_scaled[1] );
-        //i -= i2 * dimensions_scaled[1];
-        //int i1 = std::floor( i / dimensions_scaled[0] );
-        //i -= i1 * dimensions_scaled[0];
-        //return {i, i1, i2, i3};
-    }
-
-    std::vector<long long int> shiftVector( const Scalar &i, std::vector<long long int> &input ) {
-        std::vector<long long int> ret{i};
-        ret.insert( ret.begin(), input.begin(), input.end() - 1 );
-        std::cout << "input = ";
-        for ( auto &a : input )
-            std::cout << a << " ";
-        std::cout << " -> Output = ";
-        for ( auto &a : ret )
-            std::cout << a << " ";
-        std::cout << std::endl;
-        exit( 0 );
-        return ret;
-    }
-
-    // For now, hardcode get(numvar)template<typename... IndexTypes>
-    //inline const Scalar &operator()( Index firstIndex, Index secondIndex, IndexTypes... otherIndices ) const {
-    //    // The number of indices used to access a tensor coefficient must be equal to the rank of the tensor.
-    //    EIGEN_STATIC_ASSERT( sizeof...( otherIndices ) + 2 == NumIndices, YOU_MADE_A_PROGRAMMING_MISTAKE )
-    //    return this->operator()( array<Index, NumIndices>{{firstIndex, secondIndex, otherIndices...}} );
-    //}
-    Scalar get( const std::vector<long long int> &indicesX, const std::vector<long long int> &indicesY ) {
-        // Convert index array to total matrix index const Index index = i4 + m_dimensions[4] * (i3 + m_dimensions[3] * (i2 + m_dimensions[2] * (i1 + m_dimensions[1] * i0)));
-        int indexX = indicesX[0]; //i0 + i1 * dimensions_scaled[0] + i2 * dimensions_scaled[1] + i3 * dimensions_scaled[2];
-        int indexY = indicesY[0]; //j0 + j1 * dimensions_scaled[0] + j2 * dimensions_scaled[1] + j3 * dimensions_scaled[2];
-        for ( int i = 1; i < indicesX.size(); i++ ) {
-            indexX += indicesX[i] * dimensions_scaled[i - 1];
-            indexY += indicesY[i] * dimensions_scaled[i - 1];
-        }
-        assert( indexX < sparse_matrix_dimension && indexY < sparse_matrix_dimension && "Index mismatch" );
-        // Return copy of cache entry
-        return cache.coeff( indexX, indexY );
-    }
-
-    Scalar &getRef( const std::vector<long long int> &indicesX, const std::vector<long long int> &indicesY ) {
+    void addTriplet( const std::vector<int> &indicesX, const std::vector<int> &indicesY, const Scalar &value, const int i_n = -1, const int j_n = -1 ) {
         // Convert index array to total matrix index
-        int indexX = indicesX[0];
-        int indexY = indicesY[0];
-        for ( int i = 1; i < indicesX.size(); i++ ) {
-            indexX += indicesX[i] * dimensions_scaled[i - 1];
-            indexY += indicesY[i] * dimensions_scaled[i - 1];
+        if ( i_n != -1 && j_n != -1 ) {
+            auto newIndexX = indicesX;
+            auto newIndexY = indicesY;
+            newIndexX[0] = i_n;
+            newIndexY[0] = j_n;
+            for ( int i = 1; i < newIndexX.size(); i++ ) {
+                newIndexX[i] = indicesX[i - 1];
+                newIndexY[i] = indicesY[i - 1];
+            }
+            triplets.emplace_back( value, newIndexX, newIndexY, dimensions_scaled );
+        } else {
+            triplets.emplace_back( value, indicesX, indicesY, dimensions_scaled );
         }
-        // Return reference of cache entry
-        return cache.coeffRef( indexX, indexY );
     }
 
-    void makeCompressed() {
-        cache.makeCompressed();
-    }
-
-    void setFromTripletList( bool clear = true ) {
-        cache.setFromTriplets( triplets.begin(), triplets.end() );
-        if ( clear ) {
-            clearTripletList();
+    void addTripletTo( const std::vector<int> &indicesX, const std::vector<int> &indicesY, const Scalar &value, std::vector<SparseMapTriplet> &vec, const long long int i_n = -1, const long long int j_n = -1 ) {
+        if ( i_n != -1 && j_n != -1 ) {
+            auto newIndexX = indicesX;
+            auto newIndexY = indicesY;
+            newIndexX[0] = i_n;
+            newIndexY[0] = j_n;
+            for ( int i = 1; i < newIndexX.size(); i++ ) {
+                newIndexX[i] = indicesX[i - 1];
+                newIndexY[i] = indicesY[i - 1];
+            }
+            vec.emplace_back( value, newIndexX, newIndexY, dimensions_scaled );
+        } else {
+            vec.emplace_back( value, indicesX, indicesY, dimensions_scaled );
         }
-        makeCompressed();
-    }
-    void addTriplet( const std::vector<long long int> &indicesX, const std::vector<long long int> &indicesY, const Scalar &value ) {
-        // Convert index array to total matrix index
-        int indexX = indicesX[0];
-        int indexY = indicesY[0];
-        for ( int i = 1; i < indicesX.size(); i++ ) {
-            indexX += indicesX[i] * dimensions_scaled[i - 1];
-            indexY += indicesY[i] * dimensions_scaled[i - 1];
-        }
-        triplets.emplace_back( indexX, indexY, value );
-    }
-
-    void addTripletTo( const std::vector<long long int> &indicesX, const std::vector<long long int> &indicesY, const Scalar &value, std::vector<Eigen::Triplet<Scalar>> &vec ) {
-        // Convert index array to total matrix index
-        int indexX = indicesX[0];
-        int indexY = indicesY[0];
-        for ( int i = 1; i < indicesX.size(); i++ ) {
-            indexX += indicesX[i] * dimensions_scaled[i - 1];
-            indexY += indicesY[i] * dimensions_scaled[i - 1];
-        }
-        vec.emplace_back( indexX, indexY, value );
     }
 
     std::vector<Eigen::Triplet<Scalar>> &getTriplets() {
@@ -145,22 +149,34 @@ class FixedSizeSparseMap {
     }
 
     long long int nonZeros() {
-        return cache.nonZeros();
+        return cache.size();
     }
 
-    void clearTripletList() {
+    void set() {
+        //cache.clear();
+        //cache = triplets;
+        reduceDublicates( triplets );
+        auto size = triplets.size();
         triplets.clear();
+        triplets.reserve( size );
     }
 
-    double getFillRatio() {
-        return nonZeros() / ( 1.0 * sparse_matrix_dimension * sparse_matrix_dimension );
+    void reduceDublicates( std::vector<SparseMapTriplet> &triplets ) {
+        int128 limit = triplets.size();
+        cache.clear();
+        std::sort( triplets.begin(), triplets.end() );
+        cache.emplace_back( triplets.front() );
+
+        for ( int128 i = 1; i < limit; i++ ) {
+            if ( triplets[i] == cache.back() ) {
+                cache.back().value += triplets[i].value;
+            } else {
+                cache.emplace_back( triplets[i] );
+            }
+        }
     }
+
     int getSizeOfCache() {
         return nonZeros() * sizeof( Scalar );
     }
-    long long int getCacheDimensions() {
-        return sparse_matrix_dimension;
-    }
-
-    //Scalar &operator() {}
 };

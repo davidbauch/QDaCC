@@ -6,8 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "2.1.1"
-#define GLOBAL_PROGRAM_LASTCHANGE "Multithreaded ordering"
+#define GLOBAL_PROGRAM_VERSION "2.1.2"
+#define GLOBAL_PROGRAM_LASTCHANGE "Sparse Pathintegral"
 
 class Parameters {
    public:

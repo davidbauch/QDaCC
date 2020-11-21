@@ -34,8 +34,8 @@ Scalar System::dgl_phonon_S_function( const int t_delta, const int i_n, const in
 void System::initialize_path_integral_functions() {
     Log::L2( "Initializing Path-Integral functions...\n" );
     // kernel in phi-vector schreiben
-    int tau_max = std::ceil( parameters.p_phonon_tcutoff / parameters.t_step );
-    tau_max = 6 > tau_max ? 6 : tau_max;
+    int tau_max = 2 * std::ceil( parameters.p_phonon_tcutoff / parameters.t_step );
+    tau_max = 25 > tau_max ? 25 : tau_max;
     std::vector<Scalar> SS( tau_max );
     phi_vector.reserve( tau_max );
     Log::L2( "Initializing Kernel Memory functions...\n" );

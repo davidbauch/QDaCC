@@ -301,6 +301,10 @@ bool Parameters::adjustInput() {
     if ( spectrum_frequency_range == -1 )
         spectrum_frequency_range = ( std::abs( max_detuning * 1.5 ) + ( p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing ) * 3.0 );
 
+    // No phonon adjust if pathintegral is chosen
+    if ( numerics_phonon_approximation_order == 5 ) {
+        p_phonon_adjust = false;
+    }
     // Calculate phonon stuff
     p_phonon_b = 1.0;
     if ( p_phonon_T > 0 ) {
