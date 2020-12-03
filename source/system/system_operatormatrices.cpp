@@ -37,9 +37,19 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     base = tensor( tensor( base1, base2 ), base3 );
 
     Log::L3( "Operator Base: (size {}) ", base.size() );
-    for ( auto b : base )
-        Log::L3( "|{}> ", b );
-    Log::L3( "\n" );
+    std::string bb = "";
+    for ( auto b : base ) {
+        if ( b.back() == 'G' ) {
+            phononCouplingFactor.emplace_back( 0.0 );
+        } else if ( b.back() == 'B' ) {
+            phononCouplingFactor.emplace_back( 2.0 );
+        } else {
+            phononCouplingFactor.emplace_back( 1.0 );
+        }
+        Log::L3( "Level: {} -> {}\n", b, phononCouplingFactor.back() );
+        bb = fmt::format( "{}|{}> ", bb, b );
+    }
+    Log::L3( "{}\n", bb );
 
     // Initializing bare matrices:
     Log::L2( "Initializing base matrices...\n" );

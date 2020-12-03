@@ -4,7 +4,7 @@
 
 void System::initialize_polaron_frame_functions() {
     // Only Initialize functions if T!=0
-    if ( parameters.p_phonon_T != 0 ) {
+    if ( parameters.p_phonon_T >= 0 ) {
         // Initialize Phi(tau)
         phi_vector.reserve( std::ceil( parameters.p_phonon_tcutoff / parameters.t_step * 3.1 ) );
         phi_vector.emplace_back( dgl_phonons_phi( parameters.t_step * 0.01 ) );

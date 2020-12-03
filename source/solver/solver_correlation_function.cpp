@@ -62,7 +62,7 @@ bool ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse 
     int totalIterations = getIterationNumberTau( s );
     ProgressBar progressbar = ProgressBar( totalIterations );
     timer.start();
-    Log::L2( " : Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}... ", purpose, dim, dim );
+    Log::L2( " : Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}... ", purpose, dim, dim, totalIterations );
     std::string progressstring = "G1(" + purpose + "): ";
     // Reserve Cache Matrix/Vector
     Log::L2( " : Preparing cache vector...\n" );
@@ -80,11 +80,12 @@ bool ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse 
         // Calculate New Modified Density Matrix
         Sparse rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
         // Calculate Runge Kutta
-        calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, s.parameters.t_step, timer, progressbar, progressstring, s, savedRhos, true );
+        calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, s.parameters.t_step, timer, progressbar, progressstring, s, savedRhos, false );
         for ( long unsigned int j = 0; j < savedRhos.size(); j++ ) {
             double t_tau = savedRhos.at( j ).t;
             cache_noneq.at( i / s.parameters.iterations_t_skip ).emplace_back( SaveScalar( s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, op_creator, t_tau ), t_t, t_tau ) );
         }
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
     }
     // Because G1,G2 are better to be calculated on an equidistant grid, we interpolate the values to fit the grid.
     // The grid is determined by the initial timestep chosen (+ skip step)
@@ -135,11 +136,12 @@ bool ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Spars
         // Calculate New Modified Density Matrix
         Sparse rho_tau = s.dgl_calc_rhotau_2( getRhoAt( i ), op_annihilator_2, op_creator_1, t_t );
         // Calculate Runge Kutta
-        calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, s.parameters.t_step, timer, progressbar, progressstring, s, savedRhos, true );
+        calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, s.parameters.t_step, timer, progressbar, progressstring, s, savedRhos, false );
         for ( long unsigned int j = 0; j < savedRhos.size(); j++ ) {
             double t_tau = savedRhos.at( j ).t;
             cache_noneq.at( i / s.parameters.iterations_t_skip ).emplace_back( s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, evalOperator, t_tau ), t_t, t_tau );
         }
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
     }
     // Because G1,G2 are better to be calculated on an equidistant grid, we interpolate the values to fit the grid.
     // The grid is determined by the initial timestep chosen (+ skip step)

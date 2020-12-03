@@ -307,7 +307,7 @@ bool Parameters::adjustInput() {
     }
     // Calculate phonon stuff
     p_phonon_b = 1.0;
-    if ( p_phonon_T > 0 ) {
+    if ( p_phonon_T >= 0 ) {
         double integral = 0;
         double stepsize = 0.01 * p_phonon_wcutoff;
         for ( double w = stepsize; w < 10 * p_phonon_wcutoff; w += stepsize ) {
@@ -408,7 +408,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
     Log::L1( "\n" );
 
     Log::wrapInBar( "Phonons", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
-    if ( p_phonon_T ) {
+    if ( p_phonon_T >= 0 ) {
         std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral"};
         Log::L1( "Temperature = {} k\nCutoff energy = {} meV\nCutoff Time = {} ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n\n", p_phonon_T, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ), p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
     } else {

@@ -25,6 +25,9 @@ def get_all_source_files(file_path="/", source_path="source", bin_path="obj", ex
 
 
 def compile_all_object_files(data, bin_path="obj", extension_obj=".o", compiler="g++", libs="", args="", force_recompile=False, cerr_to_file=False):
+    if not os.path.exists(bin_path):
+        print("Bin path did not exist, creating '{}'".format(bin_path))
+        os.makedirs(bin_path)
     if force_recompile:
         print("Removing old {} files ... ".format(extension_obj), end="")
         for file in os.listdir(bin_path):
@@ -33,9 +36,6 @@ def compile_all_object_files(data, bin_path="obj", extension_obj=".o", compiler=
         print("Done!")
     if "-g" in args or "-g" in compiler:
         print("Compiling with debug information!")
-    if not os.path.exists(bin_path):
-        print("Bin path did not exist, creating '{}'".format(bin_path))
-        os.makedirs(bin_path)
     ret = []
     succesful = True
     if cerr_to_file:
@@ -87,10 +87,24 @@ def compile_main_program(path="", target="main.cpp", name="main.o", extension_ob
 
 if __name__ == "__main__":
     path = os.path.dirname(os.path.realpath(__file__))
+    
+    if "-frc" in sys.argv:
+        if os.path.isfile(os.path.join(path,".fullcompile")):
+            a = input("Last compile was a forced fullcompile. Press [ENTER] if you want to fullcompile again. Any other input will cancel the compilation.")
+            if len(a) > 0:
+                exit()
+        else:
+            with open(os.path.join(path,".fullcompile"),"w") as f:
+                pass
+    elif os.path.isfile(os.path.join(path,".fullcompile")):
+        os.remove(os.path.join(path,".fullcompile"))
+    
     platform = sys.platform
+    if "-laptop" in sys.argv:
+        platform = "win32"
     print("Platform is {}".format(platform))
 
-    msyspath = "msys64" if "-laptop" in sys.argv else "msys2"
+    msyspath = "msys2"
 
     # Get Program version
     version = "0.0"
@@ -106,7 +120,7 @@ if __name__ == "__main__":
     debug_info = " -g " if "-g" in sys.argv else ""
 
     bin_path = {'win32': "obj/" +
-                ("LAP" if "-laptop" in sys.argv else "win"), 'darwin': "obj/MAC"}
+                ("LAPN" if "-laptop" in sys.argv else "win"), 'darwin': "obj/MAC"}
     compiler = {'win32': "g++", 'darwin': "g++-9"}
 
     f = get_all_source_files(
@@ -114,15 +128,15 @@ if __name__ == "__main__":
 
     copy_to = {'win32': "../../Threadhandler/QDLC-{}.exe".format(
         version) if "-th" in sys.argv else "", 'darwin': "/Users/davidbauch/bin/QDLC-{}.out".format(version)}
-    libs_obj = {'win32': "-std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
-                'darwin': "-std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
-    include_obj = {'win32': '-I"C:\{}\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include"'.format(
-        msyspath), 'darwin': "-I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include'"}
+    libs_obj = {'win32': "-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
+                'darwin': "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
+    include_obj = {'win32': '-I"C:\{}\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external"'.format(
+        msyspath), 'darwin': "-I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include' -I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external'"}
 
-    libs_final = {'win32': '-std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}'.format(
-        "-static" if "-static" in sys.argv else ""), 'darwin': "-std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}".format("-static" if "-static" in sys.argv else "")}
-    bin_final = {'win32': ["obj/"+("LAP" if "-laptop" in sys.argv else "win"), "obj/ALGLIB/"+(
-        "LAP" if "-laptop" in sys.argv else "WIN")], 'darwin': ["obj/MAC", "obj/ALGLIB/MAC"]}
+    libs_final = {'win32': '-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}'.format(
+        "-static" if "-static" in sys.argv else ""), 'darwin': "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}".format("-static" if "-static" in sys.argv else "")}
+    bin_final = {'win32': ["obj/"+("LAPN" if "-laptop" in sys.argv else "win"), "external/ALGLIB/"+(
+        "LAPN" if "-laptop" in sys.argv else "WIN")], 'darwin': ["obj/MAC", "external/ALGLIB/MAC"]}
     succesful = compile_all_object_files(f, libs=libs_obj[platform], args=include_obj[platform], force_recompile=force_recompile,
                                          bin_path=bin_path[platform], compiler=compiler[platform]+debug_info, cerr_to_file=cerr_to_file)
     # if succesful:

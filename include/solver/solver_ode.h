@@ -65,14 +65,14 @@ class ODESolver {
     // @param s: [&System] Class providing set of system functions
     // @param t: [double] Time to iterate at
     // @return: [Sparse] rho at time t+t_step
-    Sparse iterateRungeKutta4( const Sparse &rho, System &s, const double t, std::vector<SaveState> &savedStates );
+    Sparse iterateRungeKutta4( const Sparse &rho, System &s, const double t, const double t_step, std::vector<SaveState> &savedStates );
     // Description: Iterates Runge-Kutta of order 5 at time t onto rho using the systems hamilton operator.
     // Type: ODESolver private function
     // @param rho: [&Sparse] Input (density-) matrix
     // @param s: [&System] Class providing set of system functions
     // @param t: [double] Time to iterate at
     // @return: [Sparse] rho at time t+t_step
-    Sparse iterateRungeKutta5( const Sparse &rho, System &s, const double t, std::vector<SaveState> &savedStates );
+    Sparse iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<SaveState> &savedStates );
 
     // Desciption: Function to calculate the number of iterations used for tau direction calculations
     // Type: ODESolver private function
@@ -121,7 +121,7 @@ class ODESolver {
     // @param t: [double] Time to iterate at
     // @param dir: [int] Time direction. Solver order can differ in both t and tau direction, depending on the systems settings. Default value is DIR_T
     // @return: [Sparse] rho at time t+t_step
-    Sparse iterate( const Sparse &rho, System &s, const double t, std::vector<SaveState> &savedStates, const int dir = DIR_T );
+    Sparse iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<SaveState> &savedStates, const int dir = DIR_T );
 
     // Description: Calculates the normal t-direction via solving the von-Neumann equation for rho. May save some of the density matrices for later uses. Logs the calculation and outputs progress.
     // Type: ODESolver public function

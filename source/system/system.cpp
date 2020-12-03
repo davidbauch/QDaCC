@@ -93,7 +93,7 @@ Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const doub
         ret += parameters.p_omega_decay / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B, operatorMatrices.atom_sigmaplus_H_B );
         ret += parameters.p_omega_decay / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B, operatorMatrices.atom_sigmaplus_V_B );
     }
-    if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T != 0.0 ) {
+    if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T >= 0.0 ) {
         ret += dgl_phonons_pmeq( rho, t, past_rhos );
     }
     return ret; //.pruned();

@@ -12,6 +12,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <vector>
+// #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/MatrixFunctions>

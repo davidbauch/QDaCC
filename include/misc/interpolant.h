@@ -8,7 +8,6 @@
 #include <fmt/format.h>
 #include "ALGLIB/interpolation.h"
 
-
 class Interpolant {
    private:
     alglib::spline1dinterpolant p;
@@ -29,6 +28,7 @@ class Interpolant2d {
     alglib::spline2dinterpolant p;
     std::string X, Y, Z;
     int sx, sy, sz;
+
    public:
     Interpolant2d() {}
     Interpolant2d( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, T &interpolationMatrixZ );
