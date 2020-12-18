@@ -28,7 +28,6 @@ class System : public Operatable {
     // Runtime efficient caching vector
     std::vector<Scalar> phi_vector;              // Vector of saved phonon-phi function
     std::vector<SaveStateTau> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
-    std::vector<Sparse> phonon_S;                // Vector of saved exp(S(t)) values
 
     // ##### Helper Variables #####
     // Helpervariables for photon emission probability
@@ -133,7 +132,7 @@ class System : public Operatable {
 
     // Path integral phonon functions
     void initialize_path_integral_functions();
-    Scalar dgl_phonons_kernel( const double t );
+    Scalar dgl_phonons_kernel( const double t, const double t_step );
     Scalar dgl_phonon_S_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd );
 
     // ##### Template Functions #####

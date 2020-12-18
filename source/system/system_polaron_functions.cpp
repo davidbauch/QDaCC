@@ -1,6 +1,22 @@
 #include "system/system.h"
 
 // Phonon Contributions calculated via the Polaron Frame Approach
+Scalar System::dgl_phonons_phi( const double t ) {
+    Scalar integral = 0;
+    double stepsize = 0.01 * parameters.p_phonon_wcutoff;
+    double eV7 = convertParam<double>( "7.0eV" );
+    double eV35 = -convertParam<double>( "3.5eV" );
+    double v_c = 5110.0;
+    double a_e = 5E-9;       //3E-9;
+    double a_h = 0.87 * a_e; //a_e / 1.15;
+    double rho = 5370.0;
+    for ( double w = stepsize; w < 10 * parameters.p_phonon_wcutoff; w += stepsize ) {
+        double J = w * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff );
+        //double J = w * parameters.hbar * std::pow( eV7 * std::exp( -w * w * a_e * a_e / ( 4. * v_c * v_c ) ) - eV35 * std::exp( -w * w * a_h * a_h / ( 4. * v_c * v_c ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * rho * std::pow( v_c, 5. ) );
+        integral += stepsize * ( parameters.p_phonon_alpha * J * ( std::cos( w * t ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) - 1i * std::sin( w * t ) ) );
+    }
+    return integral;
+}
 
 void System::initialize_polaron_frame_functions() {
     // Only Initialize functions if T!=0
@@ -60,15 +76,6 @@ Scalar System::dgl_phonons_greenf( double t, const char mode ) {
         return parameters.p_phonon_b * parameters.p_phonon_b * ( std::cosh( phi ) - 1.0 );
     }
     return parameters.p_phonon_b * parameters.p_phonon_b * std::sinh( phi );
-}
-
-Scalar System::dgl_phonons_phi( const double t ) {
-    Scalar integral = 0;
-    double stepsize = 0.01 * parameters.p_phonon_wcutoff;
-    for ( double w = stepsize; w < 10 * parameters.p_phonon_wcutoff; w += stepsize ) {
-        integral += stepsize * ( parameters.p_phonon_alpha * w * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff ) * ( std::cos( w * t ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) - 1i * std::sin( w * t ) ) );
-    }
-    return integral;
 }
 
 double System::dgl_phonons_lindblad_coefficients( double t, double omega_atomic, const char mode, const char level, const double sign ) {

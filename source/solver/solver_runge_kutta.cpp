@@ -165,8 +165,8 @@ Sparse ODESolver::path_integral( const Sparse &rho0, System &s, std::vector<std:
             Scalar result = 0;
             for ( int k = 0; k < rho0.outerSize(); ++k ) {
                 for ( Sparse::InnerIterator it( rho0, k ); it; ++it ) {
-                    std::vector<int> indices_i( {(int)it.row()} );
-                    std::vector<int> indices_j( {(int)it.col()} );
+                    std::vector<int> indices_i( { (int)it.row() } );
+                    std::vector<int> indices_j( { (int)it.col() } );
                     result += it.value() * path_integral_recursive( rho0, s, iterates, output, max_deph, i_n, j_n, indices_i, indices_j, it.value(), adm, fillADM, max_deph - 1 );
                 }
             }
@@ -184,18 +184,18 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     // FIXME: Assume zeros photons for now
     Log::L3( "Setting up Path-Integral Solver...\n" );
     output.reserve( s.parameters.iterations_t_max + 1 );
-    int n_c_max = 4;
+    int n_c_max = 6;
     int tensor_dim = rho0.rows();
     // Configurables
     double stepsize = t_step_initial; // 1E-12;          //t_step_initial;
-    double substepsize = 1.0 / 10.0;  // 10.0;
-    double squared_threshold = 1E-16; // > 1E-6;
-    double prune_threshold = 1E5;     // > 1E-10
+    double substepsize = 1.0 / 5.0;   // 10.0;
+    double squared_threshold = 1E-30; // > 1E-6;
+    double prune_threshold = 1E1;     // > 1E-10
     // Propagator Cutoff; When iterated multiple times, M(t0->t1) may gain additional entries in between the RK iterations from t0 to t1. When set to true, the final non-zero matrix entries will be mapped onto the non-zero entries after
     // the first iteration, meaning any additional non-zero entries besides the ones created within the first iteration are lost.
     bool doCutoff_propagator = false;
     // Dynamic Cutoff; While true, the squared threshold will be increased or decreased until the number of ADM elements is approximately equal to the cutoff iterations set.
-    bool doCutoff_dynamic = true;
+    bool doCutoff_dynamic = false;
     long long cutoff_iterations_max = 6E6;
 
     FixedSizeSparseMap<Scalar> adms = FixedSizeSparseMap<Scalar>( std::vector<int>( n_c_max, tensor_dim ), s.parameters.numerics_maximum_threads );
@@ -207,9 +207,6 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     Sparse rho = rho0;
     saveState( rho0, t_start, output );
     // Next n_c_max Steps and ADM initialization
-
-    // Setup cache vectors to allow for less pragmas
-    Log::L3( "Setting up thread cache vectors...\n" );
 
     // Precalculate all iterates per index and timestep once. Saveorder is j+j_max*i
     Log::L3( "Pre-Calculating propagator matrices...\n" );
@@ -228,7 +225,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
         if ( doCutoff_propagator ) {
             map = project_matrix_sparse( M_t );
         }
-        for ( double sub_t = stepsize * ( t + 1 ); sub_t < stepsize * ( t + 1 ) - t_step_initial * substepsize * 0.5; sub_t += t_step_initial * substepsize ) {
+        for ( double sub_t = stepsize * t + t_step_initial * substepsize; sub_t < stepsize * ( t + 1 ) - t_step_initial * substepsize * 0.5; sub_t += t_step_initial * substepsize ) {
             M_t = iterate( M_t, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
         }
         if ( doCutoff_propagator ) {
@@ -249,7 +246,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                 if ( doCutoff_propagator ) {
                     map = project_matrix_sparse( M_t );
                 }
-                for ( double sub_t = stepsize * ( t + 1 ); sub_t < stepsize * ( t + 1 ) - t_step_initial * substepsize * 0.5; sub_t += t_step_initial * substepsize ) {
+                for ( double sub_t = stepsize * t + t_step_initial * substepsize; sub_t < stepsize * ( t + 1 ) - t_step_initial * substepsize * 0.5; sub_t += t_step_initial * substepsize ) {
                     M_t = iterate( M_t, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
                 }
                 if ( doCutoff_propagator ) {
@@ -341,19 +338,34 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
         double total_time = 0;
 #pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
         for ( auto &outer : adms.get() )
-            for ( int k = 0; k < outer.size(); k++ ) {
+            for ( auto &triplet : outer ) {
                 auto tt = omp_get_wtime();
-                auto triplet = outer[k];
                 for ( int l = 0; l < propagator[triplet.indicesX[0]][triplet.indicesY[0]].outerSize(); ++l ) {
                     for ( Sparse::InnerIterator it( propagator[triplet.indicesX[0]][triplet.indicesY[0]], l ); it; ++it ) {
                         int i_n = it.row();
                         int j_n = it.col();
-                        Scalar phonon_s = s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n );
-                        for ( int l = 0; l < n_c_max; l++ ) {
-                            int i_nd = triplet.indicesX[l];
-                            int j_nd = triplet.indicesY[l];
-                            phonon_s += s.dgl_phonon_S_function( 1 + l, i_n, j_n, i_nd, j_nd );
-                        }
+                        Scalar phonon_s = 0;
+                        // Gemäß PhysRevB.94.125439
+                        //for ( int lt = 0; lt <= n_c_max; lt++ ) {
+                        //    int ii_n = ( lt == n_c_max ? i_n : triplet.indicesX.at( n_c_max - 1 - lt ) );
+                        //    int ij_n = ( lt == n_c_max ? j_n : triplet.indicesY.at( n_c_max - 1 - lt ) );
+                        //    for ( int ld = 0; ld <= lt; ld++ ) {
+                        //        int ii_nd = ( ld == n_c_max ? i_n : triplet.indicesX.at( n_c_max - 1 - ld ) );
+                        //        int ij_nd = ( ld == n_c_max ? j_n : triplet.indicesY.at( n_c_max - 1 - ld ) );
+                        //        phonon_s += s.dgl_phonon_S_function( l - ld, ii_n, ij_n, ii_nd, ij_nd );
+                        //    }
+                        //}
+                        // Gemäß supplement-2
+                        //phonon_s += s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n );
+                        //phonon_s += s.dgl_phonon_S_function( 1, i_n, j_n, triplet.indicesX.at( 0 ), triplet.indicesY.at( 0 ) );
+                        //phonon_s += s.dgl_phonon_S_function( 2, i_n, j_n, triplet.indicesX.at( 1 ), triplet.indicesY.at( 1 ) );
+                        //phonon_s += s.dgl_phonon_S_function( 3, i_n, j_n, triplet.indicesX.at( 2 ), triplet.indicesY.at( 2 ) );
+                        //phonon_s += s.dgl_phonon_S_function( 4, i_n, j_n, triplet.indicesX.at( 3 ), triplet.indicesY.at( 3 ) );
+                        //for ( int l = 0; l <= n_c_max; l++ ) {
+                        //    int ii_nd = ( l == 0 ? i_n : triplet.indicesX.at( l - 1 ) );
+                        //    int ij_nd = ( l == 0 ? j_n : triplet.indicesY.at( l - 1 ) );
+                        //    phonon_s += s.dgl_phonon_S_function( l, i_n, j_n, ii_nd, ij_nd );
+                        //}
                         Scalar val = it.value() * triplet.value * std::exp( phonon_s );
                         double abs = abs2( val );
                         auto appendtime = omp_get_wtime();
@@ -382,8 +394,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
         //#pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
         Dense cache = Dense::Zero( tensor_dim, tensor_dim );
         for ( auto &outer : adms.get() )
-            for ( int k = 0; k < outer.size(); k++ ) {
-                auto triplet = outer[k];
+            for ( auto &triplet : outer ) {
                 int i_n = triplet.indicesX[0];
                 int j_n = triplet.indicesY[0];
                 cache( i_n, j_n ) += triplet.value;
@@ -505,7 +516,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
                                 result += val;
                                 if ( fillADM && ( i_n == j_n || abs2( val ) > squared_threshold ) ) {
                                     //#pragma omp critical
-                                    adm.addTriplet( {i_n, i_n_m1, i_n_m2}, {j_n, j_n_m1, j_n_m2}, val, omp_get_thread_num() );
+                                    adm.addTriplet( { i_n, i_n_m1, i_n_m2 }, { j_n, j_n_m1, j_n_m2 }, val, omp_get_thread_num() );
                                 }
                             }
                         }
@@ -519,7 +530,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
 #pragma omp parallel for collapse( 2 ) num_threads( s.parameters.numerics_maximum_threads )
         for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
             for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
-                fmt::print( "N_c = 3 -- i = {}, j = {} -> {:3.0f}\%\n", i_n, j_n, 100.0 * a / 36 / 36 );
+                //fmt::print( "N_c = 3 -- i = {}, j = {} -> {:3.0f}\%\n", i_n, j_n, 100.0 * a / 36 / 36 );
                 //#pragma omp critical
                 a++;
                 Scalar result = 0;
@@ -542,7 +553,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
                                         // Indexing is time-upwards, meaning t_n, t_n-1, t_n-2, t_n-3
                                         if ( fillADM && ( i_n == j_n || abs2( val ) > squared_threshold ) ) {
                                             //#pragma omp critical
-                                            adm.addTriplet( {i_n, i_n_m1, i_n_m2, i_n_m3}, {j_n, j_n_m1, j_n_m2, j_n_m3}, val, omp_get_thread_num() );
+                                            adm.addTriplet( { i_n, i_n_m1, i_n_m2, i_n_m3 }, { j_n, j_n_m1, j_n_m2, j_n_m3 }, val, omp_get_thread_num() );
                                         }
                                     }
                                 }
@@ -558,7 +569,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
 #pragma omp parallel for collapse( 2 ) num_threads( s.parameters.numerics_maximum_threads )
         for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
             for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
-                fmt::print( "N_c = 4 -- i = {}, j = {} -> {:3.0f}\%\n", i_n, j_n, 100.0 * a / 36 / 36 );
+                //fmt::print( "N_c = 4 -- i = {}, j = {} -> {:3.0f}\%\n", i_n, j_n, 100.0 * a / 36 / 36 );
                 //#pragma omp critical
                 a++;
                 Scalar result = 0;
@@ -585,7 +596,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
                                                 // Indexing is time-upwards, meaning t_n, t_n-1, t_n-2, t_n-3
                                                 if ( fillADM && ( i_n == j_n || abs2( val ) > squared_threshold ) ) {
                                                     //#pragma omp critical
-                                                    adm.addTriplet( {i_n, i_n_m1, i_n_m2, i_n_m3, i_n_m4}, {j_n, j_n_m1, j_n_m2, j_n_m3, j_n_m4}, val, omp_get_thread_num() );
+                                                    adm.addTriplet( { i_n, i_n_m1, i_n_m2, i_n_m3, i_n_m4 }, { j_n, j_n_m1, j_n_m2, j_n_m3, j_n_m4 }, val, omp_get_thread_num() );
                                                 }
                                             }
                                         }
@@ -603,7 +614,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
 #pragma omp parallel for collapse( 2 ) num_threads( s.parameters.numerics_maximum_threads )
         for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
             for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
-                fmt::print( "N_c = 5 --  i = {}, j = {} -> {:3.0f}\%\n", i_n, j_n, 100.0 * a / 36 / 36 );
+                //fmt::print( "N_c = 5 --  i = {}, j = {} -> {:3.0f}\%\n", i_n, j_n, 100.0 * a / 36 / 36 );
                 a++;
                 Scalar result = 0;
                 for ( int k = 0; k < rho0.outerSize(); ++k ) {
@@ -633,7 +644,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
                                                         // Indexing is time-upwards, meaning t_n, t_n-1, t_n-2, t_n-3
                                                         if ( fillADM && ( i_n == j_n || abs2( val ) > squared_threshold ) ) {
                                                             //#pragma omp critical
-                                                            adm.addTriplet( {i_n, i_n_m1, i_n_m2, i_n_m3, i_n_m4, i_n_m5}, {j_n, j_n_m1, j_n_m2, j_n_m3, j_n_m4, j_n_m5}, val, omp_get_thread_num() );
+                                                            adm.addTriplet( { i_n, i_n_m1, i_n_m2, i_n_m3, i_n_m4, i_n_m5 }, { j_n, j_n_m1, j_n_m2, j_n_m3, j_n_m4, j_n_m5 }, val, omp_get_thread_num() );
                                                         }
                                                     }
                                                 }
