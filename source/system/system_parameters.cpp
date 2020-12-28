@@ -236,12 +236,16 @@ double Parameters::getIdealTimestep() {
 bool Parameters::adjustInput() {
     // Calculate/Recalculate some parameters:
     // Adjust pulse area if pulse_type is "gauss_pi"
-    for ( int i = 0; i < (int)pulse_amp.size(); i++ )
-        if ( pulse_type.at( i ).compare( "gauss_pi" ) == 0 ) {
-            //if ( pulse_amp.at( i ) < 500 )
-            pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI * pulse_sigma.at( i ) * std::sqrt( std::pow( pulse_omega_chirp.at( i ) / pulse_sigma.at( i ), 2.0 ) + std::pow( pulse_sigma.at( i ), 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
-            pulse_type.at( i ) = "gauss";
+    for ( int i = 0; i < (int)pulse_amp.size(); i++ ) {
+        auto pos = pulse_type.at( i ).find( "_pi" );
+        if ( pos != std::string::npos ) {
+            if ( pulse_type.at( i ).find( "gauss" ) != std::string::npos )
+                pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI * pulse_sigma.at( i ) * std::sqrt( std::pow( pulse_omega_chirp.at( i ) / pulse_sigma.at( i ), 2.0 ) + std::pow( pulse_sigma.at( i ), 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+            else if ( pulse_type.at( i ).find( "cutoff" ) != std::string::npos )
+                pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI * pulse_sigma.at( i ) * pulse_sigma.at( i ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+            pulse_type.at( i ).erase( pos, 3 );
         }
+    }
 
     // Calculating remaining atomic frequencies depending on delta E and biexciton binding energy.
     p_omega_atomic_G_V = p_omega_atomic_G_H + p_deltaE / 2.0;
@@ -259,8 +263,8 @@ bool Parameters::adjustInput() {
     max_rabifrequenz_G_V = rabiFrequency( p_omega_atomic_G_V - p_omega_cavity_V, p_omega_coupling, index_to_state( 'V', p_initial_state + 1 ) );
     max_rabifrequenz_H_B = rabiFrequency( p_omega_atomic_H_B - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state + 1 ) );
     max_rabifrequenz_V_B = rabiFrequency( p_omega_atomic_V_B - p_omega_cavity_V, p_omega_coupling, index_to_state( 'V', p_initial_state + 1 ) );
-    init_rabifrequenz = vec_max<double>( {init_rabifrequenz_G_H, init_rabifrequenz_G_V, init_rabifrequenz_H_B, init_rabifrequenz_V_B} );
-    max_rabifrequenz = vec_max<double>( {max_rabifrequenz_G_H, max_rabifrequenz_G_V, max_rabifrequenz_H_B, max_rabifrequenz_V_B} );
+    init_rabifrequenz = vec_max<double>( { init_rabifrequenz_G_H, init_rabifrequenz_G_V, init_rabifrequenz_H_B, init_rabifrequenz_V_B } );
+    max_rabifrequenz = vec_max<double>( { max_rabifrequenz_G_H, max_rabifrequenz_G_V, max_rabifrequenz_H_B, max_rabifrequenz_V_B } );
 
     // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
     if ( t_step == -1 ) {
@@ -292,8 +296,8 @@ bool Parameters::adjustInput() {
     max_detuning_G_V = ( (double)( init_detuning_G_V + chirp_total ) > (double)init_detuning_G_V ) ? double( init_detuning_G_V + chirp_total ) : (double)init_detuning_G_V;
     max_detuning_H_B = ( (double)( init_detuning_H_B + chirp_total ) > (double)init_detuning_H_B ) ? double( init_detuning_H_B + chirp_total ) : (double)init_detuning_H_B;
     max_detuning_V_B = ( (double)( init_detuning_V_B + chirp_total ) > (double)init_detuning_V_B ) ? double( init_detuning_V_B + chirp_total ) : (double)init_detuning_V_B;
-    init_detuning = vec_max<double>( {init_detuning_G_H, init_detuning_G_V, init_detuning_H_B, init_detuning_V_B} );
-    max_detuning = vec_max<double>( {max_detuning_G_H, max_detuning_G_V, max_detuning_H_B, max_detuning_V_B} );
+    init_detuning = vec_max<double>( { init_detuning_G_H, init_detuning_G_V, init_detuning_H_B, init_detuning_V_B } );
+    max_detuning = vec_max<double>( { max_detuning_G_H, max_detuning_G_V, max_detuning_H_B, max_detuning_V_B } );
 
     // Adjust/calculate frequency range for spectrum
     if ( spectrum_frequency_center == -1 )
@@ -409,7 +413,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
 
     Log::wrapInBar( "Phonons", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( p_phonon_T >= 0 ) {
-        std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral"};
+        std::vector<std::string> approximations = { "Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral" };
         Log::L1( "Temperature = {} k\nCutoff energy = {} meV\nCutoff Time = {} ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n\n", p_phonon_T, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ), p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
     } else {
         Log::L1( "Not using phonons\n\n" );

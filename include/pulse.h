@@ -31,8 +31,10 @@ class Pulse {
     std::vector<Scalar> pulsearray;
     std::vector<Scalar> pulsearray_derivative;
     std::vector<Scalar> pulsearray_integral;
+    std::vector<Scalar> pulsearray_fourier;
     // Saving the corresponding t doesn't hurt
     std::vector<double> timearray;
+    std::vector<double> fourier;
     std::vector<double> steps;
     double maximum;
     // Helper variables/functions

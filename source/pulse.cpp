@@ -1,7 +1,7 @@
 #include "pulse.h"
 
 Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
-    Log::L3( "Creating total pulse with {} individual pulses... ", inputs.amp.size() );
+    Log::L3( "Creating total pulse with {} individual pulses...\n", inputs.amp.size() );
     counter_evaluated = 0;
     counter_returned = 0;
     maximum = 0;
@@ -9,10 +9,10 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     pulsearray.reserve( n );
     timearray.reserve( n );
     if ( inputs.order == 5 )
-        steps = {0, 1. / 5. * inputs.t_step, 3. / 10. * inputs.t_step, 1. / 2. * inputs.t_step, 4. / 5. * inputs.t_step, 8. / 9. * inputs.t_step};
+        steps = { 0, 1. / 5. * inputs.t_step, 3. / 10. * inputs.t_step, 1. / 2. * inputs.t_step, 4. / 5. * inputs.t_step, 8. / 9. * inputs.t_step };
     else
-        steps = {0, 0.5 * inputs.t_step};
-    Log::L3( "Done initializing class, creating precalculated chirp... " );
+        steps = { 0, 0.5 * inputs.t_step };
+    Log::L3( "Done initializing class, creating precalculated pulse...\n" );
     generate();
     Log::L3( "Done!\n" );
 }
@@ -20,12 +20,15 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
 Scalar Pulse::evaluate( double t ) {
     Scalar ret = 0;
     for ( int i = 0; i < (int)inputs.amp.size(); i++ ) {
-        double amp = std::sqrt( std::pow( inputs.omega_chirp.at( i ) / inputs.sigma.at( i ), 2.0 ) + std::pow( inputs.sigma.at( i ), 2.0 ) );
-        double freq = inputs.omega_chirp.at( i ) / ( std::pow( inputs.omega_chirp.at( i ), 2.0 ) + std::pow( inputs.sigma.at( i ), 4.0 ) );
-        if ( inputs.type.at( i ).compare( "cw" ) == 0 && t >= inputs.center.at( i ) )
+        if ( inputs.type.at( i ).compare( "cw" ) == 0 && t >= inputs.center.at( i ) ) {
             ret += inputs.amp.at( i ) * std::exp( -1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + inputs.omega_chirp.at( i ) * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
-        else if ( inputs.type.at( i ).compare( "gauss" ) == 0 )
+        } else if ( inputs.type.at( i ).compare( "gauss" ) == 0 ) {
+            double amp = std::sqrt( std::pow( inputs.omega_chirp.at( i ) / inputs.sigma.at( i ), 2.0 ) + std::pow( inputs.sigma.at( i ), 2.0 ) );
+            double freq = inputs.omega_chirp.at( i ) / ( std::pow( inputs.omega_chirp.at( i ), 2.0 ) + std::pow( inputs.sigma.at( i ), 4.0 ) );
             ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / amp, 2. ) - 1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + 0.5 * freq * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
+        } else if ( inputs.type.at( i ).compare( "cutoff" ) == 0 ) {
+            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / inputs.sigma.at( i ), 2. ) ) * ( std::exp( -1i * ( ( inputs.omega.at( i ) - inputs.omega_chirp.at( i ) ) * ( t - inputs.center.at( i ) ) ) ) + std::exp( -1i * ( ( inputs.omega.at( i ) + inputs.omega_chirp.at( i ) ) * ( t - inputs.center.at( i ) ) ) ) );
+        }
     }
     return ret;
 }
@@ -60,19 +63,48 @@ void Pulse::generate() {
     pulsearray.shrink_to_fit();
     timearray.shrink_to_fit();
     size = pulsearray.size();
-    Log::L3( "pulsearray.size() = {}... ", size );
+    Log::L3( "Pulsearray.size() = {}... \n", size );
+    if ( inputs.omega.size() > 0 ) {
+        Log::L3( "Calculating pulse fourier transformation...\n" );
+        double omega_center = 0;
+        double omega_range = 0;
+        for ( auto &input : inputs.omega ) {
+            omega_center += input;
+        }
+        for ( auto &input : inputs.sigma ) {
+            omega_range += 25.0 / input;
+        }
+        omega_center /= (double)( inputs.omega.size() );
+        omega_range /= (double)( inputs.omega.size() );
+        double dw = omega_range / 500.0;
+        for ( double w = omega_center - omega_range; w < omega_center + omega_range; w += dw ) {
+            fourier.emplace_back( w );
+            Scalar spectral_amp = 0;
+            for ( double t = inputs.t_start; t < inputs.t_end + inputs.t_step * steps.size(); t += inputs.t_step ) {
+                spectral_amp += get( t ) * std::exp( 1.i * w * t ) * inputs.t_step;
+            }
+            pulsearray_fourier.emplace_back( spectral_amp );
+        }
+        Log::L3( "Fourier pulsearray.size() = {}...\n", pulsearray_fourier.size() );
+    }
 }
 
 void Pulse::fileOutput( std::string filepath ) {
+    Log::L3( "Outputting Pulse Array to file...\n" );
     FILE *pulsefile = std::fopen( filepath.c_str(), "w" );
     if ( !pulsefile ) {
         Log::L3( "Failed to open outputfile for Pulse!\n" );
         return;
     }
+    fmt::print( pulsefile, "t\tabs(Omega(t))\treal(Omega(t)))\tw\tabs(FT(Omega(t)))\n" );
     for ( long unsigned int i = 0; i < timearray.size() - steps.size(); i += steps.size() ) {
-        fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\n", timearray.at( i ), std::abs( pulsearray.at( i ) ), std::real( pulsearray.at( i ) ) );
+        if ( i < pulsearray_fourier.size() )
+            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\t{:.1e}\t{:.10e}\n", timearray.at( i ), std::abs( pulsearray.at( i ) ), std::real( pulsearray.at( i ) ), fourier.at( i ), std::abs( pulsearray_fourier.at( i ) ) );
+        else
+            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\n", timearray.at( i ), std::abs( pulsearray.at( i ) ), std::real( pulsearray.at( i ) ) );
     }
     std::fclose( pulsefile );
+    Log::L3( "Done!\n" );
 }
 
 void Pulse::Inputs::add( double _center, double _amp, double _sigma, double _omega, double _omega_chirp, std::string _type ) { //,double chirp = 0) {
@@ -206,6 +238,13 @@ void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
                 fmt::print( pulsefile, "{:.8e}\t{:.8e}\t", std::abs( pulses.at( p ).pulsearray.at( i ) ), std::real( pulses.at( p ).pulsearray.at( i ) ) );
             }
         }
+        for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
+            if ( i < pulses.at( p ).pulsearray_fourier.size() )
+                fmt::print( pulsefile, "{:.10e}\t{:.10e}", pulses.at( p ).fourier.at( i ), std::abs( pulses.at( p ).pulsearray_fourier.at( i ) ) );
+            else
+                fmt::print( pulsefile, "\t\t" );
+        }
+
         fmt::print( pulsefile, "\n" );
     }
     std::fclose( pulsefile );
