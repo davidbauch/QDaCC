@@ -56,9 +56,9 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
         int k = i / mat_step;
         if ( !calculate_concurrence_with_g2_of_zero ) {
             for ( int t = 0; t < dim; t++ ) {
-                g2_11.at( k ) += akf_mat_g2_11( k, t ) * s.parameters.t_step;
-                g2_22.at( k ) += akf_mat_g2_22( k, t ) * s.parameters.t_step;
-                g2_12.at( k ) += akf_mat_g2_12( k, t ) * s.parameters.t_step;
+                g2_11.at( k ) += akf_mat_g2_11( i, t ) * s.parameters.t_step; // FIX: akf(k,t) -> akf(i,t), da G2 mit t_step gespeichert wird!
+                g2_22.at( k ) += akf_mat_g2_22( i, t ) * s.parameters.t_step; // FIX: akf(k,t) -> akf(i,t), da G2 mit t_step gespeichert wird!
+                g2_12.at( k ) += akf_mat_g2_12( i, t ) * s.parameters.t_step; // FIX: akf(k,t) -> akf(i,t), da G2 mit t_step gespeichert wird!
             }
         }
         double t_t = getTimeAt( i );
@@ -104,7 +104,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
                 ////int k = i / s.parameters.iterations_t_skip;
                 // Calculate for t
                 if ( !calculate_concurrence_with_g2_of_zero ) {
-                    for ( int tau = 0; tau < t - i; tau++ ) {
+                    for ( int tau = 0; tau < T - i; tau++ ) { // FIX: tau < t-i --> tau < T-i, da G2 mit t_step gespeichert wird! (i,T same scaling)
                         rho_11.at( t ) += akf_mat_g2_11( i, tau ) * s.parameters.t_step * deltaT;
                         rho_22.at( t ) += akf_mat_g2_22( i, tau ) * s.parameters.t_step * deltaT;
                         rho_12.at( t ) += akf_mat_g2_12( i, tau ) * s.parameters.t_step * deltaT;
