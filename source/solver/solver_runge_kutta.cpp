@@ -69,30 +69,97 @@ bool ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_en
     return true;
 }
 
-Scalar ODESolver::path_integral_recursive( const Sparse &rho0, System &s, std::vector<std::vector<Sparse>> &iterates, std::vector<SaveState> &output, int max_deph, int outer_i, int outer_j, std::vector<int> indices_i, std::vector<int> indices_j, Scalar accumulated_m, FixedSizeSparseMap<Scalar> &adm, bool build_adm, int current_deph ) {
+Scalar ODESolver::path_integral_recursive( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, double squared_threshold, bool fillADM, int max_deph, int i_n, int j_n, const std::vector<int> &indicesX, const std::vector<int> &indicesY, Scalar adm_value, int current_deph ) {
     int tensor_dim = rho0.rows();
     Scalar result = 0;
-    int shift = indices_i.size() == 1 ? 0 : 1;
-    indices_i.insert( indices_i.begin() + shift, outer_i );
-    indices_j.insert( indices_j.begin() + shift, outer_j );
-    for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
-        for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
-            Scalar M = iterates.at( max_deph - 1 - current_deph ).at( j_n + i_n * tensor_dim ).coeff( outer_i, outer_j );
-            if ( abs2( M ) != 0 ) {
+    if ( current_deph == max_deph - 1 ) {
+        for ( int k = 0; k < rho0.outerSize(); ++k ) {
+            for ( Sparse::InnerIterator it( rho0, k ); it; ++it ) {
+                int i_n_m = it.row();
+                int j_n_m = it.col();
+                auto new_indicesX = indicesX;
+                auto new_indicesY = indicesY;
+                new_indicesX.emplace_back( i_n_m );
+                new_indicesY.emplace_back( j_n_m );
+                Scalar phonon_s = 0;
+                for ( int lt = 0; lt < new_indicesX.size(); lt++ ) {
+                    int ii_n = new_indicesX.at( lt );
+                    int ij_n = new_indicesY.at( lt );
+                    for ( int ld = 0; ld <= lt; ld++ ) {
+                        int ii_nd = new_indicesX.at( ld );
+                        int ij_nd = new_indicesY.at( ld );
+                        phonon_s += s.dgl_phonon_S_function( lt - ld, ii_n, ij_n, ii_nd, ij_nd );
+                    }
+                }
+                //for ( int l = 0; l < new_indicesX.size(); l++ ) {
+                //    int ii_nd = new_indicesX.at( l );
+                //    int ij_nd = new_indicesY.at( l );
+                //    phonon_s += s.dgl_phonon_S_function( l, new_indicesX.front(), new_indicesY.front(), ii_nd, ij_nd );
+                //}
+                Scalar val = rho0.coeff( i_n_m, j_n_m ) * iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n ) * std::exp( phonon_s );
+                if ( fillADM && ( new_indicesX[0] == new_indicesY[0] || abs2( val ) > squared_threshold ) ) {
+                    adm.addTriplet( new_indicesX, new_indicesY, adm_value * val, omp_get_thread_num() );
+                }
+                result += val;
+            }
+        }
+    } else {
+        for ( int i_n_m = 0; i_n_m < tensor_dim; i_n_m++ ) {
+            for ( int j_n_m = 0; j_n_m < tensor_dim; j_n_m++ ) {
+                Scalar phonon_s = 0;
+                auto new_indicesX = indicesX;
+                auto new_indicesY = indicesY;
+                new_indicesX.emplace_back( i_n_m );
+                new_indicesY.emplace_back( j_n_m );
+                Scalar val = iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n );
+                if ( abs2( val ) == 0 ) continue;
+                result += val * path_integral_recursive( rho0, s, iterates, output, adm, squared_threshold, fillADM, max_deph, i_n_m, j_n_m, new_indicesX, new_indicesY, adm_value * val, current_deph + 1 );
+            }
+        }
+    }
+    return result;
+}
+
+Scalar ODESolver::path_integral_recursive_backwards( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, double squared_threshold, bool fillADM, int max_deph, int i_n, int j_n, const std::vector<int> &indicesX, const std::vector<int> &indicesY, Scalar adm_value, int current_deph ) {
+    if ( current_deph == -1 )
+        current_deph = max_deph - 1;
+    int tensor_dim = rho0.rows();
+    Scalar result = 0;
+    if ( current_deph == max_deph - 1 ) {
+        for ( int k = 0; k < rho0.outerSize(); ++k ) {
+            for ( Sparse::InnerIterator it( rho0, k ); it; ++it ) {
+                int i_n_m = it.row();
+                int j_n_m = it.col();
+                auto new_indicesX = indicesX;
+                auto new_indicesY = indicesY;
+                new_indicesX.emplace_back( i_n_m ); // [i_0, , i_nc]
+                new_indicesY.emplace_back( j_n_m ); // [j_0, , j_nc]
+                Scalar phonon_s = 0;
+                Scalar val = rho0.coeff( i_n_m, j_n_m ) * iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n ) * std::exp( phonon_s );
                 if ( current_deph == 0 ) {
-                    // End and fill adm
-                    result += M;
-                    if ( build_adm ) {
-                        auto indices_i_n = indices_i;
-                        auto indices_j_n = indices_j;
-                        indices_i_n.insert( indices_i_n.begin() + shift, i_n );
-                        indices_j_n.insert( indices_j_n.begin() + shift, j_n );
-#pragma omp critical
-                        adm.addTriplet( indices_i_n, indices_j_n, M * accumulated_m, omp_get_thread_num() );
+                    result += val;
+                } else {
+                    result += val * path_integral_recursive_backwards( rho0, s, iterates, output, adm, squared_threshold, fillADM, max_deph, i_n_m, j_n_m, new_indicesX, new_indicesY, adm_value * val, current_deph - 1 );
+                }
+            }
+        }
+    } else {
+        for ( int i_n_m = 0; i_n_m < tensor_dim; i_n_m++ ) {
+            for ( int j_n_m = 0; j_n_m < tensor_dim; j_n_m++ ) {
+                Scalar phonon_s = 0;
+                auto new_indicesX = indicesX;
+                auto new_indicesY = indicesY;
+                new_indicesX.insert( new_indicesX.begin() + 1, i_n_m ); // [i_0, i_n_m, , i_nc]
+                new_indicesY.insert( new_indicesY.begin() + 1, j_n_m ); // [j_0, j_n_m, , j_nc]
+                Scalar val = iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n );
+                if ( abs2( val ) == 0 ) continue;
+                if ( current_deph == 0 ) {
+                    result += val;
+                    if ( fillADM && ( new_indicesX[0] == new_indicesY[0] || abs2( val ) > squared_threshold ) ) {
+                        adm.addTriplet( new_indicesX, new_indicesY, adm_value * val, omp_get_thread_num() );
                     }
                 } else {
-                    // Keep iterating
-                    result += M * path_integral_recursive( rho0, s, iterates, output, max_deph, i_n, j_n, indices_i, indices_j, M * accumulated_m, adm, build_adm, current_deph - 1 );
+                    result += val * path_integral_recursive_backwards( rho0, s, iterates, output, adm, squared_threshold, fillADM, max_deph, i_n_m, j_n_m, new_indicesX, new_indicesY, adm_value * val, current_deph - 1 );
                 }
             }
         }
@@ -100,77 +167,13 @@ Scalar ODESolver::path_integral_recursive( const Sparse &rho0, System &s, std::v
     return result;
 }
 
-//Scalar ODESolver::path_integral_recursive_backwards( const Sparse &rho0, System &s, std::vector<std::vector<Sparse>> &iterates, std::vector<SaveState> &output, int max_deph, int outer_i, int outer_j, std::vector<long long int> indices_i, std::vector<long long int> indices_j, Scalar accumulated_m, FixedSizeSparseMap<Scalar> &adm, bool build_adm, int current_deph ) {
-//    if ( current_deph > max_deph - 1 )
-//        current_deph = max_deph - 1;
-//
-//    Scalar result = 0;
-//    int tensor_dim = rho0.rows();
-//    if ( current_deph == max_deph - 1 ) {
-//        indices_i.emplace_back( outer_i );
-//        indices_j.emplace_back( outer_j );
-//    } else {
-//        indices_i.insert( indices_i.begin() + 1, outer_i );
-//        indices_j.insert( indices_j.begin() + 1, outer_j );
-//    }
-//    for ( int i = 0; i < tensor_dim; i++ ) {
-//        for ( int j = 0; j < tensor_dim; j++ ) {
-//            if ( current_deph == max_deph - 1 ) {
-//                if ( abs2( rho0.coeff( i, j ) ) == 0.0 ) continue;
-//                Scalar M = rho0.coeff( i, j ) * iterates.at( 0 ).at( j + tensor_dim * i ).coeff( outer_i, outer_j );
-//                if ( abs2( M ) == 0.0 ) continue;
-//                if ( current_deph == 0 ) {
-//                    result += M;
-//                } else {
-//                    result += M * path_integral_recursive_backwards( rho0, s, iterates, output, max_deph, i, j, indices_i, indices_j, M * accumulated_m, adm, build_adm, current_deph - 1 );
-//                }
-//            } else {
-//                if ( current_deph == 0 ) {
-//                    Scalar M = iterates.at( max_deph - 1 ).at( outer_j + tensor_dim * outer_i ).coeff( i, j );
-//                    result += M;
-//                    // Add new entry to density tensor
-//                    if ( build_adm ) {
-//                        auto indices_i_n = indices_i;
-//                        auto indices_j_n = indices_j;
-//                        indices_i_n.emplace_back( i );
-//                        indices_j_n.emplace_back( j );
-//                        Scalar tensor_value = M * accumulated_m;
-//                        if ( abs2( tensor_value ) != 0 ) {
-//#pragma omp critical
-//                            adm.addTriplet( indices_i_n, indices_j_n, tensor_value );
-//                        }
-//                    }
-//                } else {
-//                    Scalar M = iterates.at( max_deph - 1 - current_deph ).at( outer_j + tensor_dim * outer_i ).coeff( i, j );
-//                    if ( abs2( M ) == 0.0 ) continue;
-//                    result += M * path_integral_recursive_backwards( rho0, s, iterates, output, max_deph, i, j, indices_i, indices_j, M * accumulated_m, adm, build_adm, current_deph - 1 );
-//                }
-//            }
-//        }
-//    }
-//    return result;
-//}
-
-Sparse ODESolver::path_integral( const Sparse &rho0, System &s, std::vector<std::vector<Sparse>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph ) {
+Sparse ODESolver::path_integral( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, double squared_threshold, bool fillADM, int max_deph ) {
     int tensor_dim = rho0.rows();
     Dense rho_ret = Dense::Zero( tensor_dim, tensor_dim );
-    //std::vector<std::vector<Eigen::Triplet<Scalar>>> cpu_caches;
-    //for ( int i = 0; i < s.parameters.numerics_maximum_threads; i++ ) {
-    //    cpu_caches.emplace_back( std::vector<Eigen::Triplet<Scalar>>() );
-    //}
-    //cpu_caches.at( omp_get_thread_num() )
 #pragma omp parallel for collapse( 2 ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
         for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
-            Scalar result = 0;
-            for ( int k = 0; k < rho0.outerSize(); ++k ) {
-                for ( Sparse::InnerIterator it( rho0, k ); it; ++it ) {
-                    std::vector<int> indices_i( { (int)it.row() } );
-                    std::vector<int> indices_j( { (int)it.col() } );
-                    result += it.value() * path_integral_recursive( rho0, s, iterates, output, max_deph, i_n, j_n, indices_i, indices_j, it.value(), adm, fillADM, max_deph - 1 );
-                }
-            }
-            rho_ret( i_n, j_n ) = result;
+            rho_ret( i_n, j_n ) = path_integral_recursive( rho0, s, iterates, output, adm, squared_threshold, fillADM, max_deph, i_n, j_n, { i_n }, { j_n } );
         }
     }
     if ( fillADM ) {
@@ -180,17 +183,15 @@ Sparse ODESolver::path_integral( const Sparse &rho0, System &s, std::vector<std:
 }
 
 bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output ) {
-    // Erstmal alle M, S sachen hier lokal machen, dann später outsourcen wie bei der RK PMEQ auch (S in system precalculaten, M als weiteren saveState vector)
-    // FIXME: Assume zeros photons for now
     Log::L3( "Setting up Path-Integral Solver...\n" );
     output.reserve( s.parameters.iterations_t_max + 1 );
-    int n_c_max = 6;
+    int n_c_max = 7;
     int tensor_dim = rho0.rows();
     // Configurables
-    double stepsize = t_step_initial; // 1E-12;          //t_step_initial;
+    double stepsize = t_step_initial; // 1E-12;
     double substepsize = 1.0 / 5.0;   // 10.0;
     double squared_threshold = 1E-30; // > 1E-6;
-    double prune_threshold = 1E1;     // > 1E-10
+    double prune_threshold = 1E1;     // Wird noch mit epsilon multipliziert!
     // Propagator Cutoff; When iterated multiple times, M(t0->t1) may gain additional entries in between the RK iterations from t0 to t1. When set to true, the final non-zero matrix entries will be mapped onto the non-zero entries after
     // the first iteration, meaning any additional non-zero entries besides the ones created within the first iteration are lost.
     bool doCutoff_propagator = false;
@@ -211,27 +212,28 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     // Precalculate all iterates per index and timestep once. Saveorder is j+j_max*i
     Log::L3( "Pre-Calculating propagator matrices...\n" );
     auto t_prop = omp_get_wtime();
-    std::vector<std::vector<Sparse>> iterates;
+    std::vector<std::vector<std::vector<Sparse>>> propagators;
+    std::vector<Sparse> empty_inner( tensor_dim, Sparse( tensor_dim, tensor_dim ) );
+    std::vector<std::vector<Sparse>> empty_outer( tensor_dim, empty_inner );
     for ( int t = 1; t < n_c_max; t++ ) {
-        std::vector<Sparse> empty;
-        iterates.emplace_back( empty );
+        propagators.emplace_back( empty_outer );
     }
-
     for ( int t = 1; t < n_c_max; t++ ) {
+        // The first iteration of this is not threadsafe due to the hamilton function caching itself
         Sparse projector = Sparse( tensor_dim, tensor_dim );
         projector.coeffRef( 0, 0 ) = 1;
-        Sparse M_t = iterate( projector, s, stepsize * t, t_step_initial * substepsize, output ).pruned( prune_threshold );
+        Sparse M = iterate( projector, s, stepsize * t, t_step_initial * substepsize, output ).pruned( prune_threshold );
         Sparse map;
         if ( doCutoff_propagator ) {
-            map = project_matrix_sparse( M_t );
+            map = project_matrix_sparse( M );
         }
         for ( double sub_t = stepsize * t + t_step_initial * substepsize; sub_t < stepsize * ( t + 1 ) - t_step_initial * substepsize * 0.5; sub_t += t_step_initial * substepsize ) {
-            M_t = iterate( M_t, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
+            M = iterate( M, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
         }
         if ( doCutoff_propagator ) {
-            iterates.at( t - 1 ).emplace_back( M_t.cwiseProduct( map ).pruned( prune_threshold ) );
+            propagators.at( t - 1 ).at( 0 ).at( 0 ) = ( M.cwiseProduct( map ).pruned( prune_threshold ) );
         } else {
-            iterates.at( t - 1 ).emplace_back( M_t.pruned( prune_threshold ) );
+            propagators.at( t - 1 ).at( 0 ).at( 0 ) = ( M.pruned( prune_threshold ) );
         }
     }
 #pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
@@ -241,18 +243,18 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                 if ( i_n == 0 && i_n == j_n ) continue;
                 Sparse projector = Sparse( tensor_dim, tensor_dim );
                 projector.coeffRef( i_n, j_n ) = 1;
-                Sparse M_t = iterate( projector, s, stepsize * t, t_step_initial * substepsize, output ).pruned( prune_threshold );
+                Sparse M = iterate( projector, s, stepsize * t, t_step_initial * substepsize, output ).pruned( prune_threshold );
                 Sparse map;
                 if ( doCutoff_propagator ) {
-                    map = project_matrix_sparse( M_t );
+                    map = project_matrix_sparse( M );
                 }
                 for ( double sub_t = stepsize * t + t_step_initial * substepsize; sub_t < stepsize * ( t + 1 ) - t_step_initial * substepsize * 0.5; sub_t += t_step_initial * substepsize ) {
-                    M_t = iterate( M_t, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
+                    M = iterate( M, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
                 }
                 if ( doCutoff_propagator ) {
-                    iterates.at( t - 1 ).emplace_back( M_t.cwiseProduct( map ).pruned( prune_threshold ) );
+                    propagators.at( t - 1 ).at( i_n ).at( j_n ) = ( M.cwiseProduct( map ).pruned( prune_threshold ) );
                 } else {
-                    iterates.at( t - 1 ).emplace_back( M_t.pruned( prune_threshold ) );
+                    propagators.at( t - 1 ).at( i_n ).at( j_n ) = ( M.pruned( prune_threshold ) );
                 }
             }
         }
@@ -262,7 +264,8 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     // Calculate the first n_c steps by recursion:
     for ( int n = 1; n < n_c_max; n++ ) {
         Log::L3( "Calculating rho(t{})...\n", n );
-        rho = path_integral_bruteforce( rho0, s, iterates, output, adms, squared_threshold, n == n_c_max - 1, n );
+        //rho = path_integral_bruteforce( rho0, s, iterates, output, adms, squared_threshold, n == n_c_max - 1, n );
+        rho = path_integral( rho0, s, propagators, output, adms, squared_threshold, n == n_c_max - 1, n );
         saveState( rho, stepsize * n, output );
     }
 
@@ -275,144 +278,197 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     double t_start_new = t_start + stepsize * n_c_max;
     for ( double t_t = t_start_new; t_t <= t_end; t_t += stepsize ) {
         // Path-Integral iteration
-
-        std::vector<std::vector<Sparse>> propagator;
-        propagator.reserve( tensor_dim );
-        for ( int i = 0; i < tensor_dim; i++ ) {
-            propagator.emplace_back( std::vector<Sparse>() );
-        }
-        // The first iteration of this is not threadsafe due to the hamilton function caching itself
-        Sparse projector = Sparse( tensor_dim, tensor_dim );
-        projector.coeffRef( 0, 0 ) = 1;
-        Sparse M = iterate( projector, s, t_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
-        Sparse map;
-        if ( doCutoff_propagator ) {
-            map = project_matrix_sparse( M );
-        }
-        std::string nonzerros = fmt::format( "[{:d} ", (int)M.nonZeros() );
-        for ( double sub_t = t_t + t_step_initial * substepsize; sub_t < t_t + stepsize - t_step_initial * substepsize / 2.0; sub_t += t_step_initial * substepsize ) {
-            M = iterate( M, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold ); // The first iteration of this is not threadsafe due to the hamilton function caching itself
-            nonzerros = fmt::format( "{}{:d} ", nonzerros, (int)M.nonZeros() );
-        }
-        if ( doCutoff_propagator ) {
-            propagator.at( 0 ).emplace_back( M.cwiseProduct( map ).pruned( prune_threshold ) );
-        } else {
-            propagator.at( 0 ).emplace_back( M.pruned( prune_threshold ) );
-        }
-        nonzerros = fmt::format( "{} -> {:d}]", nonzerros, (int)propagator[0].back().nonZeros() );
-        Log::L3( "Non-Zeros evolution for 0,0 projector propagation: {}\n", nonzerros );
-
-        //Log::L3( "Curren time t_t = {}, subtimes are '{}'\n", t_t, times );
-        auto t0 = omp_get_wtime();
-#pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
-        for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
-            for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
-                if ( !( i_n == j_n && i_n == 0 ) ) {
-                    Sparse projector = Sparse( tensor_dim, tensor_dim );
-                    projector.coeffRef( i_n, j_n ) = 1;
-                    Sparse M = iterate( projector, s, t_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
-                    Sparse map;
-                    if ( doCutoff_propagator ) {
-                        map = project_matrix_sparse( M );
-                    }
-                    for ( double sub_t = t_t + t_step_initial * substepsize; sub_t < t_t + stepsize - t_step_initial * substepsize / 2.0; sub_t += t_step_initial * substepsize ) {
-                        M = iterate( M, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold ); // The first iteration of this is not threadsafe due to the hamilton function caching itself
-                    }
-                    if ( doCutoff_propagator ) {
-                        propagator.at( i_n ).emplace_back( M.cwiseProduct( map ).pruned( prune_threshold ) );
-                    } else {
-                        propagator.at( i_n ).emplace_back( M.pruned( prune_threshold ) );
-                    }
-                }
+        if ( true ) {
+            std::vector<std::vector<Sparse>> propagator;
+            propagator.reserve( tensor_dim );
+            for ( int i = 0; i < tensor_dim; i++ ) {
+                propagator.emplace_back( std::vector<Sparse>() );
             }
-        }
-        t0 = ( omp_get_wtime() - t0 );
+            // The first iteration of this is not threadsafe due to the hamilton function caching itself
+            Sparse projector = Sparse( tensor_dim, tensor_dim );
+            projector.coeffRef( 0, 0 ) = 1;
+            Sparse M = iterate( projector, s, t_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
+            Sparse map;
+            if ( doCutoff_propagator ) {
+                map = project_matrix_sparse( M );
+            }
+            if ( doCutoff_propagator ) {
+                propagator.at( 0 ).emplace_back( M.cwiseProduct( map ).pruned( prune_threshold ) );
+            } else {
+                propagator.at( 0 ).emplace_back( M.pruned( prune_threshold ) );
+            }
+            std::string nonzerros = fmt::format( "[{:d} ", (int)M.nonZeros() );
+            for ( double sub_t = t_t + t_step_initial * substepsize; sub_t < t_t + stepsize - t_step_initial * substepsize / 2.0; sub_t += t_step_initial * substepsize ) {
+                M = iterate( M, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold ); // The first iteration of this is not threadsafe due to the hamilton function caching itself
+                nonzerros = fmt::format( "{}{:d} ", nonzerros, (int)M.nonZeros() );
+            }
+            nonzerros = fmt::format( "{} -> {:d}]", nonzerros, (int)propagator[0].back().nonZeros() );
+            Log::L3( "Non-Zeros evolution for 0,0 projector propagation: {}\n", nonzerros );
 
-        double cur_min = 1;
-        test << t_t << "\t" << adms.nonZeros() << "\t" << adms.getSizeOfTensor() << "\t";
-
-        // Main Iteration loop
-        Log::L3( "current non zeros in adm: {}   \r", adms.nonZeros() );
-        auto t1 = omp_get_wtime();
-        double total_append_time = 0;
-        double total_time = 0;
+            //Log::L3( "Curren time t_t = {}, subtimes are '{}'\n", t_t, times );
+            auto t0 = omp_get_wtime();
 #pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
-        for ( auto &outer : adms.get() )
-            for ( auto &triplet : outer ) {
-                auto tt = omp_get_wtime();
-                for ( int l = 0; l < propagator[triplet.indicesX[0]][triplet.indicesY[0]].outerSize(); ++l ) {
-                    for ( Sparse::InnerIterator it( propagator[triplet.indicesX[0]][triplet.indicesY[0]], l ); it; ++it ) {
-                        int i_n = it.row();
-                        int j_n = it.col();
-                        Scalar phonon_s = 0;
-                        // Gemäß PhysRevB.94.125439
-                        //for ( int lt = 0; lt <= n_c_max; lt++ ) {
-                        //    int ii_n = ( lt == n_c_max ? i_n : triplet.indicesX.at( n_c_max - 1 - lt ) );
-                        //    int ij_n = ( lt == n_c_max ? j_n : triplet.indicesY.at( n_c_max - 1 - lt ) );
-                        //    for ( int ld = 0; ld <= lt; ld++ ) {
-                        //        int ii_nd = ( ld == n_c_max ? i_n : triplet.indicesX.at( n_c_max - 1 - ld ) );
-                        //        int ij_nd = ( ld == n_c_max ? j_n : triplet.indicesY.at( n_c_max - 1 - ld ) );
-                        //        phonon_s += s.dgl_phonon_S_function( l - ld, ii_n, ij_n, ii_nd, ij_nd );
-                        //    }
-                        //}
-                        // Gemäß supplement-2
-                        //phonon_s += s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n );
-                        //phonon_s += s.dgl_phonon_S_function( 1, i_n, j_n, triplet.indicesX.at( 0 ), triplet.indicesY.at( 0 ) );
-                        //phonon_s += s.dgl_phonon_S_function( 2, i_n, j_n, triplet.indicesX.at( 1 ), triplet.indicesY.at( 1 ) );
-                        //phonon_s += s.dgl_phonon_S_function( 3, i_n, j_n, triplet.indicesX.at( 2 ), triplet.indicesY.at( 2 ) );
-                        //phonon_s += s.dgl_phonon_S_function( 4, i_n, j_n, triplet.indicesX.at( 3 ), triplet.indicesY.at( 3 ) );
-                        //for ( int l = 0; l <= n_c_max; l++ ) {
-                        //    int ii_nd = ( l == 0 ? i_n : triplet.indicesX.at( l - 1 ) );
-                        //    int ij_nd = ( l == 0 ? j_n : triplet.indicesY.at( l - 1 ) );
-                        //    phonon_s += s.dgl_phonon_S_function( l, i_n, j_n, ii_nd, ij_nd );
-                        //}
-                        Scalar val = it.value() * triplet.value * std::exp( phonon_s );
-                        double abs = abs2( val );
-                        auto appendtime = omp_get_wtime();
-                        // Add Element to Triplet list if they are diagonal elements or if they surpass the given threshold.
-                        if ( i_n == j_n || abs >= squared_threshold ) {
-                            cur_min = cur_min < abs ? cur_min : abs;
-                            adms.addTriplet( triplet.indicesX, triplet.indicesY, val, omp_get_thread_num(), i_n, j_n );
+            for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
+                for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
+                    if ( !( i_n == j_n && i_n == 0 ) ) {
+                        Sparse projector = Sparse( tensor_dim, tensor_dim );
+                        projector.coeffRef( i_n, j_n ) = 1;
+                        Sparse M = iterate( projector, s, t_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
+                        Sparse map;
+                        if ( doCutoff_propagator ) {
+                            map = project_matrix_sparse( M );
                         }
-                        total_append_time += omp_get_wtime() - appendtime;
+                        for ( double sub_t = t_t + t_step_initial * substepsize; sub_t < t_t + stepsize - t_step_initial * substepsize / 2.0; sub_t += t_step_initial * substepsize ) {
+                            M = iterate( M, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold ); // The first iteration of this is not threadsafe due to the hamilton function caching itself
+                        }
+                        if ( doCutoff_propagator ) {
+                            propagator.at( i_n ).emplace_back( M.cwiseProduct( map ).pruned( prune_threshold ) );
+                        } else {
+                            propagator.at( i_n ).emplace_back( M.pruned( prune_threshold ) );
+                        }
                     }
                 }
-                total_time += omp_get_wtime() - tt;
             }
-        t1 = ( omp_get_wtime() - t1 );
+            t0 = ( omp_get_wtime() - t0 );
 
-        test << cur_min << std::endl;
-        // Copy new ADM into old variable for consistency
-        auto ts = omp_get_wtime();
-        adms.reduceDublicates();
-        ts = omp_get_wtime() - ts;
+            double cur_min = 1;
+            test << t_t << "\t" << adms.nonZeros() << "\t" << adms.getSizeOfTensor() << "\t";
 
-        Log::L3( "Reducing ADM\n" );
-        // Calculate the reduced density matrix by tracing over all past times for each entry
-        auto t2 = omp_get_wtime();
-        // Calculate rho by tracing over the n_c last steps
-        //#pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
-        Dense cache = Dense::Zero( tensor_dim, tensor_dim );
-        for ( auto &outer : adms.get() )
-            for ( auto &triplet : outer ) {
-                int i_n = triplet.indicesX[0];
-                int j_n = triplet.indicesY[0];
-                cache( i_n, j_n ) += triplet.value;
+            // Main Iteration loop
+            Log::L3( "current non zeros in adm: {}   \r", adms.nonZeros() );
+            auto t1 = omp_get_wtime();
+            double total_append_time = 0;
+            double total_time = 0;
+
+#pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
+            for ( auto &outer : adms.get() )
+                for ( auto &triplet : outer ) {
+                    auto tt = omp_get_wtime();
+                    for ( int l = 0; l < propagator[triplet.indicesX[0]][triplet.indicesY[0]].outerSize(); ++l ) {
+                        for ( Sparse::InnerIterator it( propagator[triplet.indicesX[0]][triplet.indicesY[0]], l ); it; ++it ) {
+                            int i_n = it.row();
+                            int j_n = it.col();
+                            Scalar phonon_s = 0;
+                            // Gemäß PhysRevB.94.125439
+                            //auto newIX = triplet.indicesX;
+                            //newIX.insert( newIX.begin(), i_n );
+                            //auto newIY = triplet.indicesY;
+                            //newIY.insert( newIY.begin(), j_n );
+                            //for ( int lt = 0; lt < newIX.size(); lt++ ) {
+                            //    int ii_n = newIX.at( lt );
+                            //    int ij_n = newIY.at( lt );
+                            //    for ( int ld = 0; ld <= lt; ld++ ) {
+                            //        int ii_nd = newIX.at( ld );
+                            //        int ij_nd = newIY.at( ld );
+                            //        phonon_s += s.dgl_phonon_S_function( lt - ld, ii_n, ij_n, ii_nd, ij_nd );
+                            //    }
+                            //}
+                            // Gemäß supplement-2
+                            //phonon_s += s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n );                                           // Only: Viel zu Starkes dephasing (nc=6,T=0)
+                            //phonon_s += s.dgl_phonon_S_function( 1, i_n, j_n, triplet.indicesX.at( 0 ), triplet.indicesY.at( 0 ) ); // +   : Schwächeres dephasing (besser)
+                            //phonon_s += s.dgl_phonon_S_function( 2, i_n, j_n, triplet.indicesX.at( 1 ), triplet.indicesY.at( 1 ) ); //  +  : Schwächeres dephasing (viel besser, fast richtig); ++  : Macht alles kaputt
+                            //phonon_s += s.dgl_phonon_S_function( 3, i_n, j_n, triplet.indicesX.at( 2 ), triplet.indicesY.at( 2 ) ); //   + : Stärkeres dephasing (schlecht); + + : Besser;  ++ : RIP ; +++ : Macht alles kaputt
+                            //phonon_s += s.dgl_phonon_S_function( 4, i_n, j_n, triplet.indicesX.at( 3 ), triplet.indicesY.at( 3 ) ); //    +: Stärkeres dephasing (schlecht); +  +: Weniger dephasing (besser); ++ +: Macht alles kaputt; + ++: Etwas schwächeres Dephasing (besser)
+                            //phonon_s += s.dgl_phonon_S_function( 5, i_n, j_n, triplet.indicesX.at( 4 ), triplet.indicesY.at( 4 ) );
+
+                            phonon_s += s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n );
+                            for ( int l = 0; l < triplet.indicesX.size(); l++ ) {
+                                int ii_nd = triplet.indicesX.at( l );
+                                int ij_nd = triplet.indicesY.at( l );
+                                phonon_s += s.dgl_phonon_S_function( l + 1, i_n, j_n, ii_nd, ij_nd );
+                            }
+
+                            Scalar val = it.value() * triplet.value * std::exp( phonon_s );
+                            double abs = abs2( val );
+                            auto appendtime = omp_get_wtime();
+                            // Add Element to Triplet list if they are diagonal elements or if they surpass the given threshold.
+                            if ( i_n == j_n || abs >= squared_threshold ) {
+                                cur_min = cur_min < abs ? cur_min : abs;
+                                adms.addTriplet( triplet.indicesX, triplet.indicesY, val, omp_get_thread_num(), i_n, j_n );
+                            }
+                            total_append_time += omp_get_wtime() - appendtime;
+                        }
+                    }
+                    total_time += omp_get_wtime() - tt;
+                }
+            t1 = ( omp_get_wtime() - t1 );
+
+            test << cur_min << std::endl;
+            // Copy new ADM into old variable for consistency
+            auto ts = omp_get_wtime();
+            adms.reduceDublicates();
+            ts = omp_get_wtime() - ts;
+
+            Log::L3( "Reducing ADM\n" );
+            // Calculate the reduced density matrix by tracing over all past times for each entry
+            auto t2 = omp_get_wtime();
+            // Calculate rho by tracing over the n_c last steps
+            //#pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
+            Dense cache = Dense::Zero( tensor_dim, tensor_dim );
+            for ( auto &outer : adms.get() )
+                for ( auto &triplet : outer ) {
+                    int i_n = triplet.indicesX[0];
+                    int j_n = triplet.indicesY[0];
+                    cache( i_n, j_n ) += triplet.value;
+                }
+            rho = cache.sparseView();
+            t2 = ( omp_get_wtime() - t2 );
+            Log::L3( "Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting: {:.4f}s, ADM Reduction: {:.4f}s ]\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2 );
+
+            // Dynamic Cutoff
+            if ( doCutoff_dynamic ) {
+                double ratio = (double)adms.nonZeros() / cutoff_iterations_max;
+                ratio = std::exp( ratio ) * std::pow( ratio, 5 ); // Scaled squared
+                squared_threshold *= ratio;                       // Adjust Cutoff by squared ratio
+                if ( squared_threshold < 1E-30 ) squared_threshold = 1E-30;
+                if ( squared_threshold > 1E4 ) squared_threshold = 1E4;
+                Log::L3( "Adjusted Cutoff Threshold to {} (x{})\n", std::sqrt( squared_threshold ), ratio );
             }
-        rho = cache.sparseView();
-        t2 = ( omp_get_wtime() - t2 );
-        Log::L3( "Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting: {:.4f}s, ADM Reduction: {:.4f}s ]\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2 );
+        } else {
+            propagators.emplace_back( empty_outer );
+            propagators.erase( propagators.begin() );
 
-        // Dynamic Cutoff
-        if ( doCutoff_dynamic ) {
-            double ratio = (double)adms.nonZeros() / cutoff_iterations_max;
-            ratio = std::exp( ratio ) * std::pow( ratio, 5 ); // Scaled squared
-            squared_threshold *= ratio;                       // Adjust Cutoff by squared ratio
-            if ( squared_threshold < 1E-30 ) squared_threshold = 1E-30;
-            if ( squared_threshold > 1E4 ) squared_threshold = 1E4;
-            Log::L3( "Adjusted Cutoff Threshold to {} (x{})\n", std::sqrt( squared_threshold ), ratio );
+            // The first iteration of this is not threadsafe due to the hamilton function caching itself
+            Sparse projector = Sparse( tensor_dim, tensor_dim );
+            projector.coeffRef( 0, 0 ) = 1;
+            Sparse M = iterate( projector, s, t_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
+            Sparse map;
+            if ( doCutoff_propagator ) {
+                map = project_matrix_sparse( M );
+            }
+            for ( double sub_t = t_t + t_step_initial * substepsize; sub_t < t_t + t_step_initial - t_step_initial * substepsize * 0.5; sub_t += t_step_initial * substepsize ) {
+                M = iterate( M, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
+            }
+            if ( doCutoff_propagator ) {
+                propagators.back().at( 0 ).at( 0 ) = ( M.cwiseProduct( map ).pruned( prune_threshold ) );
+            } else {
+                propagators.back().at( 0 ).at( 0 ) = ( M.pruned( prune_threshold ) );
+            }
+#pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
+            for ( int t = 1; t < n_c_max; t++ ) {
+                for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
+                    for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
+                        if ( i_n == 0 && i_n == j_n ) continue;
+                        Sparse projector = Sparse( tensor_dim, tensor_dim );
+                        projector.coeffRef( i_n, j_n ) = 1;
+                        Sparse M = iterate( projector, s, t_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
+                        Sparse map;
+                        if ( doCutoff_propagator ) {
+                            map = project_matrix_sparse( M );
+                        }
+                        for ( double sub_t = t_t + t_step_initial * substepsize; sub_t < t_t + t_step_initial - t_step_initial * substepsize * 0.5; sub_t += t_step_initial * substepsize ) {
+                            M = iterate( M, s, sub_t, t_step_initial * substepsize, output ).pruned( prune_threshold );
+                        }
+                        if ( doCutoff_propagator ) {
+                            propagators.back().at( i_n ).at( j_n ) = ( M.cwiseProduct( map ).pruned( prune_threshold ) );
+                        } else {
+                            propagators.back().at( i_n ).at( j_n ) = ( M.pruned( prune_threshold ) );
+                        }
+                    }
+                }
+            }
+            rho = path_integral( rho, s, propagators, output, adms, squared_threshold, false, n_c_max - 1 );
         }
-
         // Save Rho
         saveState( rho, t_t, output );
         // Progress and time output
@@ -491,6 +547,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
                 for ( int i_n_m1 = 0; i_n_m1 < tensor_dim; i_n_m1++ ) {
                     for ( int j_n_m1 = 0; j_n_m1 < tensor_dim; j_n_m1++ ) {
                         Scalar phonon_s = s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n ) + s.dgl_phonon_S_function( 0, i_n_m1, j_n_m1, i_n_m1, j_n_m1 ) + s.dgl_phonon_S_function( 1, i_n, j_n, i_n_m1, j_n_m1 );
+                        phonon_s = 0;
                         result += rho0.coeff( i_n_m1, j_n_m1 ) * 1.0 * iterates.at( 0 ).at( j_n_m1 + tensor_dim * i_n_m1 ).coeff( i_n, j_n ) * std::exp( phonon_s );
                     }
                 }
@@ -512,6 +569,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
                                 Scalar phonon_s = s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n ) + s.dgl_phonon_S_function( 0, i_n_m1, j_n_m1, i_n_m1, j_n_m1 ) + s.dgl_phonon_S_function( 0, i_n_m2, j_n_m2, i_n_m2, j_n_m2 );
                                 phonon_s += s.dgl_phonon_S_function( 1, i_n, j_n, i_n_m1, j_n_m1 ) + s.dgl_phonon_S_function( 1, i_n_m1, j_n_m1, i_n_m2, j_n_m2 );
                                 phonon_s += s.dgl_phonon_S_function( 2, i_n, j_n, i_n_m2, j_n_m2 );
+                                phonon_s = 0;
                                 Scalar val = it.value() * 1.0 * iterates.at( 1 ).at( j_n_m1 + tensor_dim * i_n_m1 ).coeff( i_n, j_n ) * iterates.at( 0 ).at( j_n_m2 + tensor_dim * i_n_m2 ).coeff( i_n_m1, j_n_m1 ) * std::exp( phonon_s );
                                 result += val;
                                 if ( fillADM && ( i_n == j_n || abs2( val ) > squared_threshold ) ) {
@@ -549,6 +607,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
                                         phonon_s += s.dgl_phonon_S_function( 2, i_n, j_n, i_n_m2, j_n_m2 ) + s.dgl_phonon_S_function( 2, i_n_m1, j_n_m1, i_n_m3, j_n_m3 );
                                         phonon_s += s.dgl_phonon_S_function( 3, i_n, j_n, i_n_m3, j_n_m3 );
                                         Scalar val = it.value() * 1.0 * iterates.at( 2 ).at( j_n_m1 + tensor_dim * i_n_m1 ).coeff( i_n, j_n ) * iterates.at( 1 ).at( j_n_m2 + tensor_dim * i_n_m2 ).coeff( i_n_m1, j_n_m1 ) * iterates.at( 0 ).at( j_n_m3 + tensor_dim * i_n_m3 ).coeff( i_n_m2, j_n_m2 ) * std::exp( phonon_s );
+                                        phonon_s = 0;
                                         result += val;
                                         // Indexing is time-upwards, meaning t_n, t_n-1, t_n-2, t_n-3
                                         if ( fillADM && ( i_n == j_n || abs2( val ) > squared_threshold ) ) {
@@ -592,6 +651,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
                                                 phonon_s += s.dgl_phonon_S_function( 3, i_n, j_n, i_n_m3, j_n_m3 ) + s.dgl_phonon_S_function( 3, i_n_m1, j_n_m1, i_n_m4, j_n_m4 );
                                                 phonon_s += s.dgl_phonon_S_function( 4, i_n, j_n, i_n_m4, j_n_m4 );
                                                 Scalar val = it.value() * 1.0 * iterates.at( 3 ).at( j_n_m1 + tensor_dim * i_n_m1 ).coeff( i_n, j_n ) * iterates.at( 2 ).at( j_n_m2 + tensor_dim * i_n_m2 ).coeff( i_n_m1, j_n_m1 ) * iterates.at( 1 ).at( j_n_m3 + tensor_dim * i_n_m3 ).coeff( i_n_m2, j_n_m2 ) * iterates.at( 0 ).at( j_n_m4 + tensor_dim * i_n_m4 ).coeff( i_n_m3, j_n_m3 ) * std::exp( phonon_s );
+                                                phonon_s = 0;
                                                 result += val;
                                                 // Indexing is time-upwards, meaning t_n, t_n-1, t_n-2, t_n-3
                                                 if ( fillADM && ( i_n == j_n || abs2( val ) > squared_threshold ) ) {
@@ -639,6 +699,7 @@ Sparse ODESolver::path_integral_bruteforce( const Sparse &rho0, System &s, std::
                                                         phonon_s += s.dgl_phonon_S_function( 3, i_n, j_n, i_n_m3, j_n_m3 ) + s.dgl_phonon_S_function( 3, i_n_m1, j_n_m1, i_n_m4, j_n_m4 ) + s.dgl_phonon_S_function( 3, i_n_m2, j_n_m2, i_n_m5, j_n_m5 );
                                                         phonon_s += s.dgl_phonon_S_function( 4, i_n, j_n, i_n_m4, j_n_m4 ) + s.dgl_phonon_S_function( 4, i_n_m1, j_n_m1, i_n_m5, j_n_m5 );
                                                         phonon_s += s.dgl_phonon_S_function( 5, i_n, j_n, i_n_m5, j_n_m5 );
+                                                        phonon_s = 0;
                                                         Scalar val = it.value() * 1.0 * iterates.at( 4 ).at( j_n_m1 + tensor_dim * i_n_m1 ).coeff( i_n, j_n ) * iterates.at( 3 ).at( j_n_m2 + tensor_dim * i_n_m2 ).coeff( i_n_m1, j_n_m1 ) * iterates.at( 2 ).at( j_n_m3 + tensor_dim * i_n_m3 ).coeff( i_n_m2, j_n_m2 ) * iterates.at( 1 ).at( j_n_m4 + tensor_dim * i_n_m4 ).coeff( i_n_m3, j_n_m3 ) * iterates.at( 0 ).at( j_n_m5 + tensor_dim * i_n_m5 ).coeff( i_n_m4, j_n_m4 ) * std::exp( phonon_s );
                                                         result += val;
                                                         // Indexing is time-upwards, meaning t_n, t_n-1, t_n-2, t_n-3

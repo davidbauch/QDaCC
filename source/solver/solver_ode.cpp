@@ -18,7 +18,7 @@ Sparse ODESolver::getHamilton( System &s, const double t, bool use_saved_hamilto
             return savedHamiltons.back().mat;
         } else {
             long unsigned int approx = std::floor( t / s.parameters.t_step / 2.0 );
-            if ( !( approx > savedHamiltons.size() || approx < 0 ) ) {
+            if ( !( approx >= savedHamiltons.size() || approx < 0 ) ) { //Fixed: > --> >=
                 // Look for corresponding Hamilton. t-direction has to be calculated first if used with multiple threads
                 while ( t > savedHamiltons.at( approx ).t )
                     approx++;
