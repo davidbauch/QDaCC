@@ -15,7 +15,8 @@ class OperatorMatrices {
     Sparse rho;
     Sparse H_used;
     std::vector<std::string> base;
-    std::vector<double> phononCouplingFactor;
+    //std::vector<double> phononCouplingFactor;
+    Dense phononCouplingFactor;
 
     //Operator Matrices
     Sparse photon_create_H, photon_annihilate_H, photon_create_V, photon_annihilate_V;

@@ -134,7 +134,6 @@ class System : public Operatable {
     void initialize_path_integral_functions();
     Scalar dgl_phonons_kernel( const double t, const double t_step );
     Scalar dgl_phonon_S_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd );
-
     // ##### Template Functions #####
 
     // Calculates the expectation values for a given operator

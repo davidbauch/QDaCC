@@ -282,7 +282,7 @@ CLA_ARGUMENT = {
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = 'temperature'
-		value = '0'
+		value = '-1'
 		datatype = 'double'
 		description = 'Assumed temperature'
 	}
@@ -290,7 +290,7 @@ CLA_ARGUMENT = {
 		subkey = 'phononorder'
 		value = '4'
 		datatype = 'int'
-		description = 'Integer between 0 and 4 where 0 is full contribution, 1 is matrixtransformation, 2 is no backtransformation, 3 is analytical contribution and 4 is hybrid.'
+		description = 'Integer between 0 and 4 where 0 is full contribution, 1 is matrixtransformation, 2 is no backtransformation, 3 is analytical contribution, 4 is hybrid and 5 is path integral.'
 	}
 	CLA_PARAMETER = {
 		subkey = 'phononalpha'
@@ -310,7 +310,14 @@ CLA_ARGUMENT = {
 		datatype = 'string'
 		description = 'Phonon Cutoff time'
 	}
+	CLA_PARAMETER = {
+		subkey = 'pathint_nc'
+		value = '6'
+		datatype = 'int'
+		description = 'Maximum backwards iteration deph n_c for Path Integral'
+	}
 }
+# Deprecated
 CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'phonons'
@@ -673,7 +680,7 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '1hyphen'
-	key = 'advLog'
+	key = 'advLog' or 'L2' or 'L3'
 	description = 'Advanced logging.'
 	group = 'General'
 	CLA_PARAMETER = {
@@ -699,6 +706,19 @@ CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'oElec'
 	description = 'Also output the electronic state emission through radiative decay'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'interpolate'
+	description = 'Interpolates the outputs of the temporal calculations, resulting in smoother outputs'
 	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''

@@ -185,19 +185,20 @@ Sparse ODESolver::path_integral( const Sparse &rho0, System &s, std::vector<std:
 bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output ) {
     Log::L3( "Setting up Path-Integral Solver...\n" );
     output.reserve( s.parameters.iterations_t_max + 1 );
-    int n_c_max = 7;
+    int n_c_max = s.parameters.p_phonon_nc;
     int tensor_dim = rho0.rows();
     // Configurables
-    double stepsize = t_step_initial; // 1E-12;
-    double substepsize = 1.0 / 5.0;   // 10.0;
-    double squared_threshold = 1E-30; // > 1E-6;
+    double stepsize = t_step_initial;
+    double substepsize = 1E-13 / t_step_initial;
+    Log::L2( "Path Integral Substepsize is 100fs -> {} delta\n", substepsize );
+    double squared_threshold = 1E-32; //1E-36; // > 1E-6;
     double prune_threshold = 1E1;     // Wird noch mit epsilon multipliziert!
     // Propagator Cutoff; When iterated multiple times, M(t0->t1) may gain additional entries in between the RK iterations from t0 to t1. When set to true, the final non-zero matrix entries will be mapped onto the non-zero entries after
     // the first iteration, meaning any additional non-zero entries besides the ones created within the first iteration are lost.
     bool doCutoff_propagator = false;
     // Dynamic Cutoff; While true, the squared threshold will be increased or decreased until the number of ADM elements is approximately equal to the cutoff iterations set.
     bool doCutoff_dynamic = false;
-    long long cutoff_iterations_max = 6E6;
+    long long cutoff_iterations_max = 5E5;
 
     FixedSizeSparseMap<Scalar> adms = FixedSizeSparseMap<Scalar>( std::vector<int>( n_c_max, tensor_dim ), s.parameters.numerics_maximum_threads );
 
@@ -274,7 +275,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     // Iterate Path integral for further time steps
 
     std::ofstream test( s.parameters.subfolder + "test.txt", std::ofstream::out );
-    test << "Time\tADM_Size(#)\tADM_Size(Bytes)\tMin\n";
+    test << "Time\tADM_Size(#)\tADM_Size(Bytes)\tMin\tCachevectorsizes\n";
     double t_start_new = t_start + stepsize * n_c_max;
     for ( double t_t = t_start_new; t_t <= t_end; t_t += stepsize ) {
         // Path-Integral iteration
@@ -348,34 +349,11 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                         for ( Sparse::InnerIterator it( propagator[triplet.indicesX[0]][triplet.indicesY[0]], l ); it; ++it ) {
                             int i_n = it.row();
                             int j_n = it.col();
-                            Scalar phonon_s = 0;
-                            // Gemäß PhysRevB.94.125439
-                            //auto newIX = triplet.indicesX;
-                            //newIX.insert( newIX.begin(), i_n );
-                            //auto newIY = triplet.indicesY;
-                            //newIY.insert( newIY.begin(), j_n );
-                            //for ( int lt = 0; lt < newIX.size(); lt++ ) {
-                            //    int ii_n = newIX.at( lt );
-                            //    int ij_n = newIY.at( lt );
-                            //    for ( int ld = 0; ld <= lt; ld++ ) {
-                            //        int ii_nd = newIX.at( ld );
-                            //        int ij_nd = newIY.at( ld );
-                            //        phonon_s += s.dgl_phonon_S_function( lt - ld, ii_n, ij_n, ii_nd, ij_nd );
-                            //    }
-                            //}
-                            // Gemäß supplement-2
-                            //phonon_s += s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n );                                           // Only: Viel zu Starkes dephasing (nc=6,T=0)
-                            //phonon_s += s.dgl_phonon_S_function( 1, i_n, j_n, triplet.indicesX.at( 0 ), triplet.indicesY.at( 0 ) ); // +   : Schwächeres dephasing (besser)
-                            //phonon_s += s.dgl_phonon_S_function( 2, i_n, j_n, triplet.indicesX.at( 1 ), triplet.indicesY.at( 1 ) ); //  +  : Schwächeres dephasing (viel besser, fast richtig); ++  : Macht alles kaputt
-                            //phonon_s += s.dgl_phonon_S_function( 3, i_n, j_n, triplet.indicesX.at( 2 ), triplet.indicesY.at( 2 ) ); //   + : Stärkeres dephasing (schlecht); + + : Besser;  ++ : RIP ; +++ : Macht alles kaputt
-                            //phonon_s += s.dgl_phonon_S_function( 4, i_n, j_n, triplet.indicesX.at( 3 ), triplet.indicesY.at( 3 ) ); //    +: Stärkeres dephasing (schlecht); +  +: Weniger dephasing (besser); ++ +: Macht alles kaputt; + ++: Etwas schwächeres Dephasing (besser)
-                            //phonon_s += s.dgl_phonon_S_function( 5, i_n, j_n, triplet.indicesX.at( 4 ), triplet.indicesY.at( 4 ) );
-
-                            phonon_s += s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n );
-                            for ( int l = 0; l < triplet.indicesX.size(); l++ ) {
-                                int ii_nd = triplet.indicesX.at( l );
-                                int ij_nd = triplet.indicesY.at( l );
-                                phonon_s += s.dgl_phonon_S_function( l + 1, i_n, j_n, ii_nd, ij_nd );
+                            Scalar phonon_s = s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n );
+                            for ( int tau = 0; tau < triplet.indicesX.size(); tau++ ) {
+                                int i_nd = triplet.indicesX[tau];
+                                int j_nd = triplet.indicesY[tau];
+                                phonon_s += s.dgl_phonon_S_function( tau + 1, i_n, j_n, i_nd, j_nd );
                             }
 
                             Scalar val = it.value() * triplet.value * std::exp( phonon_s );
@@ -383,7 +361,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                             auto appendtime = omp_get_wtime();
                             // Add Element to Triplet list if they are diagonal elements or if they surpass the given threshold.
                             if ( i_n == j_n || abs >= squared_threshold ) {
-                                cur_min = cur_min < abs ? cur_min : abs;
+                                cur_min = cur_min != 0.0 && cur_min < abs ? cur_min : abs;
                                 adms.addTriplet( triplet.indicesX, triplet.indicesY, val, omp_get_thread_num(), i_n, j_n );
                             }
                             total_append_time += omp_get_wtime() - appendtime;
@@ -393,8 +371,8 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                 }
             t1 = ( omp_get_wtime() - t1 );
 
-            test << cur_min << std::endl;
-            // Copy new ADM into old variable for consistency
+            test << cur_min << "\t" << adms.getSizesOfCache() << std::endl;
+
             auto ts = omp_get_wtime();
             adms.reduceDublicates();
             ts = omp_get_wtime() - ts;

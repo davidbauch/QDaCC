@@ -174,6 +174,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     output_coefficients = get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
     p_phonon_adjust = !get_parameter_passed( "-noPhononAdjust" );
     p_phonon_pure_dephasing = convertParam<double>( "1mueV" );
+    p_phonon_nc = get_parameter<int>( "--phonons", "pathint_nc" );
 
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
     hbar = 1.0545718E-34; // J/s, scaling will be 1

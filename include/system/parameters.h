@@ -68,6 +68,7 @@ class Parameters {
     Parameter p_omega_decay;
     Parameter p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_pure_dephasing;
     bool p_phonon_adjust;
+    int p_phonon_nc;
     Parameter p_deltaE;
     Parameter p_biexciton_bindingenergy;
 

@@ -11,7 +11,7 @@ System::System( const std::vector<std::string> &input ) : Operatable() {
     // Log the operator matrix base
     parameters.log( operatorMatrices.base );
     // Create all possible file outputs
-    fileoutput = FileOutput( {"densitymatrix.txt", "atomicinversion.txt", "photonpopulation.txt"}, parameters, operatorMatrices );
+    fileoutput = FileOutput( { "densitymatrix.txt", "atomicinversion.txt", "photonpopulation.txt" }, parameters, operatorMatrices );
     // Initialize / Adjust the remaining system class
     terminate_message = global_message_normaltermination;
     Timer &timer_systeminit = Timers::create( "System Initialization", true, false );
@@ -46,7 +46,7 @@ bool System::init_system() {
     pulseinputs_V.add( parameters.pulse_center, parameters.pulse_amp, parameters.pulse_sigma, parameters.pulse_omega, parameters.pulse_omega_chirp, parameters.pulse_type, parameters.pulse_pol, "-", -1i / std::sqrt( 2.0 ) );
     pulse_V = Pulse( pulseinputs_V );
     if ( parameters.pulse_amp.at( 0 ) != 0 ) {
-        Pulse::fileOutput( parameters.subfolder + "pulse.txt", {pulse_H, pulse_V} );
+        Pulse::fileOutput( parameters.subfolder + "pulse.txt", { pulse_H, pulse_V } );
     }
 
     if ( parameters.numerics_use_saved_coefficients )
@@ -74,24 +74,24 @@ Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const doub
     Sparse ret = -1i * dgl_kommutator( H, rho );
     // Photon losses
     if ( parameters.p_omega_cavity_loss != 0.0 ) {
-        ret += parameters.p_omega_cavity_loss / 2.0 * dgl_lindblad( rho, operatorMatrices.photon_annihilate_H, operatorMatrices.photon_create_H ); //BUGFIX: kappa/2.0
-        ret += parameters.p_omega_cavity_loss / 2.0 * dgl_lindblad( rho, operatorMatrices.photon_annihilate_V, operatorMatrices.photon_create_V ); //BUGFIX: kappa/2.0
+        ret += 0.5 * parameters.p_omega_cavity_loss * dgl_lindblad( rho, operatorMatrices.photon_annihilate_H, operatorMatrices.photon_create_H ); //BUGFIX: kappa/2.0
+        ret += 0.5 * parameters.p_omega_cavity_loss * dgl_lindblad( rho, operatorMatrices.photon_annihilate_V, operatorMatrices.photon_create_V ); //BUGFIX: kappa/2.0
     }
     // Pure Dephasing
     if ( parameters.p_omega_pure_dephasing != 0.0 ) {
-        ret -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_ground * rho * operatorMatrices.atom_state_H + operatorMatrices.atom_state_H * rho * operatorMatrices.atom_state_ground );
-        ret -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_ground * rho * operatorMatrices.atom_state_V + operatorMatrices.atom_state_V * rho * operatorMatrices.atom_state_ground );
-        ret -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_H * rho * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_biexciton * rho * operatorMatrices.atom_state_H );
-        ret -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_V * rho * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_biexciton * rho * operatorMatrices.atom_state_V );
-        ret -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_H * rho * operatorMatrices.atom_state_V + operatorMatrices.atom_state_V * rho * operatorMatrices.atom_state_H );
-        ret -= parameters.p_omega_pure_dephasing / 2.0 * ( operatorMatrices.atom_state_ground * rho * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_biexciton * rho * operatorMatrices.atom_state_ground );
+        ret -= 0.5 * parameters.p_omega_pure_dephasing * ( operatorMatrices.atom_state_ground * rho * operatorMatrices.atom_state_H + operatorMatrices.atom_state_H * rho * operatorMatrices.atom_state_ground );
+        ret -= 0.5 * parameters.p_omega_pure_dephasing * ( operatorMatrices.atom_state_ground * rho * operatorMatrices.atom_state_V + operatorMatrices.atom_state_V * rho * operatorMatrices.atom_state_ground );
+        ret -= 0.5 * parameters.p_omega_pure_dephasing * ( operatorMatrices.atom_state_H * rho * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_biexciton * rho * operatorMatrices.atom_state_H );
+        ret -= 0.5 * parameters.p_omega_pure_dephasing * ( operatorMatrices.atom_state_V * rho * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_biexciton * rho * operatorMatrices.atom_state_V );
+        ret -= 0.5 * parameters.p_omega_pure_dephasing * ( operatorMatrices.atom_state_H * rho * operatorMatrices.atom_state_V + operatorMatrices.atom_state_V * rho * operatorMatrices.atom_state_H );
+        ret -= 0.5 * parameters.p_omega_pure_dephasing * ( operatorMatrices.atom_state_ground * rho * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_biexciton * rho * operatorMatrices.atom_state_ground );
     }
     // Radiative decay
     if ( parameters.p_omega_decay != 0.0 ) {
-        ret += parameters.p_omega_decay / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_H, operatorMatrices.atom_sigmaplus_G_H );
-        ret += parameters.p_omega_decay / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_V, operatorMatrices.atom_sigmaplus_G_V );
-        ret += parameters.p_omega_decay / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B, operatorMatrices.atom_sigmaplus_H_B );
-        ret += parameters.p_omega_decay / 2.0 * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B, operatorMatrices.atom_sigmaplus_V_B );
+        ret += 0.5 * parameters.p_omega_decay * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_H, operatorMatrices.atom_sigmaplus_G_H );
+        ret += 0.5 * parameters.p_omega_decay * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_V, operatorMatrices.atom_sigmaplus_G_V );
+        ret += 0.5 * parameters.p_omega_decay * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B, operatorMatrices.atom_sigmaplus_H_B );
+        ret += 0.5 * parameters.p_omega_decay * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B, operatorMatrices.atom_sigmaplus_V_B );
     }
     if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T >= 0.0 ) {
         ret += dgl_phonons_pmeq( rho, t, past_rhos );

@@ -18,18 +18,46 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
     // Progress
     ProgressBar progressbar = ProgressBar( pbsize );
     // Cache matrix. Saves complex double entries of G1(t,tau). Will be created even if they are not needed
-    Dense akf_mat_g2_11 = Dense::Zero( dim, dim );
-    Dense akf_mat_g2_22 = Dense::Zero( dim, dim );
-    Dense akf_mat_g2_12 = Dense::Zero( dim, dim );
+    Dense akf_mat_g2_HHHH = Dense::Zero( dim, dim ); // a
+    Dense akf_mat_g2_VVVV = Dense::Zero( dim, dim ); // b
+    Dense akf_mat_g2_HHVV = Dense::Zero( dim, dim ); // c-id
+    Dense akf_mat_g2_VHVH = Dense::Zero( dim, dim ); // e+if
+    Dense akf_mat_g2_VHHV = Dense::Zero( dim, dim ); // g
+    Dense akf_mat_g2_HVVH = Dense::Zero( dim, dim ); // h
+    //Dense akf_mat_g2_VVHH = Dense::Zero( dim, dim ); // c+id
+    //Dense akf_mat_g2_VVVH = Dense::Zero( dim, dim ); // 0
+    //Dense akf_mat_g2_VVHV = Dense::Zero( dim, dim ); // 0
+    //Dense akf_mat_g2_VHVV = Dense::Zero( dim, dim ); // 0
+    //Dense akf_mat_g2_VHHH = Dense::Zero( dim, dim ); // 0
+    //Dense akf_mat_g2_HVVV = Dense::Zero( dim, dim ); // 0
+    //Dense akf_mat_g2_HVHV = Dense::Zero( dim, dim ); // e-if
+    //Dense akf_mat_g2_HVHH = Dense::Zero( dim, dim ); // 0
+    //Dense akf_mat_g2_HHVH = Dense::Zero( dim, dim ); // 0
+    //Dense akf_mat_g2_HHHV = Dense::Zero( dim, dim ); // 0
+    //calculate_g2( s, op_creator_2, op_annihilator_1, op_creator_2, op_annihilator_1, akf_mat_g2_VVHH, "Mode VVHH" );
+    //calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_2, op_annihilator_1, akf_mat_g2_VVVH, "Mode VVVH" );
+    //calculate_g2( s, op_creator_2, op_annihilator_1, op_creator_2, op_annihilator_2, akf_mat_g2_VVHV, "Mode VVHV" );
+    //calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_1, op_annihilator_2, akf_mat_g2_VHVV, "Mode VHVV" );
+    //calculate_g2( s, op_creator_2, op_annihilator_1, op_creator_1, op_annihilator_1, akf_mat_g2_VHHH, "Mode VHHH" );
+    //calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_2, op_annihilator_2, akf_mat_g2_HVVV, "Mode HVVV" );
+    //calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2, akf_mat_g2_HVHV, "Mode HVHV" );
+    //calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_1, akf_mat_g2_HVHH, "Mode HVHH" );
+    //calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_1, op_annihilator_1, akf_mat_g2_HHVH, "Mode HHVH" );
+    //calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_2, akf_mat_g2_HHHV, "Mode HHHV" );
+    std::vector<Scalar> rho_VVHH, rho_VVVH, rho_VVHV, rho_VHVV, rho_VHVH, rho_VHHV, rho_VHHH, rho_HVVV, rho_HVVH, rho_HVHV, rho_HVHH, rho_HHVH, rho_HHHV;
+
     // Calculate G2(t,tau) with given operator matrices
     if ( !calculate_concurrence_with_g2_of_zero ) {
-        Log::L2( "Calculating 3 seperate G2(t,tau) matrices...\n" );
+        Log::L2( "Calculating up to 6 seperate G2(t,tau) matrices...\n" );
         if ( s.parameters.numerics_calculate_g2_H || s.parameters.numerics_calculate_g2_C )
-            calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, akf_mat_g2_11, "Mode 11" );
+            calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, akf_mat_g2_HHHH, "Mode HHHH" );
         if ( s.parameters.numerics_calculate_g2_V || s.parameters.numerics_calculate_g2_C )
-            calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_2, op_annihilator_2, akf_mat_g2_22, "Mode 22" );
+            calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_2, op_annihilator_2, akf_mat_g2_VVVV, "Mode VVVV" );
         if ( s.parameters.numerics_calculate_g2_C )
-            calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_1, op_annihilator_2, akf_mat_g2_12, "Mode 12" );
+            calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_1, op_annihilator_2, akf_mat_g2_HHVV, "Mode HHVV" );
+        calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_1, op_annihilator_1, akf_mat_g2_VHVH, "Mode VHVH" );
+        calculate_g2( s, op_creator_2, op_annihilator_1, op_creator_1, op_annihilator_2, akf_mat_g2_VHHV, "Mode VHHV" );
+        calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_2, op_annihilator_1, akf_mat_g2_HVVH, "Mode HVVH" );
     }
     // Modified Dimension Step. If Upscaling of G1/G2 is active, step for matrices are i instead of t_skip
     int mat_step = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );
@@ -56,9 +84,9 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
         int k = i / mat_step;
         if ( !calculate_concurrence_with_g2_of_zero ) {
             for ( int t = 0; t < dim; t++ ) {
-                g2_11.at( k ) += akf_mat_g2_11( i, t ) * s.parameters.t_step; // FIX: akf(k,t) -> akf(i,t), da G2 mit t_step gespeichert wird!
-                g2_22.at( k ) += akf_mat_g2_22( i, t ) * s.parameters.t_step; // FIX: akf(k,t) -> akf(i,t), da G2 mit t_step gespeichert wird!
-                g2_12.at( k ) += akf_mat_g2_12( i, t ) * s.parameters.t_step; // FIX: akf(k,t) -> akf(i,t), da G2 mit t_step gespeichert wird!
+                g2_11.at( k ) += akf_mat_g2_HHHH( i, t ) * s.parameters.t_step; // FIX: akf(k,t) -> akf(i,t), da G2 mit t_step gespeichert wird!
+                g2_22.at( k ) += akf_mat_g2_VVVV( i, t ) * s.parameters.t_step; // FIX: akf(k,t) -> akf(i,t), da G2 mit t_step gespeichert wird!
+                g2_12.at( k ) += akf_mat_g2_HHVV( i, t ) * s.parameters.t_step; // FIX: akf(k,t) -> akf(i,t), da G2 mit t_step gespeichert wird!
             }
         }
         double t_t = getTimeAt( i );
@@ -85,11 +113,25 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
     timer_g2.end();
     // Calculating Concurrence
     // Prepare Concurrence output vector
-    std::vector<Scalar> rho_11, rho_22, rho_12;
+    std::vector<Scalar> rho_HHHH, rho_VVVV, rho_HHVV;
     for ( long unsigned int i = 0; i < savedStates.size(); i += mat_step ) {
-        rho_11.push_back( 0 );
-        rho_22.push_back( 0 );
-        rho_12.push_back( 0 );
+        rho_HHHH.push_back( 0 );
+        rho_VVVV.push_back( 0 );
+        rho_HHVV.push_back( 0 );
+
+        rho_VVHH.push_back( 0 );
+        rho_VVVH.push_back( 0 );
+        rho_VVHV.push_back( 0 );
+        rho_VHVV.push_back( 0 );
+        rho_VHVH.push_back( 0 );
+        rho_VHHV.push_back( 0 );
+        rho_VHHH.push_back( 0 );
+        rho_HVVV.push_back( 0 );
+        rho_HVVH.push_back( 0 );
+        rho_HVHV.push_back( 0 );
+        rho_HVHH.push_back( 0 );
+        rho_HHVH.push_back( 0 );
+        rho_HHHV.push_back( 0 );
     }
     if ( s.parameters.numerics_calculate_g2_C ) {
         Timer &timer_c = Timers::create( "Concurrence" );
@@ -105,15 +147,31 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
                 // Calculate for t
                 if ( !calculate_concurrence_with_g2_of_zero ) {
                     for ( int tau = 0; tau < T - i; tau++ ) { // FIX: tau < t-i --> tau < T-i, da G2 mit t_step gespeichert wird! (i,T same scaling)
-                        rho_11.at( t ) += akf_mat_g2_11( i, tau ) * s.parameters.t_step * deltaT;
-                        rho_22.at( t ) += akf_mat_g2_22( i, tau ) * s.parameters.t_step * deltaT;
-                        rho_12.at( t ) += akf_mat_g2_12( i, tau ) * s.parameters.t_step * deltaT;
+                        //rho_VVHH.at( t ) += akf_mat_g2_VVHH( i, tau ) * s.parameters.t_step * deltaT;
+                        //rho_VVVH.at( t ) += akf_mat_g2_VVVH( i, tau ) * s.parameters.t_step * deltaT;
+                        //rho_VVHV.at( t ) += akf_mat_g2_VVHV( i, tau ) * s.parameters.t_step * deltaT;
+                        //rho_VHVV.at( t ) += akf_mat_g2_VHVV( i, tau ) * s.parameters.t_step * deltaT;
+                        //rho_VHHH.at( t ) += akf_mat_g2_VHHH( i, tau ) * s.parameters.t_step * deltaT;
+                        //rho_HVVV.at( t ) += akf_mat_g2_HVVV( i, tau ) * s.parameters.t_step * deltaT;
+                        //rho_HVHV.at( t ) += akf_mat_g2_HVHV( i, tau ) * s.parameters.t_step * deltaT;
+                        //rho_HVHH.at( t ) += akf_mat_g2_HVHH( i, tau ) * s.parameters.t_step * deltaT;
+                        //rho_HHVH.at( t ) += akf_mat_g2_HHVH( i, tau ) * s.parameters.t_step * deltaT;
+                        //rho_HHHV.at( t ) += akf_mat_g2_HHHV( i, tau ) * s.parameters.t_step * deltaT;
+
+                        rho_VHVH.at( t ) += akf_mat_g2_VHVH( i, tau ) * s.parameters.t_step * deltaT;
+                        rho_VHHV.at( t ) += akf_mat_g2_VHHV( i, tau ) * s.parameters.t_step * deltaT;
+                        rho_HVVH.at( t ) += akf_mat_g2_HVVH( i, tau ) * s.parameters.t_step * deltaT;
+                        rho_HHHH.at( t ) += akf_mat_g2_HHHH( i, tau ) * s.parameters.t_step * deltaT;
+                        rho_VVVV.at( t ) += akf_mat_g2_VVVV( i, tau ) * s.parameters.t_step * deltaT;
+                        rho_HHVV.at( t ) += akf_mat_g2_HHVV( i, tau ) * s.parameters.t_step * deltaT;
                     }
+                    rho_VVHH.at( t ) = std::conj( rho_HHVV.at( t ) );
+                    rho_HVHV.at( t ) = std::conj( rho_VHVH.at( t ) );
                 } else {
                     int k = i / mat_step;
-                    rho_11.at( t ) += g2_11_zero.at( k ) * deltaT;
-                    rho_22.at( t ) += g2_22_zero.at( k ) * deltaT;
-                    rho_12.at( t ) += g2_12_zero.at( k ) * deltaT;
+                    rho_HHHH.at( t ) += g2_11_zero.at( k ) * deltaT;
+                    rho_VVVV.at( t ) += g2_22_zero.at( k ) * deltaT;
+                    rho_HHVV.at( t ) += g2_12_zero.at( k ) * deltaT;
                 }
                 Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence: " );
             }
@@ -163,10 +221,10 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
                     Scalar gpop_2 = s.dgl_expectationvalue<Sparse, Scalar>( rho, M2, t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M2, t_tau );
                     Scalar gbot_1 = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator_1, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator_1, t );
                     Scalar gbot_2 = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator_2, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator_2, t );
-                    top_1 += ( gpop_1 + akf_mat_g2_11( i, j ) - akf_mat_g1_1( i, j ) * std::conj( akf_mat_g1_1( i, j ) ) ); //k,j nicht k, l
+                    top_1 += ( gpop_1 + akf_mat_g2_HHHH( i, j ) - akf_mat_g1_1( i, j ) * std::conj( akf_mat_g1_1( i, j ) ) ); //k,j nicht k, l
                     bottom_1 += 2.0 * gpop_1 - gbot_1 * std::conj( gbot_1 );
-                    //fmt::print( "what contributes: gpop {}, g2_11 {}, g1_1 {}, gbot {}, TOP {}, BOT {}\n", gpop_1, akf_mat_g2_11( k, l ), std::pow( std::abs( akf_mat_g1_1( k, l ) ), 2.0 ), std::pow( std::abs( gbot_1 ), 2.0 ), top_1, bottom_1 );
-                    top_2 += ( gpop_2 + akf_mat_g2_22( i, j ) - akf_mat_g1_2( i, j ) * std::conj( akf_mat_g1_2( i, j ) ) ); //T,j nicht k,l
+                    //fmt::print( "what contributes: gpop {}, g2_11 {}, g1_1 {}, gbot {}, TOP {}, BOT {}\n", gpop_1, akf_mat_g2_HHHH( k, l ), std::pow( std::abs( akf_mat_g1_1( k, l ) ), 2.0 ), std::pow( std::abs( gbot_1 ), 2.0 ), top_1, bottom_1 );
+                    top_2 += ( gpop_2 + akf_mat_g2_VVVV( i, j ) - akf_mat_g1_2( i, j ) * std::conj( akf_mat_g1_2( i, j ) ) ); //T,j nicht k,l
                     bottom_2 += 2.0 * gpop_2 - gbot_2 * std::conj( gbot_2 );
                 }
                 // If we dont output the full time resoluted indistinguishability, we instead output the time resoluted integral for T = T_max
@@ -188,6 +246,12 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
     }
     // Save output
     Log::L2( "Done, saving to {}... ", fileOutputName );
+
+    //REMOVE: Test
+    std::string filepathtwo = s.parameters.subfolder + "twophotondensitymatrix.txt";
+    FILE *twophotdensitymatrix = std::fopen( filepathtwo.c_str(), "w" );
+    fmt::print( twophotdensitymatrix, "Time\tVVVV\tVVVH\tVVHV\tVVHH\tVHVV\tVHVH\tVHHV\tVHHH\tHVVV\tHVVH\tHVHV\tHVHH\tHHVV\tHHVH\tHHHV\tHHHH\n" );
+
     std::string filepath = s.parameters.subfolder + fileOutputName;
     FILE *concurrencefile = std::fopen( filepath.c_str(), "w" );
     if ( !concurrencefile ) {
@@ -195,17 +259,56 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
         return false;
     }
     fmt::print( concurrencefile, "Time\tMatrixelement_11\tMatrixelement_22\tConcurrence\tG2_11(tau)\tG2_22(tau)\tG2_12(tau)\tG2(tau=0)_11\tG2(tau=0)_22\tG2(tau=0)_12\tI_1\tI_2\n" );
+    Dense spinflip = Dense::Zero( 4, 4 );
+    spinflip( 0, 3 ) = -1;
+    spinflip( 1, 2 ) = 1;
+    spinflip( 2, 1 ) = 1;
+    spinflip( 3, 0 ) = -1;
+    Log::L3( "Spinflip Matrix: {}\n", spinflip );
+    Scalar conc = 0;
     for ( long unsigned int i = 0; i < savedStates.size(); i += mat_step ) {
         int k = i / mat_step;
-        fmt::print( concurrencefile, "{:.5e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( i ), std::abs( rho_11.at( k ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::abs( rho_22.at( k ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::abs( 2.0 * std::abs( rho_12.at( k ) ) / ( rho_11.at( k ) + rho_22.at( k ) ) ), std::real( g2_11.at( k ) ), std::real( g2_22.at( k ) ), std::real( g2_12.at( k ) ), std::real( g2_11_zero.at( k ) ), std::real( g2_22_zero.at( k ) ), std::real( g2_12_zero.at( k ) ), p1.at( k ), p2.at( k ) );
+        Log::L3( "Creating 2 photon matrix\n" );
+        Dense rho_2phot = Dense::Zero( 4, 4 );
+        rho_2phot( 0, 0 ) = rho_HHHH[k];
+        rho_2phot( 3, 3 ) = rho_VVVV[k];
+        rho_2phot( 0, 3 ) = rho_VVHH[k];
+        rho_2phot( 3, 0 ) = rho_HHVV[k];
+        rho_2phot( 1, 1 ) = rho_VHHV[k];
+        rho_2phot( 1, 2 ) = rho_VHVH[k];
+        rho_2phot( 2, 2 ) = rho_HVVH[k];
+        rho_2phot( 2, 1 ) = rho_HVHV[k];
+        Log::L3( "Normalizing 2 photon matrix\n" );
+        if ( std::abs( rho_2phot.trace() ) != 0 ) {
+            rho_2phot = rho_2phot / rho_2phot.trace();
+            Log::L3( "Rho_2phot = {}\n", rho_2phot );
+            Log::L3( "Calculating sqrt(rho)\n" );
+            //Eigen::MatrixPower<Dense> Mpow( rho_2phot );
+            Dense sqrtrho2phot = rho_2phot.sqrt(); //Mpow( 0.5 );
+            Log::L3( "Calculating R\n" );
+            Dense R = sqrtrho2phot * spinflip * rho_2phot * spinflip * sqrtrho2phot;
+            Log::L3( "R = {}\n", R );
+            Log::L3( "Calculating sqrt(R)\n" );
+            //Eigen::MatrixPower<Dense> SMPow( R );
+            R = R.sqrt(); //SMPow( 0.5 );
+            Log::L3( "Calculating Eigenvalues\n" );
+            auto eigenvalues = R.eigenvalues();
+            Log::L3( "Eigenvalues at t = {} are {}\n", getTimeAt( i ), eigenvalues );
+            conc = eigenvalues( 3 ) - eigenvalues( 2 ) - eigenvalues( 1 ) - eigenvalues( 0 );
+        }
+        fmt::print( concurrencefile, "{:.5e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( i ), std::abs( rho_HHHH.at( k ) / ( rho_HHHH.at( k ) + rho_VVVV.at( k ) ) ), std::abs( rho_VVVV.at( k ) / ( rho_HHHH.at( k ) + rho_VVVV.at( k ) ) ), std::abs( conc ), std::real( g2_11.at( k ) ), std::real( g2_22.at( k ) ), std::real( g2_12.at( k ) ), std::real( g2_11_zero.at( k ) ), std::real( g2_22_zero.at( k ) ), std::real( g2_12_zero.at( k ) ), p1.at( k ), p2.at( k ) );
+        fmt::print( twophotdensitymatrix, "{:.5e}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n", getTimeAt( i ), ( rho_VVVV[k] ), ( rho_VVVH[k] ), ( rho_VVHV[k] ), ( rho_VVHH[k] ), ( rho_VHVV[k] ), ( rho_VHVH[k] ), ( rho_VHHV[k] ), ( rho_VHHH[k] ), ( rho_HVVV[k] ), ( rho_HVVH[k] ), ( rho_HVHV[k] ), ( rho_HVHH[k] ), ( rho_HHVV[k] ), ( rho_HHVH[k] ), ( rho_HHHV[k] ), ( rho_HHHH[k] ) );
     }
     std::fclose( concurrencefile );
+
+    std::fclose( twophotdensitymatrix );
+
     Log::L2( "Done!\n" );
-    Log::L1( "Final Concurrence: {}\n", 2.0 * std::abs( rho_12.back() / ( rho_11.back() + rho_22.back() ) ) );
+    Log::L1( "Final Concurrence: {} (non-normalized: {})\n", conc, 2.0 * std::abs( rho_HHVV.back() ) );
     if ( !calculate_concurrence_with_g2_of_zero )
         Log::L1( "Final Indistinguishability: {} H, {} V\n", p1.back(), p2.back() );
     //if ()
-    //Log::L1( "Final G2(0): {}\n", std::real( 2.0 * std::abs( rho_12.back() ) / ( rho_11.back() + rho_22.back() ) ) );
+    //Log::L1( "Final G2(0): {}\n", std::real( 2.0 * std::abs( rho_HHVV.back() ) / ( rho_HHHH.back() + rho_VVVV.back() ) ) );
 
     if ( output_full_g2 ) {
         Log::L2( "Saving full, non integrated G2(t,tau) matrices... " );
@@ -215,7 +318,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
             int k = i / mat_step;
             for ( long unsigned int j = 0; j < savedStates.size(); j += mat_step ) {
                 int l = j / mat_step;
-                fmt::print( ganz, "{0:.5e}\t{1:.5e}\t{2:.8e}\t{3:.8e}\t{4:.8e}\n", getTimeAt( i ), getTimeAt( j ), std::abs( akf_mat_g2_11( k, l ) ), std::abs( akf_mat_g2_22( k, l ) ), std::abs( akf_mat_g2_12( k, l ) ) );
+                fmt::print( ganz, "{0:.5e}\t{1:.5e}\t{2:.8e}\t{3:.8e}\t{4:.8e}\n", getTimeAt( i ), getTimeAt( j ), std::abs( akf_mat_g2_HHHH( k, l ) ), std::abs( akf_mat_g2_VVVV( k, l ) ), std::abs( akf_mat_g2_HHVV( k, l ) ) );
             }
             fmt::print( ganz, "\n" );
         }

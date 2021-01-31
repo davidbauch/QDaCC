@@ -52,8 +52,7 @@ def compile_all_object_files(data, bin_path="obj", extension_obj=".o", compiler=
             obj_time = os.path.getmtime(path_obj)
         if (obj_time < src_time) or force_recompile:
             print("Compiling {} ... ".format(name), end="", flush=True)
-            cur = os.system(
-                '{} -c "{}" {} {} {}'.format(compiler, path_src, libs, args, cerr))
+            cur = os.system('{} -c "{}" {} {} {}'.format(compiler, path_src, libs, args, cerr))
             succesful = succesful and cur
             print("Moving object file ... ", end="", flush=True)
             os.replace(obj, path_obj)
