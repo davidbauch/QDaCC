@@ -2,6 +2,9 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <ostream>
+#include <set>
+#include <unordered_map>
+#include <functional>
 //using int128 = __uint128_t;
 //std::ostream &operator<<( std::ostream &os, const int128 i ) noexcept {
 //    std::ostream::sentry s( os );
@@ -30,97 +33,87 @@ template <typename Scalar>
 class FixedSizeSparseMap {
    public:
     // Index Type definition
-    typedef __uint128_t Index;
+    typedef long long Index;
     // Overwrite << stream operator
     friend std::ostream &operator<<( std::ostream &os, const Index i ) noexcept {
         os << (long long)i;
         return os;
     }
+
+    class DoubleIndex {
+       public:
+        Index x, y;
+        DoubleIndex() : x( 0 ), y( 0 ){};
+        DoubleIndex( const DoubleIndex &other ) : x( other.x ), y( other.y ){};
+        DoubleIndex( const Index &_x, const Index &_y ) : x( _x ), y( _y ){};
+        bool operator==( const DoubleIndex &other ) const {
+            return x == other.x && y == other.y;
+        }
+    };
+
+    struct hash {
+        static std::hash<Index> hasher;
+        inline size_t operator()( const DoubleIndex &val ) const {
+            size_t seed = 0;
+            seed ^= hasher( val.x ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+            seed ^= hasher( val.y ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+            return seed;
+        }
+    };
+
     class SparseMapTriplet {
        public:
         std::vector<int> indicesX, indicesY;
-        Index sparse_index;
+        DoubleIndex sparse_index;
         Scalar value;
-        static Index getSparseIndex( const std::vector<int> &indicesX, const std::vector<int> &indicesY, const std::vector<Index> &dimensions_scaled ) {
-            Index sparse_index = indicesX[0];
+        bool created_zero = false;
+        static DoubleIndex getSparseIndex( const std::vector<int> &indicesX, const std::vector<int> &indicesY, const std::vector<Index> &dimensions_scaled ) {
+            DoubleIndex sparse_index( indicesX[0], indicesY[0] );
             for ( int i = 1; i < indicesX.size(); i++ ) {
-                sparse_index += indicesX[i] * dimensions_scaled[i - 1];
-            }
-            for ( int i = 0; i < indicesY.size(); i++ ) {
-                sparse_index += indicesY[i] * dimensions_scaled[indicesX.size() + i];
+                sparse_index.x += indicesX[i] * dimensions_scaled[i - 1];
+                sparse_index.y += indicesY[i] * dimensions_scaled[i - 1];
             }
             return sparse_index;
         }
-        SparseMapTriplet(){};
+        SparseMapTriplet() : value( 0 ), created_zero( true ){};
         SparseMapTriplet( const SparseMapTriplet &other ) : indicesX( other.indicesX ), indicesY( other.indicesY ), sparse_index( other.sparse_index ), value( other.value ){};
         SparseMapTriplet( const Scalar &value, const std::vector<int> &indicesX, const std::vector<int> &indicesY, const std::vector<Index> &dimensions_scaled ) : value( value ), indicesX( indicesX ), indicesY( indicesY ) {
-            //if ( std::real( value ) != 0 || std::imag( value ) != 0 ) {
-            sparse_index = indicesX[0];
-            for ( int i = 1; i < indicesX.size(); i++ ) {
-                sparse_index += indicesX[i] * dimensions_scaled[i - 1];
+            sparse_index = getSparseIndex( indicesX, indicesY, dimensions_scaled );
+        }
+        SparseMapTriplet( const Scalar &value, const std::vector<int> &indicesX, const std::vector<int> &indicesY, DoubleIndex sparse_index, const std::vector<Index> &dimensions_scaled ) : value( value ), indicesX( indicesX ), indicesY( indicesY ), sparse_index( sparse_index ){};
+        void addWithCheckForExistence( const Scalar &_value, const std::vector<int> &_indicesX, const std::vector<int> &_indicesY, DoubleIndex _sparse_index ) {
+            value += _value;
+            if ( created_zero ) {
+                indicesX = _indicesX;
+                indicesY = _indicesY;
+                sparse_index = _sparse_index;
+                created_zero = false;
             }
-            for ( int i = 0; i < indicesY.size(); i++ ) {
-                sparse_index += indicesY[i] * dimensions_scaled[indicesX.size() + i];
+        }
+        void addWithCheckForExistence( const SparseMapTriplet &other ) {
+            value += other.value;
+            if ( created_zero ) {
+                indicesX = other.indicesX;
+                indicesY = other.indicesY;
+                sparse_index = other.sparse_index;
+                created_zero = false;
             }
-            //}
-        }
-        bool operator>( const SparseMapTriplet &other ) const {
-            return sparse_index > other.sparse_index;
-        }
-        bool operator>=( const SparseMapTriplet &other ) const {
-            return sparse_index >= other.sparse_index;
-        }
-        bool operator<( const SparseMapTriplet &other ) const {
-            return sparse_index < other.sparse_index;
-        }
-        bool operator<=( const SparseMapTriplet &other ) const {
-            return sparse_index <= other.sparse_index;
         }
         bool operator==( const SparseMapTriplet &other ) const {
             return sparse_index == other.sparse_index;
-            //bool first = true;
-            //bool second = true;
-            //if ( sparse_index != other.sparse_index ) first = false;
-            //for ( int i = 0; i < indicesX.size(); i++ ) {
-            //    if ( indicesX[i] != other.indicesX[i] ) {
-            //        second = false;
-            //        if ( first != second ) std::cout << "FUCK\n";
-            //        return false;
-            //    }
-            //    if ( indicesY[i] != other.indicesY[i] ) {
-            //        second = false;
-            //        if ( first != second ) std::cout << "FUCK\n";
-            //        return false;
-            //    }
-            //}
-            //if ( first != second ) std::cout << "FUCK\n";
-            //return true;
-        }
-        // Sparse Index Comparisons
-        bool operator>( const Index &other ) const {
-            return sparse_index > other;
-        }
-        bool operator>=( const Index &other ) const {
-            return sparse_index >= other;
-        }
-        bool operator<( const Index &other ) const {
-            return sparse_index < other;
-        }
-        bool operator<=( const Index &other ) const {
-            return sparse_index <= other;
-        }
-        // Scalar equal operator
-        bool operator==( const Scalar &other ) const {
-            return value == other;
         }
     };
 
    private:
-    std::vector<std::vector<SparseMapTriplet>> value_triplets;
-    std::vector<std::vector<SparseMapTriplet>> cache_triplets;
     std::vector<int> dimensions;
     std::vector<Index> dimensions_scaled;
     Index sparse_matrix_dimension;
+
+    // Unordered map including SparseIndex;Value pairs.
+    std::vector<std::vector<std::unordered_map<DoubleIndex, SparseMapTriplet, hash>>> values;
+    // Counter for which indices/values vector is active. Use at least 2 and shift current working/getting vector
+    int current_value_vector = 0;
+    int current_cache_vector = 1;
 
    public:
     FixedSizeSparseMap(){};
@@ -131,24 +124,19 @@ class FixedSizeSparseMap {
             sparse_matrix_dimension *= dim;
             dimensions_scaled.emplace_back( sparse_matrix_dimension );
         }
-        // Y
-        for ( int dim : init_dimensions ) {
-            sparse_matrix_dimension *= dim;
-            dimensions_scaled.emplace_back( sparse_matrix_dimension );
-        }
         dimensions = init_dimensions;
-        for ( int thread = 0; thread < max_threads; thread++ ) {
-            value_triplets.emplace_back( std::vector<SparseMapTriplet>() );
-            cache_triplets.emplace_back( std::vector<SparseMapTriplet>() );
+        std::cout << "Sparse Elements: " << (long long)( sparse_matrix_dimension ) << std::endl;
+        for ( int i = 0; i < 2; i++ ) {
+            auto filler = std::vector<std::unordered_map<DoubleIndex, SparseMapTriplet, hash>>( max_threads );
+            values.emplace_back( filler );
         }
-        std::cout << "Sparse Elements: " << (long long)( sparse_matrix_dimension ) << ", number of cache vectors: " << value_triplets.size() << std::endl;
     }
 
-    std::vector<std::vector<SparseMapTriplet>> &get() {
-        return value_triplets;
+    std::vector<std::unordered_map<DoubleIndex, SparseMapTriplet, hash>> &get() {
+        return values[current_value_vector];
     }
 
-    void addTriplet( std::vector<int> indicesX, std::vector<int> indicesY, const Scalar &value, int thread, const long long int i_n = -1, const long long int j_n = -1, bool sortedInsertion = false ) {
+    void addTriplet( std::vector<int> indicesX, std::vector<int> indicesY, const Scalar &value, int thread, const long long int i_n = -1, const long long int j_n = -1 ) {
         if ( i_n != -1 && j_n != -1 ) {
             for ( int i = indicesX.size() - 1; i > 0; i-- ) {
                 indicesX[i] = indicesX[i - 1];
@@ -157,83 +145,37 @@ class FixedSizeSparseMap {
             indicesX[0] = i_n;
             indicesY[0] = j_n;
         }
-        if ( sortedInsertion ) {
-            auto sparse_index = SparseMapTriplet::getSparseIndex( indicesX, indicesY, dimensions_scaled );
-            // Find sparse_index
-            auto lower_bound = std::lower_bound( cache_triplets[thread].begin(), cache_triplets[thread].end(), sparse_index );
-            // Not found, insert
-            if ( lower_bound == cache_triplets[thread].end() ) {
-                cache_triplets[thread].emplace_back( value, indicesX, indicesY, dimensions_scaled );
-                return;
-            }
-            // Check if found index is equal to the to-inserted index, if yes add them, if no insert new element here.
-            auto index = lower_bound - cache_triplets[thread].begin();
-            // Equal indices
-            if ( cache_triplets[thread][index] == sparse_index ) {
-                cache_triplets[thread][index].value += value;
-                return;
-            } else {
-                cache_triplets[thread].insert( lower_bound, { value, indicesX, indicesY, dimensions_scaled } );
-            }
-        }
-        // Insert element
-        cache_triplets[thread].emplace_back( value, indicesX, indicesY, dimensions_scaled );
+        auto sparse_index = SparseMapTriplet::getSparseIndex( indicesX, indicesY, dimensions_scaled );
+        values[current_cache_vector][thread][sparse_index].addWithCheckForExistence( value, indicesX, indicesY, sparse_index );
     }
 
     long long int nonZeros() {
-        long long int nonz = 0;
-        for ( int i = 0; i < value_triplets.size(); i++ ) {
-            nonz += value_triplets[i].size();
-        }
-        return nonz;
+        long long s = values[current_value_vector][0].size();
+        for ( int i = 1; i < values[current_value_vector].size(); i++ )
+            s += values[current_value_vector][i].size();
+        return s;
     }
 
     void reduceDublicates() {
-        int threads = cache_triplets.size();
-
-        // Sort and reduce each vector individually first.
-#pragma omp parallel for num_threads( threads )
-        for ( int thread = 0; thread < threads; thread++ ) {
-            value_triplets[thread].clear();
-            std::sort( cache_triplets[thread].begin(), cache_triplets[thread].end() );
-            value_triplets[thread].emplace_back( cache_triplets[thread].front() );
-
-            // Add all dublicates together, or add new element if element is unique
-            for ( Index i = 1; i < cache_triplets[thread].size(); i++ ) {
-                if ( cache_triplets[thread][i] == value_triplets[thread].back() ) {
-                    value_triplets[thread].back().value += cache_triplets[thread][i].value;
-                } else {
-                    value_triplets[thread].emplace_back( cache_triplets[thread][i] );
-                }
-            }
-
-            cache_triplets[thread].clear();
-        }
-        // Now, add all vectors together, reduce again, and split elements qually amoung all vectors
-        // Reserve space in one of the cache vectors for all of them;
-        cache_triplets[0].reserve( nonZeros() );
-        // Merge all cache vectors to sort them. This part is really slow and still needs to be adjusted
-        for ( int thread = 0; thread < threads; thread++ ) {
-            cache_triplets[0].insert( cache_triplets[0].end(), value_triplets[thread].begin(), value_triplets[thread].end() );
-            value_triplets[thread].clear();
-        }
-        // Sort single giant cache vector
-        std::sort( cache_triplets[0].begin(), cache_triplets[0].end() );
-        // Reduce now giant vector and write results into single thread vectors
-        int current_thread = 0;
-        value_triplets[0].emplace_back( cache_triplets[0][0] );
-        for ( Index i = 1; i < cache_triplets[0].size(); i++ ) {
-            if ( value_triplets[current_thread].back() == cache_triplets[0][i] ) {
-                value_triplets[current_thread].back().value += cache_triplets[0][i].value;
-            } else {
-                current_thread = ( current_thread + 1 ) % threads;
-                value_triplets[current_thread].emplace_back( cache_triplets[0][i] );
-            }
-        }
-        // Clear all cache triplets
-        for ( int thread = 0; thread < threads; thread++ ) {
-            cache_triplets[thread].clear();
-        }
+        std::swap( current_value_vector, current_cache_vector );
+        for ( auto &vec : values[current_cache_vector] )
+            vec.clear();
+        //if ( values[current_value_vector].size() > 1 ) {
+        //    int current_thread_vector = 0;
+        //    // Merge all vectors into vector 0
+        //    for ( int cv = 0; cv < values[current_value_vector].size(); cv++ ) {
+        //        for ( auto &keyv : values[current_value_vector][cv] ) {
+        //            values[current_cache_vector][0][keyv.first].addWithCheckForExistence( keyv.second );
+        //        }
+        //        values[current_value_vector][cv].clear();
+        //    }
+        //    // Redistribute by moving each element to current_thread_vector, then incrementing current_thread_vector
+        //    for ( auto &keyv : values[current_cache_vector][0] ) {
+        //        values[current_value_vector][current_thread_vector][keyv.first].addWithCheckForExistence( keyv.second );
+        //        current_thread_vector = ( current_thread_vector + 1 ) % values[current_value_vector].size();
+        //    }
+        //    values[current_cache_vector][0].clear();
+        //}
     }
 
     int getSizeOfTensor() {
@@ -241,8 +183,6 @@ class FixedSizeSparseMap {
     }
     std::string getSizesOfCache() {
         std::string cachevs = "";
-        for ( auto a : value_triplets )
-            cachevs += std::to_string( a.size() ) + "\t";
         return cachevs;
     }
 };

@@ -53,11 +53,12 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s, const Sparse &o
             calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, akf_mat_g2_HHHH, "Mode HHHH" );
         if ( s.parameters.numerics_calculate_g2_V || s.parameters.numerics_calculate_g2_C )
             calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_2, op_annihilator_2, akf_mat_g2_VVVV, "Mode VVVV" );
-        if ( s.parameters.numerics_calculate_g2_C )
+        if ( s.parameters.numerics_calculate_g2_C ) {
             calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_1, op_annihilator_2, akf_mat_g2_HHVV, "Mode HHVV" );
-        calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_1, op_annihilator_1, akf_mat_g2_VHVH, "Mode VHVH" );
-        calculate_g2( s, op_creator_2, op_annihilator_1, op_creator_1, op_annihilator_2, akf_mat_g2_VHHV, "Mode VHHV" );
-        calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_2, op_annihilator_1, akf_mat_g2_HVVH, "Mode HVVH" );
+            calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_1, op_annihilator_1, akf_mat_g2_VHVH, "Mode VHVH" );
+            calculate_g2( s, op_creator_2, op_annihilator_1, op_creator_1, op_annihilator_2, akf_mat_g2_VHHV, "Mode VHHV" );
+            calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_2, op_annihilator_1, akf_mat_g2_HVVH, "Mode HVVH" );
+        }
     }
     // Modified Dimension Step. If Upscaling of G1/G2 is active, step for matrices are i instead of t_skip
     int mat_step = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );

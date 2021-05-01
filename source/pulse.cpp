@@ -80,7 +80,7 @@ void Pulse::generate() {
         for ( double w = omega_center - omega_range; w < omega_center + omega_range; w += dw ) {
             fourier.emplace_back( w );
             Scalar spectral_amp = 0;
-            for ( double t = inputs.t_start; t < inputs.t_end + inputs.t_step * steps.size(); t += inputs.t_step ) {
+            for ( double t = inputs.t_start; t < inputs.t_end + inputs.t_step * steps.size(); t += inputs.t_step ) { // bad for bigger timesteps
                 spectral_amp += get( t ) * std::exp( 1.i * w * t ) * inputs.t_step;
             }
             pulsearray_fourier.emplace_back( spectral_amp );

@@ -43,6 +43,16 @@ class Parameters {
     int logfilecounter;
     bool numerics_stretch_correlation_grid, numerics_interpolate_outputs;
 
+    // Path Integral Numerics
+    double numerics_pathintegral_stepsize_iterator;      // = 1E-12;
+    double numerics_pathintegral_squared_threshold;      // = 1E-32;
+    double numerics_pathintegral_sparse_prune_threshold; // = 1E-1;
+    // Propagator Cutoff; When iterated multiple times, M(t0->t1) may gain additional entries in between the RK iterations from t0 to t1. When set to true, the final non-zero matrix entries will be mapped onto the non-zero entries after
+    // the first iteration, meaning any additional non-zero entries besides the ones created within the first iteration are lost.
+    bool numerics_pathintegral_docutoff_propagator; //=false
+    // Dynamic Cutoff; While true, the squared threshold will be increased or decreased until the number of ADM elements is approximately equal to the cutoff iterations set.
+    long long numerics_pathintegral_dynamiccutoff_iterations_max; //=0
+
     // System Parameters
     // Time variables
     Parameter t_start, t_end, t_step;

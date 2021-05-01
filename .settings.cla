@@ -310,18 +310,60 @@ CLA_ARGUMENT = {
 		datatype = 'string'
 		description = 'Phonon Cutoff time'
 	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'pathintegral'
+	description = 'Pathintegral properties.'
+	group = 'PhononParams'
 	CLA_PARAMETER = {
-		subkey = 'pathint_nc'
-		value = '6'
+		subkey = 'NC'
+		value = '4'
 		datatype = 'int'
 		description = 'Maximum backwards iteration deph n_c for Path Integral'
+	}
+	CLA_PARAMETER = {
+		subkey = 'iteratorStepsize'
+		value = '0.1ps'
+		datatype = 'string'
+		description = 'Iterator stepsize for the intermediate Path Integral propagators'
+	}
+	CLA_PARAMETER = {
+		subkey = 'squaredThreshold'
+		value = '1E-32'
+		datatype = 'double'
+		description = 'Squared threshold for Path Integral. Except for diagonals, elements smaller than this will be set to zero.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'sparsePruneThreshold'
+		value = '0.1'
+		datatype = 'double'
+		description = 'Prune Threshold for propagator matrices. Matrices will be pruned by this value. Only for Path Integral.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'cutoffADM'
+		value = '0'
+		datatype = 'double'
+		description = 'When greater than zero, the ADM size will be pruned accordingly.'
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'cutoffPropagator'
+	description = 'Enable cutoff for the propagator. Cutoff will be achieved by mapping the first iterator of each timestep to the final iterator.'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
 	}
 }
 # Deprecated
 CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'phonons'
-	description = 'Enable general phonon contribution. Edit parameters via --phonons subkeys'
+	description = 'DEPRECATED Enable general phonon contribution. Edit parameters via --phonons subkeys'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''

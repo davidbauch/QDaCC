@@ -36,7 +36,7 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     }
     base = tensor( tensor( base1, base2 ), base3 );
 
-    Log::L3( "Operator Base: (size {}) ", base.size() );
+    Log::L3( "Operator Base: (size {})\n", base.size() );
     phononCouplingFactor = Dense::Zero( base.size(), base.size() );
     for ( int i = 0; i < base.size(); i++ ) {
         for ( int j = 0; j < base.size(); j++ ) {
@@ -44,27 +44,19 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
                 if ( !( base.at( i ).back() == 'G' or base.at( j ).back() == 'G' ) ) {
                     if ( base.at( i ).back() == 'B' or base.at( j ).back() == 'B' ) {
                         phononCouplingFactor( i, j ) = 2.0;
-                    } else if ( base.at( i ).back() == 'H' or base.at( i ).back() == 'V' or base.at( j ).back() == 'H' or base.at( j ).back() == 'V' ) {
+                    } else { //if ( base.at( i ).back() == 'H' or base.at( i ).back() == 'V' or base.at( j ).back() == 'H' or base.at( j ).back() == 'V' ) {
                         phononCouplingFactor( i, j ) = 1.0;
                     }
                 }
             }
         }
     }
-
-    //std::string bb = "";
-    //for ( auto b : base ) {
-    //    if ( b.back() == 'G' ) {
-    //        phononCouplingFactor.emplace_back( 0.0 );
-    //    } else if ( b.back() == 'B' ) {
-    //        phononCouplingFactor.emplace_back( 2.0 );
-    //    } else {
-    //        phononCouplingFactor.emplace_back( 1.0 );
-    //    }
-    //    //Log::L3( "Level: {} -> {}\n", b, phononCouplingFactor.back() );
-    //    //bb = fmt::format( "{}|{}> ", bb, b );
-    //}
-    //Log::L3( "{}\n", bb );
+    Log::L3( "Coupling Matrix:\n{}\n", phononCouplingFactor );
+    std::string bb = "";
+    for ( auto b : base ) {
+        bb = fmt::format( "{}|{}> ", bb, b );
+    }
+    Log::L3( "Base: {}\n", bb );
 
     // Initializing bare matrices:
     Log::L2( "Initializing base matrices...\n" );

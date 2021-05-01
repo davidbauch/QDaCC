@@ -4,7 +4,8 @@ import os
 import sys
 from time import sleep
 import subprocess
-
+import multiprocessing
+from functools import partial
 
 def get_all_source_files(file_path="/", source_path="source", bin_path="obj", exclude_dirs=[], extension_source=".cpp", extension_obj=".o"):
     ret = []
@@ -24,7 +25,31 @@ def get_all_source_files(file_path="/", source_path="source", bin_path="obj", ex
     return ret
 
 
-def compile_all_object_files(data, bin_path="obj", extension_obj=".o", compiler="g++", libs="", args="", force_recompile=False, cerr_to_file=False):
+def compile_single(cset, force_recompile = False, compiler="g++", libs="", args="", cerr_to_file = False):
+    name, obj, path_src, path_obj = cset[0], cset[1], cset[2], cset[3]
+    cerr = "2>&1  | tee  error/{}_cerr.txt".format(name) if cerr_to_file else ""
+    src_time = os.path.getmtime(path_src)
+    obj_time = 0
+    if not os.path.exists(path_obj):
+        add_to_compile = True
+    else:
+        obj_time = os.path.getmtime(path_obj)
+    try:
+        if (obj_time < src_time) or force_recompile:
+            print("Compiling {} ... ".format(name), end="\n", flush=True)
+            cur = os.system('{} -c "{}" {} {} {}'.format(compiler, path_src, libs, args, cerr))
+            #print("Moving object file ... ", end="", flush=True)
+            os.replace(obj, path_obj)
+            #print("Done!", flush=True)
+            return "NEW"
+        else:
+            return "SKIPPED"
+    except Exception as e:
+        return "FAILED"
+    return "FAILED"
+        
+
+def compile_all_object_files(data, bin_path="obj", extension_obj=".o", compiler="g++", libs="", args="", force_recompile=False, cerr_to_file=False, threads = -1):
     if not os.path.exists(bin_path):
         print("Bin path did not exist, creating '{}'".format(bin_path))
         os.makedirs(bin_path)
@@ -37,29 +62,16 @@ def compile_all_object_files(data, bin_path="obj", extension_obj=".o", compiler=
     if "-g" in args or "-g" in compiler:
         print("Compiling with debug information!")
     ret = []
-    succesful = True
     if cerr_to_file:
         os.makedirs("error", exist_ok=True)
-    for set in data:
-        name, obj, path_src, path_obj = set[0], set[1], set[2], set[3]
-        cerr = "2>&1  | tee  error/{}_cerr.txt".format(
-            name) if cerr_to_file else ""
-        src_time = os.path.getmtime(path_src)
-        obj_time = 0
-        if not os.path.exists(path_obj):
-            add_to_compile = True
-        else:
-            obj_time = os.path.getmtime(path_obj)
-        if (obj_time < src_time) or force_recompile:
-            print("Compiling {} ... ".format(name), end="", flush=True)
-            cur = os.system('{} -c "{}" {} {} {}'.format(compiler, path_src, libs, args, cerr))
-            succesful = succesful and cur
-            print("Moving object file ... ", end="", flush=True)
-            os.replace(obj, path_obj)
-            print("Done!", flush=True)
-    if len(ret) > 0:
+
+    wrapper = partial(compile_single,cerr_to_file=cerr_to_file, compiler=compiler, libs=libs, args=args, force_recompile=force_recompile)
+    with multiprocessing.Pool() as pool:
+        ret = pool.map(wrapper,[cset for cset in data])
+    succesful = ret.count("FAILED") == 0
+    if ret.count("FAILED") and ret.count("NEW") > 0:
         print("Compiling was {}.".format(
-            "succesful." if succesful else "unsuccesful!"))
+            "succesful." if succesful else "unsuccesful! ({} failed)".format(ret.count("FAILED"))))
     return succesful
 
 
@@ -124,6 +136,8 @@ if __name__ == "__main__":
 
     f = get_all_source_files(
         path, exclude_dirs=["ALGLIB"], bin_path=bin_path[platform])
+
+    # Debug : -g -O0, else: -O3
 
     copy_to = {'win32': "../../Threadhandler/QDLC-{}.exe".format(
         version) if "-th" in sys.argv else "", 'darwin': "/Users/davidbauch/bin/QDLC-{}.out".format(version)}
