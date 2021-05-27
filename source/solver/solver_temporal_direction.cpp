@@ -4,7 +4,7 @@ bool ODESolver::calculate_t_direction( System &s ) {
     Sparse rho = s.operatorMatrices.rho;
 
     Timer &rkTimer = Timers::create( "RungeKutta-Main-Loop" );
-    ProgressBar progressbar = ProgressBar( s.parameters.iterations_t_max, 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
+    ProgressBar progressbar = ProgressBar( s.parameters.iterations_t_max, 60, 0, BAR_VERTICAL, true, 0.1, { " ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█" } );
     rkTimer.start();
 
     Log::L2( "Calculating t-direction from {} to {} at stepsize {}... ", s.parameters.t_start, s.parameters.t_end, s.parameters.t_step );
@@ -35,7 +35,7 @@ bool ODESolver::calculate_t_direction( System &s ) {
     // Calculate expectation values
     Timer &evalTimer = Timers::create( "Expectation-Value-Loop" );
     std::string pbname = "Expectation Values: ";
-    ProgressBar progressbar2 = ProgressBar( interpolate_savedstates.size(), 60, 0, BAR_VERTICAL, true, 0.1, {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"} );
+    ProgressBar progressbar2 = ProgressBar( interpolate_savedstates.size(), 60, 0, BAR_VERTICAL, true, 0.1, { " ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█" } );
     evalTimer.start();
     Log::L2( "Calculating expectation values...\n" );
     for ( long unsigned int i = 0; i < interpolate_savedstates.size(); i++ ) {

@@ -159,15 +159,15 @@ Scalar Pulse::get( double t, bool force_evaluate ) {
     }
 
     int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
-    while ( timearray.at( i ) < t ) {
+    while ( i < size && timearray.at( i ) < t ) {
         i++;
-    }
-    if ( std::abs( timearray.at( i ) - t ) > 1E-14 ) {
-        counter_evaluated++;
-        return evaluate( t );
     }
     if ( i < 0 || i >= size ) {
         Log::L3( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
+        counter_evaluated++;
+        return evaluate( t );
+    }
+    if ( std::abs( timearray.at( i ) - t ) > 1E-14 ) {
         counter_evaluated++;
         return evaluate( t );
     }

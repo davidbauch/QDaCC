@@ -179,8 +179,9 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_pathintegral_stepsize_iterator = get_parameter<double>( "--pathintegral", "iteratorStepsize" );
     numerics_pathintegral_squared_threshold = get_parameter<double>( "--pathintegral", "squaredThreshold" );
     numerics_pathintegral_sparse_prune_threshold = get_parameter<double>( "--pathintegral", "sparsePruneThreshold" );
-    numerics_pathintegral_docutoff_propagator = get_parameter_passed( "-cutoffPropagator" );
     numerics_pathintegral_dynamiccutoff_iterations_max = get_parameter<double>( "--pathintegral", "iteratorStepsize" );
+    numerics_pathintegral_docutoff_propagator = get_parameter_passed( "-cutoffPropagator" );
+    t_step_pathint = get_parameter<double>( "--pathintegral", "tstepPath" );
 
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
     hbar = 1.0545718E-34; // J/s, scaling will be 1
@@ -283,7 +284,7 @@ bool Parameters::adjustInput() {
     maxStates = 4 * ( p_max_photon_number + 1 ) * ( p_max_photon_number + 1 ); // 4 Electronic states x N+1 Photonic states * 2 for H,V modes
 
     // Calculate stuff for RK
-    iterations_t_max = (int)std::ceil( ( t_end - t_start ) / t_step );
+    iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
     iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
     iterations_wtau_skip = iterations_t_skip; //1;//iterations_t_skip;
 
@@ -440,6 +441,9 @@ void Parameters::log( const std::vector<std::string> &info ) {
     Log::L1( "Timeborder start: {:.8e} s - {:.2f} ps\n", t_start, t_start * 1E12 );
     Log::L1( "Timeborder end: {:.8e} s - {:.2f} ps\n", t_end, t_end * 1E12 );
     Log::L1( "Timeborder delta: {:.8e} s - {:.2f} fs \n", t_step, t_step * 1E15 );
+    if ( numerics_phonon_approximation_order == 5 ) {
+        Log::L1( "Timeborder delta path integral: {:.8e} s - {:.2f} ps\n", t_step_pathint, t_step_pathint * 1E12 );
+    }
     Log::L1( "Ideal time delta for this calculation: {:.8e} s - {:.2f} fs, minimum possible: {:.8e} s - {:.2f} fs\n", getIdealTimestep(), getIdealTimestep() * 1E15, std::numeric_limits<double>::epsilon(), std::numeric_limits<double>::epsilon() * 1E15 );
     int works = 1;
     if ( ( init_rabifrequenz != 0.0 ) && ( 3. * t_step > 2. * M_PI / init_rabifrequenz ) )
@@ -447,7 +451,8 @@ void Parameters::log( const std::vector<std::string> &info ) {
     else if ( max_rabifrequenz != 0.0 && 3. * t_step > 2. * M_PI / max_rabifrequenz )
         works = 0;
     if ( !works ) {
-        fmt::print( "{} WARNING: Step may be too small to resolve predicted oscillation: dT needed vs dT: {:.10e} < {:.10e}\n", PREFIX_WARNING, 2. / 3. * M_PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
+        if ( output_handlerstrings )
+            fmt::print( "{} WARNING: Step may be too small to resolve predicted oscillation: dT needed vs dT: {:.10e} < {:.10e}\n", PREFIX_WARNING, 2. / 3. * M_PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
         Log::L1( "WARNING: Step may be too small to resolve predicted oscillation: \n- delta T needed: {:.10e} \n- delta T used: {:.10e}\n", 2. / 3. * M_PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
     }
     Log::L1( "Time iterations (main loop) = {}\n\n", iterations_t_max );

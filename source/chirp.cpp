@@ -10,7 +10,7 @@ Chirp::Chirp( Chirp::Inputs &_inputs ) : inputs( _inputs ) {
     //if (p.numerics_order_t == 5 || p.numerics_order_tau == 5)
     //    steps = { 0, 1./5.*p.t_step, 3./10.*p.t_step, 1./2.*p.t_step, 4./5.*p.t_step, 8./9.*p.t_step };
     //else
-    steps = {0, 0.5 * inputs.t_step};
+    steps = { 0, 0.5 * inputs.t_step };
     if ( inputs.type.compare( "sine" ) != 0 ) {
         Log::L3( "Done initializing class, creating interpolant... " );
         interpolant = Interpolant( inputs.t, inputs.y, inputs.ddt, inputs.type );
@@ -92,14 +92,14 @@ double Chirp::get( double t, bool force_evaluate ) {
         return evaluate( t );
     }
     int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
-    while ( timearray.at( i ) < t ) {
+    while ( i < size && timearray.at( i ) < t ) {
         i++;
     }
-    if ( std::abs( timearray.at( i ) - t ) > 1E-15 ) {
+    if ( i < 0 || i >= size ) {
         counter_evaluated++;
         return evaluate( t );
     }
-    if ( i < 0 || i >= size ) {
+    if ( std::abs( timearray.at( i ) - t ) > 1E-15 ) {
         counter_evaluated++;
         return evaluate( t );
     }

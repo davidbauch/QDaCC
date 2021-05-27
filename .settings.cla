@@ -317,6 +317,12 @@ CLA_ARGUMENT = {
 	description = 'Pathintegral properties.'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
+		subkey = 'tstepPath'
+		value = '-1'
+		datatype = 'string'
+		description = 'Timestep for path integral'
+	}
+	CLA_PARAMETER = {
 		subkey = 'NC'
 		value = '4'
 		datatype = 'int'
@@ -330,7 +336,7 @@ CLA_ARGUMENT = {
 	}
 	CLA_PARAMETER = {
 		subkey = 'squaredThreshold'
-		value = '1E-32'
+		value = '1E-36'
 		datatype = 'double'
 		description = 'Squared threshold for Path Integral. Except for diagonals, elements smaller than this will be set to zero.'
 	}
@@ -347,10 +353,11 @@ CLA_ARGUMENT = {
 		description = 'When greater than zero, the ADM size will be pruned accordingly.'
 	}
 }
+# Deprecated
 CLA_ARGUMENT = {
 	type = '1hyphen'
-	key = 'cutoffPropagator'
-	description = 'Enable cutoff for the propagator. Cutoff will be achieved by mapping the first iterator of each timestep to the final iterator.'
+	key = 'phonons'
+	description = 'DEPRECATED Enable general phonon contribution. Edit parameters via --phonons subkeys'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''
@@ -359,11 +366,10 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
-# Deprecated
 CLA_ARGUMENT = {
 	type = '1hyphen'
-	key = 'phonons'
-	description = 'DEPRECATED Enable general phonon contribution. Edit parameters via --phonons subkeys'
+	key = 'cutoffPropagator'
+	description = 'Enable cutoff for the path integral M propagator. Cutoff will be achieved by mapping the first iterator of each timestep to the final iterator.'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''

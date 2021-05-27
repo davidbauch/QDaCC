@@ -280,7 +280,7 @@ class CommandlineArguments {
                 if ( startswith( configfile.at( i ), "type = " ) )
                     temp.type = strip( configfile.at( i ) );
                 else if ( startswith( configfile.at( i ), "key = " ) )
-                    temp.key = strip( splitString( configfile.at( i ), "or" ) );
+                    temp.key = strip( splitString( configfile.at( i ), " or " ) ); //TODO: Vorher die ' splits machen, sonst kann "or" nicht im key stehen!
                 else if ( startswith( configfile.at( i ), "description = " ) )
                     temp.description = strip( configfile.at( i ) );
                 else if ( startswith( configfile.at( i ), "group = " ) )

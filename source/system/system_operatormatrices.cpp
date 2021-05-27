@@ -40,15 +40,16 @@ bool OperatorMatrices::generateOperators( const Parameters &p ) {
     phononCouplingFactor = Dense::Zero( base.size(), base.size() );
     for ( int i = 0; i < base.size(); i++ ) {
         for ( int j = 0; j < base.size(); j++ ) {
-            if ( i == j ) {
-                if ( !( base.at( i ).back() == 'G' or base.at( j ).back() == 'G' ) ) {
-                    if ( base.at( i ).back() == 'B' or base.at( j ).back() == 'B' ) {
-                        phononCouplingFactor( i, j ) = 2.0;
-                    } else { //if ( base.at( i ).back() == 'H' or base.at( i ).back() == 'V' or base.at( j ).back() == 'H' or base.at( j ).back() == 'V' ) {
-                        phononCouplingFactor( i, j ) = 1.0;
-                    }
-                }
+            //if ( i == j ) {
+            if ( base.at( i ).back() == 'G' or base.at( j ).back() == 'G' )
+                continue;
+            if ( base.at( i ).back() == 'B' or base.at( j ).back() == 'B' ) {
+                phononCouplingFactor( i, j ) = 2.0;
+            } else { //if ( base.at( i ).back() == 'H' or base.at( i ).back() == 'V' or base.at( j ).back() == 'H' or base.at( j ).back() == 'V' ) {
+                phononCouplingFactor( i, j ) = 1.0;
             }
+
+            //}
         }
     }
     Log::L3( "Coupling Matrix:\n{}\n", phononCouplingFactor );
