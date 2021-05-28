@@ -254,6 +254,7 @@ bool System::command( unsigned int index ) {
 }
 
 bool System::exit_system( const int failure ) {
+    //TODO: NEWSYSTEM
     pulse_H.log();
     pulse_V.log();
     chirp.log();

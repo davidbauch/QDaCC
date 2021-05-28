@@ -6,8 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "2.1.2"
-#define GLOBAL_PROGRAM_LASTCHANGE "Sparse Pathintegral"
+#define GLOBAL_PROGRAM_VERSION "3.0"
+#define GLOBAL_PROGRAM_LASTCHANGE "Procedural System"
 
 class Parameters {
    public:
@@ -64,7 +64,7 @@ class Parameters {
     bool startCoherent;
 
     // Non mandatory parameters, dependant on system chosen:
-    // System Parameterss
+    // System Parameterss //TODO: die hier dann in einen vector<Parameter> mit den zugehörigen operator matrices. KEINE (!) neue subclass mit matrix und energie oder so, das is unnötig. einfach alles in vectoren schreiben.
     Parameter p_omega_atomic_G_V;
     Parameter p_omega_atomic_G_H;
     Parameter p_omega_atomic_V_B;
