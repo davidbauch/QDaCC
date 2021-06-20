@@ -1,7 +1,6 @@
 #pragma once
 
 #include "global.h"
-#include "system/operatable.h"
 #include "system/parameters.h"
 #include "system/fileoutput.h"
 #include "system/operatormatrices.h"
@@ -9,7 +8,7 @@
 #include "pulse.h"
 #include "solver/solver.h"
 
-class System : public Operatable {
+class System {
    public:
     std::string name;
     std::string terminate_message;
@@ -18,8 +17,9 @@ class System : public Operatable {
 
     // ##### System Components #####
     Chirp chirp;
-    Pulse pulse_H;
-    Pulse pulse_V;
+    //Pulse pulse_H; //REMOVE
+    //Pulse pulse_V; //REMOVE
+    std::vector<Pulse> pulse;
     FileOutput fileoutput;
     Parameters parameters;
     OperatorMatrices operatorMatrices;
@@ -30,6 +30,7 @@ class System : public Operatable {
     std::vector<SaveStateTau> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
 
     // ##### Helper Variables #####
+    std::map<std::string, double> emission_probabilities;
     // Helpervariables for photon emission probability
     double photonemissionprob_integral_H = 0;
     double photonemissionprob_integral_V = 0;
@@ -108,7 +109,7 @@ class System : public Operatable {
     Scalar dgl_phonons_phi( const double t );
 
     // Calculates the Lindbladian coefficients for the analytical phonon contributions using the polaron frame
-    double dgl_phonons_lindblad_coefficients( double t, double omega_atomic, const char mode = 'L', const char level = 'H', const double sign = 1.0 );
+    double dgl_phonons_lindblad_coefficients( double t, double energy, double coupling, Scalar pulse, const char mode = 'L', const double sign = 1.0 );
 
     // Initializes the polaron functions
     void initialize_polaron_frame_functions();
@@ -152,5 +153,55 @@ class System : public Operatable {
     template <typename T>
     inline T dgl_calc_rhotau_2( const T &rho, const T &op1, const T &op2, const double t ) {
         return dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
+    }
+
+    // Functions to determine numerical matrix trace from input types supporting .trace()
+    // @param &mat: Input dense matrix
+    // @return Matrix trace
+    template <typename T, typename M>
+    inline T getTrace( const M &mat ) const {
+        return mat.trace();
+    }
+    // Functions to determine numerical matrix trace from sparse input types not supporting .trace()
+    // @param &mat: Input sparse matrix
+    // @return Matrix trace of type T
+    template <typename T>
+    inline T getTrace( const Sparse &mat ) const {
+        //return getTrace<T>( Dense( mat ) );
+        T ret = (T)0.0;
+        for ( int k = 0; k < mat.outerSize(); ++k ) {
+            for ( Sparse::InnerIterator it( mat, k ); it; ++it ) {
+                if ( it.row() == it.col() ) {
+                    ret += it.value();
+                }
+            }
+        }
+        return ret;
+    }
+
+    // Calculates the Kommutator of two matrices of identical type
+    // @param &A,&B: Input matrices
+    // @return Kommutator of A and B where [A,B] = AB-BA
+    template <typename T>
+    inline T dgl_kommutator( const T &A, const T &B ) {
+        return A * B - B * A;
+    }
+
+    // Calculates the Anti-Kommutator of two matrices of identical type
+    // @param &A,&B: Input matrices
+    // @return Anti-Kommutator of A and B where [A,B]^- = BA-AB
+    template <typename T>
+    inline T dgl_antikommutator( const T &A, const T &B ) {
+        return A * B + B * A;
+    }
+
+    // Calculates the Lindbladian of two input matrices where L = 2*A*rho*B - B*A*rho - rho*B*A
+    // @param &rho: Input density matrix
+    // @param &op: Input matrix O
+    // @param &opd: Input matrix O^dagger
+    // @return Returns the Lindbladian of rho, O and O^dagger
+    template <typename T, typename T2, typename T3>
+    inline T dgl_lindblad( const T &rho, const T2 &op, const T3 &opd ) {
+        return 2.0 * op * rho * opd - opd * op * rho - rho * opd * op;
     }
 };

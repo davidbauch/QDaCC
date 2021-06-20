@@ -74,7 +74,7 @@ int Parameters::index_to_state( const char mode, const int state ) {
 }
 
 bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
-    Parse_Parameters params;
+    //Parse_Parameters params;
     // Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
     t_start = get_parameter<double>( "--time", "tstart" );
     t_end = get_parameter<double>( "--time", "tend" );
@@ -117,11 +117,12 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     map_vector_to_standard( pulse_amp, pulse_omega_chirp, pulse_omega_chirp.at( 0 ) );
 
     // Look for --dimensions, if not found, standard system is used (maxphotons = 0, starting state = |g,0>)
-    p_max_photon_number = get_parameter<int>( "--maxPhotons" );
-    p_initial_state_electronic = get_parameter( "--initState", "initElectronicState" ).front();
-    p_initial_state_photon_h = get_parameter<int>( "--initState", "initHorizontalPhotons" );
-    p_initial_state_photon_v = get_parameter<int>( "--initState", "initVerticalPhotons" );
-    p_initial_state = instr( "ghvbc", p_initial_state_electronic ) + 4 * ( p_max_photon_number + 1 ) * p_initial_state_photon_h + 4 * p_initial_state_photon_v;
+    p_max_photon_number = 2;          //REMOVE get_parameter<int>( "--maxPhotons" );
+    p_initial_state_electronic = "b"; //REMOVE get_parameter( "--initState", "initElectronicState" ).front();
+    p_initial_state_photon_h = 0;     //REMOVE get_parameter<int>( "--initState", "initHorizontalPhotons" );
+    p_initial_state_photon_v = 0;     //REMOVE get_parameter<int>( "--initState", "initVerticalPhotons" );
+    p_initial_state = 0;              //REMOVE instr( "ghvbc", p_initial_state_electronic ) + 4 * ( p_max_photon_number + 1 ) * p_initial_state_photon_h + 4 * p_initial_state_photon_v;
+    p_initial_state_s = get_parameter( "--R" );
 
     // Look for --spectrum, if not found, no spectrum is evaluated
     iterations_tau_resolution = get_parameter<int>( "--spectrum", "specTauRes" );
@@ -186,6 +187,8 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
     hbar = 1.0545718E-34; // J/s, scaling will be 1
 
+    parse_system();
+
     subfolder = arguments.back();
     return true;
 }
@@ -244,35 +247,37 @@ double Parameters::getIdealTimestep() {
 bool Parameters::adjustInput() {
     // Calculate/Recalculate some parameters:
     // Adjust pulse area if pulse_type is "gauss_pi"
-    for ( int i = 0; i < (int)pulse_amp.size(); i++ ) {
-        auto pos = pulse_type.at( i ).find( "_pi" );
-        if ( pos != std::string::npos ) {
-            if ( pulse_type.at( i ).find( "gauss" ) != std::string::npos )
-                pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI * pulse_sigma.at( i ) * std::sqrt( std::pow( pulse_omega_chirp.at( i ) / pulse_sigma.at( i ), 2.0 ) + std::pow( pulse_sigma.at( i ), 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
-            else if ( pulse_type.at( i ).find( "cutoff" ) != std::string::npos )
-                pulse_amp.at( i ) = pulse_amp.at( i ) * M_PI / ( std::sqrt( 2.0 * M_PI * pulse_sigma.at( i ) * pulse_sigma.at( i ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
-            pulse_type.at( i ).erase( pos, 3 );
+    for ( auto &[name, mat] : input_pulse ) {
+        for ( int i = 0; i < mat.string_v["Type"].size(); i++ ) {
+            auto pos = mat.string_v["Type"][i].find( "_pi" );
+            if ( pos != std::string::npos ) {
+                if ( mat.string_v["Type"][i].find( "gauss" ) != std::string::npos )
+                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * M_PI / ( std::sqrt( 2.0 * M_PI * mat.numerical_v["Width"][i] * std::sqrt( std::pow( mat.numerical_v["Chirp"][i] / mat.numerical_v["Width"][i], 2.0 ) + std::pow( mat.numerical_v["Width"][i], 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                else if ( mat.string_v["Type"][i].find( "cutoff" ) != std::string::npos )
+                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * M_PI / ( std::sqrt( 2.0 * M_PI * mat.numerical_v["Width"][i] * mat.numerical_v["Width"][i] ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                mat.string_v["Type"][i].erase( pos, 3 );
+            }
         }
     }
 
     // Calculating remaining atomic frequencies depending on delta E and biexciton binding energy.
-    p_omega_atomic_G_V = p_omega_atomic_G_H + p_deltaE / 2.0;
-    p_omega_atomic_B = 2.0 * p_omega_atomic_G_H - p_biexciton_bindingenergy;
-    p_omega_atomic_G_H = p_omega_atomic_G_H - p_deltaE / 2.0;
-    p_omega_atomic_H_B = p_omega_atomic_B - p_omega_atomic_G_H;
-    p_omega_atomic_V_B = p_omega_atomic_B - p_omega_atomic_G_V;
+    p_omega_atomic_G_V = p_omega_atomic_G_H + p_deltaE / 2.0;                //REMOVE
+    p_omega_atomic_B = 2.0 * p_omega_atomic_G_H - p_biexciton_bindingenergy; //REMOVE
+    p_omega_atomic_G_H = p_omega_atomic_G_H - p_deltaE / 2.0;                //REMOVE
+    p_omega_atomic_H_B = p_omega_atomic_B - p_omega_atomic_G_H;              //REMOVE
+    p_omega_atomic_V_B = p_omega_atomic_B - p_omega_atomic_G_V;              //REMOVE
 
     // Calculate Rabi frequencies:
-    init_rabifrequenz_G_H = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state ) );
-    init_rabifrequenz_G_V = rabiFrequency( p_omega_atomic_G_V - p_omega_cavity_V, p_omega_coupling, index_to_state( 'V', p_initial_state ) );
-    init_rabifrequenz_H_B = rabiFrequency( p_omega_atomic_H_B - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state ) );
-    init_rabifrequenz_V_B = rabiFrequency( p_omega_atomic_V_B - p_omega_cavity_V, p_omega_coupling, index_to_state( 'V', p_initial_state ) );
-    max_rabifrequenz_G_H = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state + 1 ) );
-    max_rabifrequenz_G_V = rabiFrequency( p_omega_atomic_G_V - p_omega_cavity_V, p_omega_coupling, index_to_state( 'V', p_initial_state + 1 ) );
-    max_rabifrequenz_H_B = rabiFrequency( p_omega_atomic_H_B - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state + 1 ) );
-    max_rabifrequenz_V_B = rabiFrequency( p_omega_atomic_V_B - p_omega_cavity_V, p_omega_coupling, index_to_state( 'V', p_initial_state + 1 ) );
-    init_rabifrequenz = vec_max<double>( { init_rabifrequenz_G_H, init_rabifrequenz_G_V, init_rabifrequenz_H_B, init_rabifrequenz_V_B } );
-    max_rabifrequenz = vec_max<double>( { max_rabifrequenz_G_H, max_rabifrequenz_G_V, max_rabifrequenz_H_B, max_rabifrequenz_V_B } );
+    init_rabifrequenz_G_H = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state ) );    //REMOVE
+    init_rabifrequenz_G_V = rabiFrequency( p_omega_atomic_G_V - p_omega_cavity_V, p_omega_coupling, index_to_state( 'V', p_initial_state ) );    //REMOVE
+    init_rabifrequenz_H_B = rabiFrequency( p_omega_atomic_H_B - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state ) );    //REMOVE
+    init_rabifrequenz_V_B = rabiFrequency( p_omega_atomic_V_B - p_omega_cavity_V, p_omega_coupling, index_to_state( 'V', p_initial_state ) );    //REMOVE
+    max_rabifrequenz_G_H = rabiFrequency( p_omega_atomic_G_H - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state + 1 ) ); //REMOVE
+    max_rabifrequenz_G_V = rabiFrequency( p_omega_atomic_G_V - p_omega_cavity_V, p_omega_coupling, index_to_state( 'V', p_initial_state + 1 ) ); //REMOVE
+    max_rabifrequenz_H_B = rabiFrequency( p_omega_atomic_H_B - p_omega_cavity_H, p_omega_coupling, index_to_state( 'H', p_initial_state + 1 ) ); //REMOVE
+    max_rabifrequenz_V_B = rabiFrequency( p_omega_atomic_V_B - p_omega_cavity_V, p_omega_coupling, index_to_state( 'V', p_initial_state + 1 ) ); //REMOVE
+    init_rabifrequenz = vec_max<double>( { init_rabifrequenz_G_H, init_rabifrequenz_G_V, init_rabifrequenz_H_B, init_rabifrequenz_V_B } );       //REMOVE
+    max_rabifrequenz = vec_max<double>( { max_rabifrequenz_G_H, max_rabifrequenz_G_V, max_rabifrequenz_H_B, max_rabifrequenz_V_B } );            //REMOVE
 
     // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
     if ( t_step == -1 ) {
@@ -281,7 +286,7 @@ bool Parameters::adjustInput() {
     }
 
     // Calculate the maximum dimensions for operator matrices (max states)
-    maxStates = 4 * ( p_max_photon_number + 1 ) * ( p_max_photon_number + 1 ); // 4 Electronic states x N+1 Photonic states * 2 for H,V modes
+    maxStates = 0; //4 * ( p_max_photon_number + 1 ) * ( p_max_photon_number + 1 ); // 4 Electronic states x N+1 Photonic states * 2 for H,V modes
 
     // Calculate stuff for RK
     iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
@@ -338,6 +343,70 @@ bool Parameters::adjustInput() {
     numerics_saved_coefficients_cutoff = ( numerics_calculate_spectrum || numerics_calculate_g2 ) ? 0 : ( p_phonon_tcutoff / t_step ) * 5;
 
     return true;
+}
+
+void Parameters::parse_system() {
+    // Generate the input variables for the electronic system:
+    auto levels = splitline( inputstring_electronic, ';' );
+    for ( std::string &level : levels ) {
+        auto conf = splitline( level, ':' );
+        input_s conf_s;
+        conf_s.numerical["Energy"] = convertParam<Parameter>( conf[1] );           // Energy
+        conf_s.string_v["CoupledTo"] = splitline( conf[2], ',' );                  // Coupled to Levels
+        conf_s.numerical["DecayScaling"] = convertParam<Parameter>( conf[3] );     // Decay Scaling
+        conf_s.numerical["DephasingScaling"] = convertParam<Parameter>( conf[4] ); // Dephasing Scaling
+        conf_s.numerical["PhononCoupling"] = convertParam<Parameter>( conf[5] );   // Phonon Coupling
+        input_electronic[conf[0]] = conf_s;
+    }
+    //for ( auto &p : input_electronic )
+    //    std::cout << "Electronic State " << p.first << ":\n"
+    //              << p.second << std::endl;
+    auto cavities = splitline( inputstring_photonic, ';' );
+    for ( std::string &cavity : cavities ) {
+        auto conf = splitline( cavity, ':' );
+        input_s conf_s;
+        conf_s.numerical["Energy"] = convertParam<Parameter>( conf[1] );                              // Energy
+        conf_s.numerical["MaxPhotons"] = convertParam<Parameter>( conf[2] );                          // Maximum Photons
+        conf_s.string_v["CoupledTo"] = splitline( conf[3], ',' );                                     // Coupled to Transitions
+        conf_s.numerical_v["CouplingScaling"] = convertParam<Parameter>( splitline( conf[4], ',' ) ); // Coupling Scaling, per transition
+        conf_s.numerical["DecayScaling"] = convertParam<Parameter>( conf[5] );                        // Decay Scaling, for all transitions
+        input_photonic[conf[0]] = conf_s;
+    }
+    //for ( auto &p : input_photonic )
+    //    std::cout << "Photonic Cavity " << p.first << ":\n"
+    //              << p.second << std::endl;
+
+    auto pulses = splitline( inputstring_pulse, ';' );
+    for ( std::string &pulse : pulses ) {
+        auto conf = splitline( pulse, ':' );
+        input_s conf_s;
+        conf_s.numerical_v["Amplitude"] = convertParam<Parameter>( splitline( conf[2], ',' ) ); // Pulse Amp
+        conf_s.numerical_v["Frequency"] = convertParam<Parameter>( splitline( conf[3], ',' ) ); // Frequency
+        conf_s.numerical_v["Width"] = convertParam<Parameter>( splitline( conf[4], ',' ) );     // Width
+        conf_s.numerical_v["Center"] = convertParam<Parameter>( splitline( conf[5], ',' ) );    // Center
+        conf_s.numerical_v["Chirp"] = convertParam<Parameter>( splitline( conf[6], ',' ) );     // Chirp
+        conf_s.string_v["Type"] = splitline( conf[7], ',' );                                    // Type, 0 for pulse, 1 for sine
+        conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                               // Coupled to Transitions
+        input_pulse[conf[0]] = conf_s;
+    }
+    //for ( auto &p : input_pulse )
+    //    std::cout << "Pulse: " << p.first << ":\n"
+    //              << p.second << std::endl;
+
+    auto chirps = splitline( inputstring_chirp, ';' );
+    for ( std::string &chirp : chirps ) {
+        auto conf = splitline( chirp, ':' );
+        input_s conf_s;
+        conf_s.numerical_v["AmpFactor"] = convertParam<Parameter>( splitline( conf[2], ',' ) ); // Amplitude Scaling for coupled_to
+        conf_s.numerical_v["Amplitude"] = convertParam<Parameter>( splitline( conf[3], ',' ) ); // Amplitudes
+        conf_s.numerical_v["Times"] = convertParam<Parameter>( splitline( conf[4], ',' ) );     // "Times"
+        conf_s.numerical_v["ddt"] = convertParam<Parameter>( splitline( conf[5], ',' ) );       // "d/dt"
+        conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                               // Coupled to Transitions
+        input_chirp[conf[0]] = conf_s;
+    }
+    //for ( auto &p : input_chirp )
+    //    std::cout << "Chirp: " << p.first << ":\n"
+    //              << p.second << std::endl;
 }
 
 void Parameters::log( const std::vector<std::string> &info ) {

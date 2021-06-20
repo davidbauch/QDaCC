@@ -24,7 +24,6 @@ class Pulse {
    private:
     int size;
     int counter_evaluated, counter_returned;
-    void generate( Parameters &p );
 
    public:
     // Pulse values

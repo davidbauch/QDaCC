@@ -32,15 +32,15 @@ class Log {
         return Get().Iinit( filepath, max_log_level );
     }
     template <typename... Args>
-    static void L1( const std::string &msg, const Args &... args ) {
+    static void L1( const std::string &msg, const Args &...args ) {
         return Get().Ilevel1_log( msg, fmt::make_format_args( args... ) );
     }
     template <typename... Args>
-    static void L2( const std::string &msg, const Args &... args ) {
+    static void L2( const std::string &msg, const Args &...args ) {
         return Get().Ilevel2_log( msg, fmt::make_format_args( args... ) );
     }
     template <typename... Args>
-    static void L3( const std::string &msg, const Args &... args ) {
+    static void L3( const std::string &msg, const Args &...args ) {
         return Get().Ilevel3_log( msg, fmt::make_format_args( args... ) );
     }
     static void Bar( int size = Log::BAR_SIZE_FULL, int level = Log::LEVEL_1, int _bar = Log::BAR_0 ) {
@@ -55,9 +55,6 @@ class Log {
 
     static void debug( const std::string &msg, int counter = -1 ) {
         return Get().Idebug( msg, counter );
-    }
-    static void debug( const std::string &msg ) {
-        return Get().Idebug( msg, -1 );
     }
     static void debug( int counter = -1 ) {
         return Get().Idebug( "", counter );
@@ -85,13 +82,13 @@ class Log {
         std::setbuf( stdout, NULL );
         max_loglevel = max_log_level;
         debug_counter = 0;
-        bars = {repeat( "=", Log::BAR_SIZE_FULL ),
-                repeat( "-", Log::BAR_SIZE_FULL ),
-                repeat( "o", Log::BAR_SIZE_FULL ),
-                repeat( "#", Log::BAR_SIZE_FULL ),
-                repeat( ":", Log::BAR_SIZE_FULL ),
-                repeat( "+", Log::BAR_SIZE_FULL ),
-                repeat( "*", Log::BAR_SIZE_FULL )};
+        bars = { repeat( "=", Log::BAR_SIZE_FULL ),
+                 repeat( "-", Log::BAR_SIZE_FULL ),
+                 repeat( "o", Log::BAR_SIZE_FULL ),
+                 repeat( "#", Log::BAR_SIZE_FULL ),
+                 repeat( ":", Log::BAR_SIZE_FULL ),
+                 repeat( "+", Log::BAR_SIZE_FULL ),
+                 repeat( "*", Log::BAR_SIZE_FULL ) };
         if ( max_loglevel >= 2 ) {
             fmt::print( file, "Succesfully created logfile '{}'!\n", filepath );
         }

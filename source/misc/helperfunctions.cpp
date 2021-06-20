@@ -111,7 +111,7 @@ std::vector<std::string> get_parameter_vector( const std::string &key, const std
     std::string arg = CommandlineArguments::cla.get( key, subkey );
     // Check if input is not a vector, then output will be a new vector with only one element
     if ( arg.at( 0 ) != '[' ) {
-        return std::vector<std::string>( {arg} );
+        return std::vector<std::string>( { arg } );
     }
     return str_to_vec( arg );
 }
@@ -127,13 +127,13 @@ Eigen::MatrixXcd project_matrix( const Eigen::MatrixXcd &input ) {
     return ret;
 }
 
-std::vector<std::string> splitline( const std::string &input ) {
+std::vector<std::string> splitline( const std::string &input, const char splitter ) {
     std::string token, subtoken;
     std::vector<std::string> set;
     std::istringstream iss( input );
     while ( std::getline( iss, subtoken, '\t' ) ) {
         std::istringstream subiss( subtoken );
-        while ( std::getline( subiss, token, ' ' ) )
+        while ( std::getline( subiss, token, splitter ) )
             if ( token.size() > 0 ) {
                 set.push_back( token );
             }

@@ -30,6 +30,7 @@ class Parameter {
     Parameter( double val, double scale ) : Parameter() { set( val, scale ); };
     Parameter( double val ) : Parameter( val, 0.0 ){};
     Parameter( Parameter &other ) : Parameter( other.value_si, other.scaling ){};
+    Parameter( const Parameter &other ) : Parameter( other.value_si, other.scaling ){};
     template <typename T>
     Parameter( std::complex<T> val ) : Parameter( std::real( val ) ){};
 

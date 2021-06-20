@@ -66,7 +66,7 @@ def compile_all_object_files(data, bin_path="obj", extension_obj=".o", compiler=
         os.makedirs("error", exist_ok=True)
 
     wrapper = partial(compile_single,cerr_to_file=cerr_to_file, compiler=compiler, libs=libs, args=args, force_recompile=force_recompile)
-    with multiprocessing.Pool() as pool:
+    with multiprocessing.Pool(processes=8) as pool:
         ret = pool.map(wrapper,[cset for cset in data])
     succesful = ret.count("FAILED") == 0
     if ret.count("FAILED") and ret.count("NEW") > 0:

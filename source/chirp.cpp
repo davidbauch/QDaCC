@@ -3,7 +3,7 @@
 Chirp::Chirp( Chirp::Inputs &_inputs ) : inputs( _inputs ) {
     counter_evaluated = 0;
     counter_returned = 0;
-    Log::L3( "Creating Chirp with {} points of type {}... ", inputs.t.size(), inputs.type );
+    Log::L3( "Creating Chirp with {} points of type {}...\n", inputs.t.size(), inputs.type );
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 2.0 + 5 );
     chirparray.reserve( n );
     timearray.reserve( n );
@@ -12,9 +12,9 @@ Chirp::Chirp( Chirp::Inputs &_inputs ) : inputs( _inputs ) {
     //else
     steps = { 0, 0.5 * inputs.t_step };
     if ( inputs.type.compare( "sine" ) != 0 ) {
-        Log::L3( "Done initializing class, creating interpolant... " );
+        Log::L3( "Done initializing class, creating interpolant...\n" );
         interpolant = Interpolant( inputs.t, inputs.y, inputs.ddt, inputs.type );
-        Log::L3( "Done creating interpolant, generating chirp... " );
+        Log::L3( "Done creating interpolant, generating chirp...\n" );
     } else {
         Log::L3( "No interpolant class used." );
         inputs.isSineChirp = true;

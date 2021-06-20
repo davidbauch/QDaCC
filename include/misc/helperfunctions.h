@@ -191,7 +191,7 @@ std::vector<T> get_parameter_vector( const std::string &key, const std::string &
     // Check if input is not a vector, then output will be a new vector with only one element
     if ( arg.at( 0 ) != '[' ) {
         T elem = convertParam<T>( arg );
-        return std::vector<T>( {elem} );
+        return std::vector<T>( { elem } );
     }
     return convertParam<T>( str_to_vec( arg ) );
 }
@@ -287,7 +287,7 @@ Eigen::SparseMatrix<T> project_matrix_sparse( const Eigen::SparseMatrix<T> &inpu
     return ret;
 }
 
-std::vector<std::string> splitline( const std::string &input = "" );
+std::vector<std::string> splitline( const std::string &input = "", const char splitter = ' ' );
 
 template <typename T>
 void init_sparsevector( std::vector<Eigen::SparseMatrix<T>> &mat, int dim, int count ) {

@@ -57,18 +57,19 @@ class Parameters {
     // Time variables
     Parameter t_start, t_end, t_step, t_step_pathint;
     // System Dimensions
-    int maxStates, p_max_photon_number;
+    int maxStates, p_max_photon_number; //REMOVE
     // Starting state:
-    int p_initial_state, p_initial_state_photon_h, p_initial_state_photon_v;
-    std::string p_initial_state_electronic;
+    int p_initial_state, p_initial_state_photon_h, p_initial_state_photon_v; //REMOVE
+    std::string p_initial_state_electronic;                                  //REMOVE
+    std::string p_initial_state_s;
     bool startCoherent;
 
     // Non mandatory parameters, dependant on system chosen:
     // System Parameterss //TODO: die hier dann in einen vector<Parameter> mit den zugehörigen operator matrices. KEINE (!) neue subclass mit matrix und energie oder so, das is unnötig. einfach alles in vectoren schreiben.
-    Parameter p_omega_atomic_G_V;
-    Parameter p_omega_atomic_G_H;
-    Parameter p_omega_atomic_V_B;
-    Parameter p_omega_atomic_H_B;
+    Parameter p_omega_atomic_G_V; //TODO: die hier generieren in map p_omega_transitions oder so
+    Parameter p_omega_atomic_G_H; //TODO: die hier generieren in map p_omega_transitions oder so
+    Parameter p_omega_atomic_V_B; //TODO: die hier generieren in map p_omega_transitions oder so
+    Parameter p_omega_atomic_H_B; //TODO: die hier generieren in map p_omega_transitions oder so
     Parameter p_omega_atomic_B;
     Parameter p_omega_cavity_V;
     Parameter p_omega_cavity_H;
@@ -98,6 +99,50 @@ class Parameters {
     // Constructor
     Parameters(){};
     Parameters( const std::vector<std::string> &arguments );
+
+    // Variables for the inputstrings and input vectors
+    struct input_s {
+        std::map<std::string, Parameter> numerical;
+        std::map<std::string, std::string> string;
+        std::map<std::string, std::vector<Parameter>> numerical_v;
+        std::map<std::string, std::vector<std::string>> string_v;
+        friend std::ostream &operator<<( std::ostream &os, const input_s &is ) {
+            //os << "Numerical Values:\n";
+            //for ( auto &p : is.numerical )
+            //    os << p.first << " = " << p.second << "\n";
+            //os << "Coupled_to Values:\n";
+            //for ( auto &p : is.coupled_to )
+            //    os << p << " ";
+            //os << std::endl;
+            //if ( is.numerical_v.size() > 0 ) {
+            //    os << "Numerical Vector Values:\n";
+            //    for ( auto &p : is.numerical_v ) {
+            //        os << p.first << " = ";
+            //        for ( auto &u : p.second )
+            //            os << u << " ";
+            //        os << std::endl;
+            //    }
+            //}
+            return os;
+        };
+    };
+    std::string inputstring_electronic = "G:0:H,V:0:0:0;H:1.365999eV:Z:1:1:1;V:1.366001eV:Z:1:1:1;Z:2.729eV:-:1:1:2";
+    std::string inputstring_photonic = "h:1.366eV:2:GH,HZ:1,1:1;v:1.366eV:2:GV,VZ:1,1:1";
+    std::string inputstring_pulse = ""; //"p:GH,HZ:6:1.3645eV:4ps:30ps:0:gauss_pi"; //"h:GH,HZ:1,4:1.366eV,1.366eV:4ps,15ps:30ps,15ps:0,0:gauss,gauss;v:GV,VZ:1:1.366eV:4ps:15ps:0:gauss";
+    std::string inputstring_chirp = ""; //"1:H,V,Z:1,1,2:0,1meV,0:0,100ps,200ps:0,0,0:monotone";
+    //std::string inputstring_electronic = "G:0:X:0:0:0;X:1.366eV:-:1:1:1";
+    //std::string inputstring_photonic = "c:1.366eV:1:GX:1:1";
+    //std::string inputstring_pulse = "h:GX:1:1.366eV:4ps:30ps:0:gauss_pi";
+    //std::string inputstring_chirp = ""; //1:X:1:0,1meV,0:0,100ps,200ps:0,0,0:monotone";
+    std::string inputstring_g1;
+    std::string inputstring_g2;
+    std::map<std::string, input_s> input_electronic;
+    std::map<std::string, input_s> input_photonic;
+    std::map<std::string, input_s> input_pulse;
+    std::map<std::string, input_s> input_chirp;
+    // Converts the input strings into input vectors.
+    // These Vectors will then be used to generate the operators and to output the inputsystem
+    void parse_system();
 
     // Log function; Uses log subclass (log.h)
     // @param &info: Additional information this class does not have access too when created, e.g. basis

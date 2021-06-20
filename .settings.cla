@@ -175,6 +175,19 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '2hyphen'
+	key = 'R'
+	description = 'Initial State Parameter'
+	group = 'InitialStateParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = '|Z|2h|2v>'
+		datatype = 'string'
+		description = 'Initial State'
+	}
+}
+# DEPRECATED
+CLA_ARGUMENT = {
+	type = '2hyphen'
 	key = 'initState'
 	description = 'Initial State Parameters'
 	group = 'InitialStateParams'

@@ -10,6 +10,6 @@ class FileOutput {
     FILE *fp_atomicinversion;
     FILE *fp_photonpopulation;
     FileOutput(){};
-    FileOutput( const std::vector<std::string> filenames, const Parameters &p, const OperatorMatrices &op );
+    FileOutput( Parameters &p, OperatorMatrices &op );
     void close();
 };
