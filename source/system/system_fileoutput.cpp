@@ -37,6 +37,7 @@ FileOutput::FileOutput( Parameters &p, OperatorMatrices &op ) {
     if ( !fp_photonpopulation )
         Log::L2( "\nCould not open file for photonpopulation!\n" );
     else {
+        fmt::print( fp_photonpopulation, "t\t" ); //|G><G|\t|X_H><X_H|\t|X_V><X_V|\t|B><B|\n" );
         for ( auto &[name, rem] : p.input_photonic )
             fmt::print( fp_photonpopulation, "|{}><{}|\t", name, name );
         if ( p.p_omega_cavity_loss > 0.0 )

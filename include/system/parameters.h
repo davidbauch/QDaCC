@@ -126,20 +126,20 @@ class Parameters {
             return os;
         };
     };
-    std::string inputstring_electronic = "G:0:H,V:0:0:0;H:1.365999eV:Z:1:1:1;V:1.366001eV:Z:1:1:1;Z:2.729eV:-:1:1:2";
-    std::string inputstring_photonic = "h:1.366eV:2:GH,HZ:1,1:1;v:1.366eV:2:GV,VZ:1,1:1";
-    std::string inputstring_pulse = ""; //"p:GH,HZ:6:1.3645eV:4ps:30ps:0:gauss_pi"; //"h:GH,HZ:1,4:1.366eV,1.366eV:4ps,15ps:30ps,15ps:0,0:gauss,gauss;v:GV,VZ:1:1.366eV:4ps:15ps:0:gauss";
-    std::string inputstring_chirp = ""; //"1:H,V,Z:1,1,2:0,1meV,0:0,100ps,200ps:0,0,0:monotone";
+    std::string inputstring_electronic; // = "G:0:H,V:0:0:0;H:1.365999eV:Z:1:1:1;V:1.366001eV:Z:1:1:1;Z:2.729eV:-:1:1:2";
+    std::string inputstring_photonic;   // = "h:1.366eV:2:GH,HZ:1,1:1;v:1.366eV:2:GV,VZ:1,1:1";
+    std::string inputstring_pulse;      //"p:GH,HZ:6:1.3645eV:4ps:30ps:0:gauss_pi"; //"h:GH,HZ:1,4:1.366eV,1.366eV:4ps,15ps:30ps,15ps:0,0:gauss,gauss;v:GV,VZ:1:1.366eV:4ps:15ps:0:gauss";
+    std::string inputstring_chirp;      //"1:H,V,Z:1,1,2:0,1meV,0:0,100ps,200ps:0,0,0:monotone";
     //std::string inputstring_electronic = "G:0:X:0:0:0;X:1.366eV:-:1:1:1";
     //std::string inputstring_photonic = "c:1.366eV:1:GX:1:1";
     //std::string inputstring_pulse = "h:GX:1:1.366eV:4ps:30ps:0:gauss_pi";
     //std::string inputstring_chirp = ""; //1:X:1:0,1meV,0:0,100ps,200ps:0,0,0:monotone";
-    std::string inputstring_g1;
-    std::string inputstring_g2;
+    std::string inputstring_spectrum, inputstring_indist, inputstring_conc;
     std::map<std::string, input_s> input_electronic;
     std::map<std::string, input_s> input_photonic;
     std::map<std::string, input_s> input_pulse;
     std::map<std::string, input_s> input_chirp;
+    std::map<std::string, input_s> input_correlation; //spectrum, indist, conc
     // Converts the input strings into input vectors.
     // These Vectors will then be used to generate the operators and to output the inputsystem
     void parse_system();

@@ -80,6 +80,15 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     t_end = get_parameter<double>( "--time", "tend" );
     t_step = get_parameter<double>( "--time", "tstep" );
 
+    inputstring_electronic = get_parameter( "--S", "SE" );
+    inputstring_photonic = get_parameter( "--S", "SO" );
+    inputstring_pulse = get_parameter( "--S", "SP" );
+    inputstring_chirp = get_parameter( "--S", "SC" );
+    inputstring_spectrum = get_parameter( "--G", "GS" );
+    inputstring_indist = get_parameter( "--G", "GI" );
+    inputstring_conc = get_parameter( "--G", "GC" );
+
+    //REMOVE: Deprecated
     // Look for --system, if not found, standard system is used
     p_omega_atomic_G_H = get_parameter<double>( "--system", "we" );
     p_omega_cavity_V = get_parameter<double>( "--system", "wcV" );
@@ -402,11 +411,34 @@ void Parameters::parse_system() {
         conf_s.numerical_v["Times"] = convertParam<Parameter>( splitline( conf[4], ',' ) );     // "Times"
         conf_s.numerical_v["ddt"] = convertParam<Parameter>( splitline( conf[5], ',' ) );       // "d/dt"
         conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                               // Coupled to Transitions
+        conf_s.string["Type"] = conf[6];                                                        // Type
         input_chirp[conf[0]] = conf_s;
     }
     //for ( auto &p : input_chirp )
     //    std::cout << "Chirp: " << p.first << ":\n"
     //              << p.second << std::endl;
+
+    for ( std::string &spectrum : splitline( inputstring_spectrum, ';' ) ) {
+        auto conf = splitline( spectrum, ':' );
+        input_s conf_s;
+        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                                // Modes to calculate Spectrum for
+        conf_s.numerical_v["Center"] = convertParam<Parameter>( splitline( conf[1], ',' ) ); // Center
+        conf_s.numerical_v["Range"] = convertParam<Parameter>( splitline( conf[2], ',' ) );  // Range
+        conf_s.numerical_v["resW"] = convertParam<Parameter>( splitline( conf[3], ',' ) );   // Resolution for w
+        input_correlation["Spectrum"] = conf_s;
+    }
+    for ( std::string &indist : splitline( inputstring_indist, ';' ) ) {
+        auto conf = splitline( indist, ':' );
+        input_s conf_s;
+        conf_s.string_v["Modes"] = splitline( conf[0], ',' ); // Modes to calculate Indistinguishgability for
+        input_correlation["Indist"] = conf_s;
+    }
+    for ( std::string &conc : splitline( inputstring_conc, ';' ) ) {
+        auto conf = splitline( conc, ':' );
+        input_s conf_s;
+        conf_s.string_v["Modes"] = splitline( conf[0], ',' ); // Modes to calculate Concurrence for
+        input_correlation["Conc"] = conf_s;
+    }
 }
 
 void Parameters::log( const std::vector<std::string> &info ) {

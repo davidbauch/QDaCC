@@ -48,7 +48,7 @@ void System::initialize_polaron_frame_functions() {
 }
 
 Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
-    double chirpcorrection = chirp.get( t ) + t * ( chirp.get( t ) - parameters.scaleVariable( chirp.derivative( t ), parameters.scale_value ) );
+    double chirpcorrection = chirp.size() > 0 ? ( chirp.back().get( t ) + t * ( chirp.back().get( t ) - parameters.scaleVariable( chirp.back().derivative( t ), parameters.scale_value ) ) ) : 0;
     Sparse explicit_time = Sparse( chi.rows(), chi.cols() );
     for ( auto &[mode, param] : parameters.input_photonic ) {
         for ( auto transition : param.string_v["CoupledTo"] ) {
@@ -206,7 +206,7 @@ Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, 
         for ( auto &p : pulse )
             sum += p.get( t );
         double error = std::abs( sum ); //std::abs( pulse_H.get( t ) + pulse_V.get( t ) );
-        if ( error > 0.1 || chirp.derivative( t ) != 0 ) {
+        if ( error > 0.1 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) {
             return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
         }
     }
@@ -322,7 +322,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             ret -= std::accumulate( threadmap_1.begin(), threadmap_1.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
         }
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_LINDBLAD_FULL ) {
-        double chirpcorrection = chirp.get( t );
+        double chirpcorrection = chirp.size() > 0 ? chirp.back().get( t ) : 0;
         for ( auto &[name, mat] : parameters.input_pulse ) {
             for ( int p = 0; p < mat.string_v["CoupledTo"].size(); p++ ) {
                 auto &mode = mat.string_v["CoupledTo"][p];

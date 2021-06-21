@@ -153,9 +153,10 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         //std::cout << b << " ";
     }
     Log::L1( "\n" );
-    //FIXME:
 
+    //FIXME:
     p.maxStates = base.size();
+
     H = Sparse( p.maxStates, p.maxStates );
     H_0 = Sparse( p.maxStates, p.maxStates );
     H_I = Sparse( p.maxStates, p.maxStates );

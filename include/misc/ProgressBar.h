@@ -7,7 +7,7 @@
 //#include <stdarg.h>
 #include <string>
 #include <iostream>
-#include <omp.h> // -fopenmp
+#include <omp.h>      // -fopenmp
 #include <fmt/core.h> // -DFMT_HEADER_ONLY
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -42,7 +42,7 @@ class ProgressBar {
     double spinPS;
     int maxSize;
     int type;
-    ProgressBar( int _maximumIterations, int _barLength = 60, int _decimalPoints = 0, int _type = BAR_VERTICAL, bool _isSpinning = true, double _spinPS = 0.1, std::vector<std::string> _sym = {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"}, std::vector<std::string> _spin = {"|", "/", "-", "\\"}, std::string _barEnd = "Done" ) {
+    ProgressBar( int _maximumIterations, int _barLength = 60, int _decimalPoints = 0, int _type = BAR_VERTICAL, bool _isSpinning = true, double _spinPS = 0.1, std::vector<std::string> _sym = { " ", ".", ":", "|" }, std::vector<std::string> _spin = { "|", "/", "-", "\\" }, std::string _barEnd = "Done" ) { //{" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"}
         maximumIterations = _maximumIterations;
         barLength = _barLength;
         decimalPoints = _decimalPoints;
@@ -55,8 +55,8 @@ class ProgressBar {
         c = 0;
         maxSize = 0;
         type = _type;
-        strBarStart = "|";
-        strBarEnd = "|";
+        strBarStart = "[ ";
+        strBarEnd = "]";
     }
     void calculate( int currentIterations ) {
         currentPercent = 1.0 * currentIterations / maximumIterations;

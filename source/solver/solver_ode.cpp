@@ -53,6 +53,7 @@ bool ODESolver::queueNow( System &s, int &curIt ) {
     return false;
 }
 
+//TODO: Notwendig?
 int ODESolver::reset( System &s ) {
     track_gethamilton_read = 0;
     track_gethamilton_write = 0;

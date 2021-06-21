@@ -37,6 +37,62 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '2hyphen'
+	key = 'S'
+	description = 'All system parameters'
+	group = 'Systemparameter'
+	CLA_PARAMETER = {
+		subkey = 'SE'
+		value = ''
+		datatype = 'string'
+		description = 'Electronic Configuration. Syntax: [N:E:CoupledTo:DecayScaling:DephasingScaling:PhononCoupling] ,Example: G:0:H,V:0:0:0;H:1.365999eV:Z:1:1:1;V:1.366001eV:Z:1:1:1;Z:2.729eV:-:1:1:2'
+	}
+	CLA_PARAMETER = {
+		subkey = 'SO'
+		value = ''
+		datatype = 'string'
+		description = 'Optical Configuration. Syntax: [N:E:Photons:CoupledToTransition:CouplingScaling:DecayScaling] ,Example: h:1.366eV:2:GH,HZ:1,1:1;v:1.366eV:2:GV,VZ:1,1:1'
+	}
+	CLA_PARAMETER = {
+		subkey = 'SP'
+		value = ''
+		datatype = 'string'
+		description = 'Pulse Configuration. Syntax: [N:CoupledToTransition:Amp:Freq:Width:Center:Chirp:Type] ,Example: p:GH,HZ:6:1.3645eV:4ps:30ps:0:gauss_pi'
+	}
+	CLA_PARAMETER = {
+		subkey = 'SC'
+		value = ''
+		datatype = 'string'
+		description = 'Chirp Configuration. Syntax: [N:CoupledTo:AmpFactors:Amps:Times:DDTs:Type], Example: 1:H,V,Z:1,1,2:0,1meV,0:0,100ps,200ps:0,0,0:monotone'
+	}
+}
+
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'G'
+	description = 'Spectrum, indistinguishability and Concurrence'
+	group = 'CorrelationStatistics'
+	CLA_PARAMETER = {
+		subkey = 'GS'
+		value = ''
+		datatype = 'string'
+		description = 'Spectrum. Syntax: [Mode:center:range:resW]'
+	}
+	CLA_PARAMETER = {
+		subkey = 'GI'
+		value = ''
+		datatype = 'string'
+		description = 'indistinguishability. Syntax: [Mode]'
+	}
+	CLA_PARAMETER = {
+		subkey = 'GC'
+		value = ''
+		datatype = 'string'
+		description = 'Concurrence. Syntax: [Mode]'
+	}
+}
+# DEPRECATED
+CLA_ARGUMENT = {
+	type = '2hyphen'
 	key = 'system'
 	description = 'All system parameters'
 	group = 'Systemparameter'

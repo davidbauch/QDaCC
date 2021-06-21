@@ -16,7 +16,7 @@ class System {
     std::vector<std::string> arguments;
 
     // ##### System Components #####
-    Chirp chirp;
+    std::vector<Chirp> chirp;
     //Pulse pulse_H; //REMOVE
     //Pulse pulse_V; //REMOVE
     std::vector<Pulse> pulse;

@@ -51,13 +51,10 @@ bool ODESolver::scale_grid( System &s, Dense &cache, std::vector<std::vector<Sav
 // @param op_creator: [&Sparse] Creator operator (adjunct of annihilator)
 // @param op_annihilator: [&Sparse] Annihilator operator
 // @return: [bool] True if calculations were sucessfull, else false
-bool ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse &op_annihilator, Dense &cache, std::string purpose ) {
+Dense ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string purpose ) {
+    Dense cache = Dense::Zero( dim, dim );
     Log::L2( " : Preparing to calculate g1 correlation function...\n" );
-    if ( !( (int)savedStates.size() > 0 ) ) {
-        Log::L1( "Need to calculate t-direction first!\n" );
-        return false;
-    }
-    //reset( s );
+
     Timer &timer = Timers::create( "RungeKutta-G1-Loop (" + purpose + ")" );
     int totalIterations = getIterationNumberTau( s );
     ProgressBar progressbar = ProgressBar( totalIterations );
@@ -102,16 +99,12 @@ bool ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse 
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
     Log::L2( "Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
-    return true;
+    return cache;
 }
 
-bool ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, Dense &cache, std::string purpose ) {
-    // Ensuring T-Direction was calculated first
-    if ( !( (int)savedStates.size() > 0 ) ) {
-        Log::L1( "Need to calculate t-direction first!\n" );
-        return false;
-    }
-    reset( s );
+Dense ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string purpose ) {
+    Dense cache = Dense::Zero( dim, dim );
+
     // Create Timer and Progresbar
     Timer &timer = Timers::create( "RungeKutta-G2-Loop (" + purpose + ")" );
     int totalIterations = getIterationNumberTau( s );
@@ -158,7 +151,7 @@ bool ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Spars
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
     Log::L2( "G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
-    return true;
+    return cache;
 }
 
 // Description: Calculates the G2(tau=0) function. Calculates <b^+(t) * b^+(t) * b(t) * b(t)> / <b^+(t) * b(t)>^2 . Logs and outputs progress. Saves resulting function.

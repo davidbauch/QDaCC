@@ -82,23 +82,25 @@ int main( int argc, char* argv[] ) {
         ODESolver solver = ODESolver( system );
         // Normal Time direction
         solver.calculate_t_direction( system );
+        // G1 and G2 statistics
+        solver.calculate_advanced_photon_statistics( system );
 
-        // Spectrum
-        if ( system.parameters.numerics_calculate_spectrum_H ) {
-            solver.calculate_spectrum( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "spectrum_H.txt", 1 );
-            if ( system.parameters.numerics_output_electronic_emission ) {
-                solver.calculate_spectrum( system, system.operatorMatrices.atom_sigmaplus_G_H, system.operatorMatrices.atom_sigmaminus_G_H, "electronic_spectrum_H.txt", 0 );
-            }
-        }
-        if ( system.parameters.numerics_calculate_spectrum_V ) {
-            solver.calculate_spectrum( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "spectrum_V.txt", 2 );
-            if ( system.parameters.numerics_output_electronic_emission ) {
-                solver.calculate_spectrum( system, system.operatorMatrices.atom_sigmaplus_G_V, system.operatorMatrices.atom_sigmaminus_G_V, "electronic_spectrum_V.txt", 0 );
-            }
-        }
-        if ( system.parameters.numerics_calculate_g2 ) {
-            solver.calculate_advanced_photon_statistics( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "advanced_photon_statistics.txt" );
-        }
+        //// Spectrum
+        //if ( system.parameters.numerics_calculate_spectrum_H ) {
+        //    solver.calculate_spectrum( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, "spectrum_H", 1 );
+        //    if ( system.parameters.numerics_output_electronic_emission ) {
+        //        solver.calculate_spectrum( system, system.operatorMatrices.atom_sigmaplus_G_H, system.operatorMatrices.atom_sigmaminus_G_H, "electronic_spectrum_H", 0 );
+        //    }
+        //}
+        //if ( system.parameters.numerics_calculate_spectrum_V ) {
+        //    solver.calculate_spectrum( system, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "spectrum_V", 2 );
+        //    if ( system.parameters.numerics_output_electronic_emission ) {
+        //        solver.calculate_spectrum( system, system.operatorMatrices.atom_sigmaplus_G_V, system.operatorMatrices.atom_sigmaminus_G_V, "electronic_spectrum_V", 0 );
+        //    }
+        //}
+        //if ( system.parameters.numerics_calculate_g2 ) {
+        //    solver.calculate_advanced_photon_statistics( system, system.operatorMatrices.photon_create_H, system.operatorMatrices.photon_annihilate_H, system.operatorMatrices.photon_create_V, system.operatorMatrices.photon_annihilate_V, "advanced_photon_statistics" );
+        //}
 
         // Finalizing all calculations
         system.exit_system();

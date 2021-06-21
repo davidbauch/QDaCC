@@ -38,8 +38,11 @@ class ODESolver {
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
     int dim;
     // Cache Matrices that allow for variable time steps.
-    Dense cache1 = Dense::Zero( 1, 1 );
-    Dense cache2 = Dense::Zero( 1, 1 );
+    //Dense cache1 = Dense::Zero( 1, 1 );
+    //Dense cache2 = Dense::Zero( 1, 1 );
+    std::map<std::string, Dense> cache;
+    std::map<std::string, std::map<std::string, std::vector<Scalar>>> to_output;
+    std::map<std::string, std::map<std::string, std::vector<Dense>>> to_output_m;
 
     // Cached Entries
     std::vector<SaveState> savedStates;    // Vector for saved matrix-time tuples for densitymatrix
@@ -65,7 +68,9 @@ class ODESolver {
     // @param s: [&System] Class providing set of system functions
     // @param t: [double] Time to iterate at
     // @return: [Sparse] rho at time t+t_step
+
     Sparse iterateRungeKutta4( const Sparse &rho, System &s, const double t, const double t_step, std::vector<SaveState> &savedStates );
+
     // Description: Iterates Runge-Kutta of order 5 at time t onto rho using the systems hamilton operator.
     // Type: ODESolver private function
     // @param rho: [&Sparse] Input (density-) matrix
@@ -104,8 +109,8 @@ class ODESolver {
     // @return: [int] dimensions of temporary variables
     int reset( System &s );
 
-    bool calculate_g1( System &s, const Sparse &op_creator, const Sparse &op_annihilator, Dense &cache, std::string purpose = "unknown" ); //std::vector<std::vector<SaveScalar>>
-    bool calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, Dense &cache, std::string purpose = "unknown" );
+    Dense calculate_g1( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string purpose = "unknown" ); //std::vector<std::vector<SaveScalar>>
+    Dense calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string purpose = "unknown" );
 
     // Description: Stretches Data evaluated at various timesteps onto an equidistant grid, such that g1 and g2 can work with said grid.
     bool scale_grid( System &s, Dense &cache, std::vector<std::vector<SaveScalar>> &cache_noneq );
@@ -130,8 +135,12 @@ class ODESolver {
     bool calculate_t_direction( System &s );
 
     //bool calculate_g2_0( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string fileOutputName ); //moved to advancedPhotonStatistics
-    bool calculate_spectrum( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string fileOutputName, const int cache_index );
-    bool calculate_advanced_photon_statistics( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string fileOutputName );
+    bool calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution );
+    bool calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator );
+    bool calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 );
+    bool calculate_advanced_photon_statistics( System &s );
+    //bool calculate_advanced_photon_statistics( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string fileOutputName );
+
     //template <typename T>
     //static Sparse iterate_definite_integral( const Sparse &rho, T rungefunction, const double t, const double step );
     //static std::vector<SaveState> calculate_definite_integral_vec( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step );

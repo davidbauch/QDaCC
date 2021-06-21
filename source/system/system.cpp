@@ -28,11 +28,11 @@ System::System( const std::vector<std::string> &input ) {
 
 bool System::init_system() {
     // Single chirp for single atomic level
-    Chirp::Inputs chirpinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.chirp_type, parameters.numerics_order_highest );
-    chirpinputs.add( parameters.chirp_t, parameters.chirp_y, parameters.chirp_ddt );
-    chirp = Chirp( chirpinputs );
-    if ( parameters.chirp_total != 0 )
-        chirp.fileOutput( parameters.subfolder + "chirp.txt" );
+    for ( auto &[mode, p] : parameters.input_chirp ) {
+        Chirp::Inputs chirpinputs( parameters.t_start, parameters.t_end, parameters.t_step, p.string["Type"], parameters.numerics_order_highest );
+        chirpinputs.add( p.numerical_v["Times"], p.numerical_v["Amplitude"], p.numerical_v["ddt"] );
+        chirp.push_back( { chirpinputs } );
+    }
 
     // Arbitrary number of pulses onto single atomic level.
     for ( auto &[mode, p] : parameters.input_pulse ) {
@@ -52,6 +52,9 @@ bool System::init_system() {
     //pulse_V = Pulse( pulseinputs_V );
     if ( pulse.size() > 0 ) {
         Pulse::fileOutput( parameters.subfolder + "pulse.txt", pulse );
+    }
+    if ( chirp.size() > 0 ) {
+        chirp.back().fileOutput( parameters.subfolder + "chirp.txt" );
     }
 
     if ( parameters.numerics_use_saved_coefficients )
@@ -186,9 +189,9 @@ Sparse System::dgl_timetrafo( const Sparse &A, const double t ) {
 }
 
 Sparse System::dgl_chirp( const double t ) {
-    if ( parameters.chirp_total == 0 )
+    if ( chirp.size() == 0 )
         return Sparse( parameters.maxStates, parameters.maxStates );
-    return operatorMatrices.chirp_mat.back() * chirp.get( t );
+    return operatorMatrices.chirp_mat.back() * chirp.back().get( t );
     //return ( 2.0 * operatorMatrices.atom_state_biexciton + operatorMatrices.atom_state_H + operatorMatrices.atom_state_V ) * chirp.get( t ); //Experimental; corrected chirp
 }
 
@@ -340,12 +343,10 @@ bool System::command( unsigned int index ) {
 }
 
 bool System::exit_system( const int failure ) {
-    //TODO: NEWSYSTEM
-    //pulse_H.log(); //REMOVE
-    //pulse_V.log(); //REMOVE
     for ( auto &p : pulse )
         p.log();
-    chirp.log();
+    for ( auto &c : chirp )
+        c.log();
     Log::L2( "Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
     Log::L2( "Number of approx+/- adjustments: {}\n", globaltries );
     Log::L1( "Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
