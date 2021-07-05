@@ -142,20 +142,20 @@ if __name__ == "__main__":
     # Debug : -g -O0, else: -O3
 
     copy_to = {'win32': "../../Threadhandler/QDLC-{}.exe".format(
-        version) if "-th" in sys.argv else "", 'darwin': "/Users/davidbauch/bin/QDLC-{}.out".format(version), "cluster" : "/"}
+        version) if "-th" in sys.argv else "", 'darwin': "/Users/davidbauch/bin/QDLC-{}.out".format(version), "cluster" : "/upb/departments/pc2/users/d/dbauch/QDLC-C/QDLC-{}.out".format(version)}
     libs_obj = {'win32': "-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
                 'darwin': "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
                 "cluster" : "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
     include_obj = {'win32': '-I"C:\{}\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external"'.format(msyspath), 
                     'darwin': "-I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include' -I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external'",
-                    "cluster" : "-I'/include' -I'/external'"}
+                    "cluster" : "-I'/upb/departments/pc2/users/d/dbauch/QDLC-C/include' -I'/upb/departments/pc2/users/d/dbauch/QDLC-C/external'"}
 
     libs_final = {'win32': '-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}'.format("-static" if "-static" in sys.argv else ""), 
                     'darwin': "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}".format("-static" if "-static" in sys.argv else ""),
                     "cluster" : "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}".format("-static" if "-static" in sys.argv else "")}
     bin_final = {'win32': ["obj/"+("LAPN" if "-laptop" in sys.argv else "win"), "external/ALGLIB/"+("LAPN" if "-laptop" in sys.argv else "WIN")], 
                 'darwin': ["obj/MAC", "external/ALGLIB/MAC"],
-                "cluster" : ["obj/CLUSTER", "external/ALGLIB/CLUSTER"]}
+                "cluster" : ["/upb/departments/pc2/users/d/dbauch/QDLC-C/obj/CLUSTER", "/upb/departments/pc2/users/d/dbauch/QDLC-C/external/ALGLIB/CLUSTER"]}
     succesful = compile_all_object_files(f, libs=libs_obj[platform], args=include_obj[platform], force_recompile=force_recompile,
                                          bin_path=bin_path[platform], compiler=compiler[platform]+debug_info, cerr_to_file=cerr_to_file)
     # if succesful:
