@@ -13,14 +13,14 @@ bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, 
     // Send system command to change to single core mainprogram, because this memberfunction is already using multithreading
     s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Calculate G1(t,tau) with given operator matrices
-    std::string s_g1 = "G1" + s_op_creator + s_op_annihilator;
+    std::string s_g1 = "G1-" + s_op_creator + "-" + s_op_annihilator;
     cache[s_g1] = calculate_g1( s, op_creator, op_annihilator, s_g1 );
     Dense &akf_mat = cache[s_g1];
 
     // Create Timer and Progressbar for the spectrum loop
     Timer &timer = Timers::create( "Spectrum (" + s_g1 + ")" );
-    int totalIterations = getIterationNumberSpectrum( s );
-    ProgressBar progressbar = ProgressBar( totalIterations );
+    int totalIterations = resolution; //getIterationNumberSpectrum( s );
+    ProgressBar progressbar = ProgressBar( resolution );
     timer.start();
     Log::L2( "Calculating spectrum... Calculating frequencies...\n" );
 
@@ -46,8 +46,8 @@ bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, 
             for ( int j = 0; j < dim2; j += s.parameters.iterations_wtau_skip ) {
                 out.at( spec_w ) += expfunc.at( j / s.parameters.iterations_wtau_skip ) * akf_mat( i, j ); // / s.parameters.t_step / s.parameters.t_step / ( (double)s.parameters.iterations_t_skip * s.parameters.iterations_wtau_skip );
             }
-            Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum (" + s_g1 + "): " );
         }
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum (" + s_g1 + "): " );
         out.at( spec_w ) = std::real( out.at( spec_w ) );
         timer.iterate();
     }

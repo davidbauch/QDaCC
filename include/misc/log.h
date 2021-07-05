@@ -122,8 +122,9 @@ class Log {
         }
     }
     void Iinbar( const std::string &msg, int size, int level, int _bar ) {
-        std::string ret = " | " + msg + " | ";
-        ret = bars.at( _bar ).substr( 0, std::floor( size - ret.size() / 2.0 ) ) + ret + bars.at( _bar ).substr( 0, std::ceil( size - ret.size() / 2.0 ) );
+        std::string ret = " | " + msg + " | ";
+        ret = bars.at( _bar ).substr( 0, std::floor( size - ret.size() / 2.0 ) ) + ret;
+        ret += bars.at( _bar ).substr( 0, std::floor( 2 * size - ret.size() ) - 1 );
         if ( (int)ret.size() <= 2 * size )
             ret += bars.at( _bar ).substr( 0, 1 );
         if ( level == LEVEL_1 ) {

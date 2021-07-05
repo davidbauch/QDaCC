@@ -67,8 +67,8 @@ int main( int argc, char* argv[] ) {
     }
 
     // Main Program
-    for ( auto set : sets ) {
-        CommandlineArguments::init( set ); //TODO: remove redundacys
+    for ( auto& set : sets ) {
+        CommandlineArguments::init( set );
         inputs = set;
         const std::string fp = inputs.back();
         std::filesystem::create_directories( fp );
@@ -107,7 +107,7 @@ int main( int argc, char* argv[] ) {
 
         double finalTime = Timers::summary();
         Log::L1( "\nStartcommand: " );
-        for ( auto ii : inputs )
+        for ( auto& ii : inputs )
             Log::L1( "{} ", ii );
         Log::L1( "\n\n" + system.terminate_message + "\n" );
 

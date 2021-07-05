@@ -239,7 +239,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         int i = 0;
         for ( auto transition : param.string_v["CoupledTo"] ) {
             std::reverse( transition.begin(), transition.end() );
-            polaron_factors.back() += el_transitions[transition].hilbert * p.p_omega_coupling * param.numerical_v["CouplingScaling"][i] * ph_transitions[mode + "b"].hilbert;
+            polaron_factors.back() += el_transitions[transition].hilbert * p.p_omega_coupling * param.numerical_v["CouplingScaling"][i] * ph_transitions[mode + "b"].hilbert; // TODO: was ist mit back coupling?
             i++;
         }
     }
@@ -270,13 +270,12 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     for ( auto &cav : p.input_photonic ) {
         for ( int i = 0; i < cav.second.string_v["CoupledTo"].size(); i++ ) {
             std::string transition = cav.second.string_v["CoupledTo"][i];
-            double scaling = cav.second.numerical_v["CouplingScaling"][i];
             std::string transition_transposed = transition;
             std::reverse( transition_transposed.begin(), transition_transposed.end() );
-            H_I_a += scaling * el_transitions[transition_transposed].hilbert * ph_transitions[cav.first + "b"].hilbert;
-            H_I_a += scaling * el_transitions[transition].hilbert * ph_transitions[cav.first + "bd"].hilbert;
-            H_I_b += scaling * el_transitions[transition_transposed].hilbert * ph_transitions[cav.first + "bd"].hilbert;
-            H_I_b += scaling * el_transitions[transition].hilbert * ph_transitions[cav.first + "b"].hilbert;
+            H_I_a += cav.second.numerical_v["CouplingScaling"][i] * el_transitions[transition_transposed].hilbert * ph_transitions[cav.first + "b"].hilbert;
+            H_I_a += cav.second.numerical_v["CouplingScaling"][i] * el_transitions[transition].hilbert * ph_transitions[cav.first + "bd"].hilbert;
+            H_I_b += cav.second.numerical_v["CouplingScaling"][i] * el_transitions[transition_transposed].hilbert * ph_transitions[cav.first + "bd"].hilbert;
+            H_I_b += cav.second.numerical_v["CouplingScaling"][i] * el_transitions[transition].hilbert * ph_transitions[cav.first + "b"].hilbert;
         }
     }
     if ( p.numerics_use_rwa )
@@ -289,266 +288,26 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     else
         H_used = H;
 
-    // Create Initial State
-
-    // REMOVE: OLD CODE
-    // Create Base Matrices and Base Vector:
-    //Dense m_base1 = Dense::Identity( p.p_max_photon_number + 1, p.p_max_photon_number + 1 );
-    //Dense m_base2 = Dense::Identity( p.p_max_photon_number + 1, p.p_max_photon_number + 1 );
-    //Dense m_base3 = Dense::Identity( 4, 4 );
-    //std::vector<std::string> base1;
-    //std::vector<std::string> base2;
-    //std::vector<std::string> base3 = { "G", "X_H", "X_V", "B" };
-    //for ( int i = 0; i <= p.p_max_photon_number; i++ ) {
-    //    base1.emplace_back( std::to_string( i ) + "_H" );
-    //    base2.emplace_back( std::to_string( i ) + "_V" );
-    //}
-    //auto base_old = tensor( tensor( base1, base2 ), base3 );
-
     Log::L3( "Operator Base: (size {})\n", base.size() );
     phononCouplingFactor = Dense::Zero( base.size(), base.size() );
     for ( int i = 0; i < base.size(); i++ ) {
-        for ( int j = 0; j < base.size(); j++ ) {
-            //if ( i == j ) {
-            if ( base.at( i ).back() == 'G' or base.at( j ).back() == 'G' )
-                continue;
-            if ( base.at( i ).back() == 'B' or base.at( j ).back() == 'B' ) {
-                //phononCouplingFactor( i, j ) = 2.0;
-            } else { //if ( base.at( i ).back() == 'H' or base.at( i ).back() == 'V' or base.at( j ).back() == 'H' or base.at( j ).back() == 'V' ) {
-                //phononCouplingFactor( i, j ) = 1.0;
-            }
-
-            //}
+        for ( int j = 0; j < base.size(); j++ ) { // base is |el|...>
+            std::string state1 = base.at( i ).substr( 1, 1 );
+            std::string state2 = base.at( j ).substr( 1, 1 );
+            if ( i == j )
+                phononCouplingFactor( i, j ) = std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
         }
     }
+    Log::L2( "Phonon Coupling Matrix:\n{}", Dense( phononCouplingFactor ) );
 
-    //Log::L3( "Coupling Matrix:\n{}\n", phononCouplingFactor );
-    //std::string bb = "";
-    //for ( auto b : base_old ) {
-    //    bb = fmt::format( "{}|{}> ", bb, b );
-    //}
-    //Log::L3( "Base: {}\n", bb );
-    //Dense ket = Dense::Zero( 4, 1 );
-    //ket( 0 ) = 1;
-    //Dense bra = ket.transpose();
-    //std::cout << "ket: " << ket.rows() << " " << ket.cols() << std::endl
-    //          << ket << std::endl;
-    //std::cout << "bra: " << bra.rows() << " " << bra.cols() << std::endl
-    //          << bra << std::endl
-    //          << std::endl;
-    //;
-    //Dense comb = bra * ket;
-    //Dense comb2 = ket * bra;
-    //std::cout << "bra*ket" << std::endl
-    //          << comb << std::endl;
-    //std::cout << "ket*bra" << std::endl
-    //          << comb2 << std::endl;
-
-    // Initializing bare matrices:
-    Log::L2( "Initializing base matrices...\n" );
-    // Atomic state operators
-    //bare_atom_state_ground = Dense::Zero( 4, 4 );
-    //bare_atom_state_ground << 1, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0;
-    //bare_atom_state_biexciton = Dense::Zero( 4, 4 );
-    //bare_atom_state_biexciton << 0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 1;
-    //bare_atom_state_H = Dense::Zero( 4, 4 );
-    //bare_atom_state_H << 0, 0, 0, 0,
-    //    0, 1, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0;
-    //bare_atom_state_V = Dense::Zero( 4, 4 );
-    //bare_atom_state_V << 0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 1, 0,
-    //    0, 0, 0, 0;
-    //bare_atom_sigmaplus_G_H = Dense::Zero( 4, 4 );
-    //bare_atom_sigmaplus_G_H << 0, 0, 0, 0,
-    //    1, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0;
-    //bare_atom_sigmaminus_G_H = Dense::Zero( 4, 4 );
-    //bare_atom_sigmaminus_G_H << 0, 1, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0;
-    //bare_atom_sigmaplus_G_V = Dense::Zero( 4, 4 );
-    //bare_atom_sigmaplus_G_V << 0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    1, 0, 0, 0,
-    //    0, 0, 0, 0;
-    //bare_atom_sigmaminus_G_V = Dense::Zero( 4, 4 );
-    //bare_atom_sigmaminus_G_V << 0, 0, 1, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0;
-    //bare_atom_sigmaplus_H_B = Dense::Zero( 4, 4 );
-    //bare_atom_sigmaplus_H_B << 0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 1, 0, 0;
-    //bare_atom_sigmaminus_H_B = Dense::Zero( 4, 4 );
-    //bare_atom_sigmaminus_H_B << 0, 0, 0, 0,
-    //    0, 0, 0, 1,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0;
-    //bare_atom_sigmaplus_V_B = Dense::Zero( 4, 4 );
-    //bare_atom_sigmaplus_V_B << 0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 1, 0;
-    //bare_atom_sigmaminus_V_B = Dense::Zero( 4, 4 );
-    //bare_atom_sigmaminus_V_B << 0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 1,
-    //    0, 0, 0, 0;
-    //bare_atom_inversion_G_H = Dense::Zero( 4, 4 );
-    //bare_atom_inversion_G_H << -1, 0, 0, 0,
-    //    0, 1, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0;
-    //bare_atom_inversion_G_V = Dense::Zero( 4, 4 );
-    //bare_atom_inversion_G_V << -1, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 1, 0,
-    //    0, 0, 0, 0;
-    //bare_atom_inversion_H_B = Dense::Zero( 4, 4 );
-    //bare_atom_inversion_H_B << 0, 0, 0, 0,
-    //    0, -1, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 1;
-    //bare_atom_inversion_V_B = Dense::Zero( 4, 4 );
-    //bare_atom_inversion_V_B << 0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, -1, 0,
-    //    0, 0, 0, 1;
-    //bare_atom_inversion_G_B = Dense::Zero( 4, 4 );
-    //bare_atom_inversion_G_B << -1, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 1;
-    //bare_atom_sigmaminus_G_B = Dense::Zero( 4, 4 );
-    //bare_atom_sigmaminus_G_B << 0, 0, 0, 1,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0,
-    //    0, 0, 0, 0;
-    //
-    //// Photon operators
-    //bare_photon_create_H = create_photonic_operator<Dense>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
-    //bare_photon_annihilate_H = create_photonic_operator<Dense>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
-    //bare_photon_n_H = bare_photon_create_H * bare_photon_annihilate_H;
-    //bare_photon_create_V = create_photonic_operator<Dense>( OPERATOR_PHOTONIC_CREATE, p.p_max_photon_number );
-    //bare_photon_annihilate_V = create_photonic_operator<Dense>( OPERATOR_PHOTONIC_ANNIHILATE, p.p_max_photon_number );
-    //bare_photon_n_V = bare_photon_create_V * bare_photon_annihilate_V;
-    //
-    //// Expanding both states
-    //Log::L2( "Expanding single state matrices...\n" );
-    //atom_state_ground = tensor( m_base1, m_base2, bare_atom_state_ground ).sparseView();
-    //atom_state_biexciton = tensor( m_base1, m_base2, bare_atom_state_biexciton ).sparseView();
-    //atom_state_H = tensor( m_base1, m_base2, bare_atom_state_H ).sparseView();
-    //atom_state_V = tensor( m_base1, m_base2, bare_atom_state_V ).sparseView();
-    //atom_sigmaplus_G_H = tensor( m_base1, m_base2, bare_atom_sigmaplus_G_H ).sparseView();
-    //atom_sigmaminus_G_H = tensor( m_base1, m_base2, bare_atom_sigmaminus_G_H ).sparseView();
-    //atom_sigmaplus_H_B = tensor( m_base1, m_base2, bare_atom_sigmaplus_H_B ).sparseView();
-    //atom_sigmaminus_H_B = tensor( m_base1, m_base2, bare_atom_sigmaminus_H_B ).sparseView();
-    //atom_sigmaplus_G_V = tensor( m_base1, m_base2, bare_atom_sigmaplus_G_V ).sparseView();
-    //atom_sigmaminus_G_V = tensor( m_base1, m_base2, bare_atom_sigmaminus_G_V ).sparseView();
-    //atom_sigmaplus_V_B = tensor( m_base1, m_base2, bare_atom_sigmaplus_V_B ).sparseView();
-    //atom_sigmaminus_V_B = tensor( m_base1, m_base2, bare_atom_sigmaminus_V_B ).sparseView();
-    //atom_inversion_G_H = tensor( m_base1, m_base2, bare_atom_inversion_G_H ).sparseView();
-    //atom_inversion_G_V = tensor( m_base1, m_base2, bare_atom_inversion_G_V ).sparseView();
-    //atom_inversion_H_B = tensor( m_base1, m_base2, bare_atom_inversion_H_B ).sparseView();
-    //atom_inversion_V_B = tensor( m_base1, m_base2, bare_atom_inversion_V_B ).sparseView();
-    //atom_inversion_G_B = tensor( m_base1, m_base2, bare_atom_inversion_G_B ).sparseView();
-    //atom_sigmaminus_G_B = tensor( m_base1, m_base2, bare_atom_sigmaminus_G_B ).sparseView();
-    //
-    //photon_create_H = tensor( bare_photon_create_H, m_base2, m_base3 ).sparseView();
-    //photon_create_V = tensor( m_base1, bare_photon_create_V, m_base3 ).sparseView();
-    //photon_annihilate_H = tensor( bare_photon_annihilate_H, m_base2, m_base3 ).sparseView();
-    //photon_annihilate_V = tensor( m_base1, bare_photon_annihilate_V, m_base3 ).sparseView();
-    //photon_n_H = tensor( bare_photon_n_H, m_base2, m_base3 ).sparseView();
-    //photon_n_V = tensor( m_base1, bare_photon_n_V, m_base3 ).sparseView();
-    //
-    //// Compressing
-    //atom_state_ground.makeCompressed();
-    //atom_state_biexciton.makeCompressed();
-    //atom_state_H.makeCompressed();
-    //atom_state_V.makeCompressed();
-    //atom_sigmaplus_G_H.makeCompressed();
-    //atom_sigmaminus_G_H.makeCompressed();
-    //atom_sigmaplus_H_B.makeCompressed();
-    //atom_sigmaminus_H_B.makeCompressed();
-    //atom_sigmaplus_G_V.makeCompressed();
-    //atom_sigmaminus_G_V.makeCompressed();
-    //atom_sigmaplus_V_B.makeCompressed();
-    //atom_sigmaminus_V_B.makeCompressed();
-    //atom_inversion_G_H.makeCompressed();
-    //atom_inversion_G_V.makeCompressed();
-    //atom_inversion_H_B.makeCompressed();
-    //atom_inversion_V_B.makeCompressed();
-    //atom_inversion_G_B.makeCompressed();
-    //atom_sigmaminus_G_B.makeCompressed();
-    //
-    //photon_create_H.makeCompressed();
-    //photon_create_V.makeCompressed();
-    //photon_annihilate_H.makeCompressed();
-    //photon_annihilate_V.makeCompressed();
-    //photon_n_H.makeCompressed();
-    //photon_n_V.makeCompressed();
-    //
-    //// Projector Matrices
-    //projector_atom_sigmaplus_G_H = project_matrix_sparse( atom_sigmaplus_G_H );
-    //projector_atom_sigmaminus_G_H = project_matrix_sparse( atom_sigmaminus_G_H );
-    //projector_atom_sigmaplus_H_B = project_matrix_sparse( atom_sigmaplus_H_B );
-    //projector_atom_sigmaminus_H_B = project_matrix_sparse( atom_sigmaminus_H_B );
-    //projector_atom_sigmaplus_G_V = project_matrix_sparse( atom_sigmaplus_G_V );
-    //projector_atom_sigmaminus_G_V = project_matrix_sparse( atom_sigmaminus_G_V );
-    //projector_atom_sigmaplus_V_B = project_matrix_sparse( atom_sigmaplus_V_B );
-    //projector_atom_sigmaminus_V_B = project_matrix_sparse( atom_sigmaminus_V_B );
-    //projector_photon_create_H = project_matrix_sparse( photon_create_H );
-    //projector_photon_annihilate_H = project_matrix_sparse( photon_annihilate_H );
-    //projector_photon_create_V = project_matrix_sparse( photon_create_V );
-    //projector_photon_annihilate_V = project_matrix_sparse( photon_annihilate_V );
-
-    Sparse H_0_old, H_I_old, H_old, H_used_old;
-    // All possible Hamiltonions
-    // H_0
-    //H_0_old = p.p_omega_atomic_G_H * atom_state_H + p.p_omega_atomic_G_V * atom_state_V + p.p_omega_atomic_B * atom_state_biexciton + p.p_omega_cavity_H * photon_n_H + p.p_omega_cavity_V * photon_n_V;
-    //H_0 = p.p_omega_atomic_G_H / 2.0 * atom_inversion_G_H + p.p_omega_atomic_G_V / 2.0 * atom_inversion_G_V + p.p_omega_atomic_H_B / 2.0 * atom_inversion_H_B + p.p_omega_atomic_V_B / 2.0 * atom_inversion_V_B + p.p_omega_cavity_H * photon_n_H + p.p_omega_cavity_V * photon_n_V;
-    // H_I
-    // RWA
-    //if ( p.numerics_use_rwa ) {
-    //    Log::L2( "using RWA... " );
-    //    H_I_old = p.p_omega_coupling * ( atom_sigmaplus_G_H * photon_annihilate_H + atom_sigmaminus_G_H * photon_create_H + atom_sigmaplus_G_V * photon_annihilate_V + atom_sigmaminus_G_V * photon_create_V + atom_sigmaplus_H_B * photon_annihilate_H + atom_sigmaminus_H_B * photon_create_H + atom_sigmaplus_V_B * photon_annihilate_V + atom_sigmaminus_V_B * photon_create_V );
-    //}
-    //// non RWA
-    //if ( !p.numerics_use_rwa ) {
-    //    Log::L2( "NOT using RWA... " );
-    //    H_I_old = p.p_omega_coupling * ( atom_sigmaplus_G_H * photon_create_H + atom_sigmaplus_G_H * photon_annihilate_H + atom_sigmaminus_G_H * photon_create_H + atom_sigmaminus_G_H * photon_annihilate_H + atom_sigmaplus_G_V * photon_create_V + atom_sigmaplus_G_V * photon_annihilate_V + atom_sigmaminus_G_V * photon_create_V + atom_sigmaminus_G_V * photon_annihilate_V + atom_sigmaplus_H_B * photon_create_H + atom_sigmaplus_H_B * photon_annihilate_H + atom_sigmaminus_H_B * photon_create_H + atom_sigmaminus_H_B * photon_annihilate_H + atom_sigmaplus_V_B * photon_create_V + atom_sigmaplus_V_B * photon_annihilate_V + atom_sigmaminus_V_B * photon_create_V + atom_sigmaminus_V_B * photon_annihilate_V );
-    //}
-    //// H
-    //H_old = H_0_old + H_I_old;
-    //// Interaction picture
-    //if ( p.numerics_use_interactionpicture ) {
-    //    Log::L2( "using interaction picture...\n" );
-    //    H_used_old = H_I_old;
-    //}
-    //if ( !p.numerics_use_interactionpicture ) {
-    //    Log::L2( "NOT using interaction picture...\n" );
-    //    H_used_old = H_old;
-    //}
     Log::L2( "Hamiltonoperator done!\n" );
+    // Create Initial State
     // rho, experimental: start with coherent state. in this case, always start in ground state.
     if ( !p.startCoherent || true ) {
         p.p_initial_state = base_index_map[p.p_initial_state_s];
         Log::L2( "Setting initial rho as pure state with rho_0 = {}... \n", p.p_initial_state );
         rho.coeffRef( p.p_initial_state, p.p_initial_state ) = 1;
-        std::cout << "initial state = " << p.p_initial_state_s << " -> " << p.p_initial_state << std::endl;
+        //std::cout << "initial state = " << p.p_initial_state_s << " -> " << p.p_initial_state << std::endl;
     } else {
         //Log::L2( "Setting initial rho as pure coherent state with alpha_h = {}, alpha_v = ... \n", p.p_initial_state_photon_h, p.p_initial_state_photon_v );
         //double trace_rest_h = 1.0;
@@ -578,54 +337,6 @@ void OperatorMatrices::outputOperators( Parameters &p ) {
     if ( p.output_operators > 0 ) {
         std::ostringstream out;
         Eigen::IOFormat CleanFmt( 4, 0, ", ", "\n", "[", "]" );
-        if ( p.output_operators > 1 ) {
-            out << "General Operators:\natom_state_ground\n"
-                << Dense( atom_state_ground ).format( CleanFmt ) << std::endl;
-            out << "atom_state_biexciton\n"
-                << Dense( atom_state_biexciton ).format( CleanFmt ) << std::endl;
-            out << "atom_state_H\n"
-                << Dense( atom_state_H ).format( CleanFmt ) << std::endl;
-            out << "atom_state_V\n"
-                << Dense( atom_state_V ).format( CleanFmt ) << std::endl;
-            out << "atom_sigmaplus_G_H\n"
-                << Dense( atom_sigmaplus_G_H ).format( CleanFmt ) << std::endl;
-            out << "atom_sigmaminus_G_H\n"
-                << Dense( atom_sigmaminus_G_H ).format( CleanFmt ) << std::endl;
-            out << "atom_sigmaplus_H_B\n"
-                << Dense( atom_sigmaplus_H_B ).format( CleanFmt ) << std::endl;
-            out << "atom_sigmaminus_H_B\n"
-                << Dense( atom_sigmaminus_H_B ).format( CleanFmt ) << std::endl;
-            out << "atom_sigmaplus_G_V\n"
-                << Dense( atom_sigmaplus_G_V ).format( CleanFmt ) << std::endl;
-            out << "atom_sigmaminus_G_V\n"
-                << Dense( atom_sigmaminus_G_V ).format( CleanFmt ) << std::endl;
-            out << "atom_sigmaplus_V_B\n"
-                << Dense( atom_sigmaplus_V_B ).format( CleanFmt ) << std::endl;
-            out << "atom_sigmaminus_V_B\n"
-                << Dense( atom_sigmaminus_V_B ).format( CleanFmt ) << std::endl;
-            out << "atom_inversion_G_H\n"
-                << Dense( atom_inversion_G_H ).format( CleanFmt ) << std::endl;
-            out << "atom_inversion_G_V\n"
-                << Dense( atom_inversion_G_V ).format( CleanFmt ) << std::endl;
-            out << "atom_inversion_H_B\n"
-                << Dense( atom_inversion_H_B ).format( CleanFmt ) << std::endl;
-            out << "atom_inversion_V_B\n"
-                << Dense( atom_inversion_V_B ).format( CleanFmt ) << std::endl;
-            out << "atom_inversion_G_B\n"
-                << Dense( atom_inversion_G_B ).format( CleanFmt ) << std::endl;
-            out << "photon_create_H\n"
-                << Dense( photon_create_H ).format( CleanFmt ) << std::endl;
-            out << "photon_create_V\n"
-                << Dense( photon_create_V ).format( CleanFmt ) << std::endl;
-            out << "photon_annihilate_H\n"
-                << Dense( photon_annihilate_H ).format( CleanFmt ) << std::endl;
-            out << "photon_annihilate_V\n"
-                << Dense( photon_annihilate_V ).format( CleanFmt ) << std::endl;
-            out << "photon_n_H\n"
-                << Dense( photon_n_H ).format( CleanFmt ) << std::endl;
-            out << "photon_n_V\n"
-                << Dense( photon_n_V ).format( CleanFmt ) << std::endl;
-        }
         out << "Hamilton and Rho:\nH=H_0+H_I (no RWA)\n"
             << Dense( H ).format( CleanFmt ) << std::endl;
         out << "H_0\n"

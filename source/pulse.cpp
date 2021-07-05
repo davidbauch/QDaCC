@@ -55,8 +55,8 @@ void Pulse::generate() {
             pulsearray_derivative.push_back( evaluate_derivative( t ) );
             pulsearray_integral.push_back( evaluate_integral( t ) );
             timearray.push_back( t );
-            if ( std::real( val ) > maximum )
-                maximum = std::real( val );
+            if ( std::abs( val ) > maximum )
+                maximum = std::abs( val );
         }
     }
 

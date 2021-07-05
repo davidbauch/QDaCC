@@ -92,6 +92,7 @@ class SaveStateTau {
     double t, tau;
     SaveStateTau( const Sparse &mat1, const Sparse &mat2, const double t, const double tau ) : mat1( mat1 ), mat2( mat2 ), t( t ), tau( tau ){};
     SaveStateTau( const Sparse &mat, const double t ) : mat1( mat ), t( t ), tau( 0 ){};
+    SaveStateTau(){};
 };
 class SaveScalar {
    public:

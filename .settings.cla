@@ -89,31 +89,18 @@ CLA_ARGUMENT = {
 		datatype = 'string'
 		description = 'Concurrence. Syntax: [Mode]'
 	}
+	CLA_PARAMETER = {
+		subkey = 'GF'
+		value = ''
+		datatype = 'string'
+		description = 'G1/2 func. Syntax: [Mode:Order]'
+	}
 }
-# DEPRECATED
 CLA_ARGUMENT = {
 	type = '2hyphen'
 	key = 'system'
 	description = 'All system parameters'
 	group = 'Systemparameter'
-	CLA_PARAMETER = {
-		subkey = 'we'
-		value = '1.366eV'
-		datatype = 'string'
-		description = 'Electronic transition frequency'
-	}
-	CLA_PARAMETER = {
-		subkey = 'wcH'
-		value = '1.366eV'
-		datatype = 'string'
-		description = 'Horizontally polarized cavity transition frequency'
-	}
-	CLA_PARAMETER = {
-		subkey = 'wcV'
-		value = '1.366eV'
-		datatype = 'string'
-		description = 'Vertically polarized cavity transition frequency'
-	}
 	CLA_PARAMETER = {
 		subkey = 'coupling'
 		value = '66mueV'
@@ -138,96 +125,6 @@ CLA_ARGUMENT = {
 		datatype = 'string'
 		description = 'Electronic pure dephasing'
 	}
-	CLA_PARAMETER = {
-		subkey = 'deltaE'
-		value = '2mueV'
-		datatype = 'string'
-		description = 'Exciton finestructure splitting'
-	}
-	CLA_PARAMETER = {
-		subkey = 'excitonBindEnergy'
-		value = '3meV'
-		datatype = 'string'
-		description = 'Biexciton binding energy'
-	}
-}
-CLA_ARGUMENT = {
-	type = '2hyphen'
-	key = 'pulse'
-	description = 'All chirp parameters'
-	group = 'Pulseparameters'
-	CLA_PARAMETER = {
-		subkey = 'pulseCenter'
-		value = '20ps'
-		datatype = 'string'
-		description = 'Pulse center'
-	}
-	CLA_PARAMETER = {
-		subkey = 'pulseAmp'
-		value = '0'
-		datatype = 'string'
-		description = 'Pulse amplitute'
-	}
-	CLA_PARAMETER = {
-		subkey = 'pulseFreq'
-		value = '1.366eV'
-		datatype = 'string'
-		description = 'Pulse frequency'
-	}
-	CLA_PARAMETER = {
-		subkey = 'pulseSigma'
-		value = '5ps'
-		datatype = 'string'
-		description = 'Pulse sigma'
-	}
-	CLA_PARAMETER = {
-		subkey = 'pulseType'
-		value = 'gauss_pi'
-		datatype = 'string'
-		description = 'Pulse type'
-	}
-	CLA_PARAMETER = {
-		subkey = 'pulsePol'
-		value = 'H'
-		datatype = 'string'
-		description = 'Pulse polarization'
-	}
-	CLA_PARAMETER = {
-		subkey = 'pulseChirp'
-		value = '0'
-		datatype = 'string'
-		description = 'Pulse chirp'
-	}
-}
-CLA_ARGUMENT = {
-	type = '2hyphen'
-	key = 'chirp'
-	description = 'All chirp parameters. These can be vectors [a1,a2,...]. If only e.g. chirp values are given, rest of vectors will be assumed to be 0. A vector of this type needs at least 2 entries'
-	group = 'Chirpparameters'
-	CLA_PARAMETER = {
-		subkey = 'chirpT'
-		value = '[0,1]'
-		datatype = 'string'
-		description = 'Chirp Time'
-	}
-	CLA_PARAMETER = {
-		subkey = 'chirpY'
-		value = '[0,0]'
-		datatype = 'string'
-		description = 'Chirp Value'
-	}
-	CLA_PARAMETER = {
-		subkey = 'chirpDDT'
-		value = '[0,0]'
-		datatype = 'string'
-		description = 'Chirp Differential'
-	}
-	CLA_PARAMETER = {
-		subkey = 'chirpType'
-		value = 'monotone'
-		datatype = 'string'
-		description = 'Chirp Type. This cannot be a vector'
-	}
 }
 CLA_ARGUMENT = {
 	type = '2hyphen'
@@ -236,46 +133,9 @@ CLA_ARGUMENT = {
 	group = 'InitialStateParams'
 	CLA_PARAMETER = {
 		subkey = ''
-		value = '|Z|2h|2v>'
+		value = ''
 		datatype = 'string'
 		description = 'Initial State'
-	}
-}
-# DEPRECATED
-CLA_ARGUMENT = {
-	type = '2hyphen'
-	key = 'initState'
-	description = 'Initial State Parameters'
-	group = 'InitialStateParams'
-	CLA_PARAMETER = {
-		subkey = 'initElectronicState'
-		value = 'g'
-		datatype = 'string'
-		description = 'Initial Electronic state. Can be g,h,v,b'
-	}
-	CLA_PARAMETER = {
-		subkey = 'initHorizontalPhotons'
-		value = '0'
-		datatype = 'int'
-		description = 'Positive Integer'
-	}
-	CLA_PARAMETER = {
-		subkey = 'initVerticalPhotons'
-		value = '0'
-		datatype = 'int'
-		description = 'Positive Integer'
-	}
-}
-CLA_ARGUMENT = {
-	type = '2hyphen'
-	key = 'maxPhotons'
-	description = 'Set global maximum photon number.'
-	group = 'InitialStateParams'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = '2'
-		datatype = 'int'
-		description = 'Positive Integer'
 	}
 }
 CLA_ARGUMENT = {
@@ -284,64 +144,10 @@ CLA_ARGUMENT = {
 	description = 'Spectral properties.'
 	group = 'SpectrumParams'
 	CLA_PARAMETER = {
-		subkey = 'specTauRes'
+		subkey = 'gridres'
 		value = '500'
 		datatype = 'int'
 		description = 'Positive Integer. Resolution for t'-calculation'
-	}
-	CLA_PARAMETER = {
-		subkey = 'specCenter'
-		value = '-1'
-		datatype = 'string'
-		description = 'Center for spectrum calculation. -1 maps this value onto the cavity'
-	}
-	CLA_PARAMETER = {
-		subkey = 'specRange'
-		value = '-1'
-		datatype = 'string'
-		description = 'Range for spectrum calculation. -1 maps this value onto the different transition frequencies and couplings used.'
-	}
-	CLA_PARAMETER = {
-		subkey = 'specWRes'
-		value = '500'
-		datatype = 'int'
-		description = 'Positive Integer. Resolution of w-calculation'
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'spectrum'
-	description = 'Enable general spectrum calculation. Edit parameters via --spectrum subkeys.'
-	group = 'SpectrumParams'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'spectrumH'
-	description = 'Enable spectrum calculation for horizontal polarization only. Edit parameters via --spectrum subkeys.'
-	group = 'SpectrumParams'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'spectrumV'
-	description = 'Enable spectrum calculation for vertical polarization only. Edit parameters via --spectrum subkeys.'
-	group = 'SpectrumParams'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
 	}
 }
 CLA_ARGUMENT = {
@@ -476,54 +282,6 @@ CLA_ARGUMENT = {
 	key = 'noPhononAdjust'
 	description = 'Disable the adjustments done on (pure-)dephasing if phonons are active.'
 	group = 'PhononParams'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'g2'
-	description = 'Enables g2 statistic calculations'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'g2H'
-	description = 'Enables g2 statistic calculations for only the H-mode'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'g2V'
-	description = 'Enables g2 statistic calculations for only the V-mode'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'g2C'
-	description = 'Enables g2 statistic calculations for concurrence'
-	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''
 		value = 'false'
@@ -790,8 +548,8 @@ CLA_ARGUMENT = {
 	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''
-		value = '-1'
-		datatype = 'int'
+		value = '0'
+		datatype = 'string'
 		description = ''
 	}
 }

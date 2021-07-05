@@ -38,15 +38,13 @@ class ODESolver {
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
     int dim;
     // Cache Matrices that allow for variable time steps.
-    //Dense cache1 = Dense::Zero( 1, 1 );
-    //Dense cache2 = Dense::Zero( 1, 1 );
     std::map<std::string, Dense> cache;
     std::map<std::string, std::map<std::string, std::vector<Scalar>>> to_output;
     std::map<std::string, std::map<std::string, std::vector<Dense>>> to_output_m;
 
     // Cached Entries
-    std::vector<SaveState> savedStates;    // Vector for saved matrix-time tuples for densitymatrix
-    std::vector<SaveState> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
+    std::vector<SaveState> savedStates;      // Vector for saved matrix-time tuples for densitymatrix
+    std::map<double, Sparse> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
 
     // Description: Saves a tuple of a complex (density-)matrix and time, ensuring times and matrices don't get mixed up
     // Type: ODESolver private function

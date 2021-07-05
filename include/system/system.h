@@ -26,8 +26,8 @@ class System {
 
     // ##### Cache Components #####
     // Runtime efficient caching vector
-    std::vector<Scalar> phi_vector;              // Vector of saved phonon-phi function
-    std::vector<SaveStateTau> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
+    std::vector<Scalar> phi_vector;                                      // Vector of saved phonon-phi function
+    std::map<std::pair<double, double>, SaveStateTau> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
 
     // ##### Helper Variables #####
     std::map<std::string, double> emission_probabilities;
@@ -113,13 +113,6 @@ class System {
 
     // Initializes the polaron functions
     void initialize_polaron_frame_functions();
-
-    // Determines the corresponding integer index for a given time tuple (t,tau)
-    // Returns the index of the cached Chi(t,tau)
-    int dgl_get_coefficient_index( const double t, const double tau = 0 );
-
-    // Saves the coefficient Chi(t,tau)
-    void dgl_save_coefficient( const Sparse &coefficient1, const Sparse &coefficient2, const double t, const double tau );
 
     // Calculates Chi(t,0)
     Sparse dgl_phonons_chi( const double t );

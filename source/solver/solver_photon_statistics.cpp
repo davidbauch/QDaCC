@@ -12,8 +12,8 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
     ProgressBar progressbar = ProgressBar( pbsize );
 
     // Calculate G2(t,tau) with given operator matrices
-    std::string s_g1 = "G1" + s_op_creator + s_op_annihilator;
-    std::string s_g2 = "G2" + s_op_creator + s_op_annihilator + s_op_creator + s_op_annihilator;
+    std::string s_g1 = "G1-" + s_op_creator + "-" + s_op_annihilator;
+    std::string s_g2 = "G2-" + s_op_creator + "-" + s_op_annihilator + "-" + s_op_creator + "-" + s_op_annihilator;
     if ( cache.count( s_g1 ) == 0 )
         cache[s_g1] = calculate_g1( s, op_creator, op_annihilator, s_g1 );
     if ( cache.count( s_g2 ) == 0 )
@@ -27,7 +27,7 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
 
     Sparse M1 = op_creator * op_annihilator;
 
-    std::string fout = s_op_creator + s_op_annihilator;
+    std::string fout = s_op_creator + "-" + s_op_annihilator;
     Timer &timer = Timers::create( "Indistinguishability " + fout );
     timer.start();
 
@@ -65,7 +65,7 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
     if ( to_output["Indist"].size() == 0 )
         to_output["Indist"]["Time"] = time;
     to_output["Indist"][fout] = outp;
-    Log::L1( "Final Indistinguishability: {} {}\n", outp.back(), fout );
+    Log::L1( "Final Indistinguishability: {} {}\n", std::real( outp.back() ), fout );
     return true;
 }
 
@@ -83,18 +83,18 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     int pbsize = (int)savedStates.size() / s.parameters.iterations_t_skip;
     ProgressBar progressbar = ProgressBar( pbsize );
 
-    std::string fout = s_op_creator_1 + s_op_annihilator_1 + s_op_creator_2 + s_op_annihilator_2;
+    std::string fout = s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
     // Calculate G2(t,tau) with given operator matrices
-    std::string s_g1_1 = "G1" + s_op_creator_1 + s_op_annihilator_1;
-    std::string s_g1_2 = "G1" + s_op_creator_2 + s_op_annihilator_2;
-    std::string s_g2_1111 = "G2" + s_op_creator_1 + s_op_annihilator_1 + s_op_creator_1 + s_op_annihilator_1;
-    std::string s_g2_1122 = "G2" + s_op_creator_1 + s_op_annihilator_2 + s_op_creator_1 + s_op_annihilator_2;
-    std::string s_g2_1212 = "G2" + s_op_creator_1 + s_op_annihilator_1 + s_op_creator_2 + s_op_annihilator_2;
-    std::string s_g2_1221 = "G2" + s_op_creator_1 + s_op_annihilator_2 + s_op_creator_2 + s_op_annihilator_1;
-    std::string s_g2_2121 = "G2" + s_op_creator_2 + s_op_annihilator_2 + s_op_creator_1 + s_op_annihilator_1;
-    std::string s_g2_2112 = "G2" + s_op_creator_2 + s_op_annihilator_1 + s_op_creator_1 + s_op_annihilator_2;
-    std::string s_g2_2211 = "G2" + s_op_creator_2 + s_op_annihilator_1 + s_op_creator_2 + s_op_annihilator_1;
-    std::string s_g2_2222 = "G2" + s_op_creator_2 + s_op_annihilator_2 + s_op_creator_2 + s_op_annihilator_2;
+    std::string s_g1_1 = "G1-" + s_op_creator_1 + "-" + s_op_annihilator_1;
+    std::string s_g1_2 = "G1-" + s_op_creator_2 + "-" + s_op_annihilator_2;
+    std::string s_g2_1111 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_1 + "-" + s_op_annihilator_1;
+    std::string s_g2_1122 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_2 + "-" + s_op_creator_1 + "-" + s_op_annihilator_2;
+    std::string s_g2_1212 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
+    std::string s_g2_1221 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_2 + "-" + s_op_creator_2 + "-" + s_op_annihilator_1;
+    std::string s_g2_2121 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_2 + "-" + s_op_creator_1 + "-" + s_op_annihilator_1;
+    std::string s_g2_2112 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_1 + "-" + s_op_creator_1 + "-" + s_op_annihilator_2;
+    std::string s_g2_2211 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_1;
+    std::string s_g2_2222 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_2 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
     if ( cache.count( s_g1_1 ) == 0 )
         cache[s_g1_1] = calculate_g1( s, op_creator_1, op_annihilator_1, s_g1_1 );
     if ( cache.count( s_g1_2 ) == 0 )
@@ -181,40 +181,39 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
         rho_2phot( 3, 0 ) = rho[s_g2_1122][k];
         rho_2phot( 1, 2 ) = rho[s_g2_2121][k];
         rho_2phot( 2, 1 ) = rho[s_g2_1212][k];
+        rho_2phot = rho_2phot / rho_2phot.trace();
+        rho_2phot( 1, 1 ) = std::abs( rho[s_g2_2112][k] ) != 0 ? rho[s_g2_2112][k] : 1E-100;
+        rho_2phot( 2, 2 ) = std::abs( rho[s_g2_1221][k] ) != 0 ? rho[s_g2_1221][k] : 1E-100;
         //Log::L3( "Normalizing 2 photon matrix\n" );
-        if ( std::abs( rho_2phot.trace() ) != 0 ) {
-            rho_2phot = rho_2phot / rho_2phot.trace();
-            rho_2phot( 1, 1 ) = std::abs( rho[s_g2_2112][k] ) != 0 ? rho[s_g2_2112][k] : 1E-100;
-            rho_2phot( 2, 2 ) = std::abs( rho[s_g2_1221][k] ) != 0 ? rho[s_g2_1221][k] : 1E-100;
-            //Log::L3( "Rho_2phot = {}\n", rho_2phot );
-            //Log::L3( "Calculating sqrt(rho)\n" );
-            //Eigen::MatrixPower<Dense> Mpow( rho_2phot );
-            Dense sqrtrho2phot = rho_2phot.sqrt(); //Mpow( 0.5 );
-            //Log::L3( "Calculating R\n" );
-            Dense R = sqrtrho2phot * spinflip * rho_2phot * spinflip * sqrtrho2phot;
-            //Log::L3( "R = {}\n", R );
-            //Log::L3( "Calculating sqrt(R)\n" );
-            //Eigen::MatrixPower<Dense> SMPow( R );
-            auto R5 = R.sqrt(); //SMPow( 0.5 );
-            //Log::L3( "Calculating Eigenvalues\n" );
-            auto eigenvalues = R5.eigenvalues();
-            //Log::L1( "rho2phot = {}\n\nsqrtrho2phot = {}\n\nR = {}\n\nRS = {}\nEigenvalues at t = {} are {}\n", rho_2phot, sqrtrho2phot, R, R5, getTimeAt( i ), eigenvalues );
-            conc = eigenvalues( 3 ) - eigenvalues( 2 ) - eigenvalues( 1 ) - eigenvalues( 0 );
-            output.emplace_back( conc );
-            time.emplace_back( getTimeAt( i ) );
-            twophotonmatrix.emplace_back( rho_2phot );
-        }
+        //if ( std::abs( rho_2phot.trace() ) != 0 ) {
+        //Log::L3( "Rho_2phot = {}\n", rho_2phot );
+        //Log::L3( "Calculating sqrt(rho)\n" );
+        //Eigen::MatrixPower<Dense> Mpow( rho_2phot );
+        Dense sqrtrho2phot = rho_2phot.sqrt(); //Mpow( 0.5 );
+        //Log::L3( "Calculating R\n" );
+        Dense R = sqrtrho2phot * spinflip * rho_2phot * spinflip * sqrtrho2phot;
+        //Log::L3( "R = {}\n", R );
+        //Log::L3( "Calculating sqrt(R)\n" );
+        //Eigen::MatrixPower<Dense> SMPow( R );
+        auto R5 = R.sqrt(); //SMPow( 0.5 );
+        //Log::L3( "Calculating Eigenvalues\n" );
+        auto eigenvalues = R5.eigenvalues();
+        //Log::L1( "rho2phot = {}\n\nsqrtrho2phot = {}\n\nR = {}\n\nRS = {}\nEigenvalues at t = {} are {}\n", rho_2phot, sqrtrho2phot, R, R5, getTimeAt( i ), eigenvalues );
+        conc = eigenvalues( 3 ) - eigenvalues( 2 ) - eigenvalues( 1 ) - eigenvalues( 0 );
+        output.emplace_back( conc );
+        time.emplace_back( getTimeAt( i ) );
+        twophotonmatrix.emplace_back( rho_2phot );
+        //}
     }
     // Final output and timer end
     Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence (" + fout + ")", PROGRESS_FORCE_OUTPUT );
     timer_c.end();
-
     // Add to Fileoutput:
     if ( to_output["Conc"].size() == 0 )
         to_output["Conc"]["Time"] = time;
     to_output["Conc"][fout] = output;
     to_output_m["TwoPMat"][fout] = twophotonmatrix;
-    Log::L1( "Final Concurrence: {} {}\n", output.back(), fout );
+    Log::L1( "Final Concurrence: {} {}\n", std::abs( output.back() ), fout );
     return true;
 }
 
@@ -270,6 +269,62 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
             }
         }
         calculate_concurrence( s, s_creator[0], s_annihilator[0], s_creator[1], s_annihilator[1] );
+    }
+    // Calculate G1/G2 functions
+    auto &gs_s = s.parameters.input_correlation["GFunc"];
+    for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
+        auto modes = gs_s.string_v["Modes"][i];
+        int order = std::abs( gs_s.numerical_v["Order"][i] );
+        std::string s_creator, s_annihilator;
+        Sparse creator, annihilator;
+        for ( auto &mode : splitline( modes, '-' ) ) {
+            if ( std::isupper( mode.front() ) ) {
+                s_annihilator = mode;
+                auto s_creator = mode;
+                std::reverse( s_creator.begin(), s_creator.end() );
+                creator = s.operatorMatrices.el_transitions[s_creator].hilbert;
+                annihilator = s.operatorMatrices.el_transitions[s_annihilator].hilbert;
+            } else {
+                s_creator = mode + "bd";
+                s_annihilator = mode + "b";
+                creator = s.operatorMatrices.el_transitions[s_creator].hilbert;
+                annihilator = s.operatorMatrices.el_transitions[s_annihilator].hilbert;
+            }
+        }
+        std::string purpose = order == 1 ? "G1-" + s_creator + "-" + s_annihilator : "G2-" + s_creator + "-" + s_annihilator + "-" + s_creator + "-" + s_annihilator;
+        if ( cache.count( purpose ) == 0 )
+            if ( order == 1 )
+                calculate_g1( s, creator, annihilator, purpose );
+            else
+                calculate_g2( s, creator, annihilator, creator, annihilator, purpose );
+        // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
+        auto &gmat = cache[purpose];
+        if ( gs_s.numerical_v["Integrated"][i] == 0 || gs_s.numerical_v["Integrated"][i] == 2 ) {
+            Log::L2( "Saving G{} function matrix to {}_m.txt...\n", order, purpose );
+            FILE *f_gfunc = std::fopen( ( s.parameters.subfolder + purpose + "_m.txt" ).c_str(), "w" );
+            for ( int k = 0; k < gmat.rows(); k += s.parameters.iterations_t_skip ) {
+                for ( int l = 0; l < gmat.cols(); l++ ) {
+                    fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", 1.0 * k * s.parameters.t_step, 1.0 * l * s.parameters.t_step, std::abs( gmat( k, l ) ), std::real( gmat( k, l ) ), std::imag( gmat( k, l ) ) );
+                }
+                fmt::print( f_gfunc, "\n" );
+            }
+            std::fclose( f_gfunc );
+        }
+        if ( gs_s.numerical_v["Integrated"][i] == 1 || gs_s.numerical_v["Integrated"][i] == 2 ) {
+            Log::L2( "Saving G{} integrated function to {}.txt...\n", order, purpose );
+            FILE *f_gfunc = std::fopen( ( s.parameters.subfolder + purpose + ".txt" ).c_str(), "w" );
+            fmt::print( f_gfunc, "Time\tAbs\tReal\tImag\n" );
+            for ( int l = 0; l < gmat.cols(); l++ ) {
+                Scalar integral = 0;
+                for ( int k = 0; k < gmat.rows(); k += s.parameters.iterations_t_skip ) {
+                    integral += gmat( k, l );
+                }
+                integral *= s.parameters.t_step * s.parameters.iterations_t_skip;
+                fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", 1.0 * l * s.parameters.t_step, std::abs( integral ), std::real( integral ), std::imag( integral ) );
+            }
+            std::fclose( f_gfunc );
+        }
+        Log::L2( "Done!\n" );
     }
     // Output Spectra and Rest in seperate Files
     for ( auto &[mode, data] : to_output["Spectrum"] ) {

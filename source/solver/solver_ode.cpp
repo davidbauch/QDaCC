@@ -8,28 +8,15 @@ ODESolver::ODESolver( System &s ) {
     Log::L2( "Done!\n" );
 }
 
+//TODO: redo mit map <double, Matrix>
 Sparse ODESolver::getHamilton( System &s, const double t, bool use_saved_hamiltons ) {
-    if ( s.parameters.numerics_use_saved_hamiltons ) { ////|| use_saved_hamiltons ) {
-        if ( savedHamiltons.size() == 0 || t > savedHamiltons.back().t ) {
-            track_gethamilton_calcattempt++;
-            // Calculate new Hamilton for t, save it, return it
+    if ( s.parameters.numerics_use_saved_hamiltons ) {
+        if ( savedHamiltons.count( t ) == 0 ) {
             saveHamilton( s.dgl_getHamilton( t ), t );
             track_gethamilton_write++;
-            return savedHamiltons.back().mat;
-        } else {
-            long unsigned int approx = std::floor( t / s.parameters.t_step / 2.0 );
-            if ( !( approx >= savedHamiltons.size() || approx < 0 ) ) { //Fixed: > --> >=
-                // Look for corresponding Hamilton. t-direction has to be calculated first if used with multiple threads
-                while ( t > savedHamiltons.at( approx ).t )
-                    approx++;
-                while ( t < savedHamiltons.at( approx ).t )
-                    approx--;
-                if ( approx < (int)savedHamiltons.size() ) {
-                    track_gethamilton_read++;
-                    return savedHamiltons.at( approx ).mat;
-                }
-            }
         }
+        track_gethamilton_read++;
+        return savedHamiltons[t];
     }
     track_gethamilton_calc++;
     return s.dgl_getHamilton( t );
@@ -40,7 +27,7 @@ void ODESolver::saveState( const Sparse &mat, const double t, std::vector<SaveSt
 }
 
 void ODESolver::saveHamilton( const Sparse &mat, const double t ) {
-    savedHamiltons.emplace_back( mat, t );
+    savedHamiltons[t] = mat;
 }
 
 bool ODESolver::queueNow( System &s, int &curIt ) {

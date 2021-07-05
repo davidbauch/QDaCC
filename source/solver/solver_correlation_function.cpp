@@ -98,6 +98,7 @@ Dense ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse
 
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
+    to_output_m["G1"][purpose] = { cache };
     Log::L2( "Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return cache;
 }
@@ -150,6 +151,7 @@ Dense ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Spar
 
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
+    to_output_m["G2"][purpose] = { cache };
     Log::L2( "G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return cache;
 }

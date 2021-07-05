@@ -125,64 +125,6 @@ double System::dgl_phonons_lindblad_coefficients( double t, double energy, doubl
     return ret;
 }
 
-int System::dgl_get_coefficient_index( const double t, const double tau ) {
-    if ( parameters.numerics_use_saved_coefficients ) {
-        // Look for already calculated coefficient. if not found, calculate and save new coefficient
-        if ( savedCoefficients.size() > 0 && t <= savedCoefficients.back().t && tau <= savedCoefficients.back().tau ) {
-            track_getcoefficient_calcattempt++;
-            double mult = ( parameters.numerics_phonon_approximation_markov1 ? std::floor( parameters.p_phonon_tcutoff / parameters.t_step ) : 1.0 );
-            int add = ( parameters.numerics_phonon_approximation_markov1 ? (int)std::floor( ( parameters.p_phonon_tcutoff - tau ) / parameters.t_step ) : 0 );
-            int approx = std::max( 0, std::min( (int)savedCoefficients.size() - 1, (int)( ( std::floor( t / parameters.t_step * 2.0 ) - 1.0 ) * mult ) ) - add ); //TODO: *4.0 wenn RK5, *parameters.rungekutta_timestep_multiplier
-            int tries = 0;
-            while ( approx < (int)savedCoefficients.size() - 1 && t > savedCoefficients.at( approx ).t ) {
-                approx++;
-                tries++;
-            }
-            while ( approx > 0 && t < savedCoefficients.at( approx ).t ) {
-                approx--;
-                tries++;
-            }
-            while ( approx < (int)savedCoefficients.size() - 1 && tau > savedCoefficients.at( approx ).tau ) {
-                approx++;
-                tries++;
-            }
-            while ( approx > 0 && tau < savedCoefficients.at( approx ).tau ) {
-                approx--;
-                tries++;
-            }
-            //Log::L2("Approx = {}, size = {}\n",approx,savedCoefficients.size());
-            if ( approx < (int)savedCoefficients.size() ) {
-                if ( t != savedCoefficients.at( approx ).t || tau != savedCoefficients.at( approx ).tau ) {
-                    // This situation may occur during multithreading.
-                    track_getcoefficient_read_but_unequal++;
-                    //Log::L2( "Coefficient time mismatch! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
-                } else {
-                    track_getcoefficient_read++;
-                    globaltries += tries;
-                    //Log::L2( "Coefficient time match! t = {} but coefficient.t = {}, tau = {} but coefficient.tau = {}\n", t, savedCoefficients.at( approx ).t, tau, savedCoefficients.at( approx ).tau );
-                    return approx;
-                }
-            }
-        }
-    }
-    return -1;
-}
-
-void System::dgl_save_coefficient( const Sparse &coefficient1, const Sparse &coefficient2, const double t, const double tau ) {
-    track_getcoefficient_calculate++;
-    if ( parameters.numerics_use_saved_coefficients && savedCoefficients.size() < parameters.numerics_saved_coefficients_max_size ) {
-        track_getcoefficient_write++;
-#pragma omp critical
-        savedCoefficients.emplace_back( SaveStateTau( coefficient1, coefficient2, t, tau ) );
-        // If use cutoff and vector saved more than 5 timesteps worth of matrices, delete other matrices
-        if ( parameters.numerics_saved_coefficients_cutoff > 0 && savedCoefficients.size() > parameters.numerics_saved_coefficients_cutoff ) {
-#pragma omp critical
-            savedCoefficients.erase( savedCoefficients.begin() );
-        }
-        //Log::L2("Saved coefficient for t = {}, tau = {}\n",t,tau);
-    }
-}
-
 Sparse System::dgl_phonons_chi( const double t ) {
     // Electron-Cavity
     Sparse ret = operatorMatrices.polaron_factors[0];
@@ -202,11 +144,10 @@ Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, 
         Sparse U = ( Dense( -1i * dgl_getHamilton( t ) * tau ).exp() ).sparseView();
         return ( U * chi_tau * U.adjoint() ).eval();
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_MIXED ) {
-        Scalar sum = 0;
+        double error = 0;
         for ( auto &p : pulse )
-            sum += p.get( t );
-        double error = std::abs( sum ); //std::abs( pulse_H.get( t ) + pulse_V.get( t ) );
-        if ( error > 0.1 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) {
+            error += std::abs( p.get( t ) ) / p.maximum;
+        if ( error > 1E-5 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) { //TODO: threshold als parameter
             return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
         }
     }
@@ -248,11 +189,13 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             // Temporary variables
             Sparse chi_tau_back_u, chi_tau_back_g, integrant;
             // Look if we already calculated coefficient sum for this specific t-value
-            int index = dgl_get_coefficient_index( t, 0 );
-            if ( index != -1 ) {
+            //int index = dgl_get_coefficient_index( t, 0 );
+            std::pair<double, double> time_pair = std::make_pair( t, 0.0 );
+            if ( parameters.numerics_use_saved_coefficients && savedCoefficients.count( time_pair ) > 0 ) {
                 // Index was found, chi(t-tau) sum used from saved vector
-                chi_tau_back_u = savedCoefficients.at( index ).mat1;
-                chi_tau_back_g = savedCoefficients.at( index ).mat2;
+                auto &coeff = savedCoefficients[time_pair];
+                chi_tau_back_u = coeff.mat1; //savedCoefficients.at( index ).mat1;
+                chi_tau_back_g = coeff.mat2; //savedCoefficients.at( index ).mat2;
             } else {
                 // Index was not found, (re)calculate chi(t-tau) sum
                 // Initialize temporary matrices to zero for threads to write to
@@ -279,7 +222,8 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 chi_tau_back_u = std::accumulate( threadmap_1.begin(), threadmap_1.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
                 chi_tau_back_g = std::accumulate( threadmap_2.begin(), threadmap_2.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
                 // Save coefficients
-                dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, 0 );
+                //dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, 0 );
+                savedCoefficients[time_pair] = SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, 0 );
             }
             // Calculate phonon contributions from (saved/calculated) coefficients and rho(t)
             integrant = dgl_kommutator( XUT, ( chi_tau_back_u * rho ).eval() );
@@ -298,11 +242,13 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                     int rho_index = std::max( 0, (int)past_rhos.size() - 1 - _tau );
                     double tau = ( 1.0 * _tau ) * parameters.t_step;
                     // Check if chi(t-tau) has to be recalculated, or can just be retaken from saved matrices, since chi(t-tau) is only dependant on time
-                    int index = dgl_get_coefficient_index( t, tau );
-                    if ( index != -1 ) {
+                    //int index = dgl_get_coefficient_index( t, tau );
+                    std::pair<double, double> time_pair = std::make_pair( t, tau );
+                    if ( parameters.numerics_use_saved_coefficients && savedCoefficients.count( time_pair ) > 0 ) {
                         // Index was found, chi(t-tau) used from saved vector
-                        chi_tau_back_u = savedCoefficients.at( index ).mat1;
-                        chi_tau_back_g = savedCoefficients.at( index ).mat2;
+                        auto &coeff = savedCoefficients[time_pair];
+                        chi_tau_back_u = coeff.mat1;
+                        chi_tau_back_g = coeff.mat2;
                     } else {
                         // Index not found, or no saving is used. Recalculate chi(t-tau).
                         chi_tau = dgl_phonons_chi( t - tau );
@@ -310,7 +256,8 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                         chi_tau_back_u = dgl_phonons_chiToX( chi_tau_back, 'u' );
                         chi_tau_back_g = dgl_phonons_chiToX( chi_tau_back, 'g' );
                         // If saving is used, save current chi(t-tau). If markov approximation is used, only save final contributions
-                        dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, tau );
+                        //dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, tau );
+                        savedCoefficients[time_pair] = SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
                     }
                     integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * past_rhos.at( rho_index ).mat ).eval() );
                     integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_back_g * past_rhos.at( rho_index ).mat ).eval() );
