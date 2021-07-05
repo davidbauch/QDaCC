@@ -113,6 +113,8 @@ if __name__ == "__main__":
     platform = sys.platform
     if "-laptop" in sys.argv:
         platform = "win32"
+    elif "-cluster" in sys.argv:
+        platform = "cluster"
     print("Platform is {}".format(platform))
 
     msyspath = "msys2"
@@ -131,8 +133,8 @@ if __name__ == "__main__":
     debug_info = " -g " if "-g" in sys.argv else ""
 
     bin_path = {'win32': "obj/" +
-                ("LAPN" if "-laptop" in sys.argv else "win"), 'darwin': "obj/MAC"}
-    compiler = {'win32': "g++", 'darwin': "g++-9"}
+                ("LAPN" if "-laptop" in sys.argv else "win"), "darwin": "obj/MAC", "cluster" : "obj/CLUSTER"}
+    compiler = {'win32': "g++", 'darwin': "g++-9", "cluster" : "g++"}
 
     f = get_all_source_files(
         path, exclude_dirs=["ALGLIB"], bin_path=bin_path[platform])
@@ -140,19 +142,23 @@ if __name__ == "__main__":
     # Debug : -g -O0, else: -O3
 
     copy_to = {'win32': "../../Threadhandler/QDLC-{}.exe".format(
-        version) if "-th" in sys.argv else "", 'darwin': "/Users/davidbauch/bin/QDLC-{}.out".format(version)}
+        version) if "-th" in sys.argv else "", 'darwin': "/Users/davidbauch/bin/QDLC-{}.out".format(version), "cluster" : "/"}
     libs_obj = {'win32': "-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
-                'darwin': "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
-    include_obj = {'win32': '-I"C:\{}\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external"'.format(
-        msyspath), 'darwin': "-I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include' -I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external'"}
+                'darwin': "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
+                "cluster" : "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
+    include_obj = {'win32': '-I"C:\{}\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external"'.format(msyspath), 
+                    'darwin': "-I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include' -I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external'",
+                    "cluster" : "-I'/include' -I'/external'"}
 
-    libs_final = {'win32': '-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}'.format(
-        "-static" if "-static" in sys.argv else ""), 'darwin': "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}".format("-static" if "-static" in sys.argv else "")}
-    bin_final = {'win32': ["obj/"+("LAPN" if "-laptop" in sys.argv else "win"), "external/ALGLIB/"+(
-        "LAPN" if "-laptop" in sys.argv else "WIN")], 'darwin': ["obj/MAC", "external/ALGLIB/MAC"]}
+    libs_final = {'win32': '-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}'.format("-static" if "-static" in sys.argv else ""), 
+                    'darwin': "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}".format("-static" if "-static" in sys.argv else ""),
+                    "cluster" : "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}".format("-static" if "-static" in sys.argv else "")}
+    bin_final = {'win32': ["obj/"+("LAPN" if "-laptop" in sys.argv else "win"), "external/ALGLIB/"+("LAPN" if "-laptop" in sys.argv else "WIN")], 
+                'darwin': ["obj/MAC", "external/ALGLIB/MAC"],
+                "cluster" : ["obj/CLUSTER", "external/ALGLIB/CLUSTER"]}
     succesful = compile_all_object_files(f, libs=libs_obj[platform], args=include_obj[platform], force_recompile=force_recompile,
                                          bin_path=bin_path[platform], compiler=compiler[platform]+debug_info, cerr_to_file=cerr_to_file)
     # if succesful:
-    add_basepath = {'win32': False, 'darwin': False}
+    add_basepath = {'win32': False, 'darwin': False, "cluster" : False}
     compile_main_program(path=path, libs=libs_final[platform], args=include_obj[platform], copy_to=copy_to[platform],
                          bin_path=bin_final[platform], compiler=compiler[platform]+debug_info, add_base_path_to_obj=add_basepath[platform])
