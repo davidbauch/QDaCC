@@ -316,7 +316,7 @@ void Parameters::parse_system() {
     for ( std::string &spectrum : splitline( inputstring_spectrum, ';' ) ) {
         auto conf = splitline( spectrum, ':' );
         input_s conf_s;
-        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                                // Modes to calculate Spectrum for
+        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                                // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
         conf_s.numerical_v["Center"] = convertParam<Parameter>( splitline( conf[1], ',' ) ); // Center
         conf_s.numerical_v["Range"] = convertParam<Parameter>( splitline( conf[2], ',' ) );  // Range
         conf_s.numerical_v["resW"] = convertParam<Parameter>( splitline( conf[3], ',' ) );   // Resolution for w
@@ -325,7 +325,7 @@ void Parameters::parse_system() {
     for ( std::string &indist : splitline( inputstring_indist, ';' ) ) {
         auto conf = splitline( indist, ':' );
         input_s conf_s;
-        conf_s.string_v["Modes"] = splitline( conf[0], ',' ); // Modes to calculate Indistinguishgability for
+        conf_s.string_v["Modes"] = splitline( conf[0], ',' ); // Modes to calculate Indistinguishgability for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
         input_correlation["Indist"] = conf_s;
     }
     for ( std::string &conc : splitline( inputstring_conc, ';' ) ) {
@@ -426,7 +426,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
 
     Log::wrapInBar( "Phonons", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( p_phonon_T >= 0 ) {
-        std::vector<std::string> approximations = { "Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral" };
+        std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral"};
         Log::L1( "Temperature = {} k\nCutoff energy = {} meV\nCutoff Time = {} ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n", p_phonon_T, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ), p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
         // Pathintegral
         if ( numerics_phonon_approximation_order == 5 ) {

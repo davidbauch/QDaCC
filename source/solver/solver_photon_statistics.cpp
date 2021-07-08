@@ -2,8 +2,12 @@
 
 // Description: Calculates G2 Indistinguishability
 bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
-    Sparse op_creator = s.operatorMatrices.el_transitions.count( s_op_creator ) != 0 ? s.operatorMatrices.el_transitions[s_op_creator].hilbert : s.operatorMatrices.ph_transitions[s_op_creator].hilbert;
-    Sparse op_annihilator = s.operatorMatrices.el_transitions.count( s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[s_op_annihilator].hilbert;
+    Sparse op_creator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    Sparse op_annihilator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    for ( auto &split_s_op_creator : splitline( s_op_creator, '+' ) )
+        op_creator += s.operatorMatrices.el_transitions.count( split_s_op_creator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator].hilbert;
+    for ( auto &split_s_op_annihilator : splitline( s_op_annihilator, '+' ) )
+        op_annihilator += s.operatorMatrices.el_transitions.count( split_s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator].hilbert;
 
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
     s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
@@ -72,10 +76,18 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
 // Description: Calculates Concurrence
 bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 ) {
     // Find Matrices
-    Sparse op_creator_1 = s.operatorMatrices.el_transitions.count( s_op_creator_1 ) != 0 ? s.operatorMatrices.el_transitions[s_op_creator_1].hilbert : s.operatorMatrices.ph_transitions[s_op_creator_1].hilbert;
-    Sparse op_creator_2 = s.operatorMatrices.el_transitions.count( s_op_creator_2 ) != 0 ? s.operatorMatrices.el_transitions[s_op_creator_2].hilbert : s.operatorMatrices.ph_transitions[s_op_creator_2].hilbert;
-    Sparse op_annihilator_1 = s.operatorMatrices.el_transitions.count( s_op_annihilator_1 ) != 0 ? s.operatorMatrices.el_transitions[s_op_annihilator_1].hilbert : s.operatorMatrices.ph_transitions[s_op_annihilator_1].hilbert;
-    Sparse op_annihilator_2 = s.operatorMatrices.el_transitions.count( s_op_annihilator_2 ) != 0 ? s.operatorMatrices.el_transitions[s_op_annihilator_2].hilbert : s.operatorMatrices.ph_transitions[s_op_annihilator_2].hilbert;
+    Sparse op_creator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    Sparse op_creator_2 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    Sparse op_annihilator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    Sparse op_annihilator_2 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    for ( auto &split_s_op_creator_1 : splitline( s_op_creator_1, '+' ) )
+        op_creator_1 += s.operatorMatrices.el_transitions.count( split_s_op_creator_1 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator_1].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator_1].hilbert;
+    for ( auto &split_s_op_creator_2 : splitline( s_op_creator_2, '+' ) )
+        op_creator_2 += s.operatorMatrices.el_transitions.count( split_s_op_creator_2 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator_2].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator_2].hilbert;
+    for ( auto &split_s_op_annihilator_1 : splitline( s_op_annihilator_1, '+' ) )
+        op_annihilator_1 += s.operatorMatrices.el_transitions.count( split_s_op_annihilator_1 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator_1].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator_1].hilbert;
+    for ( auto &split_s_op_annihilator_2 : splitline( s_op_annihilator_2, '+' ) )
+        op_annihilator_2 += s.operatorMatrices.el_transitions.count( split_s_op_annihilator_2 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator_2].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator_2].hilbert;
 
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
     s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
@@ -229,27 +241,39 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
     auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
     for ( int i = 0; i < spectrum_s.string_v["Modes"].size(); i++ ) {
         std::string s_creator, s_annihilator;
-        if ( std::isupper( spectrum_s.string_v["Modes"][i].front() ) ) {
-            s_annihilator = spectrum_s.string_v["Modes"][i];
-            s_creator = s_annihilator;
-            std::reverse( s_creator.begin(), s_creator.end() );
-        } else {
-            s_creator = spectrum_s.string_v["Modes"][i] + "bd";
-            s_annihilator = spectrum_s.string_v["Modes"][i] + "b";
+        for ( auto split_s_op : splitline( spectrum_s.string_v["Modes"][i], '+' ) ) {
+            if ( s_creator.size() > 0 ) {
+                s_creator += "+";
+                s_annihilator += "+";
+            }
+            if ( std::isupper( split_s_op.front() ) ) {
+                s_annihilator += split_s_op;
+                std::reverse( split_s_op.begin(), split_s_op.end() );
+                s_creator += split_s_op;
+            } else {
+                s_creator += split_s_op + "bd";
+                s_annihilator += split_s_op + "b";
+            }
         }
         calculate_spectrum( s, s_creator, s_annihilator, spectrum_s.numerical_v["Center"][i], spectrum_s.numerical_v["Range"][i], spectrum_s.numerical_v["resW"][i] );
     }
     // Calculate Indist
     auto &indist_s = s.parameters.input_correlation["Indist"];
-    for ( auto &mode : indist_s.string_v["Modes"] ) {
+    for ( int i = 0; i < indist_s.string_v["Modes"].size(); i++ ) {
         std::string s_creator, s_annihilator;
-        if ( std::isupper( mode.front() ) ) {
-            s_annihilator = mode;
-            s_creator = s_annihilator;
-            std::reverse( s_creator.begin(), s_creator.end() );
-        } else {
-            s_creator = mode + "bd";
-            s_annihilator = mode + "b";
+        for ( auto split_s_op : splitline( indist_s.string_v["Modes"][i], '+' ) ) {
+            if ( s_creator.size() > 0 ) {
+                s_creator += "+";
+                s_annihilator += "+";
+            }
+            if ( std::isupper( split_s_op.front() ) ) {
+                s_annihilator += split_s_op;
+                std::reverse( split_s_op.begin(), split_s_op.end() );
+                s_creator += split_s_op;
+            } else {
+                s_creator += split_s_op + "bd";
+                s_annihilator += split_s_op + "b";
+            }
         }
         calculate_indistinguishability( s, s_creator, s_annihilator );
     }

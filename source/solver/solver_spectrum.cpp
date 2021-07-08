@@ -7,8 +7,16 @@
 // @return: [bool] True if calculations were sucessfull, else false
 
 bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution ) {
-    Sparse op_creator = s.operatorMatrices.el_transitions.count( s_op_creator ) != 0 ? s.operatorMatrices.el_transitions[s_op_creator].hilbert : s.operatorMatrices.ph_transitions[s_op_creator].hilbert;
-    Sparse op_annihilator = s.operatorMatrices.el_transitions.count( s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[s_op_annihilator].hilbert;
+    Sparse op_creator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    Sparse op_annihilator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    for ( auto &split_s_op_creator : splitline( s_op_creator, '+' ) ) {
+        Log::L2( "Split operator {} from {}\n", split_s_op_creator, s_op_creator );
+        op_creator += s.operatorMatrices.el_transitions.count( split_s_op_creator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator].hilbert;
+    }
+    for ( auto &split_s_op_annihilator : splitline( s_op_annihilator, '+' ) ) {
+        Log::L2( "Split operator {} from {}\n", split_s_op_annihilator, s_op_annihilator );
+        op_annihilator += s.operatorMatrices.el_transitions.count( split_s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator].hilbert;
+    }
 
     // Send system command to change to single core mainprogram, because this memberfunction is already using multithreading
     s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
@@ -32,6 +40,7 @@ bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, 
         out.push_back( 0 );
     }
     Log::L2( "Done, calculating fourier transform via direct integral...\n" );
+    Log::L2( "Size = {} x {}\n", akf_mat.rows(), akf_mat.cols() );
     // Calculate main fourier transform integral
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
