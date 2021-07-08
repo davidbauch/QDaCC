@@ -38,11 +38,13 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
     int mat_step = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );
     Log::L2( "Using mat_step = {}\n", mat_step );
 
-    Scalar top = 0;
-    Scalar bottom = 0;
+    std::vector<Scalar> top;
+    std::vector<Scalar> bottom;
     auto T = savedStates.size();
     for ( int i = 0; i < T; i += mat_step ) {
         outp.emplace_back( 0 );
+        top.emplace_back( 0 );
+        bottom.emplace_back( 0 );
         time.emplace_back( getTimeAt( i ) );
     }
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
@@ -56,14 +58,19 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
             double t_tau = getTimeAt( i + j );
             Scalar gpop = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
             Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t );
-            top += ( gpop + akf_mat_g2( i, j ) - akf_mat_g1( i, j ) * std::conj( akf_mat_g1( i, j ) ) ); //k,j nicht k, l
-            bottom += 2.0 * gpop - gbot * std::conj( gbot );
+            top[k] += ( gpop + akf_mat_g2( i, j ) - akf_mat_g1( i, j ) * std::conj( akf_mat_g1( i, j ) ) ); //k,j nicht k, l
+            bottom[k] += 2.0 * gpop - gbot * std::conj( gbot );
         }
-        outp[k] = ( 1.0 - std::abs( top / bottom ) ); // .at( i / mat_step ) =
         Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (Simplified) (" + fout + "): " );
         timer.iterate();
     }
-
+    Scalar topsum = 0;
+    Scalar bottomsum = 0;
+    for ( int k = 0; k < top.size(); k++ ) {
+        topsum += top[k];
+        bottomsum += bottom[k];
+        outp[k] = ( 1.0 - std::abs( topsum / bottomsum ) ); // .at( i / mat_step ) =
+    }
     // Final output and timer end
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (" + fout + "): ", PROGRESS_FORCE_OUTPUT );
     timer.end();
