@@ -40,8 +40,12 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
 
     Scalar top = 0;
     Scalar bottom = 0;
-    //#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     auto T = savedStates.size();
+    for ( int i = 0; i < T; i += mat_step ) {
+        outp.emplace_back( 0 );
+        time.emplace_back( getTimeAt( i ) );
+    }
+#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int i = 0; i < T; i += mat_step ) {
         int k = i / mat_step;
         auto rho = getRhoAt( i );
@@ -55,8 +59,7 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
             top += ( gpop + akf_mat_g2( i, j ) - akf_mat_g1( i, j ) * std::conj( akf_mat_g1( i, j ) ) ); //k,j nicht k, l
             bottom += 2.0 * gpop - gbot * std::conj( gbot );
         }
-        outp.emplace_back( ( 1.0 - std::abs( top / bottom ) ) ); // .at( i / mat_step ) =
-        time.emplace_back( t );                                  // .at( i / mat_step ) =
+        outp[k] = ( 1.0 - std::abs( top / bottom ) ); // .at( i / mat_step ) =
         Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (Simplified) (" + fout + "): " );
         timer.iterate();
     }
