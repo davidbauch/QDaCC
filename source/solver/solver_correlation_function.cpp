@@ -59,7 +59,7 @@ Dense ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse
     int totalIterations = getIterationNumberTau( s );
     ProgressBar progressbar = ProgressBar( totalIterations );
     timer.start();
-    Log::L2( " : Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}... ", purpose, dim, dim, totalIterations );
+    Log::L2( " : Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}...\n", purpose, dim, dim, totalIterations );
     std::string progressstring = "G1(" + purpose + "): ";
     // Reserve Cache Matrix/Vector
     Log::L2( " : Preparing cache vector...\n" );
@@ -98,20 +98,21 @@ Dense ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse
 
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
-    to_output_m["G1"][purpose] = { cache };
-    Log::L2( "Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    to_output_m["G1"][purpose] = {cache};
+    Log::L2( ": Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return cache;
 }
 
 Dense ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string purpose ) {
     Dense cache = Dense::Zero( dim, dim );
 
+    Log::L2( " : Preparing to calculate g2 correlation function...\n" );
     // Create Timer and Progresbar
     Timer &timer = Timers::create( "RungeKutta-G2-Loop (" + purpose + ")" );
     int totalIterations = getIterationNumberTau( s );
     ProgressBar progressbar = ProgressBar( totalIterations );
     timer.start();
-    Log::L2( "Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}... ", purpose, dim, dim ); ////cache.size(), cache.at(0).size()
+    Log::L2( ": Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}...\n", purpose, dim, dim ); ////cache.size(), cache.at(0).size()
     Sparse evalOperator = op_creator_2 * op_annihilator_1;
     std::string progressstring = "G2(" + purpose + "): ";
     // Reserve Cache Matrix/Vector
@@ -151,8 +152,8 @@ Dense ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Spar
 
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
-    to_output_m["G2"][purpose] = { cache };
-    Log::L2( "G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    to_output_m["G2"][purpose] = {cache};
+    Log::L2( ": G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return cache;
 }
 

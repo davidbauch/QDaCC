@@ -78,6 +78,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     inputstring_indist = get_parameter( "--G", "GI" );
     inputstring_conc = get_parameter( "--G", "GC" );
     inputstring_gfunc = get_parameter( "--G", "GF" );
+    inputstring_wigner = get_parameter( "--G", "GW" );
 
     p_omega_coupling = get_parameter<double>( "--system", "coupling" );
     p_omega_cavity_loss = get_parameter<double>( "--system", "kappa" );
@@ -341,6 +342,16 @@ void Parameters::parse_system() {
         conf_s.numerical_v["Order"] = convertParam<Parameter>( splitline( conf[1], ',' ) );      // 1 or 2
         conf_s.numerical_v["Integrated"] = convertParam<Parameter>( splitline( conf[2], ',' ) ); // 0 or 1 or 2 for false/true/both
         input_correlation["GFunc"] = conf_s;
+    }
+    for ( std::string &wigner : splitline( inputstring_wigner, ';' ) ) {
+        auto conf = splitline( wigner, ':' );
+        input_s conf_s;
+        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                              // Modes to calculate Wigner function for
+        conf_s.numerical_v["X"] = convertParam<Parameter>( splitline( conf[1], ',' ) );    // -X to X
+        conf_s.numerical_v["Y"] = convertParam<Parameter>( splitline( conf[2], ',' ) );    // -Y to Y
+        conf_s.numerical_v["Res"] = convertParam<Parameter>( splitline( conf[3], ',' ) );  // Resolution
+        conf_s.numerical_v["Skip"] = convertParam<Parameter>( splitline( conf[4], ',' ) ); // Skips in t-direction
+        input_correlation["Wigner"] = conf_s;
     }
 }
 

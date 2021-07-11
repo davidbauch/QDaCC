@@ -94,13 +94,6 @@ class ODESolver {
     // @return: [Sparse] hamilton matrix of type Sparse
     Sparse getHamilton( System &s, const double t, bool use_saved_hamiltons = false );
 
-    // Description: Checks wether or not to save the current matrix for later calculations
-    // Type: ODESolver private function
-    // @param s: [&System] Class providing set of system functions
-    // @param curIt: [&int] Iterator variable to use for iteration check
-    // @return [bool] True if current matrix should be saved, else false. Saving depends on the iteration skip for tau direction and wether or not they are needed later.
-    bool queueNow( System &s, int &curIt );
-
     // Description: Resets all temporary variables. Currently: out, akf_mat, track variables
     // Type: ODESolver private function
     // @param s: [&System] Class providing set of system functions
@@ -136,6 +129,7 @@ class ODESolver {
     bool calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution );
     bool calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator );
     bool calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 );
+    bool calculate_wigner( System &s, const std::string &s_mode, const double x, const double y, const int resolution, const int skip );
     bool calculate_advanced_photon_statistics( System &s );
     //bool calculate_advanced_photon_statistics( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string fileOutputName );
 
@@ -150,6 +144,9 @@ class ODESolver {
     Sparse calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<SaveState> &output, const Sparse &one );
     std::vector<std::vector<Sparse>> calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<SaveState> &output );
 
+    //TODO: RKVariable mit gleicher signatur, returned dann interpoliert mit t_step werte. dann braucht man die g-funktionen nicht mehr interpolieren.
+    // die cache funktionen verwenden mitlerweile eh maps, das organizen ist also kein problem. mit path integral geht das ehr weniger, kann man aber bestimmt auch machen. ggf kann man das auch in
+    // iterateRungeKutta machen, aber dann muss man auf Threadsafety und so achten wenn z.b. die g-funktionen berechnet werden. könnte man aber auch machen tbh. oder halt einfach hier.
     bool calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true );
     bool calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true );
 };

@@ -10,13 +10,14 @@ class OperatorMatrices {
     // Information Wrapper for single operators:
    public:
     struct matrix_s {
-        Dense bra, ket;
-        Dense self_hilbert;
-        Sparse hilbert;
-        Sparse projector;
-        int base;
-        int direction;
-        double energy; // State Energy or Transition Energy
+        Dense bra, ket;     // Bra and Ket Operators in self-space
+        Dense self_hilbert; // Matrix representation Ket*Bra in self Hilbert space
+        Sparse hilbert;     // Matrix representation Ket*Bra in total Hilbert space
+        Sparse projector;   // Projector Matrix
+        int base;           // Integer index for base
+        int direction;      // "Creator" or "Annihilator" style operator
+        double energy;      // State Energy or Transition Energy
+        matrix_s() : direction( 0 ), base( -1 ), energy( 0 ){};
     };
 
    public:
@@ -26,9 +27,11 @@ class OperatorMatrices {
     Sparse H_I;
     Sparse rho;
     Sparse H_used;
-    std::vector<Sparse> pulse_mat, chirp_mat;
-    std::vector<std::string> base;
-    std::map<std::string, int> base_index_map; // Maps the index string |a|b|...> onto an integer index
+    // Basis and maps:
+    std::vector<std::string> base;             // Contains all the string bases vectors in total Hilbert space
+    std::vector<Dense> base_selfhilbert;       // Contains the individual self-Hilbert bases
+    std::vector<Dense> base_hilbert_index;     // Maps the individual self-Hilbert indices onto the corresponding total Hilbert space indices. Used to calculate partial traces. Key is the systems base integer index
+    std::map<std::string, int> base_index_map; // Maps the Key index string |a|b|...> onto an integer index
     //std::vector<double> phononCouplingFactor;
     Dense phononCouplingFactor;
 
@@ -37,6 +40,7 @@ class OperatorMatrices {
     std::vector<Sparse> lindblad_factors;
     std::vector<Sparse> polaron_factors;
     Dense timetrafo_cachematrix;
+    std::vector<Sparse> pulse_mat, chirp_mat;
 
     // Constructor
     OperatorMatrices(){};
@@ -68,15 +72,7 @@ class OperatorMatrices {
                     }
         return ret;
     }
-
-    // Calculates the tensor product of matrices a, b and c
-    // @param &a,&b,&c: Input matrices
-    // @return Returns (a x b) x c where x is the tensor product
-    template <class M>
-    static M tensor( const M &a, const M &b, const M &c ) {
-        return tensor<M>( tensor<M>( a, b ), c );
-    }
-
+    // Chains the tensor products
     template <class M>
     static M tensor( const std::vector<M> &m ) {
         if ( m.size() < 2 )
@@ -88,7 +84,7 @@ class OperatorMatrices {
         return tensor<M>( tensor<M>( md ), m.back() );
     }
 
-    // Determines the resulting base of the tensor product of two matrices
+    // Determines the resulting base of the tensor product of multiple matrices
     // @param &a,&b input string vectors containing the named base
     // @return Returns a string vector containing the combined basis vector names
     static std::vector<std::string> tensor( const std::vector<std::string> &a, const std::vector<std::string> &b ) {
@@ -99,7 +95,7 @@ class OperatorMatrices {
             }
         return ret;
     }
-
+    // Chains the string tensor products
     static std::vector<std::string> tensor( const std::vector<std::vector<std::string>> &m ) {
         if ( m.size() < 2 )
             return m.front();

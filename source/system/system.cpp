@@ -31,14 +31,14 @@ bool System::init_system() {
     for ( auto &[mode, p] : parameters.input_chirp ) {
         Chirp::Inputs chirpinputs( parameters.t_start, parameters.t_end, parameters.t_step, p.string["Type"], parameters.numerics_order_highest );
         chirpinputs.add( p.numerical_v["Times"], p.numerical_v["Amplitude"], p.numerical_v["ddt"] );
-        chirp.push_back( { chirpinputs } );
+        chirp.push_back( {chirpinputs} );
     }
 
     // Arbitrary number of pulses onto single atomic level.
     for ( auto &[mode, p] : parameters.input_pulse ) {
         Pulse::Inputs pulseinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_order_highest );
         pulseinputs.add( p.numerical_v["Center"], p.numerical_v["Amplitude"], p.numerical_v["Width"], p.numerical_v["Frequency"], p.numerical_v["Chirp"], p.string_v["Type"], 1.0 );
-        pulse.push_back( { pulseinputs } );
+        pulse.push_back( {pulseinputs} );
     }
     //pulse_V = Pulse( pulseinputs_V );
     if ( pulse.size() > 0 ) {
@@ -96,8 +96,8 @@ Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const doub
     // Electronic Dephasing
     if ( parameters.p_omega_pure_dephasing > 0 )
         for ( auto &state_a : operatorMatrices.el_states ) {
-            for ( auto &state_b : operatorMatrices.el_states ) {
-                if ( state_a.first.compare( state_b.first ) == 0 )
+            for ( auto &state_b : operatorMatrices.el_states ) { //TODO: dephasing über el transitions machen.
+                if ( state_a.first.compare( state_b.first ) == 0 || operatorMatrices.el_transitions[state_a.first + state_b.first].direction == 1 )
                     continue;
                 loss -= 0.5 * parameters.p_omega_pure_dephasing * parameters.input_electronic[state_a.first].numerical["DephasingScaling"] * operatorMatrices.el_states[state_a.first].hilbert * rho * parameters.input_electronic[state_b.first].numerical["DephasingScaling"] * operatorMatrices.el_states[state_b.first].hilbert;
             }

@@ -22,7 +22,8 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     // Generate Electronic and Photonic Base States and Self-Hilbert Matrices
     // Electronic
     std::vector<std::string> base_electronic;
-    Dense m_base_electronic = Dense::Identity( p.input_electronic.size(), p.input_electronic.size() );
+    base_selfhilbert.emplace_back( Dense::Identity( p.input_electronic.size(), p.input_electronic.size() ) );
+
     int index = 0;
     int maximum_electronic_levels = p.input_electronic.size();
     for ( auto &mat : p.input_electronic ) {
@@ -35,13 +36,13 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         state.base = 0;
         state.energy = mat.second.numerical["Energy"];
     }
+
     // Photonic
     std::vector<std::vector<std::string>> base_photonic( p.input_photonic.size() );
-    std::vector<Dense> m_base_photonic;
     int curcav = 0;
     for ( auto &cav : p.input_photonic ) {
         int max_photons = cav.second.numerical["MaxPhotons"];
-        m_base_photonic.emplace_back( Dense::Identity( max_photons + 1, max_photons + 1 ) );
+        base_selfhilbert.emplace_back( Dense::Identity( max_photons + 1, max_photons + 1 ) );
         for ( int n = 0; n <= max_photons; n++ )
             base_photonic[curcav].emplace_back( std::to_string( n ) + cav.first );
         auto &state = ph_states[cav.first];
@@ -57,19 +58,18 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     auto subb = base_photonic;
     subb.insert( subb.begin(), base_electronic );
     base = tensor( subb );
+
     // Sparse total Hilbert tensors
-    std::vector<Dense> all_bases = m_base_photonic;
-    all_bases.insert( all_bases.begin(), m_base_electronic );
     for ( auto &bel : el_states ) {
-        auto current = all_bases;
-        current.front() = bel.second.self_hilbert;
+        auto current = base_selfhilbert;
+        current.front() = bel.second.self_hilbert; // Electronic states have basis 0 for now. Maybe change when TODO: add tensoring of multiple electronic bases
         bel.second.hilbert = tensor( current ).sparseView();
         bel.second.projector = project_matrix_sparse( bel.second.hilbert );
         //std::cout << "Mat = " << bel.first << "  " << bel.second.hilbert.rows() << "\n"
         //          << Dense( bel.second.hilbert ) << std::endl;
     }
     for ( auto &phot : ph_states ) {
-        auto current = all_bases;
+        auto current = base_selfhilbert;
         current[phot.second.base] = phot.second.self_hilbert;
         phot.second.hilbert = tensor( current ).sparseView();
         phot.second.projector = project_matrix_sparse( phot.second.hilbert );
@@ -106,16 +106,28 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     }
     // Tensor remaining transition
     for ( auto &bel : el_transitions ) {
-        auto current = all_bases;
+        auto current = base_selfhilbert;
         current.front() = bel.second.self_hilbert;
         bel.second.hilbert = tensor( current ).sparseView();
         bel.second.projector = project_matrix_sparse( bel.second.hilbert );
     }
     for ( auto &phot : ph_transitions ) {
-        auto current = all_bases;
+        auto current = base_selfhilbert;
         current[phot.second.base] = phot.second.self_hilbert;
         phot.second.hilbert = tensor( current ).sparseView();
         phot.second.projector = project_matrix_sparse( phot.second.hilbert );
+    }
+
+    // Create total Hilbert space indices. This routine assumes the individual bases are added in ascending order, e.g. 0,1,2,3...:
+    for ( int i = 0; i < base_selfhilbert.size(); i++ ) {
+        auto current = base_selfhilbert;
+        int index = 1;
+        for ( int k = 0; k < current[i].rows(); k++ )
+            for ( int j = 0; j < current[i].cols(); j++ )
+                current[i]( k, j ) = ( k + 1 ) + 1i * ( j + 1 );
+
+        base_hilbert_index.emplace_back( tensor( current ) );
+        //Log::L2( "Tensor for base i = {}:\nCurrent:\n{}\n\n{}\n\n", i, current[i], base_hilbert_index.back() );
     }
 
     // Generate prechaced pulse and chirp matrices. 2 matrices are generated per pulse for Omega and Omega^*

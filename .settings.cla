@@ -95,6 +95,12 @@ CLA_ARGUMENT = {
 		datatype = 'string'
 		description = 'G1/2 func. Syntax: [Mode:Order]'
 	}
+	CLA_PARAMETER = {
+		subkey = 'GW'
+		value = ''
+		datatype = 'string'
+		description = 'Wigner Function. Syntax: [Mode:Order]'
+	}
 }
 CLA_ARGUMENT = {
 	type = '2hyphen'

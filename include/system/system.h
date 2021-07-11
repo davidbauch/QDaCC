@@ -172,6 +172,22 @@ class System {
         return ret;
     }
 
+    // Function to calculate the partial trace for a specific base index
+    Dense partialTrace( const Sparse &mat, int i ) {
+        Dense ret = Dense::Zero( operatorMatrices.base_selfhilbert.at( i ).rows(), operatorMatrices.base_selfhilbert.at( i ).cols() );
+        for ( int k = 0; k < mat.outerSize(); ++k ) {
+            for ( Sparse::InnerIterator it( mat, k ); it; ++it ) {
+                int l = it.row();
+                int j = it.col();
+                int hi = std::real( operatorMatrices.base_hilbert_index[i]( l, j ) ) - 1;
+                int hj = std::imag( operatorMatrices.base_hilbert_index[i]( l, j ) ) - 1;
+                if ( hi >= 0 and hj >= 0 )
+                    ret( hi, hj ) += it.value();
+            }
+        }
+        return ret;
+    }
+
     // Calculates the Kommutator of two matrices of identical type
     // @param &A,&B: Input matrices
     // @return Kommutator of A and B where [A,B] = AB-BA

@@ -85,6 +85,7 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
 
 // Description: Calculates Concurrence
 bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 ) {
+    Log::L2( "Conc for modes {} {} and {} {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2 );
     // Find Matrices
     Sparse op_creator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
     Sparse op_creator_2 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
@@ -239,6 +240,107 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     return true;
 }
 
+bool ODESolver::calculate_wigner( System &s, const std::string &s_mode, const double x, const double y, const int resolution, const int skips ) {
+    // Partially trace the mode to wigner:
+    std::vector<Dense> reduced_rho;
+    std::vector<Scalar> time;
+    int base = s.operatorMatrices.el_states.count( s_mode ) != 0 ? s.operatorMatrices.el_states[s_mode].base : s.operatorMatrices.ph_states[s_mode].base;
+    Log::L2( "Calculating Wigner function for mode {}/{}\n", s_mode, base );
+    for ( int i = 0; i < savedStates.size(); i += skips ) {
+        reduced_rho.emplace_back( s.partialTrace( getRhoAt( i ), base ) );
+        time.emplace_back( getTimeAt( i ) );
+    }
+
+    double g = std::sqrt( 2 );
+    // Calculate Wigner functions over time:
+    // Calculate MEshgrid
+    //TODO: Einlesen
+    auto mg = meshgrid<Dense>( -x, -y, x, y, resolution );
+    Dense X_mat = mg.first;
+    Dense Y_mat = mg.second;
+    //Dense A = 0.5 * g * ( X_mat + 1i * Y_mat );
+    Dense A = ( X_mat + 1i * Y_mat );
+
+    std::vector<Dense> wigner( reduced_rho.size(), Dense::Zero( A.rows(), A.cols() ) );
+    Log::L2( "First Matrix for Wigner:\n{}\n", reduced_rho.front() );
+
+    ProgressBar progressbar = ProgressBar( reduced_rho.size() );
+    Timer &timer_w = Timers::create( "Wigner (" + s_mode + ")" );
+    timer_w.start();
+    // Iterate
+    auto factorial = []( int n ) {
+        return std::tgamma( n + 1 );
+    };
+    //Calculates the Wigner function at coordinate alpha
+    auto Wigner = [&]( Dense &DM, Scalar alpha ) {
+        double Wval = 0.0;
+        for ( int m = 0; m < DM.rows(); m++ ) {
+            if ( abs2( DM( m, m ) ) > 0.0 ) {
+                Wval += std::real( DM( m, m ) * std::pow( -1., (double)m ) * std::assoc_laguerre( m, 0, 4. * abs2( alpha ) ) );
+            }
+        }
+
+        for ( int m = 0; m < DM.rows(); m++ ) {
+            for ( int n = m + 1; n < DM.rows(); n++ ) {
+                if ( abs2( DM( m, n ) ) > 0.0 ) {
+                    Wval += 2. * std::real( DM( m, n ) * std::pow( -1., (double)m ) * std::pow( 2. * alpha, (double)( n - m ) ) * std::sqrt( factorial( m ) / factorial( n ) ) * std::assoc_laguerre( m, n - m, 4. * abs2( alpha ) ) );
+                }
+            }
+        }
+        return ( 1 / ( 2. * 3.1415 ) * std::exp( -2. * abs2( alpha ) ) * Wval );
+    };
+#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+    for ( int i = 0; i < reduced_rho.size(); i++ ) {
+        Dense W = Dense::Zero( A.rows(), A.cols() );
+        for ( int k = 0; k < A.rows(); k++ ) {
+            for ( int l = 0; l < A.cols(); l++ ) {
+                W( k, l ) = Wigner( reduced_rho[i], A( k, l ) );
+            }
+        }
+        wigner.at( i ) = W;
+        /**
+        auto &rho = reduced_rho.at( i );
+        int M = rho.rows(); // * rho.cols();
+
+        std::vector<Dense> Wlist( M, Dense::Zero( A.rows(), A.cols() ) );
+        Wlist.front() = ( -2.0 * A.cwiseAbs().array().pow( 2 ) ).array().exp() / 3.1415;
+
+        Dense W = ( rho( 0, 0 ) * Wlist.front().real() ).real();
+        for ( int n = 1; n < M; n++ ) {
+            Wlist.at( n ) = 2.0 * A * Wlist.at( n - 1 ) / std::sqrt( n );
+            W += 2 * ( rho( 0, n ) * Wlist.at( n ) ).real();
+        }
+
+        for ( int m = 1; m < M; m++ ) {
+            Dense temp = Wlist.at( m );
+            Wlist.at( m ) = ( 2.0 * A.conjugate() * temp - std::sqrt( m ) * Wlist.at( m - 1 ) ) / std::sqrt( m );
+
+            W += ( rho( m, m ) * Wlist.at( m ) ).real();
+
+            for ( int n = m + 1; n < M; n++ ) {
+                Dense temp2 = ( 2.0 * A * Wlist.at( n - 1 ) - std::sqrt( m ) * temp ) / std::sqrt( n );
+                temp = Wlist.at( n );
+                Wlist.at( n ) = temp2;
+
+                W += 2.0 * ( rho( m, n ) * Wlist.at( n ) ).real();
+            }
+        }
+
+        wigner.at( i ) = ( 0.5 * W * std::pow( g, 2.0 ) );
+        */
+
+        timer_w.iterate();
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer_w, progressbar, reduced_rho.size(), "Wigner (" + s_mode + "): " );
+    }
+    timer_w.end();
+    // Add to Fileoutput:
+    if ( to_output["Wigner"].size() == 0 )
+        to_output["Wigner"]["Time"] = time;
+    to_output_m["Wigner"][s_mode] = wigner;
+    to_output_m["Wigner"]["rho_" + s_mode] = reduced_rho;
+    return true;
+}
+
 // Description: Calculates and outputs G1 and G2 photon statistics
 // Type: ODESolver public function
 // @param s: [&System] Class providing set of system functions
@@ -292,15 +394,24 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
     for ( auto &modes : conc_s.string_v["Modes"] ) {
         std::vector<std::string> s_creator, s_annihilator;
         for ( auto &mode : splitline( modes, '-' ) ) {
-            if ( std::isupper( mode.front() ) ) {
-                s_annihilator.emplace_back( mode );
-                auto ss_creator = mode;
-                std::reverse( ss_creator.begin(), ss_creator.end() );
-                s_creator.emplace_back( ss_creator );
-            } else {
-                s_creator.emplace_back( mode + "bd" );
-                s_annihilator.emplace_back( mode + "b" );
+            std::string ss_creator = "";
+            std::string ss_annihilator = "";
+            for ( auto split_s_op : splitline( mode, '+' ) ) {
+                if ( ss_creator.size() > 0 ) {
+                    ss_creator += "+";
+                    ss_annihilator += "+";
+                }
+                if ( std::isupper( split_s_op.front() ) ) {
+                    ss_annihilator += split_s_op;
+                    std::reverse( split_s_op.begin(), split_s_op.end() );
+                    ss_creator += split_s_op;
+                } else {
+                    ss_creator += split_s_op + "bd";
+                    ss_annihilator += split_s_op + "b";
+                }
             }
+            s_creator.emplace_back( ss_creator );
+            s_annihilator.emplace_back( ss_annihilator );
         }
         calculate_concurrence( s, s_creator[0], s_annihilator[0], s_creator[1], s_annihilator[1] );
     }
@@ -360,6 +471,12 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
         }
         Log::L2( "Done!\n" );
     }
+    // Calculate Conc
+    auto &wigner_s = s.parameters.input_correlation["Wigner"];
+    for ( int i = 0; i < wigner_s.string_v["Modes"].size(); i++ ) {
+        calculate_wigner( s, wigner_s.string_v["Modes"][i], wigner_s.numerical_v["X"][i], wigner_s.numerical_v["Y"][i], wigner_s.numerical_v["Res"][i], wigner_s.numerical_v["Skip"][i] );
+    }
+
     // Output Spectra and Rest in seperate Files
     for ( auto &[mode, data] : to_output["Spectrum"] ) {
         Log::L2( "Saving Emission Spectrum to spectrum_" + mode + ".txt...\n" );
@@ -399,19 +516,37 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
         Log::L2( "Saving Two-Photon Matrix to twopmat_" + mode + ".txt...\n" );
-        FILE *f_indist = std::fopen( ( s.parameters.subfolder + "twopmat_" + mode + ".txt" ).c_str(), "w" );
-        fmt::print( f_indist, "Time\t{}\n", mode );
+        FILE *f_twophot = std::fopen( ( s.parameters.subfolder + "twopmat_" + mode + ".txt" ).c_str(), "w" );
+        fmt::print( f_twophot, "Time\t{}\n", mode );
         for ( int i = 0; i < to_output_m["TwoPMat"][mode].size(); i++ ) {
-            fmt::print( f_indist, "{:.8e}\t", std::real( to_output["Conc"]["Time"][i] ) );
+            fmt::print( f_twophot, "{:.8e}\t", std::real( to_output["Conc"]["Time"][i] ) );
             for ( int k = 0; k < 4; k++ ) {
                 for ( int l = 0; l < 4; l++ ) {
-                    fmt::print( f_indist, "{:.8e}\t", std::abs( to_output_m["TwoPMat"][mode][i]( k, l ) ) );
+                    fmt::print( f_twophot, "{:.8e}\t", std::abs( to_output_m["TwoPMat"][mode][i]( k, l ) ) );
                 }
             }
-            fmt::print( f_indist, "\n" );
+            fmt::print( f_twophot, "\n" );
         }
-        std::fclose( f_indist );
+        std::fclose( f_twophot );
         Log::L2( "Done!\n" );
+    }
+    for ( auto &[mode, data] : to_output_m["Wigner"] ) {
+        if ( mode.compare( "Time" ) == 0 )
+            continue;
+        Log::L2( "Saving Wigner function to wigner_" + mode + ".txt...\n" );
+        FILE *f_wigner = std::fopen( ( s.parameters.subfolder + "wigner_" + mode + ".txt" ).c_str(), "w" );
+        fmt::print( f_wigner, "Time\t{}\n", mode );
+        for ( int i = 0; i < data.size(); i++ ) {
+            fmt::print( f_wigner, "{:.8e}\t", std::real( to_output["Wigner"]["Time"][i] ) );
+            auto &currentwigner = data[i];
+            for ( int k = 0; k < currentwigner.rows(); k++ ) {
+                for ( int l = 0; l < currentwigner.cols(); l++ ) {
+                    fmt::print( f_wigner, "{:.8e}\t", std::real( currentwigner( k, l ) ) );
+                }
+            }
+            fmt::print( f_wigner, "\n" );
+        }
+        std::fclose( f_wigner );
     }
     return true;
 }

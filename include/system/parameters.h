@@ -135,7 +135,7 @@ class Parameters {
     //std::string inputstring_photonic = "c:1.366eV:1:GX:1:1";
     //std::string inputstring_pulse = "h:GX:1:1.366eV:4ps:30ps:0:gauss_pi";
     //std::string inputstring_chirp = ""; //1:X:1:0,1meV,0:0,100ps,200ps:0,0,0:monotone";
-    std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc;
+    std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner;
     std::map<std::string, input_s> input_electronic;
     std::map<std::string, input_s> input_photonic;
     std::map<std::string, input_s> input_pulse;

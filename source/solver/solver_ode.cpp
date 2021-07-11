@@ -14,6 +14,7 @@ Sparse ODESolver::getHamilton( System &s, const double t, bool use_saved_hamilto
         if ( savedHamiltons.count( t ) == 0 ) {
             saveHamilton( s.dgl_getHamilton( t ), t );
             track_gethamilton_write++;
+            track_gethamilton_calc++;
         }
         track_gethamilton_read++;
         return savedHamiltons[t];
@@ -28,16 +29,6 @@ void ODESolver::saveState( const Sparse &mat, const double t, std::vector<SaveSt
 
 void ODESolver::saveHamilton( const Sparse &mat, const double t ) {
     savedHamiltons[t] = mat;
-}
-
-bool ODESolver::queueNow( System &s, int &curIt ) {
-    bool queue = s.parameters.numerics_calculate_spectrum_H || s.parameters.numerics_calculate_spectrum_V || s.parameters.numerics_calculate_g2;
-    if ( queue && curIt % s.parameters.iterations_t_skip == 0 ) {
-        curIt = 1;
-        return true;
-    }
-    curIt++;
-    return false;
 }
 
 //TODO: Notwendig?

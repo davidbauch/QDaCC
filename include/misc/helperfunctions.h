@@ -37,6 +37,22 @@ T lerp( T a, T b, double c ) {
 
 bool is_number( const std::string &s );
 
+// Meshgrid
+// Creates a XY-tuple containing x- and y values of a meshgrid containing [N] values between [xmin],[ymin] and [xmax],[ymax].
+// If the endpoints (xmax,ymax) are not to be included
+template <typename T>
+std::pair<T, T> meshgrid( double x_min, double y_min, double x_max, double y_max, int N, bool include_endpoint = true ) {
+    assert( x_min < x_max && y_min < y_max );
+    T X = T::Zero( N, N );
+    T Y = T::Zero( N, N );
+    for ( int i = 0; i < N; i++ )
+        for ( int j = 0; j < N; j++ ) {
+            X( i, j ) = x_min + (double)i / (double)( N - ( include_endpoint ? 1 : 0 ) ) * ( x_max - x_min );
+            Y( i, j ) = y_min + (double)j / (double)( N - ( include_endpoint ? 1 : 0 ) ) * ( y_max - y_min );
+        }
+    return std::make_pair( X, Y );
+}
+
 // Valid conversions from ns,ps,Hz,eV,meV,mueV to corresponding SI unit (not scaled)
 template <typename T>
 T convertParam( const std::string input ) {
@@ -191,7 +207,7 @@ std::vector<T> get_parameter_vector( const std::string &key, const std::string &
     // Check if input is not a vector, then output will be a new vector with only one element
     if ( arg.at( 0 ) != '[' ) {
         T elem = convertParam<T>( arg );
-        return std::vector<T>( { elem } );
+        return std::vector<T>( {elem} );
     }
     return convertParam<T>( str_to_vec( arg ) );
 }
