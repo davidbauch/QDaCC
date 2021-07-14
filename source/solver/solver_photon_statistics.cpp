@@ -103,13 +103,11 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
     s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Progress
-    int pbsize = (int)savedStates.size() / s.parameters.iterations_t_skip;
+    int pbsize = 2 * (int)savedStates.size() / s.parameters.iterations_t_skip;
     ProgressBar progressbar = ProgressBar( pbsize );
 
     std::string fout = s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
     // Calculate G2(t,tau) with given operator matrices
-    std::string s_g1_1 = "G1-" + s_op_creator_1 + "-" + s_op_annihilator_1;
-    std::string s_g1_2 = "G1-" + s_op_creator_2 + "-" + s_op_annihilator_2;
     std::string s_g2_1111 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_1 + "-" + s_op_annihilator_1;
     std::string s_g2_1122 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_2 + "-" + s_op_creator_1 + "-" + s_op_annihilator_2;
     std::string s_g2_1212 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
@@ -118,10 +116,6 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     std::string s_g2_2112 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_1 + "-" + s_op_creator_1 + "-" + s_op_annihilator_2;
     std::string s_g2_2211 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_1;
     std::string s_g2_2222 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_2 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
-    if ( cache.count( s_g1_1 ) == 0 )
-        cache[s_g1_1] = calculate_g1( s, op_creator_1, op_annihilator_1, s_g1_1 );
-    if ( cache.count( s_g1_2 ) == 0 )
-        cache[s_g1_2] = calculate_g1( s, op_creator_2, op_annihilator_2, s_g1_2 );
     if ( cache.count( s_g2_1111 ) == 0 )
         cache[s_g2_1111] = calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, s_g2_1111 );
     if ( cache.count( s_g2_1122 ) == 0 )
@@ -134,15 +128,8 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
         cache[s_g2_1221] = calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_2, op_annihilator_1, s_g2_1221 );
     if ( cache.count( s_g2_2222 ) == 0 )
         cache[s_g2_2222] = calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, s_g2_2222 );
-
-    Dense &akf_mat_g1_1 = cache[s_g1_1];
-    Dense &akf_mat_g1_2 = cache[s_g1_1];
-    Dense &akf_mat_g2_1111 = cache[s_g2_1111];
-    Dense &akf_mat_g2_1122 = cache[s_g2_1122];
-    Dense &akf_mat_g2_1221 = cache[s_g2_1221];
-    Dense &akf_mat_g2_2121 = cache[s_g2_2121];
-    Dense &akf_mat_g2_2112 = cache[s_g2_2112];
-    Dense &akf_mat_g2_2222 = cache[s_g2_2222];
+    cache[s_g2_2211] = cache[s_g2_1122].conjugate();
+    cache[s_g2_1212] = cache[s_g2_2121].conjugate();
 
     int mat_step = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );
     Log::L2( "Using mat_step = {}\n", mat_step );
@@ -157,27 +144,21 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
 
     double deltaT = s.parameters.t_step * ( 1.0 * mat_step );
     Log::L2( "Calculating Concurrence... Integral Timestep: {}\n", deltaT );
+
+    for ( long unsigned int T = 0; T < savedStates.size(); T += mat_step ) {
+        for ( auto &mode : {s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222} ) {
+            rho[mode].emplace_back( 0 );
+        }
+    }
+#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
     for ( long unsigned int T = 0; T < savedStates.size(); T += mat_step ) {
         int t = T / mat_step;
-        rho[s_g2_1111].emplace_back( 0 );
-        rho[s_g2_1122].emplace_back( 0 );
-        rho[s_g2_1221].emplace_back( 0 );
-        rho[s_g2_2121].emplace_back( 0 );
-        rho[s_g2_2112].emplace_back( 0 );
-        rho[s_g2_2222].emplace_back( 0 );
-        rho[s_g2_2211].emplace_back( 0 );
-        rho[s_g2_1212].emplace_back( 0 );
-        for ( int i = 0; i < T; i += mat_step ) {
-            for ( int tau = 0; tau < T - i; tau++ ) { // FIX: tau < t-i --> tau < T-i, da G2 mit t_step gespeichert wird! (i,T same scaling)
-                rho[s_g2_1111].back() += akf_mat_g2_1111( i, tau ) * s.parameters.t_step * deltaT;
-                rho[s_g2_1122].back() += akf_mat_g2_1122( i, tau ) * s.parameters.t_step * deltaT;
-                rho[s_g2_1221].back() += akf_mat_g2_1221( i, tau ) * s.parameters.t_step * deltaT;
-                rho[s_g2_2121].back() += akf_mat_g2_2121( i, tau ) * s.parameters.t_step * deltaT;
-                rho[s_g2_2112].back() += akf_mat_g2_2112( i, tau ) * s.parameters.t_step * deltaT;
-                rho[s_g2_2222].back() += akf_mat_g2_2222( i, tau ) * s.parameters.t_step * deltaT;
+        for ( auto &mode : {s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222} ) {
+            for ( int i = 0; i < T; i += mat_step ) {
+                for ( int tau = 0; tau < T - i; tau++ ) { // FIX: tau < t-i --> tau < T-i, da G2 mit t_step gespeichert wird! (i,T same scaling)
+                    rho[mode][t] += cache[mode]( i, tau ) * s.parameters.t_step * deltaT;
+                }
             }
-            rho[s_g2_2211].back() = std::conj( rho[s_g2_1122].at( t ) );
-            rho[s_g2_1212].back() = std::conj( rho[s_g2_2121].at( t ) );
         }
         timer_c.iterate();
         Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence (" + fout + "): " );
@@ -186,6 +167,11 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     std::vector<Scalar> output;
     std::vector<Scalar> time;
     std::vector<Dense> twophotonmatrix;
+    for ( long unsigned int i = 0; i < rho[s_g2_1111].size(); i += mat_step ) {
+        output.emplace_back( 0 );
+        time.emplace_back( 0 );
+        twophotonmatrix.emplace_back( Dense::Zero( 4, 4 ) );
+    }
 
     Dense spinflip = Dense::Zero( 4, 4 );
     spinflip( 0, 3 ) = -1;
@@ -194,6 +180,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     spinflip( 3, 0 ) = -1;
     Log::L3( "Spinflip Matrix: {}\n", spinflip );
     Scalar conc = 0;
+#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
     for ( long unsigned int i = 0; i < rho[s_g2_1111].size(); i += mat_step ) {
         int k = i / mat_step;
         //Log::L3( "Creating 2 photon matrix\n" );
@@ -223,9 +210,10 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
         auto eigenvalues = R5.eigenvalues();
         //Log::L1( "rho2phot = {}\n\nsqrtrho2phot = {}\n\nR = {}\n\nRS = {}\nEigenvalues at t = {} are {}\n", rho_2phot, sqrtrho2phot, R, R5, getTimeAt( i ), eigenvalues );
         conc = eigenvalues( 3 ) - eigenvalues( 2 ) - eigenvalues( 1 ) - eigenvalues( 0 );
-        output.emplace_back( conc );
-        time.emplace_back( getTimeAt( i ) );
-        twophotonmatrix.emplace_back( rho_2phot );
+        output.at( k ) = conc;
+        time.at( k ) = getTimeAt( i );
+        twophotonmatrix.at( k ) = rho_2phot;
+        timer_c.iterate();
         //}
     }
     // Final output and timer end

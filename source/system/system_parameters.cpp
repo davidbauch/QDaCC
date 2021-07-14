@@ -337,20 +337,23 @@ void Parameters::parse_system() {
     }
     for ( std::string &g_func : splitline( inputstring_gfunc, ';' ) ) {
         auto conf = splitline( g_func, ':' );
+        auto n = conf.size();
         input_s conf_s;
-        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                                    // Modes to calculate G1/G2 functions for
-        conf_s.numerical_v["Order"] = convertParam<Parameter>( splitline( conf[1], ',' ) );      // 1 or 2
-        conf_s.numerical_v["Integrated"] = convertParam<Parameter>( splitline( conf[2], ',' ) ); // 0 or 1 or 2 for false/true/both
+        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                                                                                                               // Modes to calculate G1/G2 functions for
+        conf_s.numerical_v["Order"] = convertParam<Parameter>( splitline( conf[1], ',' ) );                                                                                 // 1 or 2
+        conf_s.numerical_v["Integrated"] = convertParam<Parameter>( n > 2 ? splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "2" ) ); // 0 or 1 or 2 for false/true/both
         input_correlation["GFunc"] = conf_s;
     }
+    std::cout << "DSADASDSADSADSADASDSA   " << inputstring_wigner << std::endl;
     for ( std::string &wigner : splitline( inputstring_wigner, ';' ) ) {
         auto conf = splitline( wigner, ':' );
+        auto n = conf.size();
         input_s conf_s;
-        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                              // Modes to calculate Wigner function for
-        conf_s.numerical_v["X"] = convertParam<Parameter>( splitline( conf[1], ',' ) );    // -X to X
-        conf_s.numerical_v["Y"] = convertParam<Parameter>( splitline( conf[2], ',' ) );    // -Y to Y
-        conf_s.numerical_v["Res"] = convertParam<Parameter>( splitline( conf[3], ',' ) );  // Resolution
-        conf_s.numerical_v["Skip"] = convertParam<Parameter>( splitline( conf[4], ',' ) ); // Skips in t-direction
+        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                                                                                                         // Modes to calculate Wigner function for
+        conf_s.numerical_v["X"] = convertParam<Parameter>( splitline( conf[1], ',' ) );                                                                               // -X to X
+        conf_s.numerical_v["Y"] = convertParam<Parameter>( n > 2 ? splitline( conf[2], ',' ) : splitline( conf[1], ',' ) );                                           // -Y to Y
+        conf_s.numerical_v["Res"] = convertParam<Parameter>( n > 3 ? splitline( conf[3], ',' ) : std::vector<std::string>( conf_s.numerical_v["X"].size(), "100" ) ); // Resolution
+        conf_s.numerical_v["Skip"] = convertParam<Parameter>( n > 4 ? splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.numerical_v["X"].size(), "1" ) );  // Skips in t-direction
         input_correlation["Wigner"] = conf_s;
     }
 }
@@ -437,7 +440,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
 
     Log::wrapInBar( "Phonons", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( p_phonon_T >= 0 ) {
-        std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral"};
+        std::vector<std::string> approximations = { "Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral" };
         Log::L1( "Temperature = {} k\nCutoff energy = {} meV\nCutoff Time = {} ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n", p_phonon_T, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ), p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
         // Pathintegral
         if ( numerics_phonon_approximation_order == 5 ) {
