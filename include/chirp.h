@@ -20,11 +20,9 @@ class Chirp {
 
    private:
     // Chirp values
-    std::vector<double> chirparray;
-    std::vector<double> chirparray_derivative;
-    std::vector<double> chirparray_integral;
-    // Saving the corresponding t
-    std::vector<double> timearray;
+    std::map<double, double> chirparray;
+    std::map<double, double> chirparray_derivative;
+    std::map<double, double> chirparray_integral;
     // Helper variables/functions
     int size;
     int counter_evaluated, counter_returned;

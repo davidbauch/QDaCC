@@ -6,8 +6,6 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     counter_returned = 0;
     maximum = 0;
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 6.0 + 5 );
-    pulsearray.reserve( n );
-    timearray.reserve( n );
     if ( inputs.order == 5 )
         steps = { 0, 1. / 5. * inputs.t_step, 3. / 10. * inputs.t_step, 1. / 2. * inputs.t_step, 4. / 5. * inputs.t_step, 8. / 9. * inputs.t_step };
     else
@@ -38,9 +36,9 @@ Scalar Pulse::evaluate_derivative( double t ) {
 }
 
 Scalar Pulse::evaluate_integral( double t ) {
-    if ( pulsearray_integral.size() == 0 || t == 0.0 )
+    if ( pulsearray_integral.size() == 0 || t == 0.0 || pulsearray_integral.count( t ) == 0 )
         return evaluate( t ) * inputs.t_step;
-    return pulsearray_integral.at( std::max( (int)std::floor( t / inputs.t_step ), (int)pulsearray_integral.size() - 1 ) ) + evaluate( t ) * inputs.t_step;
+    return integral( t ) + evaluate( t ) * inputs.t_step;
 }
 
 // Generate array of energy-values corresponding to the Pulse
@@ -51,17 +49,14 @@ void Pulse::generate() {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
             t = t1 + steps[i];
             Scalar val = evaluate( t );
-            pulsearray.push_back( val );
-            pulsearray_derivative.push_back( evaluate_derivative( t ) );
-            pulsearray_integral.push_back( evaluate_integral( t ) );
-            timearray.push_back( t );
+            pulsearray[t] = val;
+            pulsearray_derivative[t] = evaluate_derivative( t );
+            pulsearray_integral[t] = evaluate_integral( t );
             if ( std::abs( val ) > maximum )
                 maximum = std::abs( val );
         }
     }
 
-    pulsearray.shrink_to_fit();
-    timearray.shrink_to_fit();
     size = pulsearray.size();
     Log::L3( "Pulsearray.size() = {}... \n", size );
     if ( inputs.omega.size() > 0 ) {
@@ -97,11 +92,13 @@ void Pulse::fileOutput( std::string filepath ) {
         return;
     }
     fmt::print( pulsefile, "t\tabs(Omega(t))\treal(Omega(t)))\tw\tabs(FT(Omega(t)))\n" );
-    for ( long unsigned int i = 0; i < timearray.size() - steps.size(); i += steps.size() ) {
+    int i = 0;
+    for ( double t = inputs.t_start; t < inputs.t_end + inputs.t_step; t += inputs.t_step ) {
         if ( i < pulsearray_fourier.size() )
-            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\t{:.1e}\t{:.10e}\n", timearray.at( i ), std::abs( pulsearray.at( i ) ), std::real( pulsearray.at( i ) ), fourier.at( i ), std::abs( pulsearray_fourier.at( i ) ) );
+            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\t{:.1e}\t{:.10e}\n", t, std::abs( pulsearray[t] ), std::real( pulsearray[t] ), fourier.at( i ), std::abs( pulsearray_fourier.at( i ) ) );
         else
-            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\n", timearray.at( i ), std::abs( pulsearray.at( i ) ), std::real( pulsearray.at( i ) ) );
+            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\n", t, std::abs( pulsearray[t] ), std::real( pulsearray[t] ) );
+        i++;
     }
     std::fclose( pulsefile );
     Log::L3( "Done!\n" );
@@ -157,22 +154,14 @@ Scalar Pulse::get( double t, bool force_evaluate ) {
         counter_evaluated++;
         return evaluate( t );
     }
-
-    int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
-    while ( i < size && timearray.at( i ) < t ) {
-        i++;
-    }
-    if ( i < 0 || i >= size ) {
-        Log::L3( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
+    if ( pulsearray.count( t ) == 0 ) {
         counter_evaluated++;
-        return evaluate( t );
-    }
-    if ( std::abs( timearray.at( i ) - t ) > 1E-14 ) {
-        counter_evaluated++;
-        return evaluate( t );
+        Scalar val = evaluate( t );
+        pulsearray[t] = val;
+        return val;
     }
     counter_returned++;
-    return pulsearray.at( i );
+    return pulsearray[t];
 }
 
 Scalar Pulse::derivative( double t, bool force_evaluate ) {
@@ -181,21 +170,14 @@ Scalar Pulse::derivative( double t, bool force_evaluate ) {
         return evaluate_derivative( t );
     }
 
-    int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
-    while ( timearray.at( i ) < t ) {
-        i++;
-    }
-    if ( std::abs( timearray.at( i ) - t ) > 1E-14 ) {
+    if ( pulsearray_derivative.count( t ) == 0 ) {
         counter_evaluated++;
-        return evaluate_derivative( t );
-    }
-    if ( i < 0 || i >= size ) {
-        Log::L3( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
-        counter_evaluated++;
-        return evaluate_derivative( t );
+        Scalar val = evaluate_derivative( t );
+        pulsearray_derivative[t] = val;
+        return val;
     }
     counter_returned++;
-    return pulsearray_derivative.at( i );
+    return pulsearray_derivative[t];
 }
 
 Scalar Pulse::integral( double t, bool force_evaluate ) {
@@ -204,21 +186,14 @@ Scalar Pulse::integral( double t, bool force_evaluate ) {
         return evaluate_integral( t );
     }
 
-    int i = std::max( 0.0, std::floor( t / inputs.t_step - 1 ) ) * steps.size();
-    while ( timearray.at( i ) < t ) {
-        i++;
-    }
-    if ( std::abs( timearray.at( i ) - t ) > 1E-14 ) {
+    if ( pulsearray_integral.count( t ) == 0 ) {
         counter_evaluated++;
-        return evaluate_integral( t );
-    }
-    if ( i < 0 || i >= size ) {
-        Log::L3( "!! Warning: requested pulsevalue at index {} is out of range! pulsearray.size() = {}\n", i, pulsearray.size() );
-        counter_evaluated++;
-        return evaluate_integral( t );
+        Scalar val = evaluate_integral( t );
+        pulsearray_integral[t] = val;
+        return val;
     }
     counter_returned++;
-    return pulsearray_integral.at( i );
+    return pulsearray_integral[t];
 }
 
 void Pulse::log() {
@@ -231,12 +206,11 @@ void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
         Log::L3( "Failed to open outputfile for Pulse!\n" );
         return;
     }
-    for ( long unsigned int i = 0; i < pulses.at( 0 ).timearray.size() - pulses.at( 0 ).steps.size(); i += pulses.at( 0 ).steps.size() ) {
-        fmt::print( pulsefile, "{:.8e}\t", pulses.at( 0 ).timearray.at( i ) );
+    int i = 0;
+    for ( double t = pulses.front().inputs.t_start; t < pulses.front().inputs.t_end + pulses.front().inputs.t_step; t += pulses.front().inputs.t_step ) {
+        fmt::print( pulsefile, "{:.8e}\t", t );
         for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
-            if ( i < pulses.at( p ).timearray.size() ) {
-                fmt::print( pulsefile, "{:.8e}\t{:.8e}\t", std::abs( pulses.at( p ).pulsearray.at( i ) ), std::real( pulses.at( p ).pulsearray.at( i ) ) );
-            }
+            fmt::print( pulsefile, "{:.8e}\t{:.8e}\t", std::abs( pulses.at( p ).pulsearray[t] ), std::real( pulses.at( p ).pulsearray[t] ) );
         }
         for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
             if ( i < pulses.at( p ).pulsearray_fourier.size() )
@@ -244,7 +218,7 @@ void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
             else
                 fmt::print( pulsefile, "\t\t" );
         }
-
+        i++;
         fmt::print( pulsefile, "\n" );
     }
     std::fclose( pulsefile );
