@@ -70,6 +70,14 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     t_end = get_parameter<double>( "--time", "tend" );
     t_step = get_parameter<double>( "--time", "tstep" );
 
+    // Runge Kutta Parameters
+    numerics_rk_order = get_parameter<double>( "--rk", "rkorder" );
+    numerics_rk_tol = get_parameter<double>( "--rk", "rktol" );
+    numerics_rk_stepdelta = get_parameter<double>( "--rk", "rkstepdelta" );
+    numerics_rk_stepmin = get_parameter<double>( "--rk", "rkstepmin" );
+    numerics_rk_stepmax = get_parameter<double>( "--rk", "rkstepmax" );
+    numerics_rk_interpolate = !get_parameter_passed( "-rknointerpolate" );
+
     inputstring_electronic = get_parameter( "--S", "SE" );
     inputstring_photonic = get_parameter( "--S", "SO" );
     inputstring_pulse = get_parameter( "--S", "SP" );
@@ -146,11 +154,13 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     return true;
 }
 
+//TODO:
 bool Parameters::scaleInputs( const double scaling ) {
     // Adjust normal parameters: time is multiplid by scaling, frequency divided
     t_start.setScale( scaling, Parameter::SCALE_TIME );
     t_end.setScale( scaling, Parameter::SCALE_TIME );
     t_step.setScale( scaling, Parameter::SCALE_TIME );
+    numerics_rk_stepdelta.setScale( scaling, Parameter::SCALE_TIME );
 
     //TODO: inputs scalen! pulse un chirp auch!
     //p_omega_atomic_G_H.setScale( scaling, Parameter::SCALE_ENERGY );
@@ -192,14 +202,6 @@ bool Parameters::scaleInputs( const double scaling ) {
     return true;
 }
 
-double Parameters::getIdealTimestep() {
-    //if ( numerics_use_rwa )
-    //    return 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_coupling + p_omega_cavity_loss + p_omega_decay + p_omega_pure_dephasing + ( vec_max( pulse_amp ) > 0 ? std::abs( p_omega_atomic_G_H - vec_max( pulse_omega ) ) : 0 ) );
-    //if ( !numerics_use_rwa )
-    //    return 2. / 8. * M_PI / std::max( std::max( init_rabifrequenz, max_rabifrequenz ), p_omega_atomic_G_H + p_omega_cavity_H );
-    return 1E-13;
-}
-
 bool Parameters::adjustInput() {
     // Calculate/Recalculate some parameters:
     // Adjust pulse area if pulse_type is "gauss_pi"
@@ -224,8 +226,8 @@ bool Parameters::adjustInput() {
 
     // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
     if ( t_step == -1 ) {
-        t_step = std::min( scaleVariable( 1E-13, scale_value ), getIdealTimestep() );
-        t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
+        t_step = 1E-13; //std::min( scaleVariable( 1E-13, scale_value ), getIdealTimestep() );
+        //t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
     }
 
     // Calculate the maximum dimensions for operator matrices (max states)
@@ -254,11 +256,10 @@ bool Parameters::adjustInput() {
             p_omega_decay = p_omega_decay * p_phonon_b * p_phonon_b;
         }
     }
-    numerics_calculate_spectrum = numerics_calculate_spectrum_H || numerics_calculate_spectrum_V;
     numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 * ( p_phonon_tcutoff / t_step ) ) + 10;
     trace.reserve( iterations_t_max + 5 );
 
-    numerics_saved_coefficients_cutoff = ( numerics_calculate_spectrum || numerics_calculate_g2 ) ? 0 : ( p_phonon_tcutoff / t_step ) * 5;
+    numerics_saved_coefficients_cutoff = 0; //( numerics_calculate_spectrum || numerics_calculate_g2 ) ? 0 : ( p_phonon_tcutoff / t_step ) * 5;
 
     return true;
 }
@@ -293,13 +294,13 @@ void Parameters::parse_system() {
     for ( std::string &pulse : pulses ) {
         auto conf = splitline( pulse, ':' );
         input_s conf_s;
+        conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                               // Coupled to Transitions
         conf_s.numerical_v["Amplitude"] = convertParam<Parameter>( splitline( conf[2], ',' ) ); // Pulse Amp
         conf_s.numerical_v["Frequency"] = convertParam<Parameter>( splitline( conf[3], ',' ) ); // Frequency
         conf_s.numerical_v["Width"] = convertParam<Parameter>( splitline( conf[4], ',' ) );     // Width
         conf_s.numerical_v["Center"] = convertParam<Parameter>( splitline( conf[5], ',' ) );    // Center
         conf_s.numerical_v["Chirp"] = convertParam<Parameter>( splitline( conf[6], ',' ) );     // Chirp
         conf_s.string_v["Type"] = splitline( conf[7], ',' );                                    // Type
-        conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                               // Coupled to Transitions
         input_pulse[conf[0]] = conf_s;
     }
     auto chirps = splitline( inputstring_chirp, ';' );
@@ -344,7 +345,6 @@ void Parameters::parse_system() {
         conf_s.numerical_v["Integrated"] = convertParam<Parameter>( n > 2 ? splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "2" ) ); // 0 or 1 or 2 for false/true/both
         input_correlation["GFunc"] = conf_s;
     }
-    std::cout << "DSADASDSADSADSADASDSA   " << inputstring_wigner << std::endl;
     for ( std::string &wigner : splitline( inputstring_wigner, ';' ) ) {
         auto conf = splitline( wigner, ':' );
         auto n = conf.size();
@@ -440,7 +440,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
 
     Log::wrapInBar( "Phonons", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( p_phonon_T >= 0 ) {
-        std::vector<std::string> approximations = { "Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral" };
+        std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral"};
         Log::L1( "Temperature = {} k\nCutoff energy = {} meV\nCutoff Time = {} ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n", p_phonon_T, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ), p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
         // Pathintegral
         if ( numerics_phonon_approximation_order == 5 ) {
@@ -493,7 +493,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
     Log::L1( "\n" );
 
     Log::wrapInBar( "Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
-    Log::L1( "Order of Runge-Kutta used: Time: RK{}, Spectrum: RK{}\n", numerics_order_t, numerics_order_tau );
+    Log::L1( "Solver used: RK{}{}\n", numerics_rk_order, numerics_rk_order != 45 ? "" : fmt::format( " (Tolerance: {}, Stepdelta: {}, Steplimits: [{},{}])", numerics_rk_tol, numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax ) );
     Log::L1( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
     Log::L1( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture == 1 ) ? "YES" : "NO" ) );
     Log::L1( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) ? "Analytic" : "Matrix Exponential" ) );

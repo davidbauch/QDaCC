@@ -31,14 +31,14 @@ bool System::init_system() {
     for ( auto &[mode, p] : parameters.input_chirp ) {
         Chirp::Inputs chirpinputs( parameters.t_start, parameters.t_end, parameters.t_step, p.string["Type"], parameters.numerics_order_highest );
         chirpinputs.add( p.numerical_v["Times"], p.numerical_v["Amplitude"], p.numerical_v["ddt"] );
-        chirp.push_back( {chirpinputs} );
+        chirp.push_back( { chirpinputs } );
     }
 
     // Arbitrary number of pulses onto single atomic level.
     for ( auto &[mode, p] : parameters.input_pulse ) {
         Pulse::Inputs pulseinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_order_highest );
         pulseinputs.add( p.numerical_v["Center"], p.numerical_v["Amplitude"], p.numerical_v["Width"], p.numerical_v["Frequency"], p.numerical_v["Chirp"], p.string_v["Type"], 1.0 );
-        pulse.push_back( {pulseinputs} );
+        pulse.push_back( { pulseinputs } );
     }
     //pulse_V = Pulse( pulseinputs_V );
     if ( pulse.size() > 0 ) {
@@ -176,45 +176,52 @@ Scalar System::dgl_raman_population_increment( const std::vector<SaveState> &pas
     return ret;
 }
 
-void System::expectationValues( const Sparse &rho, const double t, const std::vector<SaveState> &past_rhos ) {
-    std::string el_out = fmt::format( "{:.5e}", t );
-    std::string ph_out = fmt::format( "{:.5e}", t );
-    std::string el_em = "";
-    std::string ph_em = "";
-    // Output State Populations and Calculate Emission Probabilities from all radiative transitions:
-    for ( auto &[mode, state] : operatorMatrices.ph_states ) {
-        double expval = std::real( dgl_expectationvalue<Sparse, Scalar>( rho, state.hilbert, t ) );
-        ph_out = fmt::format( "{:}\t{:.5e}", ph_out, expval );
-        if ( parameters.p_omega_cavity_loss > 0.0 ) {
-            emission_probabilities[mode] += expval;
-            ph_em = fmt::format( "{:}\t{:.5e}", ph_em, parameters.p_omega_cavity_loss * parameters.t_step * parameters.input_photonic[mode].numerical["DecayScaling"] * emission_probabilities[mode] );
+//TODO: schleife direkt hier, dann braucht diese funktion nur past_rhos.
+void System::expectationValues( const std::vector<SaveState> &rhos, Timer &evalTimer ) {
+    for ( int i = 0; i < rhos.size(); i++ ) {
+        auto &rho = rhos.at( i ).mat;
+        double t = rhos.at( i ).t;
+        double dt = i > 0 ? t - rhos.at( i - 1 ).t : parameters.t_step.get();
+        std::string el_out = fmt::format( "{:.5e}", t );
+        std::string ph_out = fmt::format( "{:.5e}", t );
+        std::string el_em = "";
+        std::string ph_em = "";
+        // Output State Populations and Calculate Emission Probabilities from all radiative transitions:
+        for ( auto &[mode, state] : operatorMatrices.ph_states ) {
+            double expval = std::real( dgl_expectationvalue<Sparse, Scalar>( rho, state.hilbert, t ) );
+            ph_out = fmt::format( "{:}\t{:.6e}", ph_out, expval );
+            if ( parameters.p_omega_cavity_loss > 0.0 ) {
+                emission_probabilities[mode] += expval;
+                ph_em = fmt::format( "{:}\t{:.6e}", ph_em, parameters.p_omega_cavity_loss * dt * parameters.input_photonic[mode].numerical["DecayScaling"] * emission_probabilities[mode] );
+            }
         }
-    }
-    for ( auto &[mode, state] : operatorMatrices.el_states ) {
-        double expval = std::real( dgl_expectationvalue<Sparse, Scalar>( rho, state.hilbert, t ) );
-        el_out = fmt::format( "{:}\t{:.5e}", el_out, expval );
-        if ( parameters.p_omega_decay > 0.0 and parameters.input_electronic[mode].numerical["DecayScaling"] != 0.0 ) {
-            emission_probabilities[mode] += expval;
-            el_em = fmt::format( "{:}\t{:.5e}", el_em, parameters.p_omega_decay * parameters.t_step * parameters.input_electronic[mode].numerical["DecayScaling"] * emission_probabilities[mode] );
+        for ( auto &[mode, state] : operatorMatrices.el_states ) {
+            double expval = std::real( dgl_expectationvalue<Sparse, Scalar>( rho, state.hilbert, t ) );
+            el_out = fmt::format( "{:}\t{:.6e}", el_out, expval );
+            if ( parameters.p_omega_decay > 0.0 and parameters.input_electronic[mode].numerical["DecayScaling"] != 0.0 ) {
+                emission_probabilities[mode] += expval;
+                el_em = fmt::format( "{:}\t{:.6e}", el_em, parameters.p_omega_decay * dt * parameters.input_electronic[mode].numerical["DecayScaling"] * emission_probabilities[mode] );
+            }
         }
-    }
-    // Output
-    if ( operatorMatrices.ph_states.size() > 0 )
-        fmt::print( fileoutput.fp_photonpopulation, "{:}\t{:}\n", ph_out, ph_em );
-    if ( operatorMatrices.el_states.size() > 0 )
-        fmt::print( fileoutput.fp_atomicinversion, "{:}\t{:}\n", el_out, el_em );
+        // Output
+        if ( operatorMatrices.ph_states.size() > 0 )
+            fmt::print( fileoutput.fp_photonpopulation, "{:}\t{:}\n", ph_out, ph_em );
+        if ( operatorMatrices.el_states.size() > 0 )
+            fmt::print( fileoutput.fp_atomicinversion, "{:}\t{:}\n", el_out, el_em );
 
-    if ( !parameters.output_no_dm ) {
-        fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
-        if ( parameters.output_full_dm ) {
-            for ( int i = 0; i < parameters.maxStates; i++ )
-                for ( int j = 0; j < parameters.maxStates; j++ ) {
-                    fmt::print( fileoutput.fp_densitymatrix, "{:.10e}\t", std::real( rho.coeff( i, j ) ) );
-                }
-        } else
-            for ( int j = 0; j < parameters.maxStates; j++ )
-                fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", std::real( rho.coeff( j, j ) ) );
-        fmt::print( fileoutput.fp_densitymatrix, "\n" );
+        if ( !parameters.output_no_dm ) {
+            fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
+            if ( parameters.output_full_dm ) {
+                for ( int i = 0; i < parameters.maxStates; i++ )
+                    for ( int j = 0; j < parameters.maxStates; j++ ) {
+                        fmt::print( fileoutput.fp_densitymatrix, "{:.10e}\t", std::real( rho.coeff( i, j ) ) );
+                    }
+            } else
+                for ( int j = 0; j < parameters.maxStates; j++ )
+                    fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", std::real( rho.coeff( j, j ) ) );
+            fmt::print( fileoutput.fp_densitymatrix, "\n" );
+        }
+        evalTimer.iterate();
     }
 }
 

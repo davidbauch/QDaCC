@@ -77,7 +77,9 @@ extern std::string global_message_error_wrong_number_input;
 
 typedef std::complex<double> Scalar;
 typedef Eigen::MatrixXcd Dense;
+typedef Eigen::MatrixXd dDense;
 typedef Eigen::SparseMatrix<Scalar> Sparse;
+typedef Eigen::SparseMatrix<double> dSparse;
 
 // Vector for mat/time, tuple
 class SaveState {

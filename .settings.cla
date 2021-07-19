@@ -297,6 +297,55 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '1hyphen'
+	key = 'rknointerpolate'
+	description = 'Disablse interpolation of the variable time step solution onto a constant time grid. Interpolation will automatically be enabled if correlation functions are calculated.'
+	group = 'RungeKuttaParameters'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'rk'
+	description = 'Runge Kutta Parameters.'
+	group = 'RungeKuttaParameters'
+	CLA_PARAMETER = {
+		subkey = 'rkorder'
+		value = '4'
+		datatype = 'int'
+		description = 'Order of the Runge-Kutta method. Can be 4,5 or 45.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'rktol'
+		value = '1E-6'
+		datatype = 'double'
+		description = 'Tolerance for the RK45 method.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'rkstepdelta'
+		value = '50E-15'
+		datatype = 'double'
+		description = 'Delta for increases and decreases in delta t.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'rkstepmin'
+		value = '100E-15'
+		datatype = 'double'
+		description = 'Minimum value for delta t.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'rkstepmax'
+		value = '1000E-15'
+		datatype = 'double'
+		description = 'Maximum value for delta t.'
+	}
+}
+# DEPRECATED
+CLA_ARGUMENT = {
+	type = '1hyphen'
 	key = 'RK5'
 	description = 'Use Runge Kutta of order 5 for all calculations'
 	group = 'General'

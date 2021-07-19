@@ -1,18 +1,18 @@
 #include "pulse.h"
 
 Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
-    Log::L3( "Creating total pulse with {} individual pulses...\n", inputs.amp.size() );
+    Log::L2( "Creating total pulse with {} individual pulses...\n", inputs.amp.size() );
     counter_evaluated = 0;
     counter_returned = 0;
     maximum = 0;
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 6.0 + 5 );
     if ( inputs.order == 5 )
-        steps = { 0, 1. / 5. * inputs.t_step, 3. / 10. * inputs.t_step, 1. / 2. * inputs.t_step, 4. / 5. * inputs.t_step, 8. / 9. * inputs.t_step };
+        steps = {0, 1. / 5. * inputs.t_step, 3. / 10. * inputs.t_step, 1. / 2. * inputs.t_step, 4. / 5. * inputs.t_step, 8. / 9. * inputs.t_step};
     else
-        steps = { 0, 0.5 * inputs.t_step };
-    Log::L3( "Done initializing class, creating precalculated pulse...\n" );
+        steps = {0, 0.5 * inputs.t_step};
+    Log::L2( "Done initializing class, creating precalculated pulse...\n" );
     generate();
-    Log::L3( "Done!\n" );
+    Log::L2( "Done!\n" );
 }
 
 Scalar Pulse::evaluate( double t ) {
@@ -58,9 +58,9 @@ void Pulse::generate() {
     }
 
     size = pulsearray.size();
-    Log::L3( "Pulsearray.size() = {}... \n", size );
+    Log::L2( "Pulsearray.size() = {}... \n", size );
     if ( inputs.omega.size() > 0 ) {
-        Log::L3( "Calculating pulse fourier transformation...\n" );
+        Log::L2( "Calculating pulse fourier transformation...\n" );
         double omega_center = 0;
         double omega_range = 0;
         for ( auto &input : inputs.omega ) {
@@ -80,15 +80,15 @@ void Pulse::generate() {
             }
             pulsearray_fourier.emplace_back( spectral_amp );
         }
-        Log::L3( "Fourier pulsearray.size() = {}...\n", pulsearray_fourier.size() );
+        Log::L2( "Fourier pulsearray.size() = {}...\n", pulsearray_fourier.size() );
     }
 }
 
 void Pulse::fileOutput( std::string filepath ) {
-    Log::L3( "Outputting Pulse Array to file...\n" );
+    Log::L2( "Outputting Pulse Array to file...\n" );
     FILE *pulsefile = std::fopen( filepath.c_str(), "w" );
     if ( !pulsefile ) {
-        Log::L3( "Failed to open outputfile for Pulse!\n" );
+        Log::L2( "Failed to open outputfile for Pulse!\n" );
         return;
     }
     fmt::print( pulsefile, "t\tabs(Omega(t))\treal(Omega(t)))\tw\tabs(FT(Omega(t)))\n" );
@@ -101,7 +101,7 @@ void Pulse::fileOutput( std::string filepath ) {
         i++;
     }
     std::fclose( pulsefile );
-    Log::L3( "Done!\n" );
+    Log::L2( "Done!\n" );
 }
 
 void Pulse::Inputs::add( double _center, double _amp, double _sigma, double _omega, double _omega_chirp, std::string _type ) { //,double chirp = 0) {
@@ -111,12 +111,12 @@ void Pulse::Inputs::add( double _center, double _amp, double _sigma, double _ome
     omega.emplace_back( _omega );
     omega_chirp.emplace_back( _omega_chirp );
     type.emplace_back( _type );
-    Log::L3( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center, _amp, _sigma, _omega, _omega_chirp, _type );
+    Log::L2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center, _amp, _sigma, _omega, _omega_chirp, _type );
 }
 
 void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<std::string> &_type, std::complex<double> amp_scaling ) {
     if ( !( _center.size() == _amp.size() && _sigma.size() == _omega.size() && _amp.size() == _sigma.size() && _sigma.size() == _type.size() ) ) {
-        Log::L3( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
+        Log::L2( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
         return;
     }
     for ( int i = 0; i < (int)_amp.size(); i++ ) {
@@ -126,12 +126,12 @@ void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter>
         omega.emplace_back( _omega.at( i ) );
         omega_chirp.emplace_back( _omega_chirp.at( i ) );
         type.emplace_back( _type.at( i ) );
-        Log::L3( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ) );
+        Log::L2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ) );
     }
 }
 void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<std::string> &_type, std::vector<std::string> &_filter, std::string to_match, std::complex<double> amp_scaling ) {
     if ( !( _center.size() == _amp.size() && _sigma.size() == _omega.size() && _amp.size() == _sigma.size() && _sigma.size() == _type.size() && _type.size() == _filter.size() && _filter.size() == _omega_chirp.size() ) ) {
-        Log::L3( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
+        Log::L2( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
         return;
     }
     for ( int i = 0; i < (int)_amp.size(); i++ ) {
@@ -142,7 +142,7 @@ void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter>
             omega.emplace_back( _omega.at( i ) );
             omega_chirp.emplace_back( _omega_chirp.at( i ) );
             type.emplace_back( _type.at( i ) );
-            Log::L3( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ), to_match );
+            Log::L2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ), to_match );
         } else {
             //Log::L3( "Failed to add Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, type = {}. Mismatched Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _type.at( i ), to_match );
         }
@@ -197,13 +197,13 @@ Scalar Pulse::integral( double t, bool force_evaluate ) {
 }
 
 void Pulse::log() {
-    Log::L3( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
+    Log::L2( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
 }
 
 void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
     FILE *pulsefile = std::fopen( filepath.c_str(), "w" );
     if ( !pulsefile ) {
-        Log::L3( "Failed to open outputfile for Pulse!\n" );
+        Log::L2( "Failed to open outputfile for Pulse!\n" );
         return;
     }
     int i = 0;

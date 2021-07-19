@@ -83,7 +83,7 @@ class System {
     Scalar dgl_raman_population_increment( const std::vector<SaveState> &past_rhos, const char mode, const Scalar before, const double t );
 
     // Calculates and outputs expectation values for all available observables
-    void expectationValues( const Sparse &rho, const double t, const std::vector<SaveState> &past_rhos );
+    void expectationValues( const std::vector<SaveState> &rhos, Timer &evalTimer );
 
     // Calculates or returns the cached(if allowed) Hamiltonian for current time t.
     // This function is important because it allows for e.g. path integral to use different definitions of H
@@ -151,8 +151,8 @@ class System {
     // Functions to determine numerical matrix trace from input types supporting .trace()
     // @param &mat: Input dense matrix
     // @return Matrix trace
-    template <typename T, typename M>
-    inline T getTrace( const M &mat ) const {
+    template <typename T>
+    inline T getTrace( const Dense &mat ) const {
         return mat.trace();
     }
     // Functions to determine numerical matrix trace from sparse input types not supporting .trace()

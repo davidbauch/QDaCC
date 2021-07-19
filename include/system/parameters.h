@@ -31,8 +31,6 @@ class Parameters {
     int numerics_maximum_threads, numerics_phonon_approximation_markov1, numerics_phonon_approximation_order;
     double akf_deltaWmax;
     Parameter spectrum_frequency_center, spectrum_frequency_range;
-    bool numerics_calculate_spectrum_H, numerics_calculate_spectrum_V;
-    bool numerics_calculate_g2_H, numerics_calculate_g2_V, numerics_calculate_g2_C;
     bool numerics_use_saved_coefficients;
     bool numerics_output_raman_population;
     bool numerics_calculate_timeresolution_indistinguishability;
@@ -42,6 +40,8 @@ class Parameters {
     long unsigned int numerics_saved_coefficients_max_size;
     std::vector<int> logfilecounter;
     bool numerics_stretch_correlation_grid, numerics_interpolate_outputs;
+    Parameter numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax, numerics_rk_order, numerics_rk_tol;
+    bool numerics_rk_interpolate;
 
     // Path Integral Numerics
     double numerics_pathintegral_stepsize_iterator;      // = 1E-12;
@@ -177,8 +177,4 @@ class Parameters {
         }
         return variable;
     }
-
-    // Approximates the ideal timestep for the initial system parameters chosen
-    // @return Returns ideal timestep
-    double getIdealTimestep();
 };

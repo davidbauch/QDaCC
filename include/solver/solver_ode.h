@@ -7,7 +7,8 @@
 // Description: ODESolver class provides both Runge-Kutta functions of different orders and functions for different numerical operations
 class ODESolver {
    private:
-    // RK 4&5 coefficients
+    // RK 4&5 coefficients (Dormand–Prince method)
+    double a1 = 0;
     double a2 = 1. / 5.;
     double a3 = 3. / 10.;
     double a4 = 4. / 5.;
@@ -34,6 +35,14 @@ class ODESolver {
     double b55 = -5103 / 18656.;
     double b65 = -2187. / 6784.;
     double b66 = 11. / 84.;
+
+    double e1 = 5179. / 57600.; //71. / 57600.;
+    double e2 = 0;
+    double e3 = 7571. / 16695.;    //-71. / 16695.;
+    double e4 = 393. / 640.;       //71. / 1920.;
+    double e5 = -92097. / 339200.; //-17253. / 339200.;
+    double e6 = 187. / 2100.;      //22. / 525.;
+    double e7 = 1. / 40.;          //-1. / 40.;
 
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
     int dim;
@@ -76,6 +85,8 @@ class ODESolver {
     // @param t: [double] Time to iterate at
     // @return: [Sparse] rho at time t+t_step
     Sparse iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<SaveState> &savedStates );
+
+    std::pair<Sparse, double> iterateRungeKutta45( const Sparse &rho, System &s, const double t, const double t_step, std::vector<SaveState> &savedStates );
 
     // Desciption: Function to calculate the number of iterations used for tau direction calculations
     // Type: ODESolver private function
@@ -148,6 +159,7 @@ class ODESolver {
     // die cache funktionen verwenden mitlerweile eh maps, das organizen ist also kein problem. mit path integral geht das ehr weniger, kann man aber bestimmt auch machen. ggf kann man das auch in
     // iterateRungeKutta machen, aber dann muss man auf Threadsafety und so achten wenn z.b. die g-funktionen berechnet werden. könnte man aber auch machen tbh. oder halt einfach hier.
     bool calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true );
+    bool calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true, bool interpolate = true, double tolerance = 1E-4 );
     bool calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true );
 };
 
