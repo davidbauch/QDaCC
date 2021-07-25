@@ -1,4 +1,5 @@
 #include "pulse.h"
+#include "solver/solver.h"
 
 Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     Log::L2( "Creating total pulse with {} individual pulses...\n", inputs.amp.size() );
@@ -6,10 +7,10 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     counter_returned = 0;
     maximum = 0;
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 6.0 + 5 );
-    if ( inputs.order == 5 )
-        steps = {0, 1. / 5. * inputs.t_step, 3. / 10. * inputs.t_step, 1. / 2. * inputs.t_step, 4. / 5. * inputs.t_step, 8. / 9. * inputs.t_step};
+    if ( inputs.order > 5 )
+        steps = { Solver::a1 * inputs.t_step, Solver::a2 * inputs.t_step, Solver::a3 * inputs.t_step, Solver::a4 * inputs.t_step, Solver::a5 * inputs.t_step };
     else
-        steps = {0, 0.5 * inputs.t_step};
+        steps = { 0, 0.5 * inputs.t_step };
     Log::L2( "Done initializing class, creating precalculated pulse...\n" );
     generate();
     Log::L2( "Done!\n" );
@@ -48,13 +49,13 @@ void Pulse::generate() {
     for ( double t1 = inputs.t_start; t1 < inputs.t_end + inputs.t_step * steps.size(); t1 += inputs.t_step ) {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
             t = t1 + steps[i];
-            Scalar val = evaluate( t );
+            Scalar val = get( t );
             pulsearray[t] = val;
-            pulsearray_derivative[t] = evaluate_derivative( t );
-            pulsearray_integral[t] = evaluate_integral( t );
             if ( std::abs( val ) > maximum )
                 maximum = std::abs( val );
         }
+        pulsearray_derivative[t1] = derivative( t1 );
+        pulsearray_integral[t1] = 0.0; //integral( t1 ); // FIXME: segmentation fault, just integrade properly.
     }
 
     size = pulsearray.size();
@@ -157,6 +158,7 @@ Scalar Pulse::get( double t, bool force_evaluate ) {
     if ( pulsearray.count( t ) == 0 ) {
         counter_evaluated++;
         Scalar val = evaluate( t );
+#pragma omp critical
         pulsearray[t] = val;
         return val;
     }
@@ -173,6 +175,7 @@ Scalar Pulse::derivative( double t, bool force_evaluate ) {
     if ( pulsearray_derivative.count( t ) == 0 ) {
         counter_evaluated++;
         Scalar val = evaluate_derivative( t );
+#pragma omp critical
         pulsearray_derivative[t] = val;
         return val;
     }
@@ -189,6 +192,7 @@ Scalar Pulse::integral( double t, bool force_evaluate ) {
     if ( pulsearray_integral.count( t ) == 0 ) {
         counter_evaluated++;
         Scalar val = evaluate_integral( t );
+#pragma omp critical
         pulsearray_integral[t] = val;
         return val;
     }

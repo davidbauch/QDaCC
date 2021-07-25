@@ -18,7 +18,6 @@ class Parameters {
     // Also output electronic emission probabilities
     bool numerics_output_electronic_emission;
     int numerics_order_timetrafo;
-    int numerics_order_t, numerics_order_tau, numerics_order_highest;
     int output_advanced_log, output_handlerstrings, output_operators, output_coefficients;
     int iterations_t_skip, iterations_tau_resolution, iterations_w_resolution;
     int iterations_wtau_skip;
@@ -41,7 +40,7 @@ class Parameters {
     std::vector<int> logfilecounter;
     bool numerics_stretch_correlation_grid, numerics_interpolate_outputs;
     Parameter numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax, numerics_rk_order, numerics_rk_tol;
-    bool numerics_rk_interpolate;
+    bool numerics_rk_interpolate, numerics_rk_usediscrete_timesteps;
 
     // Path Integral Numerics
     double numerics_pathintegral_stepsize_iterator;      // = 1E-12;

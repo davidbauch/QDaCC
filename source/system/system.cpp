@@ -29,16 +29,16 @@ System::System( const std::vector<std::string> &input ) {
 bool System::init_system() {
     // Single chirp for single atomic level
     for ( auto &[mode, p] : parameters.input_chirp ) {
-        Chirp::Inputs chirpinputs( parameters.t_start, parameters.t_end, parameters.t_step, p.string["Type"], parameters.numerics_order_highest );
+        Chirp::Inputs chirpinputs( parameters.t_start, parameters.t_end, parameters.t_step, p.string["Type"], parameters.numerics_rk_order );
         chirpinputs.add( p.numerical_v["Times"], p.numerical_v["Amplitude"], p.numerical_v["ddt"] );
-        chirp.push_back( { chirpinputs } );
+        chirp.push_back( {chirpinputs} );
     }
 
     // Arbitrary number of pulses onto single atomic level.
     for ( auto &[mode, p] : parameters.input_pulse ) {
-        Pulse::Inputs pulseinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_order_highest );
+        Pulse::Inputs pulseinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_rk_order );
         pulseinputs.add( p.numerical_v["Center"], p.numerical_v["Amplitude"], p.numerical_v["Width"], p.numerical_v["Frequency"], p.numerical_v["Chirp"], p.string_v["Type"], 1.0 );
-        pulse.push_back( { pulseinputs } );
+        pulse.push_back( {pulseinputs} );
     }
     //pulse_V = Pulse( pulseinputs_V );
     if ( pulse.size() > 0 ) {

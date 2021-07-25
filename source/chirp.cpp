@@ -1,14 +1,15 @@
 #include "chirp.h"
+#include "solver/solver.h"
 
 Chirp::Chirp( Chirp::Inputs &_inputs ) : inputs( _inputs ) {
     counter_evaluated = 0;
     counter_returned = 0;
     Log::L2( "Creating Chirp with {} points of type {}...\n", inputs.t.size(), inputs.type );
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 2.0 + 5 );
-    //if (p.numerics_order_t == 5 || p.numerics_order_tau == 5)
-    //    steps = { 0, 1./5.*p.t_step, 3./10.*p.t_step, 1./2.*p.t_step, 4./5.*p.t_step, 8./9.*p.t_step };
-    //else
-    steps = {0, 0.5 * inputs.t_step};
+    if ( inputs.order > 5 )
+        steps = { Solver::a1 * inputs.t_step, Solver::a2 * inputs.t_step, Solver::a3 * inputs.t_step, Solver::a4 * inputs.t_step, Solver::a5 * inputs.t_step };
+    else
+        steps = { 0, 0.5 * inputs.t_step };
     if ( inputs.type.compare( "sine" ) != 0 ) {
         Log::L2( "Done initializing class, creating interpolant...\n" );
         interpolant = Interpolant( inputs.t, inputs.y, inputs.ddt, inputs.type );
@@ -37,17 +38,17 @@ double Chirp::evaluate_derivative( double t ) {
 double Chirp::evaluate_integral( double t ) {
     if ( chirparray_integral.size() == 0 || t == 0.0 )
         return evaluate( t ) * inputs.t_step;
-    return integral( t ) + evaluate( t ) * inputs.t_step;
+    return integral( t - inputs.t_step ) + evaluate( t ) * inputs.t_step;
 }
 
 void Chirp::generate() {
     for ( double t1 = inputs.t_start; t1 < inputs.t_end + inputs.t_step * steps.size(); t1 += inputs.t_step ) {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
             double t = t1 + steps[i];
-            chirparray[t] = evaluate( t );
-            chirparray_derivative[t] = evaluate_derivative( t );
-            chirparray_integral[t] = evaluate_integral( t );
+            chirparray[t] = get( t );
         }
+        chirparray_derivative[t1] = derivative( t1 );
+        chirparray_integral[t1] = 0.0; //integral( t1 ); // FIXME: segmentation fault, just integrade properly.
     }
     size = chirparray.size();
     Log::L2( "chirparray.size() = {}... ", size );
@@ -92,6 +93,7 @@ double Chirp::get( double t, bool force_evaluate ) {
     if ( chirparray.count( t ) == 0 ) {
         counter_evaluated++;
         double val = evaluate( t );
+#pragma omp critical
         chirparray[t] = val;
         return val;
     }
@@ -106,6 +108,7 @@ double Chirp::derivative( double t, bool force_evaluate ) {
     if ( chirparray_derivative.count( t ) == 0 ) {
         counter_evaluated++;
         double val = evaluate_derivative( t );
+#pragma omp critical
         chirparray_derivative[t] = val;
         return val;
     }
@@ -120,6 +123,7 @@ double Chirp::integral( double t, bool force_evaluate ) {
     if ( chirparray_integral.count( t ) == 0 ) {
         counter_evaluated++;
         double val = evaluate_integral( t );
+#pragma omp critical
         chirparray_integral[t] = val;
         return val;
     }

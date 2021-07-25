@@ -9,7 +9,7 @@ Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
     double a_e = 5E-9;       //3E-9;
     double a_h = 0.87 * a_e; //a_e / 1.15;
     double rho = 5370.0;
-    for ( double w = 0.1; w < 10.0 * parameters.p_phonon_wcutoff; w += stepsize ) {
+    for ( double w = 0.0001; w < 10.0 * parameters.p_phonon_wcutoff; w += stepsize ) {
         double J = w * parameters.p_phonon_alpha * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff );
         //double J = w * parameters.hbar * std::pow( eV7 * std::exp( -w * w * a_e * a_e / ( 4. * v_c * v_c ) ) - eV35 * std::exp( -w * w * a_h * a_h / ( 4. * v_c * v_c ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * rho * std::pow( v_c, 5. ) );
         if ( t < t_step / 2.0 ) {
@@ -29,10 +29,10 @@ Scalar System::dgl_phonon_S_function( const int t_delta, const int i_n, const in
     //         phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( i_n, i_nd ), std::conj( phi_vector[t_delta] ) * operatorMatrices.phononCouplingFactor( j_n, j_nd ),
     //         std::conj( phi_vector[t_delta] ) * operatorMatrices.phononCouplingFactor( i_n, j_nd ), phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( j_n, i_nd ) );
     Scalar result = 0;
-    result -= phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( i_n, i_nd );
-    result -= std::conj( phi_vector[t_delta] ) * operatorMatrices.phononCouplingFactor( j_n, j_nd );
-    result += std::conj( phi_vector[t_delta] ) * operatorMatrices.phononCouplingFactor( i_n, j_nd );
-    result += phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( j_n, i_nd );
+    result -= phi_vector_int[t_delta] * operatorMatrices.phononCouplingFactor( i_n, i_nd );
+    result -= std::conj( phi_vector_int[t_delta] ) * operatorMatrices.phononCouplingFactor( j_n, j_nd );
+    result += std::conj( phi_vector_int[t_delta] ) * operatorMatrices.phononCouplingFactor( i_n, j_nd );
+    result += phi_vector_int[t_delta] * operatorMatrices.phononCouplingFactor( j_n, i_nd );
     //if ( i_n == i_nd ) {
     //    result -= phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( i_n, i_nd );
     //}
@@ -52,19 +52,25 @@ void System::initialize_path_integral_functions() {
     Log::L2( "Initializing Path-Integral functions...\n" );
     // kernel in phi-vector schreiben
     int tau_max = parameters.p_phonon_nc + 1;
-    phi_vector.reserve( tau_max );
     Log::L2( "Initializing Kernel Memory functions...\n" );
     for ( double tau = 0.0; tau < parameters.t_step_pathint * tau_max; tau += parameters.t_step_pathint ) {
-        phi_vector.emplace_back( dgl_phonons_kernel( tau, parameters.t_step_pathint ) );
+        phi_vector[tau] = dgl_phonons_kernel( tau, parameters.t_step_pathint );
+        phi_vector_int.emplace_back( phi_vector[tau] );
     }
 
     Log::L2( "Outputting phonon functions to phonons.txt from phi_vector({})...\n", phi_vector.size() );
     // Output Phonon Functions
     FILE *fp_phonons = std::fopen( ( parameters.subfolder + "phonons.txt" ).c_str(), "w" );
-    fmt::print( fp_phonons, "t\tabs(K(t))\treal(K(t))\timag(K(t))\treal(S_ij)\timag(S_ij)\n" );
-    for ( double t = parameters.t_start; t < parameters.t_step * tau_max; t += parameters.t_step ) {
-        int i = std::floor( t / ( parameters.t_step ) );
-        fmt::print( fp_phonons, "{}\t{}\t{}\t{}\n", t, std::abs( phi_vector.at( i ) ), std::real( phi_vector.at( i ) ), std::imag( phi_vector.at( i ) ) );
+    fmt::print( fp_phonons, "t\tabs(K(t))\treal(K(t))\timag(K(t))\tabs(K(t))\treal(K(t))\timag(K(t))\n" );
+    for ( double t = parameters.t_start; t < parameters.t_step_pathint * tau_max; t += parameters.t_step_pathint ) {
+        int i = std::floor( t / ( parameters.t_step_pathint ) );
+        auto ampfactor = parameters.t_step_pathint / parameters.t_step;
+        auto phi = dgl_phonons_kernel( t, parameters.t_step ) * ampfactor;
+        fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::abs( phi ), std::real( phi ), std::imag( phi ), std::abs( phi_vector[t] ), std::real( phi_vector[t] ), std::imag( phi_vector[t] ) );
+        for ( double dt = t + parameters.t_step; dt < t + parameters.t_step_pathint; dt += parameters.t_step ) {
+            auto phi = dgl_phonons_kernel( dt, parameters.t_step ) * ampfactor;
+            fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t \t \t \n", dt, std::abs( phi ), std::real( phi ), std::imag( phi ) );
+        }
     }
     // Lets output more than the 4-8 elements usually used
     //std::vector<Scalar> phi_vector_o;

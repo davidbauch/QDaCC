@@ -4,7 +4,9 @@
 #include <ostream>
 #include <set>
 #include <unordered_map>
+#include <map>
 #include <functional>
+#include <array>
 //using int128 = __uint128_t;
 //std::ostream &operator<<( std::ostream &os, const int128 i ) noexcept {
 //    std::ostream::sentry s( os );
@@ -29,6 +31,16 @@
 //    return os;
 //}
 
+//template <>
+//struct std::less<Eigen::VectorXi> {
+//    bool operator()( const Eigen::VectorXi &a, const Eigen::VectorXi &b ) const {
+//        for ( size_t i = 0; i < a.size(); ++i ) {
+//            if ( a[i] > b[i] ) return false;
+//        }
+//        return true;
+//    }
+//};
+
 template <typename Scalar>
 class FixedSizeSparseMap {
    public:
@@ -40,77 +52,48 @@ class FixedSizeSparseMap {
         return os;
     }
 
-    class DoubleIndex {
-       public:
-        Index x, y;
-        DoubleIndex() : x( 0 ), y( 0 ){};
-        DoubleIndex( const DoubleIndex &other ) : x( other.x ), y( other.y ){};
-        DoubleIndex( const Index &_x, const Index &_y ) : x( _x ), y( _y ){};
-        bool operator==( const DoubleIndex &other ) const {
-            return x == other.x && y == other.y;
-        }
-    };
+    //struct hash {
+    //    static std::hash<Index> hasher;
+    //    inline size_t operator()( const DoubleIndex &val ) const {
+    //        size_t seed = 0;
+    //        seed ^= hasher( val.x ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+    //        seed ^= hasher( val.y ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+    //        return seed;
+    //    }
+    //};
 
-    struct hash {
-        static std::hash<Index> hasher;
-        inline size_t operator()( const DoubleIndex &val ) const {
+    // https://wjngkoh.wordpress.com/2015/03/04/c-hash-function-for-eigen-matrix-and-vector/
+    template <typename T>
+    struct vector_hash : std::unary_function<T, size_t> {
+        std::size_t operator()( T const &matrix ) const {
             size_t seed = 0;
-            seed ^= hasher( val.x ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-            seed ^= hasher( val.y ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+            for ( size_t i = 0; i < matrix.size(); ++i ) {
+                auto elem = *( matrix.data() + i );
+                seed ^= std::hash<typename T::Scalar>()( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+            }
             return seed;
         }
     };
 
-    class SparseMapTriplet {
-       public:
-        std::vector<int> indicesX, indicesY;
-        DoubleIndex sparse_index;
-        Scalar value;
-        bool created_zero = false;
-        static DoubleIndex getSparseIndex( const std::vector<int> &indicesX, const std::vector<int> &indicesY, const std::vector<Index> &dimensions_scaled ) {
-            DoubleIndex sparse_index( indicesX[0], indicesY[0] );
-            for ( int i = 1; i < indicesX.size(); i++ ) {
-                sparse_index.x += indicesX[i] * dimensions_scaled[i - 1];
-                sparse_index.y += indicesY[i] * dimensions_scaled[i - 1];
-            }
-            return sparse_index;
+    Index getSparseIndex( const Eigen::VectorXi &indices, const std::vector<Index> &dimensions_scaled ) {
+        Index sparse_index = indices( 0 );
+        for ( int i = 1; i < indices.size(); i++ ) {
+            sparse_index += indices( i ) * dimensions_scaled[i - 1];
         }
-        SparseMapTriplet() : value( 0 ), created_zero( true ){};
-        SparseMapTriplet( const SparseMapTriplet &other ) : indicesX( other.indicesX ), indicesY( other.indicesY ), sparse_index( other.sparse_index ), value( other.value ){};
-        SparseMapTriplet( const Scalar &value, const std::vector<int> &indicesX, const std::vector<int> &indicesY, const std::vector<Index> &dimensions_scaled ) : value( value ), indicesX( indicesX ), indicesY( indicesY ) {
-            sparse_index = getSparseIndex( indicesX, indicesY, dimensions_scaled );
-        }
-        SparseMapTriplet( const Scalar &value, const std::vector<int> &indicesX, const std::vector<int> &indicesY, DoubleIndex sparse_index, const std::vector<Index> &dimensions_scaled ) : value( value ), indicesX( indicesX ), indicesY( indicesY ), sparse_index( sparse_index ){};
-        void addWithCheckForExistence( const Scalar &_value, const std::vector<int> &_indicesX, const std::vector<int> &_indicesY, DoubleIndex _sparse_index ) {
-            value += _value;
-            if ( created_zero ) {
-                indicesX = _indicesX;
-                indicesY = _indicesY;
-                sparse_index = _sparse_index;
-                created_zero = false;
-            }
-        }
-        void addWithCheckForExistence( const SparseMapTriplet &other ) {
-            value += other.value;
-            if ( created_zero ) {
-                indicesX = other.indicesX;
-                indicesY = other.indicesY;
-                sparse_index = other.sparse_index;
-                created_zero = false;
-            }
-        }
-        bool operator==( const SparseMapTriplet &other ) const {
-            return sparse_index == other.sparse_index;
-        }
-    };
+        return sparse_index;
+    }
+
+    typedef std::unordered_map<Eigen::VectorXi, Scalar, vector_hash<Eigen::VectorXi>> SubTensorMapEigen;
+    typedef std::unordered_map<Eigen::VectorXi, SubTensorMapEigen, vector_hash<Eigen::VectorXi>> TensorMapEigen;
 
    private:
     std::vector<int> dimensions;
     std::vector<Index> dimensions_scaled;
     Index sparse_matrix_dimension;
 
-    // Unordered map including SparseIndex;Value pairs.
-    std::vector<std::vector<std::unordered_map<DoubleIndex, SparseMapTriplet, hash>>> values;
+    // Ordered map including SparseIndex;Value pairs.
+    std::vector<TensorMapEigen> values;
+
     // Counter for which indices/values vector is active. Use at least 2 and shift current working/getting vector
     int current_value_vector = 0;
     int current_cache_vector = 1;
@@ -127,39 +110,58 @@ class FixedSizeSparseMap {
         dimensions = init_dimensions;
         std::cout << "Sparse Elements: " << (long long)( sparse_matrix_dimension ) << std::endl;
         for ( int i = 0; i < 2; i++ ) {
-            auto filler = std::vector<std::unordered_map<DoubleIndex, SparseMapTriplet, hash>>( max_threads );
+            //auto filler = std::vector<std::map<DoubleIndex, SparseMapTriplet, hash>>( max_threads );
+            auto filler = TensorMapEigen();
             values.emplace_back( filler );
         }
     }
 
-    std::vector<std::unordered_map<DoubleIndex, SparseMapTriplet, hash>> &get() {
+    //std::vector<std::map<DoubleIndex, SparseMapTriplet, hash>> &get() {
+    TensorMapEigen &get() {
         return values[current_value_vector];
     }
 
-    void addTriplet( std::vector<int> indicesX, std::vector<int> indicesY, const Scalar &value, int thread, const long long int i_n = -1, const long long int j_n = -1 ) {
+    void addTriplet( Eigen::VectorXi indicesX, Eigen::VectorXi indicesY, const Scalar &value, int thread, const long long int i_n = -1, const long long int j_n = -1 ) {
         if ( i_n != -1 && j_n != -1 ) {
             for ( int i = indicesX.size() - 1; i > 0; i-- ) {
-                indicesX[i] = indicesX[i - 1];
-                indicesY[i] = indicesY[i - 1];
+                indicesX( i ) = indicesX( i - 1 );
+                indicesY( i ) = indicesY( i - 1 );
             }
-            indicesX[0] = i_n;
-            indicesY[0] = j_n;
+            indicesX( 0 ) = i_n;
+            indicesY( 0 ) = j_n;
         }
-        auto sparse_index = SparseMapTriplet::getSparseIndex( indicesX, indicesY, dimensions_scaled );
-        values[current_cache_vector][thread][sparse_index].addWithCheckForExistence( value, indicesX, indicesY, sparse_index );
+//auto sparse_index_x = getSparseIndex( indicesX, dimensions_scaled );
+//auto sparse_index_y = getSparseIndex( indicesY, dimensions_scaled );
+#pragma omp critical
+        {
+            auto &curX = values[current_cache_vector][indicesX];
+            if ( curX.count( indicesY ) > 0 ) {
+                curX[indicesY] += value;
+            } else {
+                curX[indicesY] = value;
+            }
+        }
+        //values[current_cache_vector][sparse_index_x][sparse_index_y].addWithCheckForExistence( value, indicesX, indicesY, sparse_index_x, sparse_index_y );
     }
 
     long long int nonZeros() {
-        long long s = values[current_value_vector][0].size();
-        for ( int i = 1; i < values[current_value_vector].size(); i++ )
-            s += values[current_value_vector][i].size();
+        long long s = 0;
+        for ( auto &[indxX, outer] : values[current_value_vector] )
+            s += outer.size();
         return s;
     }
 
+    std::vector<std::pair<Eigen::VectorXi, SubTensorMapEigen>> getIndices() {
+        std::vector<std::pair<Eigen::VectorXi, SubTensorMapEigen>> ret( values[current_value_vector].size() );
+        std::move( values[current_value_vector].begin(), values[current_value_vector].end(), ret.begin() );
+        return ret;
+    }
+
+    //TODO: damit mehrere threads worken können müsste man heir halt alles in eine map schreiben... sonst arbeiten verschiedene threads an gleichen summanden
     void reduceDublicates() {
         std::swap( current_value_vector, current_cache_vector );
-        for ( auto &vec : values[current_cache_vector] )
-            vec.clear();
+        values[current_cache_vector].clear();
+        //FIXME
         //if ( values[current_value_vector].size() > 1 ) {
         //    int current_thread_vector = 0;
         //    // Merge all vectors into vector 0
@@ -177,12 +179,7 @@ class FixedSizeSparseMap {
         //    values[current_cache_vector][0].clear();
         //}
     }
-
-    int getSizeOfTensor() {
-        return nonZeros() * ( sizeof( Scalar ) + sizeof( Index ) + sizeof( int ) * dimensions_scaled.size() );
-    }
-    std::string getSizesOfCache() {
-        std::string cachevs = "";
-        return cachevs;
+    int size() {
+        return nonZeros() * sizeof( Scalar );
     }
 };

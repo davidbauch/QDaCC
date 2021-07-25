@@ -19,7 +19,8 @@ bool ODESolver::calculate_t_direction( System &s ) {
     // Finalize
     Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, "T-Direction: ", PROGRESS_FORCE_OUTPUT );
     rkTimer.end();
-    Log::L2( "Done! Saved {} states, cached {} hamilton matrices.\n", savedStates.size(), savedHamiltons.size() );
+    Log::L2( "Done! Saved {} states.\n", savedStates.size() );
+    Log::L2( "Hamiltons: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}. Done!\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_read );
 
     // Interpolate Matrices?
     std::vector<SaveState> interpolate_savedstates;

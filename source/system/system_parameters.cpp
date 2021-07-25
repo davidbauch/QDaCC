@@ -15,8 +15,6 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     numerics_use_interactionpicture = 0;
     numerics_use_rwa = 0;
     numerics_order_timetrafo = TIMETRANSFORMATION_MATRIXEXPONENTIAL;
-    numerics_order_t = 4;
-    numerics_order_tau = 4;
     output_advanced_log = 0;
     output_handlerstrings = 0;
     output_operators = 0;
@@ -77,6 +75,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_rk_stepmin = get_parameter<double>( "--rk", "rkstepmin" );
     numerics_rk_stepmax = get_parameter<double>( "--rk", "rkstepmax" );
     numerics_rk_interpolate = !get_parameter_passed( "-rknointerpolate" );
+    numerics_rk_usediscrete_timesteps = numerics_rk_stepdelta > 0 ? true : false;
 
     inputstring_electronic = get_parameter( "--S", "SE" );
     inputstring_photonic = get_parameter( "--S", "SO" );
@@ -96,13 +95,6 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
 
     // Look for --spectrum, if not found, no spectrum is evaluated
     iterations_tau_resolution = get_parameter<int>( "--spectrum", "gridres" );
-
-    //numerics_calculate_g2_C = get_parameter_passed( "-g2C" ) || get_parameter_passed( "-g2" );
-    numerics_order_t = ( get_parameter_passed( "-RK5" ) || get_parameter_passed( "-RK5T" ) ? 5 : 4 );
-    numerics_order_tau = ( get_parameter_passed( "-RK5" ) || get_parameter_passed( "-RK5Tau" ) ? 5 : 4 );
-    numerics_order_highest = numerics_order_t;
-    if ( numerics_order_tau > numerics_order_highest )
-        numerics_order_highest = numerics_order_tau;
     numerics_use_interactionpicture = get_parameter_passed( "-noInteractionpic" ) ? 0 : 1;
     numerics_use_rwa = get_parameter_passed( "-noRWA" ) ? 0 : 1;
     numerics_maximum_threads = get_parameter<int>( "--Threads" );
@@ -307,11 +299,11 @@ void Parameters::parse_system() {
     for ( std::string &chirp : chirps ) {
         auto conf = splitline( chirp, ':' );
         input_s conf_s;
+        conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                               // Coupled to Transitions
         conf_s.numerical_v["AmpFactor"] = convertParam<Parameter>( splitline( conf[2], ',' ) ); // Amplitude Scaling for coupled_to
         conf_s.numerical_v["Amplitude"] = convertParam<Parameter>( splitline( conf[3], ',' ) ); // Amplitudes
         conf_s.numerical_v["Times"] = convertParam<Parameter>( splitline( conf[4], ',' ) );     // "Times"
         conf_s.numerical_v["ddt"] = convertParam<Parameter>( splitline( conf[5], ',' ) );       // "d/dt"
-        conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                               // Coupled to Transitions
         conf_s.string["Type"] = conf[6];                                                        // Type
         input_chirp[conf[0]] = conf_s;
     }
@@ -477,7 +469,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
     Log::L1( "Time iterations (main loop) = {}\n\n", iterations_t_max );
 
     Log::wrapInBar( "G-Function Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
-    if ( input_chirp.size() > 0 ) {
+    if ( input_correlation.size() > 0 ) {
         Log::L1( "Anticipated tau-grid resolution is {}x{} resulting in {} skips per timestep\n", iterations_tau_resolution, iterations_tau_resolution, iterations_t_skip );
         Log::L1( "Calculating:\n" );
         for ( auto &[name, mat] : input_correlation ) {

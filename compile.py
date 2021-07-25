@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
     bin_path = {'win32': "obj/" +
                 ("LAPN" if "-laptop" in sys.argv else "win"), "darwin": "obj/MAC", "cluster" : "obj/CLUSTER"}
-    compiler = {'win32': "g++", 'darwin': "g++-9", "cluster" : "g++"}
+    compiler = {'win32': "g++", 'darwin': "g++-10", "cluster" : "g++"}
 
     f = get_all_source_files(
         path, exclude_dirs=["ALGLIB"], bin_path=bin_path[platform])
@@ -144,14 +144,14 @@ if __name__ == "__main__":
     copy_to = {'win32': "../../Threadhandler/QDLC-{}.exe".format(
         version) if "-th" in sys.argv else "", 'darwin': "/Users/davidbauch/bin/QDLC-{}.out".format(version), "cluster" : "/upb/departments/pc2/users/d/dbauch/QDLC-C/QDLC-{}.out".format(version)}
     libs_obj = {'win32': "-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
-                'darwin': "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
+                'darwin': "-Wno-volatile -std=c++20 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
                 "cluster" : "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
     include_obj = {'win32': '-I"C:\{}\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external"'.format(msyspath), 
                     'darwin': "-I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include' -I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external'",
                     "cluster" : "-I'/upb/departments/pc2/users/d/dbauch/QDLC-C/include' -I'/upb/departments/pc2/users/d/dbauch/QDLC-C/external'"}
 
     libs_final = {'win32': '-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}'.format("-static" if "-static" in sys.argv else ""), 
-                    'darwin': "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}".format("-static" if "-static" in sys.argv else ""),
+                    'darwin': "-Wno-volatile -std=c++20 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}".format("-static" if "-static" in sys.argv else ""),
                     "cluster" : "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}".format("-static" if "-static" in sys.argv else "")}
     bin_final = {'win32': ["obj/"+("LAPN" if "-laptop" in sys.argv else "win"), "external/ALGLIB/"+("LAPN" if "-laptop" in sys.argv else "WIN")], 
                 'darwin': ["obj/MAC", "external/ALGLIB/MAC"],

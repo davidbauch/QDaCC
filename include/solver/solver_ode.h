@@ -7,43 +7,6 @@
 // Description: ODESolver class provides both Runge-Kutta functions of different orders and functions for different numerical operations
 class ODESolver {
    private:
-    // RK 4&5 coefficients (Dormand–Prince method)
-    double a1 = 0;
-    double a2 = 1. / 5.;
-    double a3 = 3. / 10.;
-    double a4 = 4. / 5.;
-    double a5 = 8. / 9.;
-    double a6 = 1.0;
-
-    double b11 = 1. / 5.;
-    double b21 = 3. / 40.;
-    double b31 = 44. / 45.;
-    double b41 = 19372. / 6561.;
-    double b51 = 9017. / 3168.;
-    double b61 = 35. / 384.;
-    double b22 = 9. / 40.;
-    double b32 = -56. / 15.;
-    double b42 = -25360. / 2187.;
-    double b52 = -355. / 33.;
-    double b33 = 32. / 9.;
-    double b43 = 64448. / 6561.;
-    double b53 = 46732. / 5247.;
-    double b63 = 500. / 1113.;
-    double b44 = -212. / 729.;
-    double b54 = 49. / 176.;
-    double b64 = 125. / 192.;
-    double b55 = -5103 / 18656.;
-    double b65 = -2187. / 6784.;
-    double b66 = 11. / 84.;
-
-    double e1 = 5179. / 57600.; //71. / 57600.;
-    double e2 = 0;
-    double e3 = 7571. / 16695.;    //-71. / 16695.;
-    double e4 = 393. / 640.;       //71. / 1920.;
-    double e5 = -92097. / 339200.; //-17253. / 339200.;
-    double e6 = 187. / 2100.;      //22. / 525.;
-    double e7 = 1. / 40.;          //-1. / 40.;
-
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
     int dim;
     // Cache Matrices that allow for variable time steps.
@@ -52,8 +15,8 @@ class ODESolver {
     std::map<std::string, std::map<std::string, std::vector<Dense>>> to_output_m;
 
     // Cached Entries
-    std::vector<SaveState> savedStates;      // Vector for saved matrix-time tuples for densitymatrix
-    std::map<double, Sparse> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
+    std::vector<SaveState> savedStates;                // Vector for saved matrix-time tuples for densitymatrix
+    std::unordered_map<double, Sparse> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
 
     // Description: Saves a tuple of a complex (density-)matrix and time, ensuring times and matrices don't get mixed up
     // Type: ODESolver private function

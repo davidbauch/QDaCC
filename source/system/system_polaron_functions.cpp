@@ -21,10 +21,9 @@ Scalar System::dgl_phonons_phi( const double t ) {
 void System::initialize_polaron_frame_functions() {
     if ( parameters.p_phonon_T >= 0 ) {
         // Initialize Phi(tau)
-        phi_vector.reserve( std::ceil( parameters.p_phonon_tcutoff / parameters.t_step * 3.1 ) );
-        phi_vector.emplace_back( dgl_phonons_phi( parameters.t_step * 0.01 ) );
+        phi_vector[0.0] = dgl_phonons_phi( parameters.t_step * 0.001 );
         for ( double tau = parameters.t_step; tau < parameters.p_phonon_tcutoff * 3.1; tau += parameters.t_step ) {
-            phi_vector.emplace_back( dgl_phonons_phi( tau ) );
+            phi_vector[tau] = dgl_phonons_phi( tau );
         }
 
         // Output Phonon Functions
@@ -33,7 +32,7 @@ void System::initialize_polaron_frame_functions() {
         for ( double t = parameters.t_start; t < 3.0 * parameters.p_phonon_tcutoff; t += parameters.t_step ) {
             auto greenu = dgl_phonons_greenf( t, 'u' );
             auto greeng = dgl_phonons_greenf( t, 'g' );
-            fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi_vector.at( std::floor( t / parameters.t_step ) ) ), std::imag( phi_vector.at( std::floor( t / parameters.t_step ) ) ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
+            fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi_vector[t] ), std::imag( phi_vector[t] ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
         }
         std::fclose( fp_phonons );
         if ( parameters.output_coefficients ) {
@@ -79,7 +78,7 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
 
     Sparse hamilton = dgl_getHamilton( t );
 
-    return -1i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( project_matrix_sparse( chi ) );
+    return -1i * dgl_kommutator( hamilton, chi ); // + explicit_time.cwiseProduct( project_matrix_sparse( chi ) );
 }
 
 Sparse System::dgl_phonons_chiToX( const Sparse &chi, const char mode ) {
@@ -91,8 +90,7 @@ Sparse System::dgl_phonons_chiToX( const Sparse &chi, const char mode ) {
 }
 
 Scalar System::dgl_phonons_greenf( double t, const char mode ) {
-    int i = std::floor( t / parameters.t_step );
-    auto phi = phi_vector.at( i ); //dgl_phonons_phi( t );
+    auto phi = phi_vector[t];
     if ( mode == 'g' ) {
         return parameters.p_phonon_b * parameters.p_phonon_b * ( std::cosh( phi ) - 1.0 );
     }
@@ -110,14 +108,14 @@ double System::dgl_phonons_lindblad_coefficients( double t, double energy, doubl
         int i = 0;
         for ( double tau = 0; tau < parameters.p_phonon_tcutoff; tau += parameters.t_step ) {
             Scalar f = ( energy * energy * std::cos( nu * tau ) + bpulsesquared ) / std::pow( nu, 2.0 );
-            ret += std::real( ( std::cosh( phi_vector.at( i ) ) - 1.0 ) * f + std::sinh( phi_vector.at( i ) ) * std::cos( nu * tau ) ) - sign * std::imag( ( std::exp( phi_vector.at( i ) ) - 1.0 ) * energy * std::sin( nu * tau ) / nu );
+            ret += std::real( ( std::cosh( phi_vector[t] ) - 1.0 ) * f + std::sinh( phi_vector[t] ) * std::cos( nu * tau ) ) - sign * std::imag( ( std::exp( phi_vector[t] ) - 1.0 ) * energy * std::sin( nu * tau ) / nu );
             i++;
         }
         ret *= 2.0 * bpulsesquared * parameters.t_step;
     } else if ( mode == 'C' ) {
         int i = 0;
         for ( double tau = 0; tau < parameters.p_phonon_tcutoff; tau += parameters.t_step ) {
-            ret += std::real( std::exp( 1i * sign * energy * tau ) * ( std::exp( phi_vector.at( i ) ) - 1.0 ) );
+            ret += std::real( std::exp( 1i * sign * energy * tau ) * ( std::exp( phi_vector[t] ) - 1.0 ) );
             i++;
         }
         ret *= parameters.p_phonon_b * parameters.p_phonon_b * coupling * coupling * parameters.t_step;
@@ -139,16 +137,16 @@ Sparse System::dgl_phonons_chi( const double t ) {
 
 Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, double tau ) {
     if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) {
-        return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
+        return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step, parameters.numerics_rk_tol ).mat;
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
         Sparse U = ( Dense( -1i * dgl_getHamilton( t ) * tau ).exp() ).sparseView();
         return ( U * chi_tau * U.adjoint() ).eval();
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_MIXED ) {
         double error = 0;
         for ( auto &p : pulse )
-            error += std::abs( p.get( t ) ) / p.maximum;
-        if ( error > 1E-5 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) { //TODO: threshold als parameter
-            return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step ).mat;
+            error += std::abs( p.get( t ) / p.maximum );
+        if ( error > 1E-4 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) { //TODO: threshold als parameter
+            return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step, parameters.numerics_rk_tol ).mat;
         }
     }
     return chi_tau;

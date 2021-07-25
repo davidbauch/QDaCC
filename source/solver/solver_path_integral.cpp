@@ -24,7 +24,7 @@ Scalar ODESolver::path_integral_recursive( const Sparse &rho0, System &s, std::v
                 }
                 Scalar val = rho0.coeff( i_n_m, j_n_m ) * iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n ) * std::exp( phonon_s );
                 if ( fillADM && ( new_indicesX[0] == new_indicesY[0] || abs2( val ) > s.parameters.numerics_pathintegral_squared_threshold ) ) {
-                    adm.addTriplet( new_indicesX, new_indicesY, adm_value * val, omp_get_thread_num() );
+                    adm.addTriplet( Eigen::Map<Eigen::VectorXi>( new_indicesX.data(), new_indicesX.size() ), Eigen::Map<Eigen::VectorXi>( new_indicesY.data(), new_indicesY.size() ), adm_value * val, omp_get_thread_num() );
                 }
                 result += val;
             }
@@ -92,7 +92,7 @@ Scalar ODESolver::path_integral_recursive_backwards( const Sparse &rho0, System 
                     val *= std::exp( phonon_s );
                     result += val;
                     if ( fillADM && ( ( new_indicesX[0] == new_indicesY[0] && abs2( val ) != 0.0 ) || abs2( val ) > s.parameters.numerics_pathintegral_squared_threshold ) ) {
-                        adm.addTriplet( new_indicesX, new_indicesY, adm_value * val, omp_get_thread_num() );
+                        adm.addTriplet( Eigen::Map<Eigen::VectorXi>( new_indicesX.data(), new_indicesX.size() ), Eigen::Map<Eigen::VectorXi>( new_indicesY.data(), new_indicesY.size() ), adm_value * val, omp_get_thread_num() );
                     }
                 } else {
                     result += val * path_integral_recursive_backwards( rho0, s, iterates, output, adm, fillADM, max_deph, i_n_m, j_n_m, new_indicesX, new_indicesY, adm_value * val, current_deph - 1 );
@@ -188,7 +188,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     auto t_prop = omp_get_wtime();
     std::vector<std::vector<std::vector<Sparse>>> propagators;
     // Calculate all propagators
-    for ( int t = 1; t < s.parameters.p_phonon_nc; t++ ) {
+    for ( int t = 0; t < s.parameters.p_phonon_nc - 1; t++ ) {
         propagators.emplace_back( calculate_propagator_vector( s, tensor_dim, s.parameters.t_step_pathint * t, t_step_initial, output ) );
     }
     Log::L3( "Done! Took {}s\n", omp_get_wtime() - t_prop );
@@ -204,9 +204,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     Log::L3( "Calculating Path-Integral Loop for the remaining {} timesteps...\n", std::floor( ( t_end - t_start ) / s.parameters.t_step_pathint ) - s.parameters.p_phonon_nc );
     // Iterate Path integral for further time steps
 
-    std::ofstream test( s.parameters.subfolder + "test.txt", std::ofstream::out );
-    test << "Time\tADM_Size(#)\tADM_Size(Bytes)\tMin\tCachevectorsizes\n";
-    double t_start_new = t_start + s.parameters.t_step_pathint * s.parameters.p_phonon_nc;
+    double t_start_new = t_start + s.parameters.t_step_pathint * ( s.parameters.p_phonon_nc - 1 );
     for ( double t_t = t_start_new; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
         // Path-Integral iteration
         if ( true ) {
@@ -216,51 +214,48 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
             t0 = ( omp_get_wtime() - t0 );
 
             double cur_min = 1;
-            test << t_t << "\t" << adms.nonZeros() << "\t" << adms.getSizeOfTensor() << "\t";
 
             // Main Iteration loop
-            Log::L3( "current non zeros in adm: {}   \r", adms.nonZeros() );
+            Log::L3( "Current Tensor Size: {} elements at a total of {} MB\r", adms.nonZeros(), adms.size() / 1024. / 1024. );
             auto t1 = omp_get_wtime();
             double total_append_time = 0;
             double total_time = 0;
 
-            //for ( size_t b = 0; b < adms.get().bucket_count(); b++ )
-            //for ( auto bi = adms.get().begin( b ); bi != adms.get().end( b ); bi++ ) {
-            //auto &triplet = bi->second;
+            //for ( auto &threadvector : adms.get() )
+            //auto tensor = adms.getIndices();
             //#pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
-            for ( auto &outer : adms.get() )
-                for ( auto &inner : outer ) {
-                    auto &triplet = inner.second;
-                    if ( abs2( triplet.value ) == 0 ) continue;
+            for ( auto &[sparse_index_x, outer_map] : adms.get() ) {
+                for ( auto &[sparse_index_y, value] : outer_map ) {
+                    if ( abs2( value ) == 0 ) continue;
                     auto tt = omp_get_wtime();
-                    for ( int l = 0; l < propagator[triplet.indicesX[0]][triplet.indicesY[0]].outerSize(); ++l ) {
-                        for ( Sparse::InnerIterator M( propagator[triplet.indicesX[0]][triplet.indicesY[0]], l ); M; ++M ) {
+                    for ( int l = 0; l < propagator[sparse_index_x( 0 )][sparse_index_y( 0 )].outerSize(); ++l ) {
+                        for ( Sparse::InnerIterator M( propagator[sparse_index_x( 0 )][sparse_index_y( 0 )], l ); M; ++M ) {
                             int i_n = M.row();
                             int j_n = M.col();
 
                             Scalar phonon_s = s.dgl_phonon_S_function( 0, i_n, j_n, i_n, j_n );
-                            for ( int tau = 0; tau < triplet.indicesX.size(); tau++ ) {
-                                int i_nd = triplet.indicesX[tau];
-                                int j_nd = triplet.indicesY[tau];
+                            for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
+                                int i_nd = sparse_index_x( tau );
+                                int j_nd = sparse_index_y( tau );
                                 phonon_s += s.dgl_phonon_S_function( tau + 1, i_n, j_n, i_nd, j_nd );
                             }
 
-                            Scalar val = M.value() * triplet.value * std::exp( phonon_s );
+                            Scalar val = M.value() * value * std::exp( phonon_s );
                             double abs = abs2( val );
                             auto appendtime = omp_get_wtime();
                             // Add Element to Triplet list if they are diagonal elements or if they surpass the given threshold.
                             if ( i_n == j_n || abs >= s.parameters.numerics_pathintegral_squared_threshold ) {
                                 cur_min = cur_min != 0.0 && cur_min < abs ? cur_min : abs;
-                                adms.addTriplet( triplet.indicesX, triplet.indicesY, val, omp_get_thread_num(), i_n, j_n );
+                                adms.addTriplet( sparse_index_x, sparse_index_y, val, omp_get_thread_num(), i_n, j_n );
                             }
                             total_append_time += omp_get_wtime() - appendtime;
                         }
                     }
                     total_time += omp_get_wtime() - tt;
                 }
-            t1 = ( omp_get_wtime() - t1 );
+            }
 
-            test << cur_min << "\t" << adms.getSizesOfCache() << std::endl;
+            t1 = ( omp_get_wtime() - t1 );
 
             auto ts = omp_get_wtime();
             adms.reduceDublicates();
@@ -271,15 +266,15 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
             auto t2 = omp_get_wtime();
             // Calculate rho by tracing over the n_c last steps
             Dense cache = Dense::Zero( tensor_dim, tensor_dim );
-#pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
-            for ( auto &outer : adms.get() )
-                for ( auto &inner : outer ) {
-                    auto &triplet = inner.second;
-                    int i_n = triplet.indicesX[0];
-                    int j_n = triplet.indicesY[0];
-#pragma omp critical
-                    cache( i_n, j_n ) += triplet.value;
+            //#pragma omp parallel for num_threads( s.parameters.numerics_maximum_threads )
+            //for ( auto &threadvector : adms.get() )
+            for ( auto &[sparse_index_x, outer_map] : adms.get() ) {
+                for ( auto &[sparse_index_y, value] : outer_map ) {
+                    int i_n = sparse_index_x( 0 );
+                    int j_n = sparse_index_y( 0 );
+                    cache( i_n, j_n ) += value;
                 }
+            }
             rho = cache.sparseView();
             t2 = ( omp_get_wtime() - t2 );
             Log::L3( "Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting: {:.4f}s, ADM Reduction: {:.4f}s ]\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2 );
@@ -340,14 +335,13 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
             //rho = path_integral( rho0, s, propagators, output, adms, false, (int)std::floor( t_t / s.parameters.t_step ) );
         }
         // Save Rho
-        saveState( rho, t_t, output );
+        saveState( rho, t_t + s.parameters.t_step_pathint, output );
         // Progress and time output
         rkTimer.iterate();
         if ( do_output ) {
             Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, progressbar_name );
         }
     }
-    test.close();
     //Log::L3( "Final Size of ADMs Tensor: {} bytes / {}\% filled\n", adms.getSizeOfValues(), adms.getFillRatio() * 100.0 );
     Log::L3( "Done!\n" );
     return true;
