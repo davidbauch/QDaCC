@@ -74,8 +74,8 @@ class ODESolver {
     // @return: [int] dimensions of temporary variables
     int reset( System &s );
 
-    Dense calculate_g1( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string purpose = "unknown" ); //std::vector<std::vector<SaveScalar>>
-    Dense calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string purpose = "unknown" );
+    Dense &calculate_g1( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string purpose = "unknown" ); //std::vector<std::vector<SaveScalar>>
+    Dense &calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string purpose = "unknown" );
 
     // Description: Stretches Data evaluated at various timesteps onto an equidistant grid, such that g1 and g2 can work with said grid.
     bool scale_grid( System &s, Dense &cache, std::vector<std::vector<SaveScalar>> &cache_noneq );

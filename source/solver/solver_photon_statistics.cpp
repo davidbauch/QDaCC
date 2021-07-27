@@ -19,9 +19,9 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
     std::string s_g1 = "G1-" + s_op_creator + "-" + s_op_annihilator;
     std::string s_g2 = "G2-" + s_op_creator + "-" + s_op_annihilator + "-" + s_op_creator + "-" + s_op_annihilator;
     if ( cache.count( s_g1 ) == 0 )
-        cache[s_g1] = calculate_g1( s, op_creator, op_annihilator, s_g1 );
+        calculate_g1( s, op_creator, op_annihilator, s_g1 );
     if ( cache.count( s_g2 ) == 0 )
-        cache[s_g2] = calculate_g2( s, op_creator, op_annihilator, op_creator, op_annihilator, s_g2 );
+        calculate_g2( s, op_creator, op_annihilator, op_creator, op_annihilator, s_g2 );
 
     Dense &akf_mat_g1 = cache[s_g1];
     Dense &akf_mat_g2 = cache[s_g2];
@@ -127,17 +127,17 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     std::string s_g2_2211 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_1;
     std::string s_g2_2222 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_2 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
     if ( cache.count( s_g2_1111 ) == 0 )
-        cache[s_g2_1111] = calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, s_g2_1111 );
+        calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, s_g2_1111 );
     if ( cache.count( s_g2_1122 ) == 0 )
-        cache[s_g2_1122] = calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_1, op_annihilator_2, s_g2_1122 );
+        calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_1, op_annihilator_2, s_g2_1122 );
     if ( cache.count( s_g2_2121 ) == 0 )
-        cache[s_g2_2121] = calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_1, op_annihilator_1, s_g2_2121 );
+        calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_1, op_annihilator_1, s_g2_2121 );
     if ( cache.count( s_g2_2112 ) == 0 )
-        cache[s_g2_2112] = calculate_g2( s, op_creator_2, op_annihilator_1, op_creator_1, op_annihilator_2, s_g2_2112 );
+        calculate_g2( s, op_creator_2, op_annihilator_1, op_creator_1, op_annihilator_2, s_g2_2112 );
     if ( cache.count( s_g2_1221 ) == 0 )
-        cache[s_g2_1221] = calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_2, op_annihilator_1, s_g2_1221 );
+        calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_2, op_annihilator_1, s_g2_1221 );
     if ( cache.count( s_g2_2222 ) == 0 )
-        cache[s_g2_2222] = calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, s_g2_2222 );
+        calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, s_g2_2222 );
     cache[s_g2_2211] = cache[s_g2_1122].conjugate();
     cache[s_g2_1212] = cache[s_g2_2121].conjugate();
 
@@ -466,9 +466,9 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
         std::string purpose = order == 1 ? "G1-" + s_creator + "-" + s_annihilator : "G2-" + s_creator + "-" + s_annihilator + "-" + s_creator + "-" + s_annihilator;
         if ( cache.count( purpose ) == 0 )
             if ( order == 1 )
-                cache[purpose] = calculate_g1( s, creator, annihilator, purpose );
+                calculate_g1( s, creator, annihilator, purpose );
             else
-                cache[purpose] = calculate_g2( s, creator, annihilator, creator, annihilator, purpose );
+                calculate_g2( s, creator, annihilator, creator, annihilator, purpose );
         // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
         auto &gmat = cache[purpose];
         if ( gs_s.numerical_v["Integrated"][i] == 0 || gs_s.numerical_v["Integrated"][i] == 2 ) {

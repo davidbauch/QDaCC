@@ -51,8 +51,9 @@ bool ODESolver::scale_grid( System &s, Dense &cache, std::vector<std::vector<Sav
 // @param op_creator: [&Sparse] Creator operator (adjunct of annihilator)
 // @param op_annihilator: [&Sparse] Annihilator operator
 // @return: [bool] True if calculations were sucessfull, else false
-Dense ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string purpose ) {
-    Dense cache = Dense::Zero( dim, dim );
+Dense &ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string purpose ) {
+    cache[purpose] = Dense::Zero( dim, dim );
+    Dense &gmat = cache[purpose];
     Log::L2( " : Preparing to calculate g1 correlation function...\n" );
 
     Timer &timer = Timers::create( "RungeKutta-G1-Loop (" + purpose + ")" );
@@ -87,24 +88,24 @@ Dense ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse
     // Because G1,G2 are better to be calculated on an equidistant grid, we interpolate the values to fit the grid.
     // The grid is determined by the initial timestep chosen (+ skip step)
     if ( s.parameters.numerics_stretch_correlation_grid && s.parameters.iterations_t_skip > 1 ) {
-        scale_grid( s, cache, cache_noneq );
+        scale_grid( s, gmat, cache_noneq );
     } else {
         for ( long unsigned int i = 0; i < cache_noneq.size(); i++ ) {
             for ( long unsigned int j = 0; j < cache_noneq.at( i ).size(); j++ ) {
-                cache( i * s.parameters.iterations_t_skip, j ) = cache_noneq.at( i ).at( j ).scalar;
+                gmat( i * s.parameters.iterations_t_skip, j ) = cache_noneq.at( i ).at( j ).scalar;
             }
         }
     }
 
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
-    to_output_m["G1"][purpose] = {cache};
     Log::L2( ": Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
-    return cache;
+    return gmat;
 }
 
-Dense ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string purpose ) {
-    Dense cache = Dense::Zero( dim, dim );
+Dense &ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string purpose ) {
+    cache[purpose] = Dense::Zero( dim, dim );
+    Dense &gmat = cache[purpose];
 
     Log::L2( " : Preparing to calculate g2 correlation function...\n" );
     // Create Timer and Progresbar
@@ -141,20 +142,19 @@ Dense ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Spar
     // Because G1,G2 are better to be calculated on an equidistant grid, we interpolate the values to fit the grid.
     // The grid is determined by the initial timestep chosen (+ skip step)
     if ( s.parameters.numerics_stretch_correlation_grid && s.parameters.iterations_t_skip > 1 ) {
-        scale_grid( s, cache, cache_noneq );
+        scale_grid( s, gmat, cache_noneq );
     } else {
         for ( long unsigned int i = 0; i < cache_noneq.size(); i++ ) {
             for ( long unsigned int j = 0; j < cache_noneq.at( i ).size(); j++ ) {
-                cache( i * s.parameters.iterations_t_skip, j ) = cache_noneq.at( i ).at( j ).scalar;
+                gmat( i * s.parameters.iterations_t_skip, j ) = cache_noneq.at( i ).at( j ).scalar;
             }
         }
     }
 
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
-    to_output_m["G2"][purpose] = {cache};
     Log::L2( ": G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
-    return cache;
+    return gmat;
 }
 
 // Description: Calculates the G2(tau=0) function. Calculates <b^+(t) * b^+(t) * b(t) * b(t)> / <b^+(t) * b(t)>^2 . Logs and outputs progress. Saves resulting function.
