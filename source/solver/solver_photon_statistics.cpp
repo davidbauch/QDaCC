@@ -188,7 +188,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     std::vector<Scalar> output, output_g2zero;
     std::vector<Scalar> time;
     std::vector<Dense> twophotonmatrix, twophotonmatrix_g2zero;
-    for ( long unsigned int i = 0; i < rho[s_g2_1111].size(); i += mat_step ) {
+    for ( long unsigned int i = 0; i < rho[s_g2_1111].size(); i++ ) {
         output.emplace_back( 0 );
         output_g2zero.emplace_back( 0 );
         time.emplace_back( 0 );
@@ -203,8 +203,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     spinflip( 3, 0 ) = -1;
     Log::L3( "Spinflip Matrix: {}\n", spinflip );
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( long unsigned int i = 0; i < rho[s_g2_1111].size(); i += mat_step ) {
-        int k = i / mat_step;
+    for ( long unsigned int k = 0; k < rho[s_g2_1111].size(); k++ ) {
         //Log::L3( "Creating 2 photon matrix\n" );
         Dense rho_2phot = Dense::Zero( 4, 4 );
         Dense rho_2phot_g2zero = Dense::Zero( 4, 4 );
@@ -249,7 +248,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
         auto conc_g2zero = eigenvalues_g2zero( 3 ) - eigenvalues_g2zero( 2 ) - eigenvalues_g2zero( 1 ) - eigenvalues_g2zero( 0 );
         output.at( k ) = conc;
         output_g2zero.at( k ) = conc_g2zero;
-        time.at( k ) = getTimeAt( i );
+        time.at( k ) = getTimeAt( k * mat_step );
         twophotonmatrix.at( k ) = rho_2phot;
         twophotonmatrix_g2zero.at( k ) = rho_2phot_g2zero;
         timer_c.iterate();

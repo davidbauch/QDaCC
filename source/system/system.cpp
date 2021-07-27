@@ -176,7 +176,6 @@ Scalar System::dgl_raman_population_increment( const std::vector<SaveState> &pas
     return ret;
 }
 
-//TODO: schleife direkt hier, dann braucht diese funktion nur past_rhos.
 void System::expectationValues( const std::vector<SaveState> &rhos, Timer &evalTimer ) {
     for ( int i = 0; i < rhos.size(); i++ ) {
         auto &rho = rhos.at( i ).mat;
