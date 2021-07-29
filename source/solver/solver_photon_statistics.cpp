@@ -2,13 +2,6 @@
 
 // Description: Calculates G2 Indistinguishability
 bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
-    Sparse op_creator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    Sparse op_annihilator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    for ( auto &split_s_op_creator : splitline( s_op_creator, '+' ) )
-        op_creator += s.operatorMatrices.el_transitions.count( split_s_op_creator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator].hilbert;
-    for ( auto &split_s_op_annihilator : splitline( s_op_annihilator, '+' ) )
-        op_annihilator += s.operatorMatrices.el_transitions.count( split_s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator].hilbert;
-
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
     s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Progress
@@ -18,10 +11,9 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
     // Calculate G2(t,tau) with given operator matrices
     std::string s_g1 = "G1-" + s_op_creator + "-" + s_op_annihilator;
     std::string s_g2 = "G2-" + s_op_creator + "-" + s_op_annihilator + "-" + s_op_creator + "-" + s_op_annihilator;
-    if ( cache.count( s_g1 ) == 0 )
-        calculate_g1( s, op_creator, op_annihilator, s_g1 );
-    if ( cache.count( s_g2 ) == 0 )
-        calculate_g2( s, op_creator, op_annihilator, op_creator, op_annihilator, s_g2 );
+
+    auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
+    calculate_g2( s, s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator, s_g2 );
 
     Dense &akf_mat_g1 = cache[s_g1];
     Dense &akf_mat_g2 = cache[s_g2];
@@ -96,19 +88,6 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
 // Description: Calculates Concurrence
 bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 ) {
     Log::L2( "Conc for modes {} {} and {} {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2 );
-    // Find Matrices
-    Sparse op_creator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    Sparse op_creator_2 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    Sparse op_annihilator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    Sparse op_annihilator_2 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    for ( auto &split_s_op_creator_1 : splitline( s_op_creator_1, '+' ) )
-        op_creator_1 += s.operatorMatrices.el_transitions.count( split_s_op_creator_1 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator_1].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator_1].hilbert;
-    for ( auto &split_s_op_creator_2 : splitline( s_op_creator_2, '+' ) )
-        op_creator_2 += s.operatorMatrices.el_transitions.count( split_s_op_creator_2 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator_2].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator_2].hilbert;
-    for ( auto &split_s_op_annihilator_1 : splitline( s_op_annihilator_1, '+' ) )
-        op_annihilator_1 += s.operatorMatrices.el_transitions.count( split_s_op_annihilator_1 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator_1].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator_1].hilbert;
-    for ( auto &split_s_op_annihilator_2 : splitline( s_op_annihilator_2, '+' ) )
-        op_annihilator_2 += s.operatorMatrices.el_transitions.count( split_s_op_annihilator_2 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator_2].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator_2].hilbert;
 
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
     s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
@@ -126,18 +105,13 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     std::string s_g2_2112 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_1 + "-" + s_op_creator_1 + "-" + s_op_annihilator_2;
     std::string s_g2_2211 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_1;
     std::string s_g2_2222 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_2 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
-    if ( cache.count( s_g2_1111 ) == 0 )
-        calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, s_g2_1111 );
-    if ( cache.count( s_g2_1122 ) == 0 )
-        calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_1, op_annihilator_2, s_g2_1122 );
-    if ( cache.count( s_g2_2121 ) == 0 )
-        calculate_g2( s, op_creator_2, op_annihilator_2, op_creator_1, op_annihilator_1, s_g2_2121 );
-    if ( cache.count( s_g2_2112 ) == 0 )
-        calculate_g2( s, op_creator_2, op_annihilator_1, op_creator_1, op_annihilator_2, s_g2_2112 );
-    if ( cache.count( s_g2_1221 ) == 0 )
-        calculate_g2( s, op_creator_1, op_annihilator_2, op_creator_2, op_annihilator_1, s_g2_1221 );
-    if ( cache.count( s_g2_2222 ) == 0 )
-        calculate_g2( s, op_creator_1, op_annihilator_1, op_creator_1, op_annihilator_1, s_g2_2222 );
+
+    calculate_g2( s, s_op_creator_1, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_1, s_g2_1111 );
+    calculate_g2( s, s_op_creator_1, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_2, s_g2_1122 );
+    calculate_g2( s, s_op_creator_2, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_1, s_g2_2121 );
+    auto [op_creator_2, op_annihilator_1, op_creator_1, op_annihilator_2] = calculate_g2( s, s_op_creator_2, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_2, s_g2_2112 );
+    calculate_g2( s, s_op_creator_1, s_op_annihilator_2, s_op_creator_2, s_op_annihilator_1, s_g2_1221 );
+    calculate_g2( s, s_op_creator_1, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_1, s_g2_2222 );
     cache[s_g2_2211] = cache[s_g2_1122].conjugate();
     cache[s_g2_1212] = cache[s_g2_2121].conjugate();
 
@@ -179,7 +153,9 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
                     rho[mode][t] += cache[mode]( i, tau ) * s.parameters.t_step * deltaT;
                 }
             }
-            rho_g2zero[mode][t] += s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( T ), matmap_g2zero[mode], getTimeAt( T ) ) * s.parameters.t_step;
+            for ( int i = 0; i < T; i++ ) {
+                rho_g2zero[mode][t] += s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( i ), matmap_g2zero[mode], getTimeAt( i ) ) * s.parameters.t_step;
+            }
         }
         timer_c.iterate();
         Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence (" + fout + "): " );
@@ -280,11 +256,8 @@ bool ODESolver::calculate_wigner( System &s, const std::string &s_mode, const do
 
     double g = std::sqrt( 2 );
     // Calculate Wigner functions over time:
-    // Calculate MEshgrid
-    //TODO: Einlesen
-    auto mg = meshgrid<Dense>( -x, -y, x, y, resolution );
-    Dense X_mat = mg.first;
-    Dense Y_mat = mg.second;
+    // Calculate Meshgrid
+    auto [X_mat, Y_mat] = meshgrid<Dense>( -x, -y, x, y, resolution );
     //Dense A = 0.5 * g * ( X_mat + 1i * Y_mat );
     Dense A = ( X_mat + 1i * Y_mat );
 
@@ -377,6 +350,7 @@ bool ODESolver::calculate_wigner( System &s, const std::string &s_mode, const do
 
 bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
     // Calculate Spectra
+    //BIG TODO: nur operator A (vernichter) übergeben!!! Erzeuger dann über "adjoint" bauen, dann ist man auf der sicheren seite!
     auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
     for ( int i = 0; i < spectrum_s.string_v["Modes"].size(); i++ ) {
         std::string s_creator, s_annihilator;
@@ -447,35 +421,45 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
     for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
         auto modes = gs_s.string_v["Modes"][i];
         int order = std::abs( gs_s.numerical_v["Order"][i] );
-        std::string s_creator, s_annihilator;
-        Sparse creator, annihilator;
-        for ( auto &mode : splitline( modes, '-' ) ) {
-            if ( std::isupper( mode.front() ) ) {
-                s_annihilator = mode;
-                auto s_creator = mode;
-                std::reverse( s_creator.begin(), s_creator.end() );
-                creator = s.operatorMatrices.el_transitions[s_creator].hilbert;
-                annihilator = s.operatorMatrices.el_transitions[s_annihilator].hilbert;
-            } else {
-                s_creator = mode + "bd";
-                s_annihilator = mode + "b";
-                creator = s.operatorMatrices.ph_transitions[s_creator].hilbert;
-                annihilator = s.operatorMatrices.ph_transitions[s_annihilator].hilbert;
+        std::string s_creator = "";
+        std::string s_annihilator = "";
+        for ( auto &mode : splitline( modes, '+' ) ) {
+            if ( s_creator.size() > 0 ) {
+                s_creator += "+";
+                s_annihilator += "+";
             }
+            std::string s_s_annihilator, s_s_creator;
+            if ( std::isupper( mode.front() ) ) {
+                s_s_annihilator = mode;
+                s_s_creator = mode;
+                std::reverse( s_s_creator.begin(), s_s_creator.end() );
+            } else {
+                s_s_creator = mode + "bd";
+                s_s_annihilator = mode + "b";
+            }
+            s_creator += s_s_creator;
+            s_annihilator += s_s_annihilator;
         }
         std::string purpose = order == 1 ? "G1-" + s_creator + "-" + s_annihilator : "G2-" + s_creator + "-" + s_annihilator + "-" + s_creator + "-" + s_annihilator;
-        if ( cache.count( purpose ) == 0 )
-            if ( order == 1 )
-                calculate_g1( s, creator, annihilator, purpose );
-            else
-                calculate_g2( s, creator, annihilator, creator, annihilator, purpose );
+        Sparse creator, annihilator;
+        if ( order == 1 ) {
+            auto [a, b] = calculate_g1( s, s_creator, s_annihilator, purpose );
+            creator = std::move( a );
+            annihilator = std::move( b );
+        } else {
+            auto [a, b, discard1, discard2] = calculate_g2( s, s_creator, s_annihilator, s_creator, s_annihilator, purpose );
+            creator = std::move( a );
+            annihilator = std::move( b );
+        }
         // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
         auto &gmat = cache[purpose];
+        int mat_step = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );
+        // G2(t,tau)
         if ( gs_s.numerical_v["Integrated"][i] == 0 || gs_s.numerical_v["Integrated"][i] == 2 ) {
             Log::L2( "Saving G{} function matrix to {}_m.txt...\n", order, purpose );
             FILE *f_gfunc = std::fopen( ( s.parameters.subfolder + purpose + "_m.txt" ).c_str(), "w" );
             fmt::print( f_gfunc, "Time\tTau\tAbs\tReal\tImag\n" );
-            for ( int k = 0; k < gmat.rows(); k += s.parameters.iterations_t_skip ) {
+            for ( int k = 0; k < gmat.rows(); k += mat_step ) {
                 for ( int l = 0; l < gmat.cols(); l++ ) {
                     fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", 1.0 * k * s.parameters.t_step, 1.0 * l * s.parameters.t_step, std::abs( gmat( k, l ) ), std::real( gmat( k, l ) ), std::imag( gmat( k, l ) ) );
                 }
@@ -483,18 +467,42 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
             }
             std::fclose( f_gfunc );
         }
+        // G2(0)
+        std::vector<Scalar> topv, g2ofzero;
+        auto T = savedStates.size();
+        for ( int i = 0; i < T; i += mat_step ) {
+            g2ofzero.emplace_back( 0 );
+            topv.emplace_back( 0 );
+        }
+#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+        for ( int i = 0; i < T; i += mat_step ) {
+            int k = i / mat_step;
+            for ( int j = 0; j < T - i; j += 1 ) {
+                topv[k] += gmat( i, j );
+            }
+        }
+        Scalar topsumv = 0;
+        Scalar bottomsumv = 0;
+        for ( int k = 0; k < topv.size(); k++ ) {
+            int t = k * mat_step;
+            topsumv += topv[k];
+            bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( t ), creator * annihilator, getTimeAt( t ) ) * mat_step;
+            g2ofzero[k] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 ); // / mat_step * s.parameters.t_step;
+        }
+        // G2(t,0) and G2(tau)
         if ( gs_s.numerical_v["Integrated"][i] == 1 || gs_s.numerical_v["Integrated"][i] == 2 ) {
             Log::L2( "Saving G{} integrated function to {}.txt...\n", order, purpose );
             FILE *f_gfunc = std::fopen( ( s.parameters.subfolder + purpose + ".txt" ).c_str(), "w" );
-            fmt::print( f_gfunc, "Time\tAbs(g2(tau))\tReal(g2(tau))\tImag(g2(tau))\tAbs(g2(0))\tReal(g2(0))\tImag(g2(0))\n" );
-            for ( int l = 0; l < savedStates.size(); l++ ) {
-                Scalar integral = 0;
-                for ( int k = 0; k < gmat.rows(); k += s.parameters.iterations_t_skip ) {
-                    integral += gmat( k, l );
+            fmt::print( f_gfunc, "Time\tAbs(g2(tau))\tReal(g2(tau))\tImag(g2(tau))\tAbs(g2(t,0))\tReal(g2(t,0))\tImag(g2(t,0))\tAbs(g2(0))\tReal(g2(0))\tImag(g2(0))\n" );
+            for ( int l = 0; l < savedStates.size(); l += mat_step ) {
+                int k = l / mat_step;
+                Scalar g2oftau = 0;
+                for ( int k = 0; k < gmat.rows(); k += mat_step ) {
+                    g2oftau += gmat( k, l );
                 }
-                integral *= s.parameters.t_step * s.parameters.iterations_t_skip;
-                Scalar g2ofzero = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( l ), creator * creator * annihilator * annihilator, getTimeAt( l ) ) / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( l ), creator * annihilator, getTimeAt( l ) ), 2.0 );
-                fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( l ), std::abs( integral ), std::real( integral ), std::imag( integral ), std::abs( g2ofzero ), std::real( g2ofzero ), std::imag( g2ofzero ) );
+                g2oftau *= s.parameters.t_step * mat_step;
+                Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( l ), creator * creator * annihilator * annihilator, getTimeAt( l ) ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( l ), creator * annihilator, getTimeAt( l ) ), 2.0 );
+                fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( l ), std::abs( g2oftau ), std::real( g2oftau ), std::imag( g2oftau ), std::abs( g2oft ), std::real( g2oft ), std::imag( g2oft ), std::abs( g2ofzero[k] ), std::real( g2ofzero[k] ), std::imag( g2ofzero[k] ) );
             }
             std::fclose( f_gfunc );
         }

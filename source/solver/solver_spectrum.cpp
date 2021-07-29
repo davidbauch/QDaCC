@@ -7,22 +7,11 @@
 // @return: [bool] True if calculations were sucessfull, else false
 
 bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution ) {
-    Sparse op_creator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    Sparse op_annihilator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    for ( auto &split_s_op_creator : splitline( s_op_creator, '+' ) ) {
-        Log::L2( "Split operator {} from {}\n", split_s_op_creator, s_op_creator );
-        op_creator += s.operatorMatrices.el_transitions.count( split_s_op_creator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator].hilbert;
-    }
-    for ( auto &split_s_op_annihilator : splitline( s_op_annihilator, '+' ) ) {
-        Log::L2( "Split operator {} from {}\n", split_s_op_annihilator, s_op_annihilator );
-        op_annihilator += s.operatorMatrices.el_transitions.count( split_s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator].hilbert;
-    }
-
     // Send system command to change to single core mainprogram, because this memberfunction is already using multithreading
     s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Calculate G1(t,tau) with given operator matrices
     std::string s_g1 = "G1-" + s_op_creator + "-" + s_op_annihilator;
-    cache[s_g1] = calculate_g1( s, op_creator, op_annihilator, s_g1 );
+    auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
     Dense &akf_mat = cache[s_g1];
 
     // Create Timer and Progressbar for the spectrum loop

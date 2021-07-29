@@ -51,10 +51,25 @@ bool ODESolver::scale_grid( System &s, Dense &cache, std::vector<std::vector<Sav
 // @param op_creator: [&Sparse] Creator operator (adjunct of annihilator)
 // @param op_annihilator: [&Sparse] Annihilator operator
 // @return: [bool] True if calculations were sucessfull, else false
-Dense &ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string purpose ) {
+std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, std::string purpose ) {
+    // Find Operator Matrices
+    Log::L2( " : Preparing to calculate G1 Correlation function\n : Generating Sparse Operator Matrices from String input...\n" );
+    Sparse op_creator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    Sparse op_annihilator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    for ( auto &split_s_op_creator : splitline( s_op_creator, '+' ) )
+        op_creator += s.operatorMatrices.el_transitions.count( split_s_op_creator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator].hilbert;
+    for ( auto &split_s_op_annihilator : splitline( s_op_annihilator, '+' ) )
+        op_annihilator += s.operatorMatrices.el_transitions.count( split_s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator].hilbert;
+
+    if ( cache.count( purpose ) != 0 ) {
+        Log::L2( " : G1(tau) for {} already exists.\n", purpose );
+        return {op_creator, op_annihilator};
+    }
+
+    // Generate Cache Matrices
+    Log::L2( " : Preparing Cache Matrices...\n" );
     cache[purpose] = Dense::Zero( dim, dim );
     Dense &gmat = cache[purpose];
-    Log::L2( " : Preparing to calculate g1 correlation function...\n" );
 
     Timer &timer = Timers::create( "RungeKutta-G1-Loop (" + purpose + ")" );
     int totalIterations = getIterationNumberTau( s );
@@ -100,14 +115,34 @@ Dense &ODESolver::calculate_g1( System &s, const Sparse &op_creator, const Spars
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
     Log::L2( ": Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
-    return gmat;
+    return {op_creator, op_annihilator};
 }
 
-Dense &ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string purpose ) {
+std::tuple<Sparse, Sparse, Sparse, Sparse> ODESolver::calculate_g2( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, std::string purpose ) {
+    // Find Operator Matrices
+    Log::L2( " : Preparing to calculate G1 Correlation function\n : Generating Sparse Operator Matrices from String input...\n" );
+    Sparse op_creator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    Sparse op_creator_2 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    Sparse op_annihilator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    Sparse op_annihilator_2 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    for ( auto &split_s_op_creator_1 : splitline( s_op_creator_1, '+' ) )
+        op_creator_1 += s.operatorMatrices.el_transitions.count( split_s_op_creator_1 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator_1].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator_1].hilbert;
+    for ( auto &split_s_op_creator_2 : splitline( s_op_creator_2, '+' ) )
+        op_creator_2 += s.operatorMatrices.el_transitions.count( split_s_op_creator_2 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator_2].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator_2].hilbert;
+    for ( auto &split_s_op_annihilator_1 : splitline( s_op_annihilator_1, '+' ) )
+        op_annihilator_1 += s.operatorMatrices.el_transitions.count( split_s_op_annihilator_1 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator_1].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator_1].hilbert;
+    for ( auto &split_s_op_annihilator_2 : splitline( s_op_annihilator_2, '+' ) )
+        op_annihilator_2 += s.operatorMatrices.el_transitions.count( split_s_op_annihilator_2 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator_2].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator_2].hilbert;
+
+    if ( cache.count( purpose ) != 0 ) {
+        Log::L2( " : G2(tau) for {} already exists.\n", purpose );
+        return {op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2};
+    }
+
+    Log::L2( " : Preparing Cache Matrices...\n" );
     cache[purpose] = Dense::Zero( dim, dim );
     Dense &gmat = cache[purpose];
 
-    Log::L2( " : Preparing to calculate g2 correlation function...\n" );
     // Create Timer and Progresbar
     Timer &timer = Timers::create( "RungeKutta-G2-Loop (" + purpose + ")" );
     int totalIterations = getIterationNumberTau( s );
@@ -154,7 +189,7 @@ Dense &ODESolver::calculate_g2( System &s, const Sparse &op_creator_1, const Spa
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
     Log::L2( ": G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
-    return gmat;
+    return {op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2};
 }
 
 // Description: Calculates the G2(tau=0) function. Calculates <b^+(t) * b^+(t) * b(t) * b(t)> / <b^+(t) * b(t)>^2 . Logs and outputs progress. Saves resulting function.
