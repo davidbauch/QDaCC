@@ -74,14 +74,12 @@ bool ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_en
         return true;
     }
 
-    Log::L3( "Setting up Runge-Kutta Solver...\n" );
     // Reserve Output Vector
     output.reserve( s.parameters.iterations_t_max + 1 );
     // Save initial value
     saveState( rho0, t_start, output );
     // Calculate Remaining
     Sparse rho = rho0;
-    Log::L3( "Calculating Runge-Kutta Loop...\n" );
     for ( double t_t = t_start; t_t <= t_end; t_t += t_step_initial ) {
         // Runge-Kutta iteration
         rho = iterate( rho, s, t_t, t_step_initial, output );
@@ -92,8 +90,20 @@ bool ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_en
         if ( do_output ) {
             Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, progressbar_name );
         }
+        // Adjust t_end until ground state is reached. we assume the ground state is the first entry of the DM
+        if ( s.parameters.numerics_calculate_till_converged and t_t + t_step_initial > t_end and std::real( rho.coeff( 0, 0 ) ) < 0.999 ) {
+            t_end += 10.0 * t_step_initial;
+            s.parameters.iterations_t_max = (int)std::ceil( ( t_end - t_start ) / t_step_initial );
+            progressbar.maximumIterations = s.parameters.iterations_t_max;
+        }
     }
-    Log::L3( "Done!\n" );
+    if ( s.parameters.numerics_calculate_till_converged ) {
+        s.parameters.numerics_calculate_till_converged = false;
+        s.parameters.t_end = t_end;
+        s.parameters.adjustInput();
+        reset( s );
+        Log::L2( "Adjusted t_end to {}.\n", s.parameters.t_end );
+    }
     return true;
 }
 

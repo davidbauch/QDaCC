@@ -14,7 +14,7 @@ class Parameters {
     // Numerical Parameters
     Parameter hbar, kb;
     std::string subfolder;
-    bool numerics_calculate_spectrum, numerics_calculate_g2, numerics_use_simplified_g2, numerics_use_interactionpicture, numerics_use_rwa;
+    bool numerics_use_interactionpicture, numerics_use_rwa, numerics_calculate_till_converged;
     // Also output electronic emission probabilities
     bool numerics_output_electronic_emission;
     int numerics_order_timetrafo;

@@ -15,11 +15,11 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
     auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
     calculate_g2( s, s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator, s_g2 );
 
-    Dense &akf_mat_g1 = cache[s_g1];
-    Dense &akf_mat_g2 = cache[s_g2];
+    auto &akf_mat_g1 = cache[s_g1];
+    auto &akf_mat_g2 = cache[s_g2];
 
-    std::vector<Scalar> outp, outpv; //( std::ceil( savedStates.size() / mat_step ), 0 );
-    std::vector<Scalar> time;        //( std::ceil( savedStates.size() / mat_step ), 0 );
+    std::vector<Scalar> outp, outpv; //( std::ceil( savedStates.size() / s.parameters.iterations_t_skip ), 0 );
+    std::vector<Scalar> time;        //( std::ceil( savedStates.size() / s.parameters.iterations_t_skip ), 0 );
 
     Sparse M1 = op_creator * op_annihilator;
 
@@ -27,12 +27,11 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
     Timer &timer = Timers::create( "Indistinguishability " + fout );
     timer.start();
 
-    int mat_step = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );
-    Log::L2( "Using mat_step = {}\n", mat_step );
+    Log::L2( "Using matstep = {}\n", s.parameters.iterations_t_skip );
 
     std::vector<Scalar> top, bottom, topv;
     auto T = savedStates.size();
-    for ( int i = 0; i < T; i += mat_step ) {
+    for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
         outp.emplace_back( 0 );
         outpv.emplace_back( 0 );
         top.emplace_back( 0 );
@@ -41,18 +40,19 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
         time.emplace_back( getTimeAt( i ) );
     }
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( int i = 0; i < T; i += mat_step ) {
-        int k = i / mat_step;
+    for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
+        int k = i / s.parameters.iterations_t_skip;
         auto rho = getRhoAt( i );
         double t = getTimeAt( i );
-        for ( int j = 0; j < T - i; j += 1 ) { //&& j + i < (int)savedStates.size() ////mat_step
+        for ( int j = 0; j < T - i; j += s.parameters.iterations_t_skip ) {
+            int l = j / s.parameters.iterations_t_skip;
             auto rho_tau = getRhoAt( i + j );
             double t_tau = getTimeAt( i + j );
             Scalar gpop = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
             Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t );
-            top[k] += ( gpop + akf_mat_g2( i, j ) - akf_mat_g1( i, j ) * std::conj( akf_mat_g1( i, j ) ) );
+            top[k] += ( gpop + akf_mat_g2( k, l ) - akf_mat_g1( k, l ) * std::conj( akf_mat_g1( k, l ) ) );
             bottom[k] += 2.0 * gpop - gbot * std::conj( gbot );
-            topv[k] += std::pow( std::abs( akf_mat_g1( i, j ) ), 2.0 );
+            topv[k] += std::pow( std::abs( akf_mat_g1( k, l ) ), 2.0 );
         }
         Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (Simplified) (" + fout + "): " );
         timer.iterate();
@@ -62,13 +62,13 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
     Scalar topsumv = 0;
     Scalar bottomsumv = 0;
     for ( int k = 0; k < top.size(); k++ ) {
-        int t = k * mat_step;
+        int t = k * s.parameters.iterations_t_skip;
         topsum += top[k];
         bottomsum += bottom[k];
         topsumv += topv[k];
         bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( t ), M1, getTimeAt( t ) );
         //Log::L2( "dTopsum = {}, dbottomsum = {}, topsum = {}, bottomsum = {}\n", topv[k], s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( t ), M1, getTimeAt( t ) ), topsumv, bottomsumv );
-        outpv[k] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 ) / mat_step; // / mat_step * s.parameters.t_step;
+        outpv[k] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 );
         outp[k] = 1.0 - std::abs( topsum / bottomsum );
     }
     // Final output and timer end
@@ -115,8 +115,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     cache[s_g2_2211] = cache[s_g2_1122].conjugate();
     cache[s_g2_1212] = cache[s_g2_2121].conjugate();
 
-    int mat_step = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );
-    Log::L2( "Using mat_step = {}\n", mat_step );
+    Log::L2( "Using matstep = {}\n", s.parameters.iterations_t_skip );
 
     std::map<std::string, std::vector<Scalar>> rho;
     std::map<std::string, std::vector<Scalar>> rho_g2zero;
@@ -129,28 +128,30 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
                                                    {s_g2_2211, op_creator_2 * op_creator_2 * op_annihilator_1 * op_annihilator_1},
                                                    {s_g2_2222, op_creator_2 * op_creator_2 * op_annihilator_2 * op_annihilator_2}};
     //for ( auto &mode : { s_g2_1111, s_g2_1122, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2222, s_g2_2211, s_g2_1212 } ) {
-    //    rho[mode] = std::vector<Scalar>( std::ceil( savedStates.size() / mat_step ), 0 );
+    //    rho[mode] = std::vector<Scalar>( std::ceil( savedStates.size() / s.parameters.iterations_t_skip ), 0 );
     //}
 
     Timer &timer_c = Timers::create( "Concurrence (" + fout + ")" );
     timer_c.start();
 
-    double deltaT = s.parameters.t_step * ( 1.0 * mat_step );
+    double deltaT = s.parameters.t_step * ( 1.0 * s.parameters.iterations_t_skip );
     Log::L2( "Calculating Concurrence... Integral Timestep: {}\n", deltaT );
 
-    for ( long unsigned int T = 0; T < savedStates.size(); T += mat_step ) {
+    for ( long unsigned int T = 0; T < savedStates.size(); T += s.parameters.iterations_t_skip ) {
         for ( auto &mode : {s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222} ) {
             rho[mode].emplace_back( 0 );
             rho_g2zero[mode].emplace_back( 0 );
         }
     }
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( long unsigned int T = 0; T < savedStates.size(); T += mat_step ) {
-        int t = T / mat_step;
+    for ( long unsigned int T = 0; T < savedStates.size(); T += s.parameters.iterations_t_skip ) {
+        int t = T / s.parameters.iterations_t_skip;
         for ( auto &mode : {s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222} ) {
-            for ( int i = 0; i < T; i += mat_step ) {
-                for ( int tau = 0; tau < T - i; tau++ ) { // FIX: tau < t-i --> tau < T-i, da G2 mit t_step gespeichert wird! (i,T same scaling)
-                    rho[mode][t] += cache[mode]( i, tau ) * s.parameters.t_step * deltaT;
+            for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
+                int k = i / s.parameters.iterations_t_skip;
+                for ( int tau = 0; tau < T - i; tau += s.parameters.iterations_t_skip ) {
+                    int l = tau / s.parameters.iterations_t_skip;
+                    rho[mode][t] += cache[mode]( k, l ) * deltaT * deltaT;
                 }
             }
             for ( int i = 0; i < T; i++ ) {
@@ -224,7 +225,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
         auto conc_g2zero = eigenvalues_g2zero( 3 ) - eigenvalues_g2zero( 2 ) - eigenvalues_g2zero( 1 ) - eigenvalues_g2zero( 0 );
         output.at( k ) = conc;
         output_g2zero.at( k ) = conc_g2zero;
-        time.at( k ) = getTimeAt( k * mat_step );
+        time.at( k ) = getTimeAt( k * s.parameters.iterations_t_skip );
         twophotonmatrix.at( k ) = rho_2phot;
         twophotonmatrix_g2zero.at( k ) = rho_2phot_g2zero;
         timer_c.iterate();
@@ -453,15 +454,14 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
         }
         // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
         auto &gmat = cache[purpose];
-        int mat_step = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );
         // G2(t,tau)
         if ( gs_s.numerical_v["Integrated"][i] == 0 || gs_s.numerical_v["Integrated"][i] == 2 ) {
             Log::L2( "Saving G{} function matrix to {}_m.txt...\n", order, purpose );
             FILE *f_gfunc = std::fopen( ( s.parameters.subfolder + purpose + "_m.txt" ).c_str(), "w" );
             fmt::print( f_gfunc, "Time\tTau\tAbs\tReal\tImag\n" );
-            for ( int k = 0; k < gmat.rows(); k += mat_step ) {
+            for ( int k = 0; k < gmat.rows(); k++ ) {
                 for ( int l = 0; l < gmat.cols(); l++ ) {
-                    fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", 1.0 * k * s.parameters.t_step, 1.0 * l * s.parameters.t_step, std::abs( gmat( k, l ) ), std::real( gmat( k, l ) ), std::imag( gmat( k, l ) ) );
+                    fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", 1.0 * k * s.parameters.t_step * s.parameters.iterations_t_skip, 1.0 * l * s.parameters.t_step * s.parameters.iterations_t_skip, std::abs( gmat( k, l ) ), std::real( gmat( k, l ) ), std::imag( gmat( k, l ) ) );
                 }
                 fmt::print( f_gfunc, "\n" );
             }
@@ -470,13 +470,13 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
         // G2(0)
         std::vector<Scalar> topv, g2ofzero;
         auto T = savedStates.size();
-        for ( int i = 0; i < T; i += mat_step ) {
+        for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
             g2ofzero.emplace_back( 0 );
             topv.emplace_back( 0 );
         }
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
-        for ( int i = 0; i < T; i += mat_step ) {
-            int k = i / mat_step;
+        for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
+            int k = i / s.parameters.iterations_t_skip;
             for ( int j = 0; j < T - i; j += 1 ) {
                 topv[k] += gmat( i, j );
             }
@@ -484,25 +484,24 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
         Scalar topsumv = 0;
         Scalar bottomsumv = 0;
         for ( int k = 0; k < topv.size(); k++ ) {
-            int t = k * mat_step;
+            int t = k * s.parameters.iterations_t_skip;
             topsumv += topv[k];
-            bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( t ), creator * annihilator, getTimeAt( t ) ) * mat_step;
-            g2ofzero[k] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 ); // / mat_step * s.parameters.t_step;
+            bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( t ), creator * annihilator, getTimeAt( t ) );
+            g2ofzero[k] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 ); // / s.parameters.iterations_t_skip * s.parameters.t_step;
         }
         // G2(t,0) and G2(tau)
         if ( gs_s.numerical_v["Integrated"][i] == 1 || gs_s.numerical_v["Integrated"][i] == 2 ) {
             Log::L2( "Saving G{} integrated function to {}.txt...\n", order, purpose );
             FILE *f_gfunc = std::fopen( ( s.parameters.subfolder + purpose + ".txt" ).c_str(), "w" );
             fmt::print( f_gfunc, "Time\tAbs(g2(tau))\tReal(g2(tau))\tImag(g2(tau))\tAbs(g2(t,0))\tReal(g2(t,0))\tImag(g2(t,0))\tAbs(g2(0))\tReal(g2(0))\tImag(g2(0))\n" );
-            for ( int l = 0; l < savedStates.size(); l += mat_step ) {
-                int k = l / mat_step;
+            for ( int l = 0; l < gmat.cols(); l++ ) {
                 Scalar g2oftau = 0;
-                for ( int k = 0; k < gmat.rows(); k += mat_step ) {
+                for ( int k = 0; k < gmat.rows(); k++ ) {
                     g2oftau += gmat( k, l );
                 }
-                g2oftau *= s.parameters.t_step * mat_step;
-                Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( l ), creator * creator * annihilator * annihilator, getTimeAt( l ) ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( l ), creator * annihilator, getTimeAt( l ) ), 2.0 );
-                fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( l ), std::abs( g2oftau ), std::real( g2oftau ), std::imag( g2oftau ), std::abs( g2oft ), std::real( g2oft ), std::imag( g2oft ), std::abs( g2ofzero[k] ), std::real( g2ofzero[k] ), std::imag( g2ofzero[k] ) );
+                g2oftau *= s.parameters.t_step * s.parameters.iterations_t_skip;
+                Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( l * s.parameters.iterations_t_skip ), creator * creator * annihilator * annihilator, getTimeAt( l * s.parameters.iterations_t_skip ) ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( l ), creator * annihilator, getTimeAt( l ) ), 2.0 );
+                fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( l * s.parameters.iterations_t_skip ), std::abs( g2oftau ), std::real( g2oftau ), std::imag( g2oftau ), std::abs( g2oft ), std::real( g2oft ), std::imag( g2oft ), std::abs( g2ofzero[l] ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ) );
             }
             std::fclose( f_gfunc );
         }
@@ -647,10 +646,10 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //        }
 //    }
 //    // Modified Dimension Step. If Upscaling of G1/G2 is active, step for matrices are i instead of t_skip
-//    int mat_step = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );
-//    Log::L2( "Using mat_step = {}\n", mat_step );
+//    int s.parameters.iterations_t_skip = ( s.parameters.numerics_stretch_correlation_grid ? 1 : s.parameters.iterations_t_skip );
+//    Log::L2( "Using s.parameters.iterations_t_skip = {}\n", s.parameters.iterations_t_skip );
 //    // Modified T-Step
-//    double deltaT = s.parameters.t_step * ( 1.0 * mat_step );
+//    double deltaT = s.parameters.t_step * ( 1.0 * s.parameters.iterations_t_skip );
 //    // Calculating G2(tau)
 //    Timer &timer_g2 = Timers::create( "G2(tau integral" );
 //    timer_g2.start();
@@ -658,7 +657,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //    // Prepare output vector
 //    std::vector<Scalar> g2_11, g2_22, g2_12;
 //    std::vector<Scalar> g2_11_zero, g2_22_zero, g2_12_zero;
-//    for ( long unsigned int i = 0; i < savedStates.size(); i += mat_step ) {
+//    for ( long unsigned int i = 0; i < savedStates.size(); i += s.parameters.iterations_t_skip ) {
 //        g2_11.push_back( 0 );
 //        g2_22.push_back( 0 );
 //        g2_12.push_back( 0 );
@@ -667,8 +666,8 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //        g2_12_zero.push_back( 0 );
 //    }
 //    Sparse M1, M2, M3, rho;
-//    for ( long unsigned int i = 0; i < savedStates.size(); i += mat_step ) {
-//        int k = i / mat_step;
+//    for ( long unsigned int i = 0; i < savedStates.size(); i += s.parameters.iterations_t_skip ) {
+//        int k = i / s.parameters.iterations_t_skip;
 //        if ( !calculate_concurrence_with_g2_of_zero ) {
 //            for ( int t = 0; t < dim; t++ ) {
 //                g2_11.at( k ) += akf_mat_g2_HHHH( i, t ) * s.parameters.t_step; // FIX: akf(k,t) -> akf(i,t), da G2 mit t_step gespeichert wird!
@@ -702,7 +701,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //    // Calculating Concurrence
 //    // Prepare Concurrence output vector
 //    std::vector<Scalar> rho_HHHH, rho_VVVV, rho_HHVV;
-//    for ( long unsigned int i = 0; i < savedStates.size(); i += mat_step ) {
+//    for ( long unsigned int i = 0; i < savedStates.size(); i += s.parameters.iterations_t_skip ) {
 //        rho_HHHH.push_back( 0 );
 //        rho_VVVV.push_back( 0 );
 //        rho_HHVV.push_back( 0 );
@@ -728,9 +727,9 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //        // Main integral
 //        Log::L2( "Concurrence integral timestep: {}\n", deltaT );
 //        //#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-//        for ( long unsigned int T = 0; T < savedStates.size(); T += mat_step ) {
-//            int t = T / mat_step;
-//            for ( int i = 0; i < T; i += mat_step ) { ////+= s.parameters.iterations_t_skip
+//        for ( long unsigned int T = 0; T < savedStates.size(); T += s.parameters.iterations_t_skip ) {
+//            int t = T / s.parameters.iterations_t_skip;
+//            for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) { ////+= s.parameters.iterations_t_skip
 //                ////int k = i / s.parameters.iterations_t_skip;
 //                // Calculate for t
 //                if ( !calculate_concurrence_with_g2_of_zero ) {
@@ -756,7 +755,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //                    rho_VVHH.at( t ) = std::conj( rho_HHVV.at( t ) );
 //                    rho_HVHV.at( t ) = std::conj( rho_VHVH.at( t ) );
 //                } else {
-//                    int k = i / mat_step;
+//                    int k = i / s.parameters.iterations_t_skip;
 //                    rho_HHHH.at( t ) += g2_11_zero.at( k ) * deltaT;
 //                    rho_VVVV.at( t ) += g2_22_zero.at( k ) * deltaT;
 //                    rho_HHVV.at( t ) += g2_12_zero.at( k ) * deltaT;
@@ -773,7 +772,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //    Dense akf_mat_g1_1 = cache.count() Dense::Zero( dim, dim );
 //    Dense akf_mat_g1_2 = Dense::Zero( dim, dim );
 //    std::vector<double> p1, p2;
-//    for ( long unsigned int i = 0; i < savedStates.size(); i += mat_step ) {
+//    for ( long unsigned int i = 0; i < savedStates.size(); i += s.parameters.iterations_t_skip ) {
 //        p1.push_back( 0 );
 //        p2.push_back( 0 );
 //    }
@@ -790,19 +789,19 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //            calculate_g1( s, op_creator_2, op_annihilator_2, akf_mat_g1_2, "g1_2" );
 //        Timer &timer = Timers::create( "Indistinguishability" );
 //        timer.start();
-//        long unsigned int tstart = output_full_ind ? 0 : savedStates.size() - mat_step;
+//        long unsigned int tstart = output_full_ind ? 0 : savedStates.size() - s.parameters.iterations_t_skip;
 //#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-//        for ( long unsigned int T = tstart; T < savedStates.size(); T += mat_step ) {
+//        for ( long unsigned int T = tstart; T < savedStates.size(); T += s.parameters.iterations_t_skip ) {
 //            Scalar top_1 = 0;
 //            Scalar top_2 = 0;
 //            Scalar bottom_1 = 0;
 //            Scalar bottom_2 = 0;
-//            for ( int i = 0; i < T; i += mat_step ) {
-//                int k = i / mat_step;
+//            for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
+//                int k = i / s.parameters.iterations_t_skip;
 //                auto rho = getRhoAt( i );
 //                double t = getTimeAt( i );
-//                for ( int j = 0; j < T - i; j += 1 ) { //&& j + i < (int)savedStates.size() ////mat_step
-//                    int l = j / mat_step;
+//                for ( int j = 0; j < T - i; j += 1 ) { //&& j + i < (int)savedStates.size() ////s.parameters.iterations_t_skip
+//                    int l = j / s.parameters.iterations_t_skip;
 //                    auto rho_tau = getRhoAt( i + j );
 //                    double t_tau = getTimeAt( i + j );
 //                    Scalar gpop_1 = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
@@ -817,14 +816,14 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //                }
 //                // If we dont output the full time resoluted indistinguishability, we instead output the time resoluted integral for T = T_max
 //                if ( !output_full_ind ) {
-//                    p1.at( i / mat_step ) = ( 1.0 - std::abs( top_1 / bottom_1 ) );
-//                    p2.at( i / mat_step ) = ( 1.0 - std::abs( top_2 / bottom_2 ) );
+//                    p1.at( i / s.parameters.iterations_t_skip ) = ( 1.0 - std::abs( top_1 / bottom_1 ) );
+//                    p2.at( i / s.parameters.iterations_t_skip ) = ( 1.0 - std::abs( top_2 / bottom_2 ) );
 //                    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (Simplified): " );
 //                    timer.iterate();
 //                }
 //            }
-//            p1.at( T / mat_step ) = ( 1.0 - std::real( top_1 / bottom_1 ) );
-//            p2.at( T / mat_step ) = ( 1.0 - std::real( top_2 / bottom_2 ) );
+//            p1.at( T / s.parameters.iterations_t_skip ) = ( 1.0 - std::real( top_1 / bottom_1 ) );
+//            p2.at( T / s.parameters.iterations_t_skip ) = ( 1.0 - std::real( top_2 / bottom_2 ) );
 //            Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (Full): " );
 //            timer.iterate();
 //        }
@@ -854,8 +853,8 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //    spinflip( 3, 0 ) = -1;
 //    Log::L3( "Spinflip Matrix: {}\n", spinflip );
 //    Scalar conc = 0;
-//    for ( long unsigned int i = 0; i < savedStates.size(); i += mat_step ) {
-//        int k = i / mat_step;
+//    for ( long unsigned int i = 0; i < savedStates.size(); i += s.parameters.iterations_t_skip ) {
+//        int k = i / s.parameters.iterations_t_skip;
 //        Log::L3( "Creating 2 photon matrix\n" );
 //        Dense rho_2phot = Dense::Zero( 4, 4 );
 //        rho_2phot( 0, 0 ) = rho_HHHH[k];
@@ -902,10 +901,10 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //        Log::L2( "Saving full, non integrated G2(t,tau) matrices... " );
 //        FILE *ganz = std::fopen( ( s.parameters.subfolder + fileOutputName + "_g2(ttau)_matrix.txt" ).c_str(), "w" );
 //        fmt::print( ganz, "t\ttau\tG2_11(t,tau)\tG2_22(t,tau)\tG2_12(t,tau)\n" );
-//        for ( long unsigned int i = 0; i < savedStates.size(); i += mat_step ) {
-//            int k = i / mat_step;
-//            for ( long unsigned int j = 0; j < savedStates.size(); j += mat_step ) {
-//                int l = j / mat_step;
+//        for ( long unsigned int i = 0; i < savedStates.size(); i += s.parameters.iterations_t_skip ) {
+//            int k = i / s.parameters.iterations_t_skip;
+//            for ( long unsigned int j = 0; j < savedStates.size(); j += s.parameters.iterations_t_skip ) {
+//                int l = j / s.parameters.iterations_t_skip;
 //                fmt::print( ganz, "{0:.5e}\t{1:.5e}\t{2:.8e}\t{3:.8e}\t{4:.8e}\n", getTimeAt( i ), getTimeAt( j ), std::abs( akf_mat_g2_HHHH( k, l ) ), std::abs( akf_mat_g2_VVVV( k, l ) ), std::abs( akf_mat_g2_HHVV( k, l ) ) );
 //            }
 //            fmt::print( ganz, "\n" );

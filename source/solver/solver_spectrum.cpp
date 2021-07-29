@@ -12,7 +12,7 @@ bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, 
     // Calculate G1(t,tau) with given operator matrices
     std::string s_g1 = "G1-" + s_op_creator + "-" + s_op_annihilator;
     auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
-    Dense &akf_mat = cache[s_g1];
+    auto &akf_mat = cache[s_g1];
 
     // Create Timer and Progressbar for the spectrum loop
     Timer &timer = Timers::create( "Spectrum (" + s_g1 + ")" );
@@ -34,15 +34,17 @@ bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, 
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
         std::vector<Scalar> expfunc;
-        expfunc.reserve( dim / s.parameters.iterations_wtau_skip );
-        for ( int spec_tau = 0; spec_tau < dim; spec_tau += s.parameters.iterations_wtau_skip ) {
+        expfunc.reserve( dim / s.parameters.iterations_t_skip );
+        for ( int spec_tau = 0; spec_tau < dim; spec_tau += s.parameters.iterations_t_skip ) {
             expfunc.emplace_back( std::exp( -1i * spectrum_frequency_w.at( spec_w ) * (double)(spec_tau)*s.parameters.t_step ) );
         }
         for ( long unsigned int i = 0; i < dim; i += s.parameters.iterations_t_skip ) {
+            int k = i / s.parameters.iterations_t_skip;
             double t_t = ( (double)i ) * s.parameters.t_step;
             int dim2 = (int)std::floor( ( s.parameters.t_end - s.parameters.t_start - t_t ) / ( s.parameters.t_step ) );
-            for ( int j = 0; j < dim2; j += s.parameters.iterations_wtau_skip ) {
-                out.at( spec_w ) += expfunc.at( j / s.parameters.iterations_wtau_skip ) * akf_mat( i, j ); // / s.parameters.t_step / s.parameters.t_step / ( (double)s.parameters.iterations_t_skip * s.parameters.iterations_wtau_skip );
+            for ( int j = 0; j < dim2; j += s.parameters.iterations_t_skip ) {
+                int l = i / s.parameters.iterations_t_skip;
+                out.at( spec_w ) += expfunc.at( l ) * akf_mat( k, l ); // / s.parameters.t_step / s.parameters.t_step / ( (double)s.parameters.iterations_t_skip * s.parameters.iterations_wtau_skip );
             }
         }
         Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum (" + s_g1 + "): " );

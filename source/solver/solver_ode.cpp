@@ -3,6 +3,10 @@
 ODESolver::ODESolver( System &s ) {
     Log::L2( "Creating ODESolver Class... " );
     reset( s );
+    track_gethamilton_read = 0;
+    track_gethamilton_write = 0;
+    track_gethamilton_calc = 0;
+    track_gethamilton_calcattempt = 0;
     savedStates.clear();
     savedStates.reserve( dim );
     Log::L2( "Done!\n" );
@@ -31,12 +35,7 @@ void ODESolver::saveHamilton( const Sparse &mat, const double t ) {
     savedHamiltons[t] = mat;
 }
 
-//TODO: Notwendig?
 int ODESolver::reset( System &s ) {
-    track_gethamilton_read = 0;
-    track_gethamilton_write = 0;
-    track_gethamilton_calc = 0;
-    track_gethamilton_calcattempt = 0;
     dim = (int)std::ceil( ( s.parameters.t_end - s.parameters.t_start ) / s.parameters.t_step ) + 10; //(int)( s.parameters.iterations_t_max / s.parameters.iterations_t_skip ) + 10;
     return dim;
 }

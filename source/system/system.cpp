@@ -257,7 +257,6 @@ bool System::traceValid( Sparse &rho, double t_hit, bool force ) {
         if ( force )
             fmt::print( "{} {} -> trace check failed at t = {} with trace(rho) = {}\n", PREFIX_ERROR, global_message_error_divergent, t_hit, trace );
         terminate_message = global_message_error_divergent;
-        parameters.numerics_calculate_spectrum = 0;
         FILE *fp_trace = std::fopen( ( parameters.subfolder + "trace.txt" ).c_str(), "w" );
         for ( int i = 0; i < (int)parameters.trace.size() && parameters.t_step * 1.0 * i < t_hit; i++ ) {
             fmt::print( fp_trace, "{:.10e} {:.15e}\n", parameters.t_step * 1.0 * ( i + 1 ), parameters.trace.at( i ) );

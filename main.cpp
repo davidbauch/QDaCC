@@ -14,7 +14,6 @@
 int main( int argc, char* argv[] ) {
     // Commandline Arguments:
     CommandlineArguments::init( argc, argv );
-
     // Check for Multifile, if true parse all settings
     std::vector<std::vector<std::string>> sets;
     std::string filename = get_parameter( "--file" );

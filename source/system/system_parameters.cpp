@@ -10,8 +10,6 @@ double min( const Parameter &p1, const Parameter &p2 ) {
 }; // namespace std
 
 Parameters::Parameters( const std::vector<std::string> &arguments ) {
-    numerics_calculate_spectrum = 0;
-    numerics_calculate_g2 = 0;
     numerics_use_interactionpicture = 0;
     numerics_use_rwa = 0;
     numerics_order_timetrafo = TIMETRANSFORMATION_MATRIXEXPONENTIAL;
@@ -26,6 +24,8 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     iterations_t_max = 1;
     output_full_dm = false;
     output_no_dm = false;
+    maxStates = 0;
+    numerics_calculate_till_converged = false;
 
     // Parsing input:
     Timer &timer_parseInput = Timers::create( "Parsing parameters", true, false );
@@ -111,7 +111,6 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_use_saved_hamiltons = !get_parameter_passed( "-disableHamiltonCaching" );
     numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
     numerics_output_raman_population = get_parameter_passed( "-raman" );
-    numerics_use_simplified_g2 = get_parameter_passed( "-g2s" );
     logfilecounter = convertParam<int>( splitline( get_parameter( "--lfc" ), ',' ) );
     numerics_calculate_timeresolution_indistinguishability = get_parameter_passed( "-timedepInd" );
     numerics_output_electronic_emission = get_parameter_passed( "-oElec" );
@@ -146,7 +145,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     return true;
 }
 
-//TODO:
+//TODO: this is broken. and unncesesary actually. remove.
 bool Parameters::scaleInputs( const double scaling ) {
     // Adjust normal parameters: time is multiplid by scaling, frequency divided
     t_start.setScale( scaling, Parameter::SCALE_TIME );
@@ -195,6 +194,7 @@ bool Parameters::scaleInputs( const double scaling ) {
 }
 
 bool Parameters::adjustInput() {
+    Log::L2( "Adjusting Inputs...\n" );
     // Calculate/Recalculate some parameters:
     // Adjust pulse area if pulse_type is "gauss_pi"
     for ( auto &[name, mat] : input_pulse ) {
@@ -221,14 +221,23 @@ bool Parameters::adjustInput() {
         t_step = 1E-13; //std::min( scaleVariable( 1E-13, scale_value ), getIdealTimestep() );
         //t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
     }
-
-    // Calculate the maximum dimensions for operator matrices (max states)
-    maxStates = 0; //4 * ( p_max_photon_number + 1 ) * ( p_max_photon_number + 1 ); // 4 Electronic states x N+1 Photonic states * 2 for H,V modes
+    if ( t_end == -1 ) {
+        // If this is given, we calculate the t-direction until 99% ground state poulation is reached after any pulses.
+        numerics_calculate_till_converged = true;
+        for ( auto &[name, mat] : input_pulse ) {
+            for ( auto &t : mat.numerical_v["Center"] ) {
+                t_end = std::max( t_end.get(), t );
+            }
+        }
+        if ( t_end == -1 )
+            t_end = 10E-12;
+        Log::L2( "Calculate till at least {} and adjust accordingly to guarantee convergence.\n", t_end );
+    }
 
     // Calculate stuff for RK
     iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
     iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
-    iterations_wtau_skip = iterations_t_skip; //1;//iterations_t_skip;
+    iterations_wtau_skip = iterations_t_skip; //1;//iterations_t_skip; //FIXME: DEPRECATED, ramove!
 
     // No phonon adjust if pathintegral is chosen
     if ( numerics_phonon_approximation_order == 5 ) {
@@ -252,7 +261,7 @@ bool Parameters::adjustInput() {
     trace.reserve( iterations_t_max + 5 );
 
     numerics_saved_coefficients_cutoff = 0; //( numerics_calculate_spectrum || numerics_calculate_g2 ) ? 0 : ( p_phonon_tcutoff / t_step ) * 5;
-
+    Log::L2( "Adjusting Inputs Done!\n" );
     return true;
 }
 
@@ -450,7 +459,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
     Log::L1( "\n" );
     Log::wrapInBar( "Time", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     Log::L1( "Timeborder start: {:.8e} s - {:.2f} ps\n", t_start, t_start * 1E12 );
-    Log::L1( "Timeborder end: {:.8e} s - {:.2f} ps\n", t_end, t_end * 1E12 );
+    Log::L1( "Timeborder end: {:.8e} s - {:.2f} ps{}\n", t_end, t_end * 1E12, numerics_calculate_till_converged ? " (variable time end at 99.9\% convergence)" : "" );
     Log::L1( "Timeborder delta: {:.8e} s - {:.2f} fs \n", t_step, t_step * 1E15 );
     if ( numerics_phonon_approximation_order == 5 ) {
         Log::L1( "Timeborder delta path integral: {:.8e} s - {:.2f} ps\n", t_step_pathint, t_step_pathint * 1E12 );
