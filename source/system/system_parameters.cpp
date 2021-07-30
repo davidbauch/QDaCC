@@ -226,7 +226,7 @@ bool Parameters::adjustInput() {
         numerics_calculate_till_converged = true;
         for ( auto &[name, mat] : input_pulse ) {
             for ( auto &t : mat.numerical_v["Center"] ) {
-                t_end = std::max( t_end.get(), t );
+                t_end = std::max( t_end.get(), 2.0 * t );
             }
         }
         if ( t_end == -1 )

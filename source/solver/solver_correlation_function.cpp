@@ -54,7 +54,8 @@ bool ODESolver::scale_grid( System &s, Dense &cache, std::vector<std::vector<Sav
 // @return: [bool] True if calculations were sucessfull, else false
 std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, std::string purpose ) {
     // Find Operator Matrices
-    Log::L2( " : Preparing to calculate G1 Correlation function\n : Generating Sparse Operator Matrices from String input...\n" );
+    Log::L2( " : Preparing to calculate G1 Correlation function\n" );
+    Log::L2( " : Generating Sparse Operator Matrices from String input...\n" );
     Sparse op_creator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
     Sparse op_annihilator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
     for ( auto &split_s_op_creator : splitline( s_op_creator, '+' ) )
@@ -75,7 +76,7 @@ std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string
 
     // Generate Cache Matrices
     Log::L2( " : Preparing Cache Matrices...\n" );
-    int matdim = std::ceil( savedStates.size() / s.parameters.iterations_t_skip ) + 1;
+    int matdim = std::max( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, int( savedStates.size() ) );
     cache[purpose] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
     Log::L2( " : Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, skip is {}...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, s.parameters.iterations_t_skip );
@@ -103,7 +104,8 @@ std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string
 
 std::tuple<Sparse, Sparse, Sparse, Sparse> ODESolver::calculate_g2( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, std::string purpose ) {
     // Find Operator Matrices
-    Log::L2( " : Preparing to calculate G1 Correlation function\n : Generating Sparse Operator Matrices from String input...\n" );
+    Log::L2( " : Preparing to calculate G2 Correlation function\n" );
+    Log::L2( " : Generating Sparse Operator Matrices from String input...\n" );
     Sparse op_creator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
     Sparse op_creator_2 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
     Sparse op_annihilator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
@@ -131,7 +133,7 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> ODESolver::calculate_g2( System &s, c
     std::string progressstring = "G2(" + purpose + "): ";
 
     Log::L2( " : Preparing Cache Matrices...\n" );
-    int matdim = std::ceil( savedStates.size() / s.parameters.iterations_t_skip ) + 1;
+    int matdim = std::max( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, int( savedStates.size() ) );
     cache[purpose] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
     Log::L2( ": Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}...\n", purpose, gmat.rows(), gmat.cols() );

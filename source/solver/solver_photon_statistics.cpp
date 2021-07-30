@@ -449,8 +449,8 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
             annihilator = std::move( b );
         } else {
             auto [a, b, discard1, discard2] = calculate_g2( s, s_creator, s_annihilator, s_creator, s_annihilator, purpose );
-            creator = std::move( a );
-            annihilator = std::move( b );
+            creator = a;     //std::move( a );
+            annihilator = b; //std::move( b );
         }
         // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
         auto &gmat = cache[purpose];
@@ -494,7 +494,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
             Log::L2( "Saving G{} integrated function to {}.txt...\n", order, purpose );
             FILE *f_gfunc = std::fopen( ( s.parameters.subfolder + purpose + ".txt" ).c_str(), "w" );
             fmt::print( f_gfunc, "Time\tAbs(g2(tau))\tReal(g2(tau))\tImag(g2(tau))\tAbs(g2(t,0))\tReal(g2(t,0))\tImag(g2(t,0))\tAbs(g2(0))\tReal(g2(0))\tImag(g2(0))\n" );
-            for ( int l = 0; l < gmat.cols(); l++ ) {
+            for ( int l = 0; l < topv.size(); l++ ) { //gmat.cols()
                 Scalar g2oftau = 0;
                 for ( int k = 0; k < gmat.rows(); k++ ) {
                     g2oftau += gmat( k, l );
