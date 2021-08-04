@@ -127,9 +127,6 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
                                                    {s_g2_2112, op_creator_2 * op_creator_1 * op_annihilator_1 * op_annihilator_2},
                                                    {s_g2_2211, op_creator_2 * op_creator_2 * op_annihilator_1 * op_annihilator_1},
                                                    {s_g2_2222, op_creator_2 * op_creator_2 * op_annihilator_2 * op_annihilator_2}};
-    //for ( auto &mode : { s_g2_1111, s_g2_1122, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2222, s_g2_2211, s_g2_1212 } ) {
-    //    rho[mode] = std::vector<Scalar>( std::ceil( savedStates.size() / s.parameters.iterations_t_skip ), 0 );
-    //}
 
     Timer &timer_c = Timers::create( "Concurrence (" + fout + ")" );
     timer_c.start();
@@ -240,7 +237,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     to_output["Conc_g2zero"][fout] = output_g2zero;
     to_output_m["TwoPMat"][fout] = twophotonmatrix;
     to_output_m["TwoPMat"][fout + "_g2zero"] = twophotonmatrix_g2zero;
-    Log::L1( "Final Concurrence: {} ({} with g2(0)) {}\n", std::abs( output.back() ), std::abs( output_g2zero.back() ), fout );
+    Log::L1( "Final Concurrence: {:.10f} ({:.10f} with g2(0)) {}\n", std::real( output.back() ), std::real( output_g2zero.back() ), fout );
     return true;
 }
 

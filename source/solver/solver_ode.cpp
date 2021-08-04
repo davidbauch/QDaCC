@@ -12,10 +12,10 @@ ODESolver::ODESolver( System &s ) {
     Log::L2( "Done!\n" );
 }
 
-//TODO: redo mit map <double, Matrix>
 Sparse ODESolver::getHamilton( System &s, const double t, bool use_saved_hamiltons ) {
     if ( s.parameters.numerics_use_saved_hamiltons ) {
         if ( savedHamiltons.count( t ) == 0 ) {
+#pragma omp critical
             saveHamilton( s.dgl_getHamilton( t ), t );
             track_gethamilton_write++;
             track_gethamilton_calc++;
@@ -36,6 +36,7 @@ void ODESolver::saveHamilton( const Sparse &mat, const double t ) {
 }
 
 int ODESolver::reset( System &s ) {
+    //TODO: remove dim
     dim = (int)std::ceil( ( s.parameters.t_end - s.parameters.t_start ) / s.parameters.t_step ) + 10; //(int)( s.parameters.iterations_t_max / s.parameters.iterations_t_skip ) + 10;
     return dim;
 }

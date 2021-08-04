@@ -76,7 +76,7 @@ std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string
 
     // Generate Cache Matrices
     Log::L2( " : Preparing Cache Matrices...\n" );
-    int matdim = std::max( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, int( savedStates.size() ) );
+    int matdim = std::min( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1;
     cache[purpose] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
     Log::L2( " : Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, skip is {}...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, s.parameters.iterations_t_skip );
@@ -133,7 +133,7 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> ODESolver::calculate_g2( System &s, c
     std::string progressstring = "G2(" + purpose + "): ";
 
     Log::L2( " : Preparing Cache Matrices...\n" );
-    int matdim = std::max( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, int( savedStates.size() ) );
+    int matdim = std::min( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1;
     cache[purpose] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
     Log::L2( ": Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}...\n", purpose, gmat.rows(), gmat.cols() );

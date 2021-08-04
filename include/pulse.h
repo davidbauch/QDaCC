@@ -27,9 +27,9 @@ class Pulse {
 
    public:
     // Pulse values
-    std::unordered_map<double, Scalar> pulsearray;
-    std::unordered_map<double, Scalar> pulsearray_derivative;
-    std::unordered_map<double, Scalar> pulsearray_integral;
+    std::map<double, Scalar> pulsearray;
+    std::map<double, Scalar> pulsearray_derivative;
+    std::map<double, Scalar> pulsearray_integral;
     std::vector<Scalar> pulsearray_fourier;
     std::vector<double> fourier;
     std::vector<double> steps;

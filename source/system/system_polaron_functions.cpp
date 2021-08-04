@@ -189,6 +189,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             // Look if we already calculated coefficient sum for this specific t-value
             //int index = dgl_get_coefficient_index( t, 0 );
             std::pair<double, double> time_pair = std::make_pair( t, 0.0 );
+            // FIXME: multithreading mit der map is RIP wenn RK 45
             if ( parameters.numerics_use_saved_coefficients && savedCoefficients.count( time_pair ) > 0 ) {
                 // Index was found, chi(t-tau) sum used from saved vector
                 auto &coeff = savedCoefficients[time_pair];
@@ -221,7 +222,10 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 chi_tau_back_g = std::accumulate( threadmap_2.begin(), threadmap_2.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
                 // Save coefficients
                 //dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, 0 );
-                savedCoefficients[time_pair] = SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, 0 );
+                if ( parameters.numerics_use_saved_coefficients ) {
+#pragma omp critical
+                    savedCoefficients[time_pair] = SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, 0 );
+                }
             }
             // Calculate phonon contributions from (saved/calculated) coefficients and rho(t)
             integrant = dgl_kommutator( XUT, ( chi_tau_back_u * rho ).eval() );
@@ -243,10 +247,13 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                     //int index = dgl_get_coefficient_index( t, tau );
                     std::pair<double, double> time_pair = std::make_pair( t, tau );
                     if ( parameters.numerics_use_saved_coefficients && savedCoefficients.count( time_pair ) > 0 ) {
-                        // Index was found, chi(t-tau) used from saved vector
-                        auto &coeff = savedCoefficients[time_pair];
-                        chi_tau_back_u = coeff.mat1;
-                        chi_tau_back_g = coeff.mat2;
+// Index was found, chi(t-tau) used from saved vector
+#pragma omp critical
+                        {
+                            auto &coeff = savedCoefficients[time_pair];
+                            chi_tau_back_u = coeff.mat1;
+                            chi_tau_back_g = coeff.mat2;
+                        }
                     } else {
                         // Index not found, or no saving is used. Recalculate chi(t-tau).
                         chi_tau = dgl_phonons_chi( t - tau );
@@ -255,7 +262,10 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                         chi_tau_back_g = dgl_phonons_chiToX( chi_tau_back, 'g' );
                         // If saving is used, save current chi(t-tau). If markov approximation is used, only save final contributions
                         //dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, tau );
-                        savedCoefficients[time_pair] = SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
+                        if ( parameters.numerics_use_saved_coefficients ) {
+#pragma omp critical
+                            savedCoefficients[time_pair] = SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
+                        }
                     }
                     integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * past_rhos.at( rho_index ).mat ).eval() );
                     integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_back_g * past_rhos.at( rho_index ).mat ).eval() );

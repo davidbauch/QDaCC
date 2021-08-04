@@ -33,7 +33,7 @@ class OperatorMatrices {
     std::vector<Dense> base_hilbert_index;     // Maps the individual self-Hilbert indices onto the corresponding total Hilbert space indices. Used to calculate partial traces. Key is the systems base integer index
     std::map<std::string, int> base_index_map; // Maps the Key index string |a|b|...> onto an integer index
     //std::vector<double> phononCouplingFactor;
-    Dense phononCouplingFactor;
+    dDense phononCouplingFactor;
 
     // 3.0 New System Matrices
     std::map<std::string, matrix_s> el_states, ph_states, el_transitions, ph_transitions;

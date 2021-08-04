@@ -42,6 +42,7 @@ std::pair<Sparse, double> ODESolver::iterateRungeKutta45( const Sparse &rho, Sys
     Sparse H_calc_k4 = getHamilton( s, t + Solver::a4 * t_step );
     Sparse H_calc_k5 = getHamilton( s, t + Solver::a5 * t_step );
     Sparse H_calc_k6 = getHamilton( s, t + Solver::a6 * t_step );
+    Sparse H_calc_k7 = getHamilton( s, t + t_step );
     // k1-6 ausrechnen
     Sparse k1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
     Sparse k2 = s.dgl_rungeFunction( rho + t_step * Solver::b11 * k1, H_calc_k2, t + Solver::a2 * t_step, savedStates );
@@ -53,7 +54,6 @@ std::pair<Sparse, double> ODESolver::iterateRungeKutta45( const Sparse &rho, Sys
     Sparse drho = Solver::b61 * k1 + Solver::b63 * k3 + Solver::b64 * k4 + Solver::b65 * k5 + Solver::b66 * k6;
     Sparse ret = rho + t_step * drho;
     // Error
-    Sparse H_calc_k7 = getHamilton( s, t + t_step );
     Sparse k7 = s.dgl_rungeFunction( ret, H_calc_k7, t + t_step, savedStates );
     dSparse errmat = ( drho - ( k1 * Solver::e1 + k3 * Solver::e3 + k4 * Solver::e4 + k5 * Solver::e5 + k6 * Solver::e6 + k7 * Solver::e7 ) ).cwiseAbs2();
     double err = errmat.sum() / drho.cwiseAbs2().sum();
@@ -100,9 +100,10 @@ bool ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_en
     if ( s.parameters.numerics_calculate_till_converged ) {
         s.parameters.numerics_calculate_till_converged = false;
         s.parameters.t_end = t_end;
-        s.parameters.adjustInput();
+        s.parameters.iterations_t_max = output.size();
+        s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.iterations_tau_resolution ) );
         reset( s );
-        Log::L2( "Adjusted t_end to {}.\n", s.parameters.t_end );
+        Log::L1( "Adjusted t_end to {}.\n", s.parameters.t_end );
     }
     return true;
 }
@@ -117,15 +118,16 @@ bool ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t
     // Save initial value
     saveState( rho0, t_start, temp );
     double t_t = t_start; // + s.parameters.numerics_rk_stepdelta; // + t_step;
-    Sparse rho;
     while ( t_t <= t_end ) {
         // Runge-Kutta iteration
         auto rkret = iterateRungeKutta45( temp.back().mat, s, t_t, t_step, temp );
         double error = rkret.second;
-        double dh = std::pow( tolerance / 2. / error, 0.25 );
-        bool accept = false;
-        if ( error < tolerance ) {
-            accept = true;
+        double dh = std::pow( tolerance / 2. / std::max( error, 1E-15 ), 0.25 );
+        if ( std::isnan( dh ) )
+            dh = 1.0;
+        bool accept = true;
+        if ( error >= tolerance ) {
+            accept = false;
         }
         double t_step_new = t_step * dh;
         if ( s.parameters.numerics_rk_usediscrete_timesteps ) {
@@ -134,6 +136,9 @@ bool ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t
                 t_step_new -= s.parameters.numerics_rk_stepdelta * std::floor( 1.0 / dh );
             } else if ( dh > 1 and t_step_new + s.parameters.numerics_rk_stepdelta < s.parameters.numerics_rk_stepmax ) {
                 t_step_new += s.parameters.numerics_rk_stepdelta * std::floor( dh );
+                // TODO: besser anders
+                //if ( t_step_new > t_step_initial )
+                //    t_step_new = t_step_initial;
             }
             //} else
             //    accept = true;
@@ -147,6 +152,11 @@ bool ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t
             rkTimer.iterate();
             if ( do_output ) {
                 Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, progressbar_name );
+            }
+            // Adjust t_end until ground state is reached.we assume the ground state is the first entry of the DM
+            if ( s.parameters.numerics_calculate_till_converged and t_t + t_step > t_end and std::real( temp.back().mat.coeff( 0, 0 ) ) < 0.999 ) {
+                t_end += 10.0 * t_step;
+                progressbar.maximumIterations = rkTimer.getTotalIterationNumber();
             }
         }
         t_step = t_step_new;
@@ -168,5 +178,14 @@ bool ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t
     } else {
         output = temp;
     }
+    if ( s.parameters.numerics_calculate_till_converged ) {
+        s.parameters.numerics_calculate_till_converged = false;
+        s.parameters.t_end = t_end;
+        s.parameters.iterations_t_max = output.size();
+        s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.iterations_tau_resolution ) );
+        reset( s );
+        Log::L1( "Adjusted t_end to {}.\n", s.parameters.t_end );
+    }
+    Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, rkTimer.getTotalIterationNumber(), progressbar_name );
     return true;
 }

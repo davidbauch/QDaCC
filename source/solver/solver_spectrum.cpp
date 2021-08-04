@@ -44,7 +44,7 @@ bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, 
             int dim2 = (int)std::floor( ( s.parameters.t_end - s.parameters.t_start - t_t ) / ( s.parameters.t_step ) );
             for ( int j = 0; j < dim2; j += s.parameters.iterations_t_skip ) {
                 int l = i / s.parameters.iterations_t_skip;
-                out.at( spec_w ) += expfunc.at( l ) * akf_mat( k, l ); // / s.parameters.t_step / s.parameters.t_step / ( (double)s.parameters.iterations_t_skip * s.parameters.iterations_wtau_skip );
+                out.at( spec_w ) += expfunc.at( l ) * akf_mat( k, l );
             }
         }
         Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum (" + s_g1 + "): " );

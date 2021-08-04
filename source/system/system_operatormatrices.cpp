@@ -300,17 +300,17 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     else
         H_used = H;
 
-    Log::L3( "Operator Base: (size {})\n", base.size() );
-    phononCouplingFactor = Dense::Zero( base.size(), base.size() );
+    // TODO: kann eig auch vector sein.
+    phononCouplingFactor = dDense::Zero( base.size(), base.size() );
     for ( int i = 0; i < base.size(); i++ ) {
         for ( int j = 0; j < base.size(); j++ ) { // base is |el|...>
             std::string state1 = base.at( i ).substr( 1, 1 );
             std::string state2 = base.at( j ).substr( 1, 1 );
             if ( i == j )
-                phononCouplingFactor( i, j ) = std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
+                phononCouplingFactor( i, j ) = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
         }
     }
-    Log::L2( "Phonon Coupling Matrix:\n{}", Dense( phononCouplingFactor ) );
+    Log::L2( "Phonon Coupling Matrix:\n{}\n", phononCouplingFactor.format( CleanFmt ) );
 
     Log::L2( "Hamiltonoperator done!\n" );
     // Create Initial State

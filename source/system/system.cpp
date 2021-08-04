@@ -121,7 +121,7 @@ Sparse System::dgl_timetrafo( const Sparse &A, const double t ) {
                     // Convert row/col into respective photon numbers / atomic state
                     int i = it.row();
                     int j = it.col();
-                    ret.coeffRef( i, j ) *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) );
+                    ret.coeffRef( i, j ) *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) ); //it.value() = ?
                 }
             }
         }

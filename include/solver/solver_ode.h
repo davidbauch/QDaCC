@@ -15,8 +15,8 @@ class ODESolver {
     std::map<std::string, std::map<std::string, std::vector<Dense>>> to_output_m;
 
     // Cached Entries
-    std::vector<SaveState> savedStates;                // Vector for saved matrix-time tuples for densitymatrix
-    std::unordered_map<double, Sparse> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
+    std::vector<SaveState> savedStates;      // Vector for saved matrix-time tuples for densitymatrix
+    std::map<double, Sparse> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
 
     // Description: Saves a tuple of a complex (density-)matrix and time, ensuring times and matrices don't get mixed up
     // Type: ODESolver private function

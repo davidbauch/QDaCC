@@ -20,7 +20,6 @@ class Parameters {
     int numerics_order_timetrafo;
     int output_advanced_log, output_handlerstrings, output_operators, output_coefficients;
     int iterations_t_skip, iterations_tau_resolution, iterations_w_resolution;
-    int iterations_wtau_skip;
     bool scale_parameters;
     double scale_value;
     // Runtime parameters and other stuff

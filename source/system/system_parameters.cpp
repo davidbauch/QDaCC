@@ -195,6 +195,11 @@ bool Parameters::scaleInputs( const double scaling ) {
 
 bool Parameters::adjustInput() {
     Log::L2( "Adjusting Inputs...\n" );
+
+    // For threadsafety
+    if ( numerics_rk_order > 5 )
+        numerics_use_saved_hamiltons = false;
+
     // Calculate/Recalculate some parameters:
     // Adjust pulse area if pulse_type is "gauss_pi"
     for ( auto &[name, mat] : input_pulse ) {
@@ -237,7 +242,6 @@ bool Parameters::adjustInput() {
     // Calculate stuff for RK
     iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
     iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
-    iterations_wtau_skip = iterations_t_skip; //1;//iterations_t_skip; //FIXME: DEPRECATED, ramove!
 
     // No phonon adjust if pathintegral is chosen
     if ( numerics_phonon_approximation_order == 5 ) {
