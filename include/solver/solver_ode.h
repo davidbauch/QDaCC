@@ -101,6 +101,9 @@ class ODESolver {
     bool calculate_t_direction( System &s );
 
     //bool calculate_g2_0( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string fileOutputName ); //moved to advancedPhotonStatistics
+    std::tuple<std::string, std::string> get_operator_strings( const std::string &operators );
+    std::string get_operators_purpose( const std::vector<std::string> &operators, int order );
+    std::tuple<Sparse, Sparse> get_operators_matrices( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator );
     bool calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution );
     bool calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator );
     bool calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 );
@@ -119,12 +122,10 @@ class ODESolver {
     Sparse calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<SaveState> &output, const Sparse &one );
     std::vector<std::vector<Sparse>> calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<SaveState> &output );
 
-    //TODO: RKVariable mit gleicher signatur, returned dann interpoliert mit t_step werte. dann braucht man die g-funktionen nicht mehr interpolieren.
-    // die cache funktionen verwenden mitlerweile eh maps, das organizen ist also kein problem. mit path integral geht das ehr weniger, kann man aber bestimmt auch machen. ggf kann man das auch in
-    // iterateRungeKutta machen, aber dann muss man auf Threadsafety und so achten wenn z.b. die g-funktionen berechnet werden. könnte man aber auch machen tbh. oder halt einfach hier.
     bool calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true );
     bool calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true, bool interpolate = true, double tolerance = 1E-4 );
     bool calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true );
+    bool calculate_path_integral_correlation( FixedSizeSparseMap<Scalar> adms, Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output, const std::vector<Sparse> &matrices );
 };
 
 /*

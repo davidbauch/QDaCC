@@ -34,6 +34,7 @@ class OperatorMatrices {
     std::map<std::string, int> base_index_map; // Maps the Key index string |a|b|...> onto an integer index
     //std::vector<double> phononCouplingFactor;
     dDense phononCouplingFactor;
+    std::vector<int> phononCouplingIndex; //TODO
 
     // 3.0 New System Matrices
     std::map<std::string, matrix_s> el_states, ph_states, el_transitions, ph_transitions;

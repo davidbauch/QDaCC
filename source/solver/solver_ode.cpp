@@ -37,7 +37,7 @@ void ODESolver::saveHamilton( const Sparse &mat, const double t ) {
 
 int ODESolver::reset( System &s ) {
     //TODO: remove dim
-    dim = (int)std::ceil( ( s.parameters.t_end - s.parameters.t_start ) / s.parameters.t_step ) + 10; //(int)( s.parameters.iterations_t_max / s.parameters.iterations_t_skip ) + 10;
+    dim = (int)std::ceil( ( s.parameters.t_end - s.parameters.t_start ) / ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step ) ) + 10; //(int)( s.parameters.iterations_t_max / s.parameters.iterations_t_skip ) + 10;
     return dim;
 }
 
@@ -46,7 +46,7 @@ int ODESolver::getIterationNumberTau( System &s ) {
     // Tau Direction Iteration steps
     for ( int i = 0; i < (int)savedStates.size(); i += s.parameters.iterations_t_skip ) {
         double t_t = getTimeAt( i );
-        for ( double t_tau = t_t + s.parameters.t_step; t_tau < s.parameters.t_end; t_tau += s.parameters.t_step ) { // t + +s.parameters.t_step
+        for ( double t_tau = t_t + ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step ); t_tau < s.parameters.t_end; t_tau += ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step ) ) { // t + +s.parameters.t_step
             num++;
         }
     }
@@ -83,4 +83,43 @@ double ODESolver::getTimeAt( int i ) {
 
 Sparse ODESolver::getRhoAt( int i ) {
     return savedStates.at( i ).mat;
+}
+
+// Helperfunctions for g1/2 function string-matrix switch
+std::tuple<std::string, std::string> ODESolver::get_operator_strings( const std::string &operators ) {
+    std::string s_creator = "";
+    std::string s_annihilator = "";
+    for ( auto split_s_op : splitline( operators, '+' ) ) {
+        if ( s_creator.size() > 0 ) {
+            s_creator += "+";
+            s_annihilator += "+";
+        }
+        if ( std::isupper( split_s_op.front() ) ) {
+            s_annihilator += split_s_op;
+            std::reverse( split_s_op.begin(), split_s_op.end() );
+            s_creator += split_s_op;
+        } else {
+            s_creator += split_s_op + "bd";
+            s_annihilator += split_s_op + "b";
+        }
+    }
+    return std::make_tuple( s_creator, s_annihilator );
+}
+
+std::string ODESolver::get_operators_purpose( const std::vector<std::string> &operators, int order ) {
+    std::string ret = "G" + std::to_string( order );
+    for ( auto &el : operators )
+        ret += "-" + el;
+    return ret;
+}
+
+std::tuple<Sparse, Sparse> ODESolver::get_operators_matrices( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
+    Sparse op_creator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    Sparse op_annihilator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
+    for ( auto &split_s_op_creator : splitline( s_op_creator, '+' ) )
+        op_creator += s.operatorMatrices.el_transitions.count( split_s_op_creator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator].hilbert;
+    for ( auto &split_s_op_annihilator : splitline( s_op_annihilator, '+' ) )
+        op_annihilator += s.operatorMatrices.el_transitions.count( split_s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator].hilbert;
+    //return std::make_tuple( op_creator, op_annihilator );
+    return std::make_tuple( op_creator, op_creator.adjoint() );
 }

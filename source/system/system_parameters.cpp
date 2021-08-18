@@ -134,6 +134,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_pathintegral_sparse_prune_threshold = get_parameter<double>( "--pathintegral", "sparsePruneThreshold" );
     numerics_pathintegral_dynamiccutoff_iterations_max = get_parameter<double>( "--pathintegral", "iteratorStepsize" );
     numerics_pathintegral_docutoff_propagator = get_parameter_passed( "-cutoffPropagator" );
+    numerics_pathint_partially_summed = true;
     t_step_pathint = get_parameter<double>( "--pathintegral", "tstepPath" );
 
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy

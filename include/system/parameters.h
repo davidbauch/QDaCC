@@ -6,8 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "3.0"
-#define GLOBAL_PROGRAM_LASTCHANGE "Procedural System"
+#define GLOBAL_PROGRAM_VERSION "3.1"
+#define GLOBAL_PROGRAM_LASTCHANGE "Partially Summed ADM"
 
 class Parameters {
    public:
@@ -40,6 +40,7 @@ class Parameters {
     bool numerics_stretch_correlation_grid, numerics_interpolate_outputs;
     Parameter numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax, numerics_rk_order, numerics_rk_tol;
     bool numerics_rk_interpolate, numerics_rk_usediscrete_timesteps;
+    bool numerics_pathint_partially_summed;
 
     // Path Integral Numerics
     double numerics_pathintegral_stepsize_iterator;      // = 1E-12;

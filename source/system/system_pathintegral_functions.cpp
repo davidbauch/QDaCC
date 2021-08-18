@@ -9,7 +9,7 @@ Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
     double a_e = 5E-9;       //3E-9;
     double a_h = 0.87 * a_e; //a_e / 1.15;
     double rho = 5370.0;
-    for ( double w = 0.0001; w < 10.0 * parameters.p_phonon_wcutoff; w += stepsize ) {
+    for ( double w = 1E-10; w < 10.0 * parameters.p_phonon_wcutoff; w += stepsize ) {
         double J = w * parameters.p_phonon_alpha * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff );
         //double J = w * parameters.hbar * std::pow( eV7 * std::exp( -w * w * a_e * a_e / ( 4. * v_c * v_c ) ) - eV35 * std::exp( -w * w * a_h * a_h / ( 4. * v_c * v_c ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * rho * std::pow( v_c, 5. ) );
         if ( t < t_step / 2.0 ) {
@@ -21,30 +21,17 @@ Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
     return integral;
 }
 
+// As in 3.1, this function will get the group index, which equals the coupling.
 Scalar System::dgl_phonon_S_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd ) {
-    //return -phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( i_n, i_nd ) - std::conj( phi_vector[t_delta] ) * operatorMatrices.phononCouplingFactor( j_n, j_nd ) + std::conj( phi_vector[t_delta] ) * operatorMatrices.phononCouplingFactor( i_n, j_nd ) + phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( j_n, i_nd );
-    // If i or j = Groundstate, return 0
-    //return 0;
-    //Log::L1( "Modifiying i={}({}), i'={}({}), j={}({}), j'={}({}) at dt = {} --> S(i,i')={}, S(j,j')*={}, S(i,j')*={}, S(i',j)={}\n", operatorMatrices.base[i_n].back(), i_n, operatorMatrices.base[i_nd].back(), i_nd, operatorMatrices.base[j_n].back(), j_n, operatorMatrices.base[j_nd].back(), j_nd, t_delta,
-    //         phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( i_n, i_nd ), std::conj( phi_vector[t_delta] ) * operatorMatrices.phononCouplingFactor( j_n, j_nd ),
-    //         std::conj( phi_vector[t_delta] ) * operatorMatrices.phononCouplingFactor( i_n, j_nd ), phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( j_n, i_nd ) );
     Scalar result = 0;
-    result -= phi_vector_int[t_delta] * operatorMatrices.phononCouplingFactor( i_n, i_nd );
-    result -= std::conj( phi_vector_int[t_delta] ) * operatorMatrices.phononCouplingFactor( j_n, j_nd );
-    result += std::conj( phi_vector_int[t_delta] ) * operatorMatrices.phononCouplingFactor( i_n, j_nd );
-    result += phi_vector_int[t_delta] * operatorMatrices.phononCouplingFactor( j_n, i_nd );
-    //if ( i_n == i_nd ) {
-    //    result -= phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( i_n, i_nd );
-    //}
-    //if ( j_n == j_nd ) {
-    //    result -= std::conj( phi_vector[t_delta] ) * operatorMatrices.phononCouplingFactor( j_n, j_nd );
-    //}
-    //if ( i_n == j_nd ) {
-    //    result += std::conj( phi_vector[t_delta] ) * operatorMatrices.phononCouplingFactor( i_n, j_nd );
-    //}
-    //if ( i_nd == j_n ) {
-    //    result += phi_vector[t_delta] * operatorMatrices.phononCouplingFactor( j_n, i_nd );
-    //}
+    if ( i_n == i_nd )
+        result -= phi_vector_int[t_delta] * ( parameters.numerics_pathint_partially_summed ? (double)i_n : operatorMatrices.phononCouplingFactor( i_n, i_nd ) );
+    if ( j_n == j_nd )
+        result -= std::conj( phi_vector_int[t_delta] ) * ( parameters.numerics_pathint_partially_summed ? (double)j_n : operatorMatrices.phononCouplingFactor( j_n, j_nd ) );
+    if ( i_n == j_nd )
+        result += std::conj( phi_vector_int[t_delta] ) * ( parameters.numerics_pathint_partially_summed ? (double)i_n : operatorMatrices.phononCouplingFactor( i_n, j_nd ) );
+    if ( j_n == i_nd )
+        result += phi_vector_int[t_delta] * ( parameters.numerics_pathint_partially_summed ? (double)j_n : operatorMatrices.phononCouplingFactor( j_n, i_nd ) );
     return result;
 }
 

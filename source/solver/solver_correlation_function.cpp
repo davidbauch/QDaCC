@@ -56,12 +56,9 @@ std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string
     // Find Operator Matrices
     Log::L2( " : Preparing to calculate G1 Correlation function\n" );
     Log::L2( " : Generating Sparse Operator Matrices from String input...\n" );
-    Sparse op_creator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    Sparse op_annihilator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    for ( auto &split_s_op_creator : splitline( s_op_creator, '+' ) )
-        op_creator += s.operatorMatrices.el_transitions.count( split_s_op_creator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator].hilbert;
-    for ( auto &split_s_op_annihilator : splitline( s_op_annihilator, '+' ) )
-        op_annihilator += s.operatorMatrices.el_transitions.count( split_s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator].hilbert;
+    auto [op_creator, op_annihilator] = get_operators_matrices( s, s_op_creator, s_op_annihilator );
+
+    int matdim = std::min( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1;
 
     if ( cache.count( purpose ) != 0 ) {
         Log::L2( " : G1(tau) for {} already exists.\n", purpose );
@@ -74,9 +71,13 @@ std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string
     timer.start();
     std::string progressstring = "G1(" + purpose + "): ";
 
+    bool filltime = cache.count( "Time" ) == 0;
+    if ( filltime ) {
+        cache["Time"] = Dense::Zero( matdim, matdim );
+    }
+
     // Generate Cache Matrices
     Log::L2( " : Preparing Cache Matrices...\n" );
-    int matdim = std::min( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1;
     cache[purpose] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
     Log::L2( " : Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, skip is {}...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, s.parameters.iterations_t_skip );
@@ -92,6 +93,9 @@ std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string
         for ( long unsigned int j = 0; j < savedRhos.size(); j += s.parameters.iterations_t_skip ) {
             double t_tau = savedRhos.at( j ).t;
             gmat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, op_creator, t_tau );
+            if ( filltime ) {
+                cache["Time"]( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = t_t + 1i * t_tau;
+            }
         }
         Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
     }
@@ -106,23 +110,15 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> ODESolver::calculate_g2( System &s, c
     // Find Operator Matrices
     Log::L2( " : Preparing to calculate G2 Correlation function\n" );
     Log::L2( " : Generating Sparse Operator Matrices from String input...\n" );
-    Sparse op_creator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    Sparse op_creator_2 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    Sparse op_annihilator_1 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    Sparse op_annihilator_2 = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    for ( auto &split_s_op_creator_1 : splitline( s_op_creator_1, '+' ) )
-        op_creator_1 += s.operatorMatrices.el_transitions.count( split_s_op_creator_1 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator_1].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator_1].hilbert;
-    for ( auto &split_s_op_creator_2 : splitline( s_op_creator_2, '+' ) )
-        op_creator_2 += s.operatorMatrices.el_transitions.count( split_s_op_creator_2 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator_2].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator_2].hilbert;
-    for ( auto &split_s_op_annihilator_1 : splitline( s_op_annihilator_1, '+' ) )
-        op_annihilator_1 += s.operatorMatrices.el_transitions.count( split_s_op_annihilator_1 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator_1].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator_1].hilbert;
-    for ( auto &split_s_op_annihilator_2 : splitline( s_op_annihilator_2, '+' ) )
-        op_annihilator_2 += s.operatorMatrices.el_transitions.count( split_s_op_annihilator_2 ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator_2].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator_2].hilbert;
+    auto [op_creator_1, op_annihilator_1] = get_operators_matrices( s, s_op_creator_1, s_op_annihilator_1 );
+    auto [op_creator_2, op_annihilator_2] = get_operators_matrices( s, s_op_creator_2, s_op_annihilator_2 );
 
     if ( cache.count( purpose ) != 0 ) {
         Log::L2( " : G2(tau) for {} already exists.\n", purpose );
         return {op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2};
     }
+
+    int matdim = std::min( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1;
 
     // Create Timer and Progresbar
     Timer &timer = Timers::create( "RungeKutta-G2-Loop (" + purpose + ")" );
@@ -132,8 +128,12 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> ODESolver::calculate_g2( System &s, c
     Sparse evalOperator = op_creator_2 * op_annihilator_1;
     std::string progressstring = "G2(" + purpose + "): ";
 
+    bool filltime = cache.count( "Time" ) == 0;
+    if ( filltime ) {
+        cache["Time"] = Dense::Zero( matdim, matdim );
+    }
+
     Log::L2( " : Preparing Cache Matrices...\n" );
-    int matdim = std::min( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1;
     cache[purpose] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
     Log::L2( ": Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}...\n", purpose, gmat.rows(), gmat.cols() );
@@ -151,6 +151,9 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> ODESolver::calculate_g2( System &s, c
         for ( long unsigned int j = 0; j < savedRhos.size(); j += s.parameters.iterations_t_skip ) {
             double t_tau = savedRhos.at( j ).t;
             gmat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, evalOperator, t_tau );
+            if ( filltime ) {
+                cache["Time"]( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = t_t + 1i * t_tau;
+            }
         }
         Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
     }

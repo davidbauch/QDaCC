@@ -163,19 +163,19 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
         Sparse XGT = dgl_phonons_chiToX( chi, 'g' );
         int _taumax = (int)std::min( parameters.p_phonon_tcutoff / parameters.t_step, t / parameters.t_step );
         // Index vector for thread ordering
-        std::vector<int> thread_index;
-        thread_index.reserve( _taumax );
-        int thread_increment = std::ceil( _taumax / parameters.numerics_maximum_threads );
-        for ( int thread = 0; thread < parameters.numerics_maximum_threads; thread++ ) {
-            for ( int cur = 0; cur < parameters.numerics_maximum_threads; cur++ ) {
-                int vec_index = thread + cur * parameters.numerics_maximum_threads;
-                if ( vec_index < _taumax ) {
-                    thread_index.emplace_back( vec_index );
-                } else {
-                    break;
-                }
-            }
-        }
+        //std::vector<int> thread_index;
+        //thread_index.reserve( _taumax );
+        //int thread_increment = std::ceil( _taumax / parameters.numerics_maximum_threads );
+        //for ( int thread = 0; thread < parameters.numerics_maximum_threads; thread++ ) {
+        //    for ( int cur = 0; cur < parameters.numerics_maximum_threads; cur++ ) {
+        //        int vec_index = thread + cur * parameters.numerics_maximum_threads;
+        //        if ( vec_index < _taumax ) {
+        //            thread_index.emplace_back( vec_index );
+        //        } else {
+        //            break;
+        //        }
+        //    }
+        //}
         // debug
         //Log::L2("Vec index:\n");
         //for ( auto &a : thread_index) {

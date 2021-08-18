@@ -52,6 +52,7 @@ class FixedSizeSparseMap {
         return os;
     }
 
+    static Eigen::VectorXi dimensions_scaled;
     //struct hash {
     //    static std::hash<Index> hasher;
     //    inline size_t operator()( const DoubleIndex &val ) const {
@@ -65,30 +66,31 @@ class FixedSizeSparseMap {
     // https://wjngkoh.wordpress.com/2015/03/04/c-hash-function-for-eigen-matrix-and-vector/
     template <typename T>
     struct vector_hash : std::unary_function<T, size_t> {
+        static std::hash<typename T::Scalar> hasher;
         std::size_t operator()( T const &matrix ) const {
             size_t seed = 0;
             for ( size_t i = 0; i < matrix.size(); ++i ) {
                 auto elem = *( matrix.data() + i );
-                seed ^= std::hash<typename T::Scalar>()( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+                seed ^= hasher( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
             }
             return seed;
         }
     };
 
-    Index getSparseIndex( const Eigen::VectorXi &indices, const std::vector<Index> &dimensions_scaled ) {
-        Index sparse_index = indices( 0 );
-        for ( int i = 1; i < indices.size(); i++ ) {
-            sparse_index += indices( i ) * dimensions_scaled[i - 1];
+    template <typename T>
+    struct vector_compare {
+        bool operator()( const T &A, const T &B ) const {
+            return A.dot( dimensions_scaled ) < B.dot( dimensions_scaled );
         }
-        return sparse_index;
-    }
+    };
 
     typedef std::unordered_map<Eigen::VectorXi, Scalar, vector_hash<Eigen::VectorXi>> SubTensorMapEigen;
     typedef std::unordered_map<Eigen::VectorXi, SubTensorMapEigen, vector_hash<Eigen::VectorXi>> TensorMapEigen;
+    //typedef std::map<Eigen::VectorXi, Scalar, vector_compare<Eigen::VectorXi>> SubTensorMapEigen;
+    //typedef std::map<Eigen::VectorXi, SubTensorMapEigen, vector_compare<Eigen::VectorXi>> TensorMapEigen;
 
    private:
     std::vector<int> dimensions;
-    std::vector<Index> dimensions_scaled;
     Index sparse_matrix_dimension;
 
     // Ordered map including SparseIndex;Value pairs.
@@ -102,13 +104,19 @@ class FixedSizeSparseMap {
     FixedSizeSparseMap(){};
     FixedSizeSparseMap( const std::vector<int> &init_dimensions, int max_threads = 1 ) {
         sparse_matrix_dimension = 1;
+        dimensions_scaled = Eigen::VectorXi::Zero( init_dimensions.size() );
         // X
-        for ( int dim : init_dimensions ) {
-            sparse_matrix_dimension *= dim;
-            dimensions_scaled.emplace_back( sparse_matrix_dimension );
+        dimensions_scaled( 0 ) = 1;
+        for ( int i = 0; i < init_dimensions.size(); i++ ) {
+            sparse_matrix_dimension *= init_dimensions.at( i );
+            if ( i + 1 < init_dimensions.size() )
+                dimensions_scaled( i + 1 ) = sparse_matrix_dimension;
         }
+        //vector_compare<Eigen::VectorXi>::ds = dimensions_scaled;
         dimensions = init_dimensions;
-        std::cout << "Sparse Elements: " << (long long)( sparse_matrix_dimension ) << std::endl;
+        std::cout << "Tensor Size: ( ";
+        std::copy( begin( init_dimensions ), end( init_dimensions ), std::ostream_iterator<int>( std::cout, ", " ) );
+        std::cout << ") - " << (long long)( sparse_matrix_dimension * sparse_matrix_dimension ) << " total." << std::endl;
         for ( int i = 0; i < 2; i++ ) {
             //auto filler = std::vector<std::map<DoubleIndex, SparseMapTriplet, hash>>( max_threads );
             auto filler = TensorMapEigen();
@@ -121,7 +129,11 @@ class FixedSizeSparseMap {
         return values[current_value_vector];
     }
 
-    void addTriplet( Eigen::VectorXi indicesX, Eigen::VectorXi indicesY, const Scalar &value, int thread, const long long int i_n = -1, const long long int j_n = -1 ) {
+    size_t getDim() {
+        return dimensions.front();
+    }
+
+    void addTriplet( Eigen::VectorXi indicesX, Eigen::VectorXi indicesY, const Scalar &value, int thread, const int i_n = -1, const int j_n = -1, const int gi_n = -1, const int gj_n = -1 ) {
         if ( i_n != -1 && j_n != -1 ) {
             for ( int i = indicesX.size() - 1; i > 0; i-- ) {
                 indicesX( i ) = indicesX( i - 1 );
@@ -130,8 +142,10 @@ class FixedSizeSparseMap {
             indicesX( 0 ) = i_n;
             indicesY( 0 ) = j_n;
         }
-//auto sparse_index_x = getSparseIndex( indicesX, dimensions_scaled );
-//auto sparse_index_y = getSparseIndex( indicesY, dimensions_scaled );
+        if ( gi_n != -1 && gj_n != -1 ) {
+            indicesX( 1 ) = gi_n;
+            indicesY( 1 ) = gj_n;
+        }
 #pragma omp critical
         {
             auto &curX = values[current_cache_vector][indicesX];

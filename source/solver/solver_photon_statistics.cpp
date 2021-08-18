@@ -9,8 +9,8 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
     ProgressBar progressbar = ProgressBar( pbsize );
 
     // Calculate G2(t,tau) with given operator matrices
-    std::string s_g1 = "G1-" + s_op_creator + "-" + s_op_annihilator;
-    std::string s_g2 = "G2-" + s_op_creator + "-" + s_op_annihilator + "-" + s_op_creator + "-" + s_op_annihilator;
+    std::string s_g1 = get_operators_purpose( {s_op_creator, s_op_annihilator}, 1 );
+    std::string s_g2 = get_operators_purpose( {s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator}, 2 );
 
     auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
     calculate_g2( s, s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator, s_g2 );
@@ -97,14 +97,14 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
 
     std::string fout = s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
     // Calculate G2(t,tau) with given operator matrices
-    std::string s_g2_1111 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_1 + "-" + s_op_annihilator_1;
-    std::string s_g2_1122 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_2 + "-" + s_op_creator_1 + "-" + s_op_annihilator_2;
-    std::string s_g2_1212 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
-    std::string s_g2_1221 = "G2-" + s_op_creator_1 + "-" + s_op_annihilator_2 + "-" + s_op_creator_2 + "-" + s_op_annihilator_1;
-    std::string s_g2_2121 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_2 + "-" + s_op_creator_1 + "-" + s_op_annihilator_1;
-    std::string s_g2_2112 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_1 + "-" + s_op_creator_1 + "-" + s_op_annihilator_2;
-    std::string s_g2_2211 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_1;
-    std::string s_g2_2222 = "G2-" + s_op_creator_2 + "-" + s_op_annihilator_2 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
+    std::string s_g2_1111 = get_operators_purpose( {s_op_creator_1, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_1}, 2 );
+    std::string s_g2_1122 = get_operators_purpose( {s_op_creator_1, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_2}, 2 );
+    std::string s_g2_1212 = get_operators_purpose( {s_op_creator_1, s_op_annihilator_1, s_op_creator_2, s_op_annihilator_2}, 2 );
+    std::string s_g2_1221 = get_operators_purpose( {s_op_creator_1, s_op_annihilator_2, s_op_creator_2, s_op_annihilator_1}, 2 );
+    std::string s_g2_2121 = get_operators_purpose( {s_op_creator_2, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_1}, 2 );
+    std::string s_g2_2112 = get_operators_purpose( {s_op_creator_2, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_2}, 2 );
+    std::string s_g2_2211 = get_operators_purpose( {s_op_creator_2, s_op_annihilator_1, s_op_creator_2, s_op_annihilator_1}, 2 );
+    std::string s_g2_2222 = get_operators_purpose( {s_op_creator_2, s_op_annihilator_2, s_op_creator_2, s_op_annihilator_2}, 2 );
 
     calculate_g2( s, s_op_creator_1, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_1, s_g2_1111 );
     calculate_g2( s, s_op_creator_1, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_2, s_g2_1122 );
@@ -351,41 +351,13 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
     //BIG TODO: nur operator A (vernichter) übergeben!!! Erzeuger dann über "adjoint" bauen, dann ist man auf der sicheren seite!
     auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
     for ( int i = 0; i < spectrum_s.string_v["Modes"].size(); i++ ) {
-        std::string s_creator, s_annihilator;
-        for ( auto split_s_op : splitline( spectrum_s.string_v["Modes"][i], '+' ) ) {
-            if ( s_creator.size() > 0 ) {
-                s_creator += "+";
-                s_annihilator += "+";
-            }
-            if ( std::isupper( split_s_op.front() ) ) {
-                s_annihilator += split_s_op;
-                std::reverse( split_s_op.begin(), split_s_op.end() );
-                s_creator += split_s_op;
-            } else {
-                s_creator += split_s_op + "bd";
-                s_annihilator += split_s_op + "b";
-            }
-        }
+        const auto &[s_creator, s_annihilator] = get_operator_strings( spectrum_s.string_v["Modes"][i] );
         calculate_spectrum( s, s_creator, s_annihilator, spectrum_s.numerical_v["Center"][i], spectrum_s.numerical_v["Range"][i], spectrum_s.numerical_v["resW"][i] );
     }
     // Calculate Indist
     auto &indist_s = s.parameters.input_correlation["Indist"];
     for ( int i = 0; i < indist_s.string_v["Modes"].size(); i++ ) {
-        std::string s_creator, s_annihilator;
-        for ( auto split_s_op : splitline( indist_s.string_v["Modes"][i], '+' ) ) {
-            if ( s_creator.size() > 0 ) {
-                s_creator += "+";
-                s_annihilator += "+";
-            }
-            if ( std::isupper( split_s_op.front() ) ) {
-                s_annihilator += split_s_op;
-                std::reverse( split_s_op.begin(), split_s_op.end() );
-                s_creator += split_s_op;
-            } else {
-                s_creator += split_s_op + "bd";
-                s_annihilator += split_s_op + "b";
-            }
-        }
+        const auto &[s_creator, s_annihilator] = get_operator_strings( indist_s.string_v["Modes"][i] );
         calculate_indistinguishability( s, s_creator, s_annihilator );
     }
     // Calculate Conc
@@ -393,22 +365,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
     for ( auto &modes : conc_s.string_v["Modes"] ) {
         std::vector<std::string> s_creator, s_annihilator;
         for ( auto &mode : splitline( modes, '-' ) ) {
-            std::string ss_creator = "";
-            std::string ss_annihilator = "";
-            for ( auto split_s_op : splitline( mode, '+' ) ) {
-                if ( ss_creator.size() > 0 ) {
-                    ss_creator += "+";
-                    ss_annihilator += "+";
-                }
-                if ( std::isupper( split_s_op.front() ) ) {
-                    ss_annihilator += split_s_op;
-                    std::reverse( split_s_op.begin(), split_s_op.end() );
-                    ss_creator += split_s_op;
-                } else {
-                    ss_creator += split_s_op + "bd";
-                    ss_annihilator += split_s_op + "b";
-                }
-            }
+            const auto &[ss_creator, ss_annihilator] = get_operator_strings( mode );
             s_creator.emplace_back( ss_creator );
             s_annihilator.emplace_back( ss_annihilator );
         }
@@ -417,28 +374,12 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
     // Calculate G1/G2 functions
     auto &gs_s = s.parameters.input_correlation["GFunc"];
     for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
+        double t_step = ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step );
+        /// TODO : in funktion
         auto modes = gs_s.string_v["Modes"][i];
         int order = std::abs( gs_s.numerical_v["Order"][i] );
-        std::string s_creator = "";
-        std::string s_annihilator = "";
-        for ( auto &mode : splitline( modes, '+' ) ) {
-            if ( s_creator.size() > 0 ) {
-                s_creator += "+";
-                s_annihilator += "+";
-            }
-            std::string s_s_annihilator, s_s_creator;
-            if ( std::isupper( mode.front() ) ) {
-                s_s_annihilator = mode;
-                s_s_creator = mode;
-                std::reverse( s_s_creator.begin(), s_s_creator.end() );
-            } else {
-                s_s_creator = mode + "bd";
-                s_s_annihilator = mode + "b";
-            }
-            s_creator += s_s_creator;
-            s_annihilator += s_s_annihilator;
-        }
-        std::string purpose = order == 1 ? "G1-" + s_creator + "-" + s_annihilator : "G2-" + s_creator + "-" + s_annihilator + "-" + s_creator + "-" + s_annihilator;
+        const auto &[s_creator, s_annihilator] = get_operator_strings( modes );
+        std::string purpose = order == 1 ? get_operators_purpose( {s_creator, s_annihilator}, 1 ) : get_operators_purpose( {s_creator, s_annihilator, s_creator, s_annihilator}, 2 );
         Sparse creator, annihilator;
         if ( order == 1 ) {
             auto [a, b] = calculate_g1( s, s_creator, s_annihilator, purpose );
@@ -458,7 +399,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
             fmt::print( f_gfunc, "Time\tTau\tAbs\tReal\tImag\n" );
             for ( int k = 0; k < gmat.rows(); k++ ) {
                 for ( int l = 0; l < gmat.cols(); l++ ) {
-                    fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", 1.0 * k * s.parameters.t_step * s.parameters.iterations_t_skip, 1.0 * l * s.parameters.t_step * s.parameters.iterations_t_skip, std::abs( gmat( k, l ) ), std::real( gmat( k, l ) ), std::imag( gmat( k, l ) ) );
+                    fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", 1.0 * k * t_step * s.parameters.iterations_t_skip, 1.0 * l * t_step * s.parameters.iterations_t_skip, std::abs( gmat( k, l ) ), std::real( gmat( k, l ) ), std::imag( gmat( k, l ) ) );
                 }
                 fmt::print( f_gfunc, "\n" );
             }
@@ -466,16 +407,14 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
         }
         // G2(0)
         std::vector<Scalar> topv, g2ofzero;
-        auto T = savedStates.size();
-        for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
+        for ( int i = 0; i < std::min<int>( gmat.cols(), savedStates.size() ); i++ ) {
             g2ofzero.emplace_back( 0 );
             topv.emplace_back( 0 );
         }
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
-        for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
-            int k = i / s.parameters.iterations_t_skip;
-            for ( int j = 0; j < T - i; j += 1 ) {
-                topv[k] += gmat( i, j );
+        for ( int i = 0; i < std::min<int>( gmat.cols(), savedStates.size() ); i++ ) {
+            for ( int j = 0; j < gmat.cols() - i; j++ ) {
+                topv[i] += gmat( i, j );
             }
         }
         Scalar topsumv = 0;
@@ -496,7 +435,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
                 for ( int k = 0; k < gmat.rows(); k++ ) {
                     g2oftau += gmat( k, l );
                 }
-                g2oftau *= s.parameters.t_step * s.parameters.iterations_t_skip;
+                g2oftau *= t_step * s.parameters.iterations_t_skip;
                 Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( l * s.parameters.iterations_t_skip ), creator * creator * annihilator * annihilator, getTimeAt( l * s.parameters.iterations_t_skip ) ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( l ), creator * annihilator, getTimeAt( l ) ), 2.0 );
                 fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( l * s.parameters.iterations_t_skip ), std::abs( g2oftau ), std::real( g2oftau ), std::imag( g2oftau ), std::abs( g2oft ), std::real( g2oft ), std::imag( g2oft ), std::abs( g2ofzero[l] ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ) );
             }
