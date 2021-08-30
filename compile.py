@@ -122,10 +122,11 @@ if __name__ == "__main__":
     # Get Program version
     version = "0.0"
     with open(os.path.join(path, "include/system/parameters.h")) as f:
-        data = f.readlines()
-        for line in data:
+        while True:
+            line = f.readline()
             if "GLOBAL_PROGRAM_VERSION" in line:
                 version = line.split()[-1][1:-1]
+                break
     print("Will try to compile into version {}".format(version))
 
     force_recompile = True if "-frc" in sys.argv else False
