@@ -122,7 +122,7 @@ Sparse ODESolver::path_integral( const Sparse &rho0, System &s, std::vector<std:
 #pragma omp parallel for collapse( 2 ) num_threads( s.parameters.numerics_phonons_maximum_threads )
     for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
         for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
-            rho_ret( i_n, j_n ) = path_integral_recursive( rho0, s, iterates, output, adm, fillADM, max_deph, i_n, j_n, {i_n}, {j_n} );
+            rho_ret( i_n, j_n ) = path_integral_recursive( rho0, s, iterates, output, adm, fillADM, max_deph, i_n, j_n, { i_n }, { j_n } );
         }
     }
     if ( fillADM ) {
@@ -168,7 +168,7 @@ Sparse ODESolver::calculate_propagator_single( System &s, size_t tensor_dim, dou
 
 std::vector<std::vector<Sparse>> ODESolver::calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<SaveState> &output ) {
     Sparse one = Dense::Identity( tensor_dim, tensor_dim ).sparseView();
-    std::vector<std::vector<Sparse>> ret( tensor_dim, {tensor_dim, Sparse( tensor_dim, tensor_dim )} );
+    std::vector<std::vector<Sparse>> ret( tensor_dim, { tensor_dim, Sparse( tensor_dim, tensor_dim ) } );
     // Calculate first by hand to ensure the Hamilton gets calculated correclty
     ret[0][0] = calculate_propagator_single( s, tensor_dim, t0, t_step, 0, 0, output, one );
 // Calculate the remaining propagators
@@ -192,22 +192,22 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
         auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
         for ( int i = 0; i < spectrum_s.string_v["Modes"].size(); i++ ) {
             const auto &[s_creator, s_annihilator] = get_operator_strings( spectrum_s.string_v["Modes"][i] );
-            std::string g1 = get_operators_purpose( {s_creator, s_annihilator}, 1 );
+            std::string g1 = get_operators_purpose( { s_creator, s_annihilator }, 1 );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
             if ( g12_settings.count( g1 ) == 0 )
-                g12_settings[g1] = {creator, annihilator};
+                g12_settings[g1] = { creator, annihilator };
         }
         // Calculate Indist
         auto &indist_s = s.parameters.input_correlation["Indist"];
         for ( int i = 0; i < indist_s.string_v["Modes"].size(); i++ ) {
             const auto &[s_creator, s_annihilator] = get_operator_strings( indist_s.string_v["Modes"][i] );
-            std::string g1 = get_operators_purpose( {s_creator, s_annihilator}, 1 );
-            std::string g2 = get_operators_purpose( {s_creator, s_annihilator, s_creator, s_annihilator}, 2 );
+            std::string g1 = get_operators_purpose( { s_creator, s_annihilator }, 1 );
+            std::string g2 = get_operators_purpose( { s_creator, s_annihilator, s_creator, s_annihilator }, 2 );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
             if ( g12_settings.count( g1 ) == 0 )
-                g12_settings[g1] = {creator, annihilator};
+                g12_settings[g1] = { creator, annihilator };
             if ( g12_settings.count( g2 ) == 0 )
-                g12_settings[g2] = {creator, annihilator, creator, annihilator};
+                g12_settings[g2] = { creator, annihilator, creator, annihilator };
         }
         // Calculate Conc
         auto &conc_s = s.parameters.input_correlation["Conc"];
@@ -216,40 +216,40 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
             const auto &[s_creator_1, s_annihilator_1] = get_operator_strings( mode[0] );
             const auto &[s_creator_2, s_annihilator_2] = get_operator_strings( mode[1] );
 
-            std::string g2_1111 = get_operators_purpose( {s_creator_1, s_annihilator_1, s_creator_1, s_annihilator_1}, 2 );
-            std::string g2_1212 = get_operators_purpose( {s_creator_1, s_annihilator_1, s_creator_2, s_annihilator_2}, 2 );
-            std::string g2_1221 = get_operators_purpose( {s_creator_1, s_annihilator_2, s_creator_2, s_annihilator_1}, 2 );
-            std::string g2_2112 = get_operators_purpose( {s_creator_2, s_annihilator_1, s_creator_1, s_annihilator_2}, 2 );
-            std::string g2_2211 = get_operators_purpose( {s_creator_2, s_annihilator_1, s_creator_2, s_annihilator_1}, 2 );
-            std::string g2_2222 = get_operators_purpose( {s_creator_2, s_annihilator_2, s_creator_2, s_annihilator_2}, 2 );
+            std::string g2_1111 = get_operators_purpose( { s_creator_1, s_annihilator_1, s_creator_1, s_annihilator_1 }, 2 );
+            std::string g2_1212 = get_operators_purpose( { s_creator_1, s_annihilator_1, s_creator_2, s_annihilator_2 }, 2 );
+            std::string g2_1221 = get_operators_purpose( { s_creator_1, s_annihilator_2, s_creator_2, s_annihilator_1 }, 2 );
+            std::string g2_2112 = get_operators_purpose( { s_creator_2, s_annihilator_1, s_creator_1, s_annihilator_2 }, 2 );
+            std::string g2_2211 = get_operators_purpose( { s_creator_2, s_annihilator_1, s_creator_2, s_annihilator_1 }, 2 );
+            std::string g2_2222 = get_operators_purpose( { s_creator_2, s_annihilator_2, s_creator_2, s_annihilator_2 }, 2 );
 
             auto [creator_1, annihilator_1] = get_operators_matrices( s, s_creator_1, s_annihilator_1 );
             auto [creator_2, annihilator_2] = get_operators_matrices( s, s_creator_2, s_annihilator_2 );
             if ( g12_settings.count( g2_1111 ) == 0 )
-                g12_settings[g2_1111] = {creator_1, annihilator_1, creator_1, annihilator_1};
+                g12_settings[g2_1111] = { creator_1, annihilator_1, creator_1, annihilator_1 };
             if ( g12_settings.count( g2_1212 ) == 0 )
-                g12_settings[g2_1212] = {creator_1, annihilator_1, creator_1, annihilator_1};
+                g12_settings[g2_1212] = { creator_1, annihilator_1, creator_1, annihilator_1 };
             if ( g12_settings.count( g2_1221 ) == 0 )
-                g12_settings[g2_1221] = {creator_1, annihilator_1, creator_1, annihilator_1};
+                g12_settings[g2_1221] = { creator_1, annihilator_1, creator_1, annihilator_1 };
             if ( g12_settings.count( g2_2112 ) == 0 )
-                g12_settings[g2_2112] = {creator_1, annihilator_1, creator_1, annihilator_1};
+                g12_settings[g2_2112] = { creator_1, annihilator_1, creator_1, annihilator_1 };
             if ( g12_settings.count( g2_2211 ) == 0 )
-                g12_settings[g2_2211] = {creator_1, annihilator_1, creator_1, annihilator_1};
+                g12_settings[g2_2211] = { creator_1, annihilator_1, creator_1, annihilator_1 };
             if ( g12_settings.count( g2_2222 ) == 0 )
-                g12_settings[g2_2222] = {creator_1, annihilator_1, creator_1, annihilator_1};
+                g12_settings[g2_2222] = { creator_1, annihilator_1, creator_1, annihilator_1 };
         }
         // Calculate G1/G2 functions
         auto &gs_s = s.parameters.input_correlation["GFunc"];
         for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
             int order = std::abs( gs_s.numerical_v["Order"][i] );
             const auto &[s_creator, s_annihilator] = get_operator_strings( gs_s.string_v["Modes"][i] );
-            std::string g = order == 1 ? get_operators_purpose( {s_creator, s_annihilator}, 1 ) : get_operators_purpose( {s_creator, s_annihilator, s_creator, s_annihilator}, 2 );
+            std::string g = order == 1 ? get_operators_purpose( { s_creator, s_annihilator }, 1 ) : get_operators_purpose( { s_creator, s_annihilator, s_creator, s_annihilator }, 2 );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
             if ( g12_settings.count( g ) == 0 )
                 if ( order == 1 )
-                    g12_settings[g] = {creator, annihilator};
+                    g12_settings[g] = { creator, annihilator };
                 else
-                    g12_settings[g] = {creator, annihilator, creator, annihilator};
+                    g12_settings[g] = { creator, annihilator, creator, annihilator };
         }
         int matdim = std::min( int( std::floor( ( t_end - t_start ) / s.parameters.t_step_pathint ) / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1;
         for ( auto &[purpose, matrices] : g12_settings ) {
@@ -267,7 +267,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     for ( int i = 0; i < s.operatorMatrices.phononCouplingFactor.rows(); i++ ) {
         different_dimensions.insert( s.operatorMatrices.phononCouplingFactor( i, i ) );
     }
-    std::vector<int> tensor_dimensions = {tensor_dim};
+    std::vector<int> tensor_dimensions = { tensor_dim };
     for ( int i = 1; i < s.parameters.p_phonon_nc; i++ )
         tensor_dimensions.emplace_back( different_dimensions.size() );
 
@@ -296,12 +296,23 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
         Log::L3( "Calculating rho(t{})...\n", n );
         rho = path_integral( rho0, s, propagators, output, adms, n == s.parameters.p_phonon_nc - 1, n );
         saveState( rho, s.parameters.t_step_pathint * n, output );
+        rkTimer.iterate();
+        if ( do_output ) {
+            Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, progressbar_name );
+        }
     }
 
     //Log::L3( "Size of ADMs Tensor: {} bytes / {}\% filled\n", adms.getSizeOfValues(), adms.getFillRatio() * 100.0 );
     Log::L3( "Calculating Path-Integral Loop for the remaining {} timesteps...\n", std::floor( ( t_end - t_start ) / s.parameters.t_step_pathint ) - s.parameters.p_phonon_nc );
 
     //TODO NEXT: start bei t_start = 0, dann rho zum tensor mit rang 2 hochtensoren, den dann hoch zu rang 3 tensoren usw. viel besser als rekursiv. löst alle probleme mit rekursion, + korrelationsfunkction direkt möglich.
+    //FixedSizeSparseMap<Scalar> current_adm( {tensor_dim}, s.parameters.numerics_phonons_maximum_threads );
+    //for ( int l = 0; l < rho0.outerSize(); ++l ) {
+    //    for ( Sparse::InnerIterator M( rho0, l ); M; ++M ) {
+    //        current_adm.addTriplet(); //...
+    //    }
+    //}
+
     // Iterate Path integral for further time steps
     double t_start_new = t_start + s.parameters.t_step_pathint * ( s.parameters.p_phonon_nc - 1 );
     for ( double t_t = t_start_new; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
@@ -409,9 +420,9 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                 newrho( i_n, j_n ) += value;
             }
         }
-        rho = newrho.sparseView();
+        rho = newrho.sparseView() / newrho.trace();
         t2 = ( omp_get_wtime() - t2 );
-        Log::L3( "Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting: {:.4f}s, ADM Reduction: {:.4f}s ]\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2 );
+        Log::L3( "Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting: {:.4f}s, ADM Reduction: {:.4f}s ], Trace: {}\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2, s.getTrace<Scalar>( rho ) );
 
         // Dynamic Cutoff
         if ( s.parameters.numerics_pathintegral_dynamiccutoff_iterations_max > 0 ) {

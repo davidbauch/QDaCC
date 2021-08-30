@@ -114,7 +114,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     logfilecounter = convertParam<int>( splitline( get_parameter( "--lfc" ), ',' ) );
     numerics_calculate_timeresolution_indistinguishability = get_parameter_passed( "-timedepInd" );
     numerics_output_electronic_emission = get_parameter_passed( "-oElec" );
-    numerics_stretch_correlation_grid = false; //FIXME: Doesnt work right now
+    numerics_stretch_correlation_grid = false; //FIXME: Doesnt work right now //DEPRECATED
     numerics_interpolate_outputs = get_parameter_passed( "-interpolate" );
 
     // Phonon Parameters
@@ -124,6 +124,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     p_phonon_T = get_parameter<double>( "--phonons", "temperature" );
     numerics_phonon_approximation_order = get_parameter<int>( "--phonons", "phononorder" );
     numerics_phonon_approximation_markov1 = get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
+    numerics_phonon_nork45 = get_parameter_passed( "-noPhononRK45" );                    // Disables RK45 for phonon backwards integral; use if detunings are high. //TODO: andersrum, RK backwards integral soll rkorder nehmen, dann mit nork45 für backwards integral deaktivieren!
     output_coefficients = get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
     p_phonon_adjust = !get_parameter_passed( "-noPhononAdjust" );
     p_phonon_pure_dephasing = convertParam<double>( "1mueV" );
@@ -446,7 +447,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
 
     Log::wrapInBar( "Phonons", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( p_phonon_T >= 0 ) {
-        std::vector<std::string> approximations = {"Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral"};
+        std::vector<std::string> approximations = { "Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral" };
         Log::L1( "Temperature = {} k\nCutoff energy = {} meV\nCutoff Time = {} ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n", p_phonon_T, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ), p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
         // Pathintegral
         if ( numerics_phonon_approximation_order == 5 ) {
@@ -500,6 +501,8 @@ void Parameters::log( const std::vector<std::string> &info ) {
 
     Log::wrapInBar( "Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     Log::L1( "Solver used: RK{}{}\n", numerics_rk_order, numerics_rk_order != 45 ? "" : fmt::format( " (Tolerance: {}, Stepdelta: {}, Steplimits: [{},{}])", numerics_rk_tol, numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax ) );
+    if ( numerics_rk_order == 45 and numerics_phonon_nork45 )
+        Log::L1( "Will NOT use RK45 for the phonon backwards integral!\n" );
     Log::L1( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
     Log::L1( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture == 1 ) ? "YES" : "NO" ) );
     Log::L1( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) ? "Analytic" : "Matrix Exponential" ) );

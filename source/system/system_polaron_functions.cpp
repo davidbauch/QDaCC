@@ -49,7 +49,12 @@ void System::initialize_polaron_frame_functions() {
 Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
     double chirpcorrection = chirp.size() > 0 ? ( chirp.back().get( t ) + t * ( chirp.back().get( t ) - parameters.scaleVariable( chirp.back().derivative( t ), parameters.scale_value ) ) ) : 0;
     Sparse explicit_time = Sparse( chi.rows(), chi.cols() );
-    for ( auto &[mode, param] : parameters.input_photonic ) {
+    for ( auto &[mode, param] : operatorMatrices.el_transitions ) {
+        if ( param.direction == -1 )
+            continue;
+        explicit_time += 1.0i * ( param.energy + chirpcorrection ) * param.projector; //TODO: chirpcorrection * chirpfaktor
+    }
+    for ( auto &[mode, param] : parameters.input_photonic ) { //FIXME: ohne cav, keine übergäng!!
         for ( auto transition : param.string_v["CoupledTo"] ) {
             std::reverse( transition.begin(), transition.end() );
             explicit_time += 1.0i * ( operatorMatrices.el_transitions[transition].energy + chirpcorrection - operatorMatrices.ph_states[mode].energy ) * operatorMatrices.el_transitions[transition].projector * operatorMatrices.ph_transitions[mode + "b"].projector;
@@ -78,7 +83,7 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
 
     Sparse hamilton = dgl_getHamilton( t );
 
-    return -1i * dgl_kommutator( hamilton, chi ); // + explicit_time.cwiseProduct( project_matrix_sparse( chi ) );
+    return -1i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( project_matrix_sparse( chi ) );
 }
 
 Sparse System::dgl_phonons_chiToX( const Sparse &chi, const char mode ) {
@@ -90,6 +95,8 @@ Sparse System::dgl_phonons_chiToX( const Sparse &chi, const char mode ) {
 }
 
 Scalar System::dgl_phonons_greenf( double t, const char mode ) {
+    if ( phi_vector.count( t ) == 0 )
+        phi_vector[t] = dgl_phonons_phi( t ); //std::cout << "Time " << t << " is not in phi vecotr\n";
     auto phi = phi_vector[t];
     if ( mode == 'g' ) {
         return parameters.p_phonon_b * parameters.p_phonon_b * ( std::cosh( phi ) - 1.0 );
@@ -100,6 +107,8 @@ Scalar System::dgl_phonons_greenf( double t, const char mode ) {
 double System::dgl_phonons_lindblad_coefficients( double t, double energy, double coupling, Scalar pulse, const char mode, const double sign ) {
     if ( t == 0.0 )
         t = parameters.t_step * 0.01;
+    if ( phi_vector.count( t ) == 0 ) //TODO: get function for phi?
+        phi_vector[t] = dgl_phonons_phi( t );
     double ret = 0;
     if ( mode == 'L' ) {
         double bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse ), 2.0 );
@@ -137,16 +146,16 @@ Sparse System::dgl_phonons_chi( const double t ) {
 
 Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, double tau ) {
     if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) {
-        return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step, parameters.numerics_rk_tol ).mat;
+        return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step, parameters.numerics_rk_tol, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
         Sparse U = ( Dense( -1i * dgl_getHamilton( t ) * tau ).exp() ).sparseView();
         return ( U * chi_tau * U.adjoint() ).eval();
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_MIXED ) {
-        double error = 0;
+        double threshold = 0;
         for ( auto &p : pulse )
-            error += std::abs( p.get( t ) / p.maximum );
-        if ( error > 1E-4 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) { //TODO: threshold als parameter
-            return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step, parameters.numerics_rk_tol ).mat;
+            threshold += std::abs( p.get( t ) / p.maximum );
+        if ( threshold > 1E-4 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) { //TODO: threshold als parameter
+            return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), -parameters.t_step, parameters.numerics_rk_tol, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
         }
     }
     return chi_tau;

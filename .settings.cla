@@ -297,6 +297,18 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '1hyphen'
+	key = 'noPhononRK45'
+	description = 'Disables using RK45 for the phonon integral, will use constant timestep with passed dt instead.'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
 	key = 'rknointerpolate'
 	description = 'Disablse interpolation of the variable time step solution onto a constant time grid. Interpolation will automatically be enabled if correlation functions are calculated.'
 	group = 'RungeKuttaParameters'

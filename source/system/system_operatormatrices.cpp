@@ -82,11 +82,11 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             if ( trans_to.front() == '-' ) continue;
             std::string transition = bel.first + trans_to;
             el_transitions[transition].self_hilbert = bel.second.ket * el_states[trans_to].bra;
-            el_transitions[transition].direction = -1;
+            el_transitions[transition].direction = -1; //DOWN
             el_transitions[transition].energy = std::abs( p.input_electronic[trans_to].numerical["Energy"] - p.input_electronic[bel.first].numerical["Energy"] );
             std::string transition_transposed = trans_to + bel.first;
             el_transitions[transition_transposed].self_hilbert = el_states[trans_to].ket * bel.second.bra;
-            el_transitions[transition_transposed].direction = 1;
+            el_transitions[transition_transposed].direction = 1; //UP
             el_transitions[transition_transposed].energy = std::abs( p.input_electronic[trans_to].numerical["Energy"] - p.input_electronic[bel.first].numerical["Energy"] );
         }
     }
@@ -247,7 +247,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
 
     // Precalculate Polaron Matrices
     polaron_factors.emplace_back( Sparse( base.size(), base.size() ) );
-    for ( auto &[mode, param] : p.input_photonic ) {
+    for ( auto &[mode, param] : p.input_photonic ) { 
         int i = 0;
         for ( auto transition : param.string_v["CoupledTo"] ) {
             std::reverse( transition.begin(), transition.end() );

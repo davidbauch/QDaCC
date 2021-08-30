@@ -41,7 +41,8 @@ class Parameters {
     Parameter numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax, numerics_rk_order, numerics_rk_tol;
     bool numerics_rk_interpolate, numerics_rk_usediscrete_timesteps;
     bool numerics_pathint_partially_summed;
-
+    bool numerics_phonon_nork45;
+    
     // Path Integral Numerics
     double numerics_pathintegral_stepsize_iterator;      // = 1E-12;
     double numerics_pathintegral_squared_threshold;      // = 1E-32;
