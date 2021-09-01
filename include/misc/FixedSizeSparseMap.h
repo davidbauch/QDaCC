@@ -115,7 +115,7 @@ class FixedSizeSparseMap {
         //vector_compare<Eigen::VectorXi>::ds = dimensions_scaled;
         dimensions = init_dimensions;
         std::cout << "Tensor Size: ( ";
-        std::copy( begin( init_dimensions ), end( init_dimensions ), std::ostream_iterator<int>( std::cout, ", " ) );
+        std::copy( std::begin( init_dimensions ), std::end( init_dimensions ), std::ostream_iterator<int>( std::cout, ", " ) );
         std::cout << ") - " << (long long)( sparse_matrix_dimension * sparse_matrix_dimension ) << " total." << std::endl;
         for ( int i = 0; i < 2; i++ ) {
             //auto filler = std::vector<std::map<DoubleIndex, SparseMapTriplet, hash>>( max_threads );

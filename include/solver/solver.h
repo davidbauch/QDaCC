@@ -48,12 +48,12 @@ std::pair<Sparse, double> iterate_definite_integral( const Sparse &rho, std::fun
 // Description: Integrates rho from t0 to t1 via Rungefunc.
 // Type: Solver public function
 // @return: [vector<SaveState>] Vector of save state tuples (matrix, time)
-std::vector<SaveState> calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const int order );
+std::vector<SaveState> calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
 
 // Description: Integrates rho from t0 to t1 via Rungefunc.
 // Type: Solver public function
 // @return: [SaveState] Save state tuple (matrix, time)
-SaveState calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const int order );
+SaveState calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
 
 // Description: Uses the interpolation class to monotone-cubic spline interpolate a given vector of saved states, resulting in much smoother output. Should probably not be used
 // Type: Solver public function

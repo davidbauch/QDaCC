@@ -125,25 +125,27 @@ bool ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t
         double dh = std::pow( tolerance / 2. / std::max( error, 1E-15 ), 0.25 );
         if ( std::isnan( dh ) )
             dh = 1.0;
+        double t_step_new = t_step * dh; //FIXME: ohne diskrete schritte kann das hier null werden, check machen!
         bool accept = true;
         if ( error >= tolerance ) {
             accept = false;
         }
-        double t_step_new = t_step * dh;
         if ( s.parameters.numerics_rk_usediscrete_timesteps ) {
             t_step_new = t_step;
-            if ( dh < 1 and t_step_new - s.parameters.numerics_rk_stepdelta > 0 and t_step_new - s.parameters.numerics_rk_stepdelta > s.parameters.numerics_rk_stepmin ) {
+            if ( dh < 1 ) {
                 t_step_new -= s.parameters.numerics_rk_stepdelta * std::floor( 1.0 / dh );
-            } else if ( dh > 1 and t_step_new + s.parameters.numerics_rk_stepdelta < s.parameters.numerics_rk_stepmax ) {
+            } else {
                 t_step_new += s.parameters.numerics_rk_stepdelta * std::floor( dh );
-                // TODO: besser anders
-                //if ( t_step_new > t_step_initial )
-                //    t_step_new = t_step_initial;
             }
-            //} else
-            //    accept = true;
+            if ( t_step_new < s.parameters.numerics_rk_stepmin ) {
+                t_step_new = s.parameters.numerics_rk_stepmin;
+                accept = true;
+            } else if ( t_step_new > s.parameters.numerics_rk_stepmax ) {
+                t_step_new = s.parameters.numerics_rk_stepmax;
+                accept = true;
+            }
         }
-        Log::L3( "[t = {}] - - - Local error: {} - dh = {}, current timestep is: {}, new timestep will be: {}\n", t_t, error, dh, t_step, t_step_new );
+        Log::L3( "[t = {}] - - - Local error: {} - dh = {}, current timestep is: {}, new timestep will be: {}, accept current step = {}\n", t_t, error, dh, t_step, t_step_new, accept );
         if ( accept ) {
             t_t += t_step;
             saveState( rkret.first, t_t, temp );
