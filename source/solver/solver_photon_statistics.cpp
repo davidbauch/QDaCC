@@ -489,12 +489,29 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
             continue;
         Log::L2( "Saving Two-Photon Matrix to twopmat_" + mode + ".txt...\n" );
         FILE *f_twophot = std::fopen( ( s.parameters.subfolder + "twopmat_" + mode + ".txt" ).c_str(), "w" );
-        fmt::print( f_twophot, "Time\t{}\n", mode );
+        fmt::print( f_twophot, "Time\t" );
+        std::vector<std::string> modes = { "11", "12", "21", "22" };
+        for ( int k = 0; k < 4; k++ ) {
+            for ( int l = 0; l < 4; l++ ) {
+                fmt::print( f_twophot, "Re({}{})\t", modes[k], modes[l] );
+            }
+        }
+        for ( int k = 0; k < 4; k++ ) {
+            for ( int l = 0; l < 4; l++ ) {
+                fmt::print( f_twophot, "Im({}{})\t", modes[k], modes[l] );
+            }
+        }
+        fmt::print( f_twophot, "\n" );
         for ( int i = 0; i < to_output_m["TwoPMat"][mode].size(); i++ ) {
             fmt::print( f_twophot, "{:.8e}\t", std::real( to_output["Conc"]["Time"][i] ) );
             for ( int k = 0; k < 4; k++ ) {
                 for ( int l = 0; l < 4; l++ ) {
-                    fmt::print( f_twophot, "{:.8e}\t", std::abs( to_output_m["TwoPMat"][mode][i]( k, l ) ) );
+                    fmt::print( f_twophot, "{:.8e}\t", std::real( to_output_m["TwoPMat"][mode][i]( k, l ) ) );
+                }
+                for ( int k = 0; k < 4; k++ ) {
+                    for ( int l = 0; l < 4; l++ ) {
+                        fmt::print( f_twophot, "{:.8e}\t", std::imag( to_output_m["TwoPMat"][mode][i]( k, l ) ) );
+                    }
                 }
             }
             fmt::print( f_twophot, "\n" );
