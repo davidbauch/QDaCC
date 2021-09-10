@@ -222,13 +222,12 @@ bool Parameters::adjustInput() {
                 mat.numerical_v["ddt"][i] = mat.numerical_v["ddt"][i] * 1E12;
         }
     }
-
     // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
-    if ( t_step == -1 ) {
+    if ( t_step < 0 ) {
         t_step = 1E-13; //std::min( scaleVariable( 1E-13, scale_value ), getIdealTimestep() );
         //t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
     }
-    if ( t_end == -1 ) {
+    if ( t_end < 0 ) {
         // If this is given, we calculate the t-direction until 99% ground state poulation is reached after any pulses.
         numerics_calculate_till_converged = true;
         for ( auto &[name, mat] : input_pulse ) {
@@ -236,7 +235,7 @@ bool Parameters::adjustInput() {
                 t_end = std::max( t_end.get(), 2.0 * t );
             }
         }
-        if ( t_end == -1 )
+        if ( t_end < 0 )
             t_end = 10E-12;
         Log::L2( "Calculate till at least {} and adjust accordingly to guarantee convergence.\n", t_end );
     }

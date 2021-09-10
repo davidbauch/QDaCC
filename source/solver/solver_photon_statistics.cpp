@@ -140,23 +140,44 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
             rho_g2zero[mode].emplace_back( 0 );
         }
     }
-#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( long unsigned int T = 0; T < savedStates.size(); T += s.parameters.iterations_t_skip ) {
-        int t = T / s.parameters.iterations_t_skip;
-        for ( auto &mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
-            for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
-                int k = i / s.parameters.iterations_t_skip;
-                for ( int tau = 0; tau < T - i; tau += s.parameters.iterations_t_skip ) {
-                    int l = tau / s.parameters.iterations_t_skip;
-                    rho[mode][t] += cache[mode]( k, l ); // * deltaT * deltaT;
-                }
+    //#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
+    //for ( long unsigned int T = 0; T < savedStates.size(); T += s.parameters.iterations_t_skip ) {
+    //    int t = T / s.parameters.iterations_t_skip;
+    //    for ( auto &mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
+    //        for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
+    //            int k = i / s.parameters.iterations_t_skip;
+    //            for ( int tau = 0; tau < T - i; tau += s.parameters.iterations_t_skip ) {
+    //                int l = tau / s.parameters.iterations_t_skip;
+    //                rho[mode][t] += cache[mode]( k, l ); // * deltaT * deltaT;
+    //            }
+    //        }
+    //        for ( int i = 0; i < T; i++ ) {
+    //            rho_g2zero[mode][t] += s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( i ), matmap_g2zero[mode], getTimeAt( i ) ) * deltaT;
+    //        }
+    //    }
+    //    timer_c.iterate();
+    //    Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence (" + fout + "): " );
+    //}
+    for ( auto &mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
+        bool didout = false;
+        rho[mode][0] = cache[mode]( 0, 0 );
+        rho_g2zero[mode][0] = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( 0 ), matmap_g2zero[mode], getTimeAt( 0 ) ); // * deltaT;
+        for ( long unsigned int T = s.parameters.iterations_t_skip; T < savedStates.size(); T += s.parameters.iterations_t_skip ) {
+            int t = T / s.parameters.iterations_t_skip;
+            rho[mode][t] = rho[mode][t - 1];
+            for ( int tau = 0; tau < savedStates.size() - T; tau += s.parameters.iterations_t_skip ) {
+                int l = tau / s.parameters.iterations_t_skip;
+                rho[mode][t] += cache[mode]( t, l ); // * deltaT * deltaT;
             }
-            for ( int i = 0; i < T; i++ ) {
-                rho_g2zero[mode][t] += s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( i ), matmap_g2zero[mode], getTimeAt( i ) ) * deltaT;
+
+            rho_g2zero[mode][t] = rho_g2zero[mode][t - 1] + s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( T ), matmap_g2zero[mode], getTimeAt( T ) ); // * deltaT;
+
+            if ( not didout ) {
+                didout = true;
+                timer_c.iterate();
+                Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence (" + fout + "): " );
             }
         }
-        timer_c.iterate();
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence (" + fout + "): " );
     }
     // Calculate EigenValues
     std::vector<Scalar> output, output_g2zero;
