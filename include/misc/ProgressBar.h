@@ -42,7 +42,7 @@ class ProgressBar {
     double spinPS;
     int maxSize;
     int type;
-    ProgressBar( int _maximumIterations, int _barLength = 60, int _decimalPoints = 0, int _type = BAR_VERTICAL, bool _isSpinning = true, double _spinPS = 0.1, std::vector<std::string> _sym = {" ", ".", ":", "|"}, std::vector<std::string> _spin = {"|", "/", "-", "\\"}, std::string _barEnd = "Done" ) { //{" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"}
+    ProgressBar( int _maximumIterations, int _barLength = 60, int _decimalPoints = 0, int _type = BAR_VERTICAL, bool _isSpinning = true, double _spinPS = 0.1, std::vector<std::string> _sym = { " ", ".", ":", "|" }, std::vector<std::string> _spin = { "|", "/", "-", "\\" }, std::string _barEnd = "Done" ) { //{" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"}
         maximumIterations = _maximumIterations;
         barLength = _barLength;
         decimalPoints = _decimalPoints;
@@ -59,7 +59,7 @@ class ProgressBar {
         strBarEnd = "]";
     }
     void calculate( int currentIterations ) {
-        currentPercent = 1.0 * currentIterations / maximumIterations;
+        currentPercent = std::min( 1.0 * currentIterations / maximumIterations, 1.0 );
         int size = (int)sym.size() - 1;
         if ( type == 0 ) {
             num0 = std::floor( currentPercent * size ); // min(*,sym.size()-1)

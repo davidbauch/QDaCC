@@ -31,14 +31,14 @@ bool System::init_system() {
     for ( auto &[mode, p] : parameters.input_chirp ) {
         Chirp::Inputs chirpinputs( parameters.t_start, parameters.t_end, parameters.t_step, p.string["Type"], parameters.numerics_rk_order );
         chirpinputs.add( p.numerical_v["Times"], p.numerical_v["Amplitude"], p.numerical_v["ddt"] );
-        chirp.push_back( {chirpinputs} );
+        chirp.push_back( { chirpinputs } );
     }
 
     // Arbitrary number of pulses onto single atomic level.
     for ( auto &[mode, p] : parameters.input_pulse ) {
         Pulse::Inputs pulseinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_rk_order );
-        pulseinputs.add( p.numerical_v["Center"], p.numerical_v["Amplitude"], p.numerical_v["Width"], p.numerical_v["Frequency"], p.numerical_v["Chirp"], p.string_v["Type"], 1.0 );
-        pulse.push_back( {pulseinputs} );
+        pulseinputs.add( p.numerical_v["Center"], p.numerical_v["Amplitude"], p.numerical_v["Width"], p.numerical_v["Frequency"], p.numerical_v["Chirp"], p.numerical_v["SuperAmp"], p.string_v["Type"], 1.0 );
+        pulse.push_back( { pulseinputs } );
     }
     //pulse_V = Pulse( pulseinputs_V );
     if ( pulse.size() > 0 ) {
@@ -110,9 +110,8 @@ Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const doub
     return ret + loss;
 }
 
-Sparse System::dgl_timetrafo( const Sparse &A, const double t ) {
-    Sparse ret = A;
-    if ( parameters.numerics_use_interactionpicture == 1 ) {
+Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
+    if ( parameters.numerics_use_interactionpicture ) {
         // TIMETRANSFORMATION_ANALYTICAL
         if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) {
             //std::vector<Eigen::Triplet<Scalar>> ret_v;
@@ -128,7 +127,7 @@ Sparse System::dgl_timetrafo( const Sparse &A, const double t ) {
         // TIMETRANSFORMATION_MATRIXEXPONENTIAL
         else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL ) {
             Sparse U = ( Dense( 1i * operatorMatrices.H_0 * t ).exp() ).sparseView();
-            ret = U * A * U.adjoint();
+            return U * ret * U.adjoint();
         }
     }
     return ret;
@@ -146,7 +145,11 @@ Sparse System::dgl_pulse( const double t ) {
         return ret;
     }
     for ( int i = 0; i < pulse.size(); i++ ) {
-        ret += operatorMatrices.pulse_mat[2 * i + 1] * pulse[i].get( t ) + operatorMatrices.pulse_mat[2 * i] * std::conj( pulse[i].get( t ) );
+        auto p = pulse[i].get( t );
+        if ( parameters.numerics_use_rwa )
+            ret += operatorMatrices.pulse_mat[2 * i + 1] * p + operatorMatrices.pulse_mat[2 * i] * std::conj( p );
+        else
+            ret += operatorMatrices.pulse_mat[2 * i + 1] * ( p + std::conj( p ) ) + operatorMatrices.pulse_mat[2 * i] * ( p + std::conj( p ) );
     }
     return ret;
 }

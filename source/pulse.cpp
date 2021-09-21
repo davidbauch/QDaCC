@@ -24,7 +24,7 @@ Scalar Pulse::evaluate( double t ) {
         } else if ( inputs.type.at( i ).compare( "gauss" ) == 0 ) {
             double amp = std::sqrt( std::pow( inputs.omega_chirp.at( i ) / inputs.sigma.at( i ), 2.0 ) + std::pow( inputs.sigma.at( i ), 2.0 ) );
             double freq = inputs.omega_chirp.at( i ) / ( std::pow( inputs.omega_chirp.at( i ), 2.0 ) + std::pow( inputs.sigma.at( i ), 4.0 ) );
-            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / amp, 2. ) - 1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + 0.5 * freq * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
+            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / amp, inputs.super_amp.at( i ) ) - 1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + 0.5 * freq * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
         } else if ( inputs.type.at( i ).compare( "cutoff" ) == 0 ) {
             ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / inputs.sigma.at( i ), 2. ) ) * ( std::exp( -1i * ( ( inputs.omega.at( i ) - inputs.omega_chirp.at( i ) ) * ( t - inputs.center.at( i ) ) ) ) + std::exp( -1i * ( ( inputs.omega.at( i ) + inputs.omega_chirp.at( i ) ) * ( t - inputs.center.at( i ) ) ) ) );
         }
@@ -115,7 +115,7 @@ void Pulse::Inputs::add( double _center, double _amp, double _sigma, double _ome
     Log::L2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center, _amp, _sigma, _omega, _omega_chirp, _type );
 }
 
-void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<std::string> &_type, std::complex<double> amp_scaling ) {
+void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<Parameter> &_super_amp, std::vector<std::string> &_type, std::complex<double> amp_scaling ) {
     if ( !( _center.size() == _amp.size() && _sigma.size() == _omega.size() && _amp.size() == _sigma.size() && _sigma.size() == _type.size() ) ) {
         Log::L2( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
         return;
@@ -126,11 +126,12 @@ void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter>
         sigma.emplace_back( _sigma.at( i ) );
         omega.emplace_back( _omega.at( i ) );
         omega_chirp.emplace_back( _omega_chirp.at( i ) );
+        super_amp.emplace_back( _super_amp.at( i ) );
         type.emplace_back( _type.at( i ) );
         Log::L2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. No filter was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ) );
     }
 }
-void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<std::string> &_type, std::vector<std::string> &_filter, std::string to_match, std::complex<double> amp_scaling ) {
+void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<Parameter> &_super_amp, std::vector<std::string> &_type, std::vector<std::string> &_filter, std::string to_match, std::complex<double> amp_scaling ) {
     if ( !( _center.size() == _amp.size() && _sigma.size() == _omega.size() && _amp.size() == _sigma.size() && _sigma.size() == _type.size() && _type.size() == _filter.size() && _filter.size() == _omega_chirp.size() ) ) {
         Log::L2( "Input arrays don't have the same length! No Vectors are created, initializing pulse will fail!\n" );
         return;
@@ -142,6 +143,7 @@ void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter>
             sigma.emplace_back( _sigma.at( i ) );
             omega.emplace_back( _omega.at( i ) );
             omega_chirp.emplace_back( _omega_chirp.at( i ) );
+            super_amp.emplace_back( _super_amp.at( i ) );
             type.emplace_back( _type.at( i ) );
             Log::L2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ), to_match );
         } else {
@@ -210,6 +212,14 @@ void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
         Log::L2( "Failed to open outputfile for Pulse!\n" );
         return;
     }
+    fmt::print( pulsefile, "t" );
+    for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
+        fmt::print( pulsefile, "\tabs(Omega_{0}(t))\treal(Omega_{0}(t)))", p );
+    }
+    for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
+        fmt::print( pulsefile, "\tw\tabs(FT(Omega_{0}(t)))\t", p );
+    }
+    fmt::print( pulsefile, "\n" );
     int i = 0;
     for ( double t = pulses.front().inputs.t_start; t < pulses.front().inputs.t_end + pulses.front().inputs.t_step; t += pulses.front().inputs.t_step ) {
         fmt::print( pulsefile, "{:.8e}\t", t );
@@ -218,7 +228,7 @@ void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses ) {
         }
         for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
             if ( i < pulses.at( p ).pulsearray_fourier.size() )
-                fmt::print( pulsefile, "{:.10e}\t{:.10e}", pulses.at( p ).fourier.at( i ), std::abs( pulses.at( p ).pulsearray_fourier.at( i ) ) );
+                fmt::print( pulsefile, "{:.10e}\t{:.10e}\t", pulses.at( p ).fourier.at( i ), std::abs( pulses.at( p ).pulsearray_fourier.at( i ) ) );
             else
                 fmt::print( pulsefile, "\t\t" );
         }

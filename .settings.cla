@@ -338,13 +338,13 @@ CLA_ARGUMENT = {
 	}
 	CLA_PARAMETER = {
 		subkey = 'rkstepdelta'
-		value = '10E-15'
+		value = '1E-15'
 		datatype = 'double'
 		description = 'Delta for increases and decreases in delta t.'
 	}
 	CLA_PARAMETER = {
 		subkey = 'rkstepmin'
-		value = '10E-15'
+		value = '1E-15'
 		datatype = 'double'
 		description = 'Minimum value for delta t.'
 	}

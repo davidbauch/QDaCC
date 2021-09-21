@@ -95,7 +95,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
 
     // Look for --spectrum, if not found, no spectrum is evaluated
     iterations_tau_resolution = get_parameter<int>( "--spectrum", "gridres" );
-    numerics_use_interactionpicture = get_parameter_passed( "-noInteractionpic" ) ? 0 : 1;
+    numerics_use_interactionpicture = get_parameter_passed( "-noInteractionpic" ) ? false : true;
     numerics_use_rwa = get_parameter_passed( "-noRWA" ) ? 0 : 1;
     numerics_maximum_threads = get_parameter<int>( "--Threads" );
     if ( numerics_maximum_threads == -1 )
@@ -296,17 +296,19 @@ void Parameters::parse_system() {
         input_photonic[conf[0]] = conf_s;
     }
 
+    //TODO: erst pulsetype übergeben, dann parameter parsen. verschiedene types können dann auch verschieden viele paramter haben.
     auto pulses = splitline( inputstring_pulse, ';' );
     for ( std::string &pulse : pulses ) {
         auto conf = splitline( pulse, ':' );
         input_s conf_s;
-        conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                               // Coupled to Transitions
-        conf_s.numerical_v["Amplitude"] = convertParam<Parameter>( splitline( conf[2], ',' ) ); // Pulse Amp
-        conf_s.numerical_v["Frequency"] = convertParam<Parameter>( splitline( conf[3], ',' ) ); // Frequency
-        conf_s.numerical_v["Width"] = convertParam<Parameter>( splitline( conf[4], ',' ) );     // Width
-        conf_s.numerical_v["Center"] = convertParam<Parameter>( splitline( conf[5], ',' ) );    // Center
-        conf_s.numerical_v["Chirp"] = convertParam<Parameter>( splitline( conf[6], ',' ) );     // Chirp
-        conf_s.string_v["Type"] = splitline( conf[7], ',' );                                    // Type
+        conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                                                                                                                     // Coupled to Transitions
+        conf_s.numerical_v["Amplitude"] = convertParam<Parameter>( splitline( conf[2], ',' ) );                                                                                       // Pulse Amp
+        conf_s.numerical_v["Frequency"] = convertParam<Parameter>( splitline( conf[3], ',' ) );                                                                                       // Frequency
+        conf_s.numerical_v["Width"] = convertParam<Parameter>( splitline( conf[4], ',' ) );                                                                                           // Width
+        conf_s.numerical_v["Center"] = convertParam<Parameter>( splitline( conf[5], ',' ) );                                                                                          // Center
+        conf_s.numerical_v["Chirp"] = convertParam<Parameter>( splitline( conf[6], ',' ) );                                                                                           // Chirp
+        conf_s.string_v["Type"] = splitline( conf[7], ',' );                                                                                                                          // Type
+        conf_s.numerical_v["SuperAmp"] = conf.size() > 8 ? convertParam<Parameter>( splitline( conf[8], ',' ) ) : std::vector<Parameter>( conf_s.numerical_v["Center"].size(), 2.0 ); // Optional: SuperGaussian Amplitude
         input_pulse[conf[0]] = conf_s;
     }
     auto chirps = splitline( inputstring_chirp, ';' );
@@ -418,7 +420,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
                 Log::L1( " - - Width: {} s - {:.8} ps\n", mat.numerical_v["Width"][i], mat.numerical_v["Width"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 Log::L1( " - - Center: {} s - {:.8} ps\n", mat.numerical_v["Center"][i], mat.numerical_v["Center"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 Log::L1( " - - Chirp: {}\n", mat.numerical_v["Chirp"][i] );
-                Log::L1( " - - Type: {}\n", mat.string_v["Type"][i] );
+                Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i], mat.string_v["Type"][i] == "gauss" ? fmt::format( " (Gaussian Amplitude: {})", mat.numerical_v["SuperAmp"][i] ) : "" );
             }
         }
         Log::L1( "\n" );
@@ -503,7 +505,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
     if ( numerics_rk_order == 45 and numerics_phonon_nork45 )
         Log::L1( "Will NOT use RK45 for the phonon backwards integral!\n" );
     Log::L1( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
-    Log::L1( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture == 1 ) ? "YES" : "NO" ) );
+    Log::L1( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture ) ? "YES" : "NO" ) );
     Log::L1( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) ? "Analytic" : "Matrix Exponential" ) );
     Log::L1( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\nThreads used by Eigen: {}\n", numerics_phonons_maximum_threads, numerics_maximum_threads, Eigen::nbThreads() );
     Log::L1( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );

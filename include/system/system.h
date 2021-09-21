@@ -60,7 +60,7 @@ class System {
     System( const std::vector<std::string> &input );
 
     // Initializes the System class. Will be called inside the system constructor
-    Sparse dgl_timetrafo( const Sparse &op, const double t );
+    Sparse dgl_timetrafo( Sparse ret, const double t );
 
     // Calculates the differential equation for different input times for evaluation with the any-order Runge-Kutta solver
     Sparse dgl_rungeFunction( const Sparse &rho, const Sparse &H, const double t, std::vector<SaveState> &past_rhos );

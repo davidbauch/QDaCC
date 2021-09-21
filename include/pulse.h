@@ -12,13 +12,14 @@ class Pulse {
         std::vector<double> sigma;
         std::vector<double> omega;
         std::vector<double> omega_chirp;
+        std::vector<double> super_amp;
         double t_start, t_end, t_step;
         int order;
         Inputs(){};
         Inputs( double t_start, double t_end, double t_step, int order ) : t_start( t_start ), t_end( t_end ), t_step( t_step ), order( order ) {}
         void add( double _center, double _amp, double _sigma, double _omega, double _omega_chirp, std::string _type );
-        void add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<std::string> &_type, std::complex<double> amp_scaling = 1.0 );
-        void add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<std::string> &_type, std::vector<std::string> &_filter, std::string to_match, std::complex<double> amp_scaling = 1.0 );
+        void add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<Parameter> &_super_amp, std::vector<std::string> &_type, std::complex<double> amp_scaling = 1.0 );
+        void add( std::vector<Parameter> &_center, std::vector<Parameter> &_amp, std::vector<Parameter> &_sigma, std::vector<Parameter> &_omega, std::vector<Parameter> &_omega_chirp, std::vector<Parameter> &_super_amp, std::vector<std::string> &_type, std::vector<std::string> &_filter, std::string to_match, std::complex<double> amp_scaling = 1.0 );
     };
 
    private:
