@@ -15,8 +15,12 @@ class ODESolver {
     std::map<std::string, std::map<std::string, std::vector<Dense>>> to_output_m;
 
     // Cached Entries
-    std::vector<SaveState> savedStates;      // Vector for saved matrix-time tuples for densitymatrix
-    std::map<double, Sparse> savedHamiltons; // Vector for saved matrix-time tuples for hamilton operators
+    std::vector<SaveState> savedStates;                                    // Vector for saved matrix-time tuples for densitymatrix
+    std::map<double, Sparse> savedHamiltons;                               // Vector for saved matrix-time tuples for hamilton operators
+    std::map<double, std::vector<std::vector<Sparse>>> pathint_propagator; // Propagators for the path integral. Used for their corresponding correlation functions.
+
+    // Path Integral Helper Variables
+    std::vector<int> pathint_tensor_dimensions;
 
     // Description: Saves a tuple of a complex (density-)matrix and time, ensuring times and matrices don't get mixed up
     // Type: ODESolver private function
@@ -120,7 +124,7 @@ class ODESolver {
     Scalar path_integral_recursive_backwards( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph, int i_n, int j_n, const std::vector<int> &indicesX, const std::vector<int> &indicesY, Scalar adm_value = 1, int current_deph = -1 );
     Sparse path_integral( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph );
     Sparse calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<SaveState> &output, const Sparse &one );
-    std::vector<std::vector<Sparse>> calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<SaveState> &output );
+    std::vector<std::vector<Sparse>> &calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<SaveState> &output );
 
     bool calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true );
     bool calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output = true, bool interpolate = true, double tolerance = 1E-4 );

@@ -10,7 +10,7 @@ bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, 
     // Send system command to change to single core mainprogram, because this memberfunction is already using multithreading
     s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Calculate G1(t,tau) with given operator matrices
-    std::string s_g1 = get_operators_purpose( {s_op_creator, s_op_annihilator}, 1 );
+    std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 );
     auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
     auto &akf_mat = cache[s_g1];
 

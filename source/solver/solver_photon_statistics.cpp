@@ -27,10 +27,10 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
     Timer &timer = Timers::create( "Indistinguishability " + fout );
     timer.start();
 
-    Log::L2( "Using matstep = {}\n", s.parameters.iterations_t_skip );
+    auto T = std::min<int32_t>( akf_mat_g1.rows() * s.parameters.iterations_t_skip, savedStates.size() ); //savedStates.size();
+    Log::L2( "Using matstep = {} -> matdim = {}\n", s.parameters.iterations_t_skip, T );
 
     std::vector<Scalar> top, bottom, topv;
-    auto T = akf_mat_g1.rows(); //savedStates.size();
     for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
         outp.emplace_back( 0 );
         outpv.emplace_back( 0 );
@@ -131,10 +131,12 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     Timer &timer_c = Timers::create( "Concurrence (" + fout + ")" );
     timer_c.start();
 
+    auto T = std::min<int32_t>( cache[s_g2_1111].rows() * s.parameters.iterations_t_skip, savedStates.size() );
+
     double deltaT = s.parameters.t_step * ( 1.0 * s.parameters.iterations_t_skip );
     Log::L2( "Calculating Concurrence... Integral Timestep: {}\n", deltaT );
 
-    for ( long unsigned int T = 0; T < savedStates.size(); T += s.parameters.iterations_t_skip ) {
+    for ( long unsigned int t = 0; t < T; t += s.parameters.iterations_t_skip ) {
         for ( auto &mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
             rho[mode].emplace_back( 0 );
             rho_g2zero[mode].emplace_back( 0 );
@@ -162,15 +164,15 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
         bool didout = false;
         rho[mode][0] = cache[mode]( 0, 0 );
         rho_g2zero[mode][0] = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( 0 ), matmap_g2zero[mode], getTimeAt( 0 ) ); // * deltaT;
-        for ( long unsigned int T = s.parameters.iterations_t_skip; T < savedStates.size(); T += s.parameters.iterations_t_skip ) {
-            int t = T / s.parameters.iterations_t_skip;
+        for ( long unsigned int i = s.parameters.iterations_t_skip; i < T; i += s.parameters.iterations_t_skip ) {
+            int t = i / s.parameters.iterations_t_skip;
             rho[mode][t] = rho[mode][t - 1];
-            for ( int tau = 0; tau < savedStates.size() - T; tau += s.parameters.iterations_t_skip ) {
+            for ( int tau = 0; tau < T - i; tau += s.parameters.iterations_t_skip ) {
                 int l = tau / s.parameters.iterations_t_skip;
                 rho[mode][t] += cache[mode]( t, l ); // * deltaT * deltaT;
             }
 
-            rho_g2zero[mode][t] = rho_g2zero[mode][t - 1] + s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( T ), matmap_g2zero[mode], getTimeAt( T ) ); // * deltaT;
+            rho_g2zero[mode][t] = rho_g2zero[mode][t - 1] + s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( i ), matmap_g2zero[mode], getTimeAt( i ) ); // * deltaT;
 
             if ( not didout ) {
                 didout = true;
@@ -183,7 +185,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     std::vector<Scalar> output, output_g2zero;
     std::vector<Scalar> time;
     std::vector<Dense> twophotonmatrix, twophotonmatrix_g2zero;
-    for ( long unsigned int i = 0; i < rho[s_g2_1111].size(); i++ ) {
+    for ( long unsigned int i = 0; i < T; i++ ) {
         output.emplace_back( 0 );
         output_g2zero.emplace_back( 0 );
         time.emplace_back( 0 );
@@ -198,7 +200,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     spinflip( 3, 0 ) = -1;
     Log::L3( "Spinflip Matrix: {}\n", spinflip );
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( long unsigned int k = 0; k < rho[s_g2_1111].size(); k++ ) {
+    for ( long unsigned int k = 0; k < T; k++ ) {
         //Log::L3( "Creating 2 photon matrix\n" );
         Dense rho_2phot = Dense::Zero( 4, 4 );
         Dense rho_2phot_g2zero = Dense::Zero( 4, 4 );

@@ -45,14 +45,14 @@ template <typename Scalar>
 class FixedSizeSparseMap {
    public:
     // Index Type definition
-    typedef long long Index;
+    typedef uint64_t Index;
     // Overwrite << stream operator
     friend std::ostream &operator<<( std::ostream &os, const Index i ) noexcept {
         os << (long long)i;
         return os;
     }
 
-    static Eigen::VectorXi dimensions_scaled;
+    Eigen::VectorXi dimensions_scaled;
     //struct hash {
     //    static std::hash<Index> hasher;
     //    inline size_t operator()( const DoubleIndex &val ) const {
@@ -89,8 +89,8 @@ class FixedSizeSparseMap {
     //typedef std::map<Eigen::VectorXi, Scalar, vector_compare<Eigen::VectorXi>> SubTensorMapEigen;
     //typedef std::map<Eigen::VectorXi, SubTensorMapEigen, vector_compare<Eigen::VectorXi>> TensorMapEigen;
 
-   private:
     std::vector<int> dimensions;
+
     Index sparse_matrix_dimension;
 
     // Ordered map including SparseIndex;Value pairs.
@@ -104,29 +104,44 @@ class FixedSizeSparseMap {
     FixedSizeSparseMap(){};
     FixedSizeSparseMap( const std::vector<int> &init_dimensions, int max_threads = 1 ) {
         sparse_matrix_dimension = 1;
-        dimensions_scaled = Eigen::VectorXi::Zero( init_dimensions.size() );
-        // X
-        dimensions_scaled( 0 ) = 1;
-        for ( int i = 0; i < init_dimensions.size(); i++ ) {
-            sparse_matrix_dimension *= init_dimensions.at( i );
-            if ( i + 1 < init_dimensions.size() )
-                dimensions_scaled( i + 1 ) = sparse_matrix_dimension;
-        }
-        //vector_compare<Eigen::VectorXi>::ds = dimensions_scaled;
         dimensions = init_dimensions;
-        std::cout << "Tensor Size: ( ";
-        std::copy( std::begin( init_dimensions ), std::end( init_dimensions ), std::ostream_iterator<int>( std::cout, ", " ) );
-        std::cout << ") - " << (long long)( sparse_matrix_dimension * sparse_matrix_dimension ) << " total." << std::endl;
+        rescale_dimensions();
         for ( int i = 0; i < 2; i++ ) {
             //auto filler = std::vector<std::map<DoubleIndex, SparseMapTriplet, hash>>( max_threads );
             auto filler = TensorMapEigen();
             values.emplace_back( filler );
         }
     }
+    FixedSizeSparseMap( const FixedSizeSparseMap &other ) : values( other.values ),
+                                                            dimensions( other.dimensions ),
+                                                            dimensions_scaled( other.dimensions_scaled ),
+                                                            current_value_vector( other.current_value_vector ),
+                                                            current_cache_vector( other.current_cache_vector ) {}
 
     //std::vector<std::map<DoubleIndex, SparseMapTriplet, hash>> &get() {
     TensorMapEigen &get() {
         return values[current_value_vector];
+    }
+
+    // Adds subdimension and adjustes dimensions_scaled
+    void add_dimension( int dim ) {
+        dimensions.emplace_back( dim );
+        rescale_dimensions();
+    }
+
+    void rescale_dimensions() {
+        sparse_matrix_dimension = 1;
+        dimensions_scaled = Eigen::VectorXi::Zero( dimensions.size() );
+        // X
+        dimensions_scaled( 0 ) = 1;
+        for ( int i = 0; i < dimensions.size(); i++ ) {
+            sparse_matrix_dimension *= dimensions.at( i );
+            if ( i + 1 < dimensions.size() )
+                dimensions_scaled( i + 1 ) = sparse_matrix_dimension;
+        }
+        std::cout << "Tensor Size: ( ";
+        std::copy( std::begin( dimensions ), std::end( dimensions ), std::ostream_iterator<int>( std::cout, ", " ) );
+        std::cout << ") - " << (uint64_t)( sparse_matrix_dimension * sparse_matrix_dimension ) << " total." << std::endl;
     }
 
     size_t getDim() {
@@ -155,7 +170,6 @@ class FixedSizeSparseMap {
                 curX[indicesY] = value;
             }
         }
-        //values[current_cache_vector][sparse_index_x][sparse_index_y].addWithCheckForExistence( value, indicesX, indicesY, sparse_index_x, sparse_index_y );
     }
 
     long long int nonZeros() {
