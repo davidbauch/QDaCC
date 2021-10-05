@@ -147,8 +147,8 @@ if __name__ == "__main__":
     libs_obj = {'win32': "-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
                 'darwin': "-Wno-volatile -std=c++20 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs",
                 "cluster" : "-Wno-volatile -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs"}
-    include_obj = {'win32': '-I"C:\{}\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external"'.format(msyspath), 
-                    'darwin': "-I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/include' -I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/external'",
+    include_obj = {'win32': '-I"C:\{}\myinclude" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC3.0/include" -I"C:/Users/david/OneDrive - Universität Paderborn/Kot/BP/QDLC3.0/external"'.format(msyspath), 
+                    'darwin': "-I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC3.0/include' -I'/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC3.0/external'",
                     "cluster" : "-I'/upb/departments/pc2/users/d/dbauch/QDLC-C/include' -I'/upb/departments/pc2/users/d/dbauch/QDLC-C/external'"}
 
     libs_final = {'win32': '-Wno-volatile -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs {}'.format("-static" if "-static" in sys.argv else ""), 

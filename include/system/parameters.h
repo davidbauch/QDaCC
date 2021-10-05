@@ -6,8 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "3.1"
-#define GLOBAL_PROGRAM_LASTCHANGE "Partially Summed ADM"
+#define GLOBAL_PROGRAM_VERSION "3.2"
+#define GLOBAL_PROGRAM_LASTCHANGE "Multithreaded ADM"
 
 class Parameters {
    public:

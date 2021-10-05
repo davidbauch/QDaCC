@@ -7,39 +7,6 @@
 #include <map>
 #include <functional>
 #include <array>
-//using int128 = __uint128_t;
-//std::ostream &operator<<( std::ostream &os, const int128 i ) noexcept {
-//    std::ostream::sentry s( os );
-//    if ( s ) {
-//        unsigned __int128 tmp = i < 0 ? -i : i;
-//        char buffer[128];
-//        char *d = std::end( buffer );
-//        do {
-//            --d;
-//            *d = "0123456789"[tmp % 10];
-//            tmp /= 10;
-//        } while ( tmp != 0 );
-//        if ( i < 0 ) {
-//            --d;
-//            *d = '-';
-//        }
-//        int len = std::end( buffer ) - d;
-//        if ( os.rdbuf()->sputn( d, len ) != len ) {
-//            os.setstate( std::ios_base::badbit );
-//        }
-//    }
-//    return os;
-//}
-
-//template <>
-//struct std::less<Eigen::VectorXi> {
-//    bool operator()( const Eigen::VectorXi &a, const Eigen::VectorXi &b ) const {
-//        for ( size_t i = 0; i < a.size(); ++i ) {
-//            if ( a[i] > b[i] ) return false;
-//        }
-//        return true;
-//    }
-//};
 
 template <typename Scalar>
 class FixedSizeSparseMap {
@@ -141,7 +108,7 @@ class FixedSizeSparseMap {
         }
         std::cout << "Tensor Size: ( ";
         std::copy( std::begin( dimensions ), std::end( dimensions ), std::ostream_iterator<int>( std::cout, ", " ) );
-        std::cout << ") - " << (uint64_t)( sparse_matrix_dimension * sparse_matrix_dimension ) << " total." << std::endl;
+        std::cout << ") - " << ( uint64_t )( sparse_matrix_dimension * sparse_matrix_dimension ) << " total." << std::endl;
     }
 
     size_t getDim() {
@@ -161,7 +128,7 @@ class FixedSizeSparseMap {
             indicesX( 1 ) = gi_n;
             indicesY( 1 ) = gj_n;
         }
-#pragma omp critical
+//#pragma omp critical
         {
             auto &curX = values[current_cache_vector][indicesX];
             if ( curX.count( indicesY ) > 0 ) {
@@ -182,6 +149,8 @@ class FixedSizeSparseMap {
     std::vector<std::pair<Eigen::VectorXi, SubTensorMapEigen>> getIndices() {
         std::vector<std::pair<Eigen::VectorXi, SubTensorMapEigen>> ret( values[current_value_vector].size() );
         std::move( values[current_value_vector].begin(), values[current_value_vector].end(), ret.begin() );
+        //std::sort( ret.begin(), ret.end(), [&]( const std::pair<Eigen::VectorXi, SubTensorMapEigen> &a, const std::pair<Eigen::VectorXi, SubTensorMapEigen> &b ) { return a.first(a.first.size() - 1) > b.first(b.first.size() - 1); } );
+        std::sort( ret.begin(), ret.end(), [&]( const std::pair<Eigen::VectorXi, SubTensorMapEigen> &a, const std::pair<Eigen::VectorXi, SubTensorMapEigen> &b ) { return a.first(0) < b.first(0); } );
         return ret;
     }
 
