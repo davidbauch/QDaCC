@@ -13,25 +13,24 @@ Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
         double J = w * parameters.p_phonon_alpha * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff );
         //double J = w * parameters.hbar * std::pow( eV7 * std::exp( -w * w * a_e * a_e / ( 4. * v_c * v_c ) ) - eV35 * std::exp( -w * w * a_h * a_h / ( 4. * v_c * v_c ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * rho * std::pow( v_c, 5. ) );
         if ( t < t_step / 2.0 ) {
-            integral += stepsize * J * ( ( 1.0 - std::cos( w * t_step ) ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) + 1.i * std::sin( w * t_step ) ); // - 1.i * w * t_step );
+            integral += stepsize * J * ( ( 1.0 - std::cos( w * t_step ) ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) + 1.0i * std::sin( w * t_step ) ); // - 1.i * w * t_step );
         } else {
-            integral += stepsize * 2.0 * J * ( 1.0 - std::cos( w * t_step ) ) * ( std::cos( w * t ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) - 1.i * std::sin( w * t ) );
+            integral += stepsize * 2.0 * J * ( 1.0 - std::cos( w * t_step ) ) * ( std::cos( w * t ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) - 1.0i * std::sin( w * t ) );
         }
     }
     return integral;
 }
 
-// As in 3.1, this function will get the group index, which equals the coupling.
 Scalar System::dgl_phonon_S_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd ) {
     Scalar result = 0;
     if ( i_n == i_nd )
-        result -= phi_vector_int[t_delta] * ( parameters.numerics_pathint_partially_summed ? (double)i_n : operatorMatrices.phononCouplingFactor( i_n, i_nd ) );
+        result -= phi_vector_int[t_delta] * ( parameters.numerics_pathint_partially_summed ? operatorMatrices.phononCouplingIndexValue[i_n] : operatorMatrices.phononCouplingFactor( i_n, i_nd ) );
     if ( j_n == j_nd )
-        result -= std::conj( phi_vector_int[t_delta] ) * ( parameters.numerics_pathint_partially_summed ? (double)j_n : operatorMatrices.phononCouplingFactor( j_n, j_nd ) );
+        result -= std::conj( phi_vector_int[t_delta] ) * ( parameters.numerics_pathint_partially_summed ? operatorMatrices.phononCouplingIndexValue[j_n] : operatorMatrices.phononCouplingFactor( j_n, j_nd ) );
     if ( i_n == j_nd )
-        result += std::conj( phi_vector_int[t_delta] ) * ( parameters.numerics_pathint_partially_summed ? (double)i_n : operatorMatrices.phononCouplingFactor( i_n, j_nd ) );
+        result += std::conj( phi_vector_int[t_delta] ) * ( parameters.numerics_pathint_partially_summed ? operatorMatrices.phononCouplingIndexValue[i_n] : operatorMatrices.phononCouplingFactor( i_n, j_nd ) );
     if ( j_n == i_nd )
-        result += phi_vector_int[t_delta] * ( parameters.numerics_pathint_partially_summed ? (double)j_n : operatorMatrices.phononCouplingFactor( j_n, i_nd ) );
+        result += phi_vector_int[t_delta] * ( parameters.numerics_pathint_partially_summed ? operatorMatrices.phononCouplingIndexValue[j_n] : operatorMatrices.phononCouplingFactor( j_n, i_nd ) );
     return result;
 }
 
@@ -40,6 +39,7 @@ void System::initialize_path_integral_functions() {
     // kernel in phi-vector schreiben
     int tau_max = parameters.p_phonon_nc + 1;
     Log::L2( "Initializing Kernel Memory functions...\n" );
+    phi_vector_int.clear();
     for ( double tau = 0.0; tau < parameters.t_step_pathint * tau_max; tau += parameters.t_step_pathint ) {
         phi_vector[tau] = dgl_phonons_kernel( tau, parameters.t_step_pathint );
         phi_vector_int.emplace_back( phi_vector[tau] );

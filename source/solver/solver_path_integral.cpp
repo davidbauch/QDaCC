@@ -123,7 +123,7 @@ Sparse ODESolver::path_integral( const Sparse &rho0, System &s, std::vector<std:
         }
     }
     if ( fillADM ) {
-        adm.reduceDublicates();
+        //adm.swapAndClearCache();
     }
     return rho_ret.sparseView();
 }
@@ -191,7 +191,6 @@ std::vector<std::vector<Sparse>> &ODESolver::calculate_propagator_vector( System
     return pathint_propagator[-1];
 }
 
-// TODO: cache all propagators in giant map. recalculation for correlation functions scales with number of functions otherwise.
 bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output ) {
     // Generate list of needed G1 and G2 functions. To save on the excessive RAM usage by caching the ADM for every timestep, we calculate the tau-direction for every t step here.
     std::map<std::string, std::vector<Sparse>> g12_settings;
@@ -263,26 +262,43 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
         }
         int matdim = std::min( int( std::floor( ( t_end - t_start ) / s.parameters.t_step_pathint ) / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1;
         for ( auto &[purpose, matrices] : g12_settings ) {
-            Log::L3( "[PATHINT] Calculating G-Function with purpose {} in place with path integral.\n", purpose );
+            Log::L2( "[PATHINT] Calculating G-Function with purpose {} in place with path integral.\n", purpose );
             cache[purpose] = Dense::Zero( matdim, matdim );
         }
         if ( cache.size() > 0 )
             cache["Time"] = Dense::Zero( matdim, matdim );
     }
 
-    Log::L3( "[PATHINT] Setting up Path-Integral Solver...\n" );
+    Log::L2( "[PATHINT] Setting up Path-Integral Solver...\n" );
     output.reserve( s.parameters.iterations_t_max + 1 );
     int tensor_dim = rho0.rows();
 
     std::set<int> different_dimensions;
     for ( int i = 0; i < s.operatorMatrices.phononCouplingFactor.rows(); i++ ) {
-        different_dimensions.insert( s.operatorMatrices.phononCouplingFactor( i, i ) );
+        different_dimensions.insert( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( i, i ) : i );
     }
+
     pathint_tensor_dimensions = { tensor_dim };
     for ( int i = 1; i < s.parameters.p_phonon_nc; i++ )
         pathint_tensor_dimensions.emplace_back( different_dimensions.size() );
 
-    FixedSizeSparseMap<Scalar> adms = FixedSizeSparseMap<Scalar>( { tensor_dim }, s.parameters.numerics_phonons_maximum_threads );
+    std::stringstream adm_tensor_dimensions;
+    std::copy( std::begin( pathint_tensor_dimensions ), std::end( pathint_tensor_dimensions ), std::ostream_iterator<int>( adm_tensor_dimensions, ", " ) );
+    Log::L2( "[PATHINT] ADM Tensor dimensions will reach: [{}]\n", adm_tensor_dimensions.str() );
+
+    int adm_multithreading_cores = 1; //std::min<int>( s.parameters.numerics_phonons_maximum_threads, different_dimensions.size() );
+    Log::L2( "[PATHINT] Using #{} cpu cores for the ADM propagation.\n", adm_multithreading_cores );
+
+    std::vector<std::vector<int>> adm_multithreaded_indices( different_dimensions.size() );
+    for ( int i = 0; i < tensor_dim; i++ ) {
+        adm_multithreaded_indices[s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( i, i ) : i].emplace_back( i );
+    }
+    Log::L2( "[PATHINT] CPU Threaded vectors are:\n" );
+    for ( auto &v : adm_multithreaded_indices ) {
+        Log::L2( "[PATHINT] - {}\n", v );
+    }
+
+    FixedSizeSparseMap<Scalar> adms = FixedSizeSparseMap<Scalar>( adm_multithreading_cores );
 
     // Calculate first n_c timesteps directly
     //Log::L3( "Calculating first n_c = {} timesteps of the pathintegral directly...\n", s.parameters.p_phonon_nc );
@@ -324,16 +340,18 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
             Eigen::VectorXi jj = Eigen::VectorXi( 1 );
             ii( 0 ) = i;
             jj( 0 ) = j;
-            adms.addTriplet( ii, jj, rho.coeff( i, j ), omp_get_thread_num() );
+            adms.addTriplet( ii, jj, rho.coeff( i, j ), 0 );
         }
     }
-    adms.reduceDublicates();
+    adms.swapAndClearCache( tensor_dim, adm_multithreading_cores );
+
     Log::L3( "[PATHINT] Filled Initial Tensor with elements: [" );
-    for ( auto &[sparse_index_x, outer_map] : adms.get() ) {
-        for ( auto &[sparse_index_y, value] : outer_map ) {
-            Log::L3( "{} ({},{}), ", value, sparse_index_x, sparse_index_y );
-        }
-    }
+    for ( auto &[i0, a0] : adms.get() )
+        for ( auto &[j0, a1] : a0 )
+            for ( auto &[sparse_index_x, c0] : a1 )
+                for ( auto &[sparse_index_y, value] : c0 ) {
+                    Log::L3( "{} ({},{}), ", value, sparse_index_x, sparse_index_y );
+                }
     Log::L3( "] ({} elements)\n", adms.nonZeros() );
 
     // Iterate Path integral for further time steps
@@ -351,7 +369,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                 int order = matrices.size() == 4 ? 2 : 1;
                 std::vector<SaveState> temp;
                 auto &gmat = cache[purpose];
-                calculate_path_integral_correlation( adms, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, purpose, s, temp, do_output, matrices );
+                calculate_path_integral_correlation( adms, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, purpose, s, temp, do_output, matrices, adm_multithreaded_indices, adm_multithreading_cores );
                 for ( int32_t j = 0; j < std::min<int32_t>( temp.size(), gmat.rows() * s.parameters.iterations_t_skip ); j += s.parameters.iterations_t_skip ) {
                     double t_tau = temp.at( j ).t;
                     //Log::L3( "Filling gmat for t = {}, tau = {}\n", t_t, t_tau );
@@ -383,117 +401,89 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
         // Main Iteration loop
         Log::L3( "[PATHINT] Current Tensor Size: {} elements at a total of {} MB\n", adms.nonZeros(), adms.size() / 1024. / 1024. );
         auto t1 = omp_get_wtime();
+        double ts;
         double total_append_time = 0;
         double total_time = 0;
 
-        bool addeddimension = false;
-        if ( adms.dimensions_scaled.size() < s.parameters.p_phonon_nc ) {
-            auto toadd = pathint_tensor_dimensions.at( t_t / s.parameters.t_step_pathint + 1 );
-            Log::L3( "[PATHINT] Added tensor dimension {} to the path integral, total dimensions: {}\n", toadd, adms.dimensions_scaled.size() );
-            adms.add_dimension( toadd );
-            addeddimension = true;
-        }
+        bool addeddimension = std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) < ( s.parameters.p_phonon_nc - 2 );
 
-        ////for ( auto &threadvector : adms.get() )
-        //auto tensor = adms.getIndices();
-        //// Find starting and endpoint for threads:
-        //std::vector<std::pair<size_t, size_t>> indices;
-        //int index_size = 0; //tensor.front().first.size() - 1;
-        //size_t current = tensor.front().first( index_size );
-        //for ( size_t i = 1; i < tensor.size(); i++ ) {
-        //    if ( tensor[i].first( index_size ) > tensor[i - 1].first( index_size ) ) {
-        //        indices.emplace_back( std::make_pair( current, i ) );
-        //        current = i;
-        //    }
-        //}
-        //if ( current < tensor.size() )
-        //    indices.emplace_back( std::make_pair( current, tensor.size() ) );
+#pragma omp parallel for collapse( 2 ) num_threads( adm_multithreading_cores )
+        for ( auto &idx : adm_multithreaded_indices )
+            for ( auto &jdx : adm_multithreaded_indices )
+                for ( auto &i_n_m1 : idx )
+                    for ( auto &j_n_m1 : jdx )
+                        for ( int l = 0; l < propagator[i_n_m1][j_n_m1].outerSize(); ++l )
+                            for ( Sparse::InnerIterator M( propagator[i_n_m1][j_n_m1], l ); M; ++M ) {
+                                int i_n = M.row();
+                                int j_n = M.col();
+                                int gi_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i_n] : i_n;
+                                int gj_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[j_n] : j_n;
+                                for ( auto &[sparse_index_x, inner] : adms.get()[i_n_m1][j_n_m1] )
+                                    for ( auto &[sparse_index_y, value] : inner ) {
+                                        if ( abs2( value ) == 0 ) continue;
+                                        auto tt = omp_get_wtime();
+                                        //Log::L3( "[PATHINT] (T{}) handling ({}),({}) -> {}\n", omp_get_thread_num(), sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), value );
+                                        //for ( int l = 0; l < propagator[sparse_index_x( 0 )][sparse_index_y( 0 )].outerSize(); ++l )
+                                        //    for ( Sparse::InnerIterator M( propagator[sparse_index_x( 0 )][sparse_index_y( 0 )], l ); M; ++M ) {
 
-        //for ( auto &[a, b] : indices ) {
-        //    Log::L3( "[{} {}], ", a, b );
-        //}
-        //    Log::L3( "\n" );
+                                        Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
+                                        for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
+                                            int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )] : sparse_index_x( 0 ) ) : sparse_index_x( tau ) );
+                                            int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] : sparse_index_y( 0 ) ) : sparse_index_y( tau ) );
+                                            phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
+                                        }
 
-        //#pragma omp parallel for num_threads( s.parameters.numerics_phonons_maximum_threads )
-        //for ( auto &[a, b] : indices )
-        //for ( int index = a; index < b; index++ ) {
-        //auto &[sparse_index_x, outer_map] = tensor[index];
-        for ( auto &[sparse_index_x, outer_map] : adms.get() ) {
-            //#pragma omp parallel for num_threads( s.parameters.numerics_phonons_maximum_threads )
-            //            for ( auto i = 0; i < adms.get().size(); i++ ) {
-            //                auto iterator = adms.get().begin();
-            //                std::advance( iterator, i );
-            //                auto &sparse_index_x = iterator->first;
-            //                auto &outer_map = iterator->second;
-            for ( auto &[sparse_index_y, value] : outer_map ) {
-                if ( abs2( value ) == 0 ) continue;
-                auto tt = omp_get_wtime();
-                //Log::L3( "[PATHINT] handling ({}),({}) -> {}\n", sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), value );
-                for ( int l = 0; l < propagator[sparse_index_x( 0 )][sparse_index_y( 0 )].outerSize(); ++l ) {
-                    for ( Sparse::InnerIterator M( propagator[sparse_index_x( 0 )][sparse_index_y( 0 )], l ); M; ++M ) {
-                        int i_n = M.row();
-                        int j_n = M.col();
-                        int gi_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( i_n, i_n ) : i_n; //TODO: nicht couplingFactor, sondern couplingIndex = set(couplingFactor), damit auch non-int couplings gehen!
-                        int gj_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( j_n, j_n ) : j_n;
-
-                        Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
-                        for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
-                            int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( sparse_index_x( 0 ), sparse_index_x( 0 ) ) : sparse_index_x( 0 ) ) : sparse_index_x( tau ) );
-                            int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( sparse_index_y( 0 ), sparse_index_y( 0 ) ) : sparse_index_y( 0 ) ) : sparse_index_y( tau ) );
-                            phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
-                        }
-                        Scalar val = M.value() * value * std::exp( phonon_s );
-                        double abs = abs2( val );
-                        auto appendtime = omp_get_wtime();
-                        // Add Element to Triplet list if they are diagonal elements or if they surpass the given threshold.
-                        if ( i_n == j_n || abs >= s.parameters.numerics_pathintegral_squared_threshold ) {
-                            // Add new indices to vectors:
-                            if ( addeddimension ) {
-                                Eigen::VectorXi new_sparse_index_x = Eigen::VectorXi::Zero( sparse_index_x.size() + 1 );
-                                Eigen::VectorXi new_sparse_index_y = Eigen::VectorXi::Zero( sparse_index_y.size() + 1 );
-                                for ( int i = 0; i < sparse_index_x.size(); i++ ) {
-                                    new_sparse_index_x( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( sparse_index_x( i ), sparse_index_x( i ) ) : sparse_index_x( i ) );
-                                    new_sparse_index_y( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( sparse_index_y( i ), sparse_index_y( i ) ) : sparse_index_y( i ) );
-                                }
-                                new_sparse_index_x( 0 ) = i_n;
-                                new_sparse_index_y( 0 ) = j_n;
-                                adms.addTriplet( new_sparse_index_x, new_sparse_index_y, val, omp_get_thread_num() );
-                            } else {
-                                cur_min = cur_min != 0.0 && cur_min < abs ? cur_min : abs;
-                                if ( s.parameters.numerics_pathint_partially_summed )
-                                    adms.addTriplet( sparse_index_x, sparse_index_y, val, omp_get_thread_num(), i_n, j_n, s.operatorMatrices.phononCouplingFactor( sparse_index_x( 0 ), sparse_index_x( 0 ) ), s.operatorMatrices.phononCouplingFactor( sparse_index_y( 0 ), sparse_index_y( 0 ) ) );
-                                else
-                                    adms.addTriplet( sparse_index_x, sparse_index_y, val, omp_get_thread_num(), i_n, j_n );
+                                        Scalar val = M.value() * value * std::exp( phonon_s );
+                                        double abs = abs2( val );
+                                        auto appendtime = omp_get_wtime();
+                                        // Add Element to Triplet list if they are diagonal elements or if they surpass the given threshold.
+                                        if ( i_n == j_n || abs >= s.parameters.numerics_pathintegral_squared_threshold ) {
+                                            // Add new indices to vectors:
+                                            if ( addeddimension ) {
+                                                Eigen::VectorXi new_sparse_index_x = Eigen::VectorXi::Zero( sparse_index_x.size() + 1 );
+                                                Eigen::VectorXi new_sparse_index_y = Eigen::VectorXi::Zero( sparse_index_y.size() + 1 );
+                                                for ( int i = 0; i < sparse_index_x.size(); i++ ) {
+                                                    new_sparse_index_x( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( i )] : sparse_index_x( i ) );
+                                                    new_sparse_index_y( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( i )] : sparse_index_y( i ) );
+                                                }
+                                                new_sparse_index_x( 0 ) = i_n;
+                                                new_sparse_index_y( 0 ) = j_n;
+                                                adms.addTriplet( new_sparse_index_x, new_sparse_index_y, val, omp_get_thread_num() );
+                                            } else {
+                                                cur_min = cur_min != 0.0 && cur_min < abs ? cur_min : abs;
+                                                if ( s.parameters.numerics_pathint_partially_summed )
+                                                    adms.addTriplet( sparse_index_x, sparse_index_y, val, omp_get_thread_num(), i_n, j_n, s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )], s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] );
+                                                else
+                                                    adms.addTriplet( sparse_index_x, sparse_index_y, val, omp_get_thread_num(), i_n, j_n );
+                                            }
+                                        }
+                                        total_append_time += omp_get_wtime() - appendtime;
+                                        total_time += omp_get_wtime() - tt;
+                                    }
                             }
-                        }
-                        total_append_time += omp_get_wtime() - appendtime;
-                    }
-                }
-                total_time += omp_get_wtime() - tt;
-            }
-        }
 
         t1 = ( omp_get_wtime() - t1 );
 
-        auto ts = omp_get_wtime();
-        adms.reduceDublicates();
-        ts = omp_get_wtime() - ts;
+        adms.swapAndClearCache( tensor_dim, s.parameters.numerics_phonons_maximum_threads );
 
         Log::L3( "[PATHINT] Reducing ADM\n" );
         // Calculate the reduced density matrix by tracing over all past times for each entry
         auto t2 = omp_get_wtime();
         Dense newrho = Dense::Zero( tensor_dim, tensor_dim );
-        for ( auto &[sparse_index_x, outer_map] : adms.get() ) {
-            for ( auto &[sparse_index_y, value] : outer_map ) {
-                int i_n = sparse_index_x( 0 );
-                int j_n = sparse_index_y( 0 );
-                newrho( i_n, j_n ) += value;
-            }
-        }
+
+        for ( auto &[i0, a0] : adms.get() )
+            for ( auto &[j0, a1] : a0 )
+                for ( auto &[sparse_index_x, c0] : a1 )
+                    for ( auto &[sparse_index_y, value] : c0 ) {
+                        int i_n = sparse_index_x( 0 );
+                        int j_n = sparse_index_y( 0 );
+                        newrho( i_n, j_n ) += value;
+                    }
+
         //rho = newrho.sparseView() / newrho.trace();
-        rho = newrho.sparseView() / newrho.trace();
+        rho = newrho.sparseView();// / newrho.trace();
         t2 = ( omp_get_wtime() - t2 );
-        Log::L3( "[PATHINT] Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting: {:.4f}s, ADM Reduction: {:.4f}s ], Trace: {}, Elements: {}\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2, s.getTrace<Scalar>( rho ), adms.nonZeros() );
+        Log::L3( "[PATHINT] Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting (Parallel): {:.4f}s, ADM Reduction: {:.4f}s ], Trace: {}, Elements: {}\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2, s.getTrace<Scalar>( rho ), adms.nonZeros() );
 
         // Dynamic Cutoff
         if ( s.parameters.numerics_pathintegral_dynamiccutoff_iterations_max > 0 ) {
@@ -514,12 +504,15 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
             Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, progressbar_name );
         }
     }
-    //Log::L3( "Final Size of ADMs Tensor: {} bytes / {}\% filled\n", adms.getSizeOfValues(), adms.getFillRatio() * 100.0 );
+
+    // TODO MAYBE: interpolate density matrices to t_step instead of t_step_path -> indist, spectrum integral more smooth!
+    // additionally, correlation functions do not need to concern about timestep
+
     Log::L3( "Done!\n" );
     return true;
 }
 
-bool ODESolver::calculate_path_integral_correlation( FixedSizeSparseMap<Scalar> adm_correlation, Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output, const std::vector<Sparse> &matrices ) {
+bool ODESolver::calculate_path_integral_correlation( FixedSizeSparseMap<Scalar> adm_correlation, Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output, const std::vector<Sparse> &matrices, const std::vector<std::vector<int>> &adm_multithreaded_indices, int adm_multithreading_cores ) {
     int order = matrices.size() == 4 ? 2 : 1;
     Log::L3( "| [PATHINT SUB] Setting up Path-Integral Solver...\n" );
     int tensor_dim = rho0.rows();
@@ -548,13 +541,7 @@ bool ODESolver::calculate_path_integral_correlation( FixedSizeSparseMap<Scalar> 
             }
         }
 
-        bool addeddimension = false;
-        if ( adm_correlation.dimensions_scaled.size() < s.parameters.p_phonon_nc ) {
-            auto toadd = pathint_tensor_dimensions.at( t_t / s.parameters.t_step_pathint + 1 );
-            Log::L3( "| [PATHINT SUB] Added tensor dimension {} to the path integral, total dimensions: {}\n", toadd, adm_correlation.dimensions_scaled.size() );
-            adm_correlation.add_dimension( toadd );
-            addeddimension = true;
-        }
+        bool addeddimension = std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) < ( s.parameters.p_phonon_nc - 2 );
 
         // Main Iteration loop
         Log::L3( "| [PATHINT SUB] Current Correlation Tensor Size: {} elements at a total of {} MB\r", adm_correlation.nonZeros(), adm_correlation.size() / 1024. / 1024. );
@@ -562,73 +549,74 @@ bool ODESolver::calculate_path_integral_correlation( FixedSizeSparseMap<Scalar> 
         double total_append_time = 0;
         double total_time = 0;
 
-        for ( auto &[sparse_index_x, outer_map] : adm_correlation.get() ) {
-            for ( auto &[sparse_index_y, value] : outer_map ) {
-                if ( abs2( value ) == 0 ) continue;
-                auto tt = omp_get_wtime();
-                for ( int l = 0; l < propagator[sparse_index_x( 0 )][sparse_index_y( 0 )].outerSize(); ++l ) {
-                    for ( Sparse::InnerIterator M( propagator[sparse_index_x( 0 )][sparse_index_y( 0 )], l ); M; ++M ) {
-                        int i_n = M.row();
-                        int j_n = M.col();
-                        int gi_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( i_n, i_n ) : i_n;
-                        int gj_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( j_n, j_n ) : j_n;
-                        Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
-                        for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
-                            int gi_nd = tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( sparse_index_x( 0 ), sparse_index_x( 0 ) ) : sparse_index_x( 0 ) ) : sparse_index_x( tau );
-                            int gj_nd = tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( sparse_index_y( 0 ), sparse_index_y( 0 ) ) : sparse_index_y( 0 ) ) : sparse_index_y( tau );
-                            phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
-                        }
-                        Scalar val = M.value() * value * std::exp( phonon_s );
-                        double abs = abs2( val );
-                        auto appendtime = omp_get_wtime();
-                        // Add Element to Triplet list if they are diagonal elements or if they surpass the given threshold.
-                        if ( i_n == j_n || abs >= s.parameters.numerics_pathintegral_squared_threshold ) {
-                            // Add new indices to vectors:
-                            if ( addeddimension ) {
-                                Eigen::VectorXi new_sparse_index_x = Eigen::VectorXi::Zero( sparse_index_x.size() + 1 );
-                                Eigen::VectorXi new_sparse_index_y = Eigen::VectorXi::Zero( sparse_index_y.size() + 1 );
-                                for ( int i = 0; i < sparse_index_x.size(); i++ ) {
-                                    new_sparse_index_x( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( sparse_index_x( i ), sparse_index_x( i ) ) : sparse_index_x( i ) );
-                                    new_sparse_index_y( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( sparse_index_y( i ), sparse_index_y( i ) ) : sparse_index_y( i ) );
-                                }
-                                new_sparse_index_x( 0 ) = i_n;
-                                new_sparse_index_y( 0 ) = j_n;
-                                //Log::L3( "[PATHINT SUB] saving ({}),({}) -> {}\n", new_sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), new_sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), val );
-                                adm_correlation.addTriplet( new_sparse_index_x, new_sparse_index_y, val, omp_get_thread_num() );
-                            } else {
-                                cur_min = cur_min != 0.0 && cur_min < abs ? cur_min : abs;
-                                if ( s.parameters.numerics_pathint_partially_summed )
-                                    adm_correlation.addTriplet( sparse_index_x, sparse_index_y, val, omp_get_thread_num(), i_n, j_n, s.operatorMatrices.phononCouplingFactor( sparse_index_x( 0 ), sparse_index_x( 0 ) ), s.operatorMatrices.phononCouplingFactor( sparse_index_y( 0 ), sparse_index_y( 0 ) ) );
-                                else
-                                    adm_correlation.addTriplet( sparse_index_x, sparse_index_y, val, omp_get_thread_num(), i_n, j_n );
+#pragma omp parallel for collapse( 2 ) num_threads( adm_multithreading_cores )
+        for ( auto &idx : adm_multithreaded_indices )
+            for ( auto &jdx : adm_multithreaded_indices )
+                for ( auto &i_n_m1 : idx )
+                    for ( auto &j_n_m1 : jdx )
+                        for ( int l = 0; l < propagator[i_n_m1][j_n_m1].outerSize(); ++l )
+                            for ( Sparse::InnerIterator M( propagator[i_n_m1][j_n_m1], l ); M; ++M ) {
+                                int i_n = M.row();
+                                int j_n = M.col();
+                                int gi_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i_n] : i_n;
+                                int gj_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[j_n] : j_n;
+                                for ( auto &[sparse_index_x, inner] : adm_correlation.get()[i_n_m1][j_n_m1] )
+                                    for ( auto &[sparse_index_y, value] : inner ) {
+                                        if ( abs2( value ) == 0 ) continue;
+                                        auto tt = omp_get_wtime();
+                                        Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
+                                        for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
+                                            int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )] : sparse_index_x( 0 ) ) : sparse_index_x( tau ) );
+                                            int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] : sparse_index_y( 0 ) ) : sparse_index_y( tau ) );
+                                            phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
+                                        }
+                                        Scalar val = M.value() * value * std::exp( phonon_s );
+                                        double abs = abs2( val );
+                                        auto appendtime = omp_get_wtime();
+                                        // Add Element to Triplet list if they are diagonal elements or if they surpass the given threshold.
+                                        if ( i_n == j_n || abs >= s.parameters.numerics_pathintegral_squared_threshold ) {
+                                            // Add new indices to vectors:
+                                            if ( addeddimension ) {
+                                                Eigen::VectorXi new_sparse_index_x = Eigen::VectorXi::Zero( sparse_index_x.size() + 1 );
+                                                Eigen::VectorXi new_sparse_index_y = Eigen::VectorXi::Zero( sparse_index_y.size() + 1 );
+                                                for ( int i = 0; i < sparse_index_x.size(); i++ ) {
+                                                    new_sparse_index_x( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( i )] : sparse_index_x( i ) );
+                                                    new_sparse_index_y( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( i )] : sparse_index_y( i ) );
+                                                }
+                                                new_sparse_index_x( 0 ) = i_n;
+                                                new_sparse_index_y( 0 ) = j_n;
+                                                adm_correlation.addTriplet( new_sparse_index_x, new_sparse_index_y, val, omp_get_thread_num() );
+                                            } else {
+                                                cur_min = cur_min != 0.0 && cur_min < abs ? cur_min : abs;
+                                                if ( s.parameters.numerics_pathint_partially_summed )
+                                                    adm_correlation.addTriplet( sparse_index_x, sparse_index_y, val, omp_get_thread_num(), i_n, j_n, s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )], s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] );
+                                                else
+                                                    adm_correlation.addTriplet( sparse_index_x, sparse_index_y, val, omp_get_thread_num(), i_n, j_n );
+                                            }
+                                        }
+                                        total_append_time += omp_get_wtime() - appendtime;
+                                        total_time += omp_get_wtime() - tt;
+                                    }
                             }
-                        }
-                        total_append_time += omp_get_wtime() - appendtime;
-                        //}
-                    }
-                }
-                total_time += omp_get_wtime() - tt;
-            }
-        }
-        //modified = true;
 
         t1 = ( omp_get_wtime() - t1 );
 
         auto ts = omp_get_wtime();
-        adm_correlation.reduceDublicates();
+        adm_correlation.swapAndClearCache( tensor_dim, adm_multithreading_cores );
         ts = omp_get_wtime() - ts;
 
         Log::L3( "| [PATHINT SUB] Reducing Correlation ADM\n" );
         // Calculate the reduced density matrix by tracing over all past times for each entry
         auto t2 = omp_get_wtime();
         Dense cache = Dense::Zero( tensor_dim, tensor_dim );
-        for ( auto &[sparse_index_x, outer_map] : adm_correlation.get() ) {
-            for ( auto &[sparse_index_y, value] : outer_map ) {
-                int i_n = sparse_index_x( 0 );
-                int j_n = sparse_index_y( 0 );
-                cache( i_n, j_n ) += value;
-            }
-        }
+        for ( auto &[i0, a0] : adm_correlation.get() )
+            for ( auto &[j0, a1] : a0 )
+                for ( auto &[sparse_index_x, c0] : a1 )
+                    for ( auto &[sparse_index_y, value] : c0 ) {
+                        int i_n = sparse_index_x( 0 );
+                        int j_n = sparse_index_y( 0 );
+                        cache( i_n, j_n ) += value;
+                    }
         auto rho = cache.sparseView();
         t2 = ( omp_get_wtime() - t2 );
         Log::L3( "| [PATHINT SUB] Correlation Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting: {:.4f}s, ADM Reduction: {:.4f}s ]\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2 );
@@ -893,7 +881,7 @@ bool ODESolver::calculate_path_integral_correlation( FixedSizeSparseMap<Scalar> 
 //    }
 //
 //    if ( fillADM ) {
-//        adm.reduceDublicates();
+//        adm.swapAndClearCache();
 //    }
 //    return rho_ret.sparseView();
 //}

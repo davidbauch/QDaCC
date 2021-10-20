@@ -99,7 +99,7 @@ CLA_ARGUMENT = {
 		subkey = 'GW'
 		value = ''
 		datatype = 'string'
-		description = 'Wigner Function. Syntax: [Mode:Order]'
+		description = 'Wigner Function. Syntax: [Mode:X:Y:Res:Skip(t-direction)]'
 	}
 }
 CLA_ARGUMENT = {
@@ -552,6 +552,18 @@ CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'disableHamiltonCaching'
 	description = 'Disables saving of Hamilton matrices for later calculations. Using this will require much less ram at the cost of a lot of calculation time.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'disableFunctionCaching'
+	description = 'Disables saving of Function values (pulse,chirp,...) for later calculations.'
 	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''

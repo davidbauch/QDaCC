@@ -54,15 +54,15 @@ bool ODESolver::scale_grid( System &s, Dense &cache, std::vector<std::vector<Sav
 // @return: [bool] True if calculations were sucessfull, else false
 std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, std::string purpose ) {
     // Find Operator Matrices
-    Log::L2( " : Preparing to calculate G1 Correlation function\n" );
-    Log::L2( " : Generating Sparse Operator Matrices from String input...\n" );
+    Log::L2( "[G1CORRELATION] Preparing to calculate G1 Correlation function\n" );
+    Log::L2( "[G1CORRELATION] Generating Sparse Operator Matrices from String input...\n" );
     auto [op_creator, op_annihilator] = get_operators_matrices( s, s_op_creator, s_op_annihilator );
 
     // int matdim = std::min( int( savedStates.size() / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1; // Problem: underestimate, e.g. grid=1000, ss.size()=1500, dann ist skip=1 -> broken
     int matdim = int( savedStates.size() / s.parameters.iterations_t_skip );
 
     if ( cache.count( purpose ) != 0 ) {
-        Log::L2( " : G1(tau) for {} already exists.\n", purpose );
+        Log::L2( "[G1CORRELATION] G1(tau) for {} already exists.\n", purpose );
         return { op_creator, op_annihilator };
     }
 
@@ -78,10 +78,10 @@ std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string
     }
 
     // Generate Cache Matrices
-    Log::L2( " : Preparing Cache Matrices...\n" );
+    Log::L2( "[G1CORRELATION] Preparing Cache Matrices...\n" );
     cache[purpose] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
-    Log::L2( " : Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, skip is {}...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, s.parameters.iterations_t_skip );
+    Log::L2( "[G1CORRELATION] Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, skip is {}...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, s.parameters.iterations_t_skip );
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( long unsigned int i = 0; i < matdim; i += s.parameters.iterations_t_skip ) {
         std::vector<SaveState> savedRhos;
@@ -103,19 +103,19 @@ std::tuple<Sparse, Sparse> ODESolver::calculate_g1( System &s, const std::string
 
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
-    Log::L2( ": Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    Log::L2( "[G1CORRELATION] Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return { op_creator, op_annihilator };
 }
 
 std::tuple<Sparse, Sparse, Sparse, Sparse> ODESolver::calculate_g2( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, std::string purpose ) {
     // Find Operator Matrices
-    Log::L2( " : Preparing to calculate G2 Correlation function\n" );
-    Log::L2( " : Generating Sparse Operator Matrices from String input...\n" );
+    Log::L2( "[G2CORRELATION] Preparing to calculate G2 Correlation function\n" );
+    Log::L2( "[G2CORRELATION] Generating Sparse Operator Matrices from String input...\n" );
     auto [op_creator_1, op_annihilator_1] = get_operators_matrices( s, s_op_creator_1, s_op_annihilator_1 );
     auto [op_creator_2, op_annihilator_2] = get_operators_matrices( s, s_op_creator_2, s_op_annihilator_2 );
 
     if ( cache.count( purpose ) != 0 ) {
-        Log::L2( " : G2(tau) for {} already exists.\n", purpose );
+        Log::L2( "[G2CORRELATION] G2(tau) for {} already exists.\n", purpose );
         return { op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2 };
     }
 
@@ -134,10 +134,10 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> ODESolver::calculate_g2( System &s, c
         cache["Time"] = Dense::Zero( matdim, matdim );
     }
 
-    Log::L2( " : Preparing Cache Matrices...\n" );
+    Log::L2( "[G2CORRELATION] Preparing Cache Matrices...\n" );
     cache[purpose] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
-    Log::L2( ": Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}...\n", purpose, gmat.rows(), gmat.cols() );
+    Log::L2( "[G2CORRELATION] Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}...\n", purpose, gmat.rows(), gmat.cols() );
     // Main G2 Loop
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( long unsigned int i = 0; i < matdim; i += s.parameters.iterations_t_skip ) {
@@ -161,6 +161,6 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> ODESolver::calculate_g2( System &s, c
 
     Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, PROGRESS_FORCE_OUTPUT );
     timer.end();
-    Log::L2( ": G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    Log::L2( "[G2CORRELATION] G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return { op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2 };
 }

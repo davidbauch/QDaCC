@@ -42,6 +42,7 @@ class Parameters {
     bool numerics_rk_interpolate, numerics_rk_usediscrete_timesteps;
     bool numerics_pathint_partially_summed;
     bool numerics_phonon_nork45;
+    bool numerics_use_function_caching;
     
     // Path Integral Numerics
     double numerics_pathintegral_stepsize_iterator;      // = 1E-12;
@@ -147,7 +148,7 @@ class Parameters {
 
     // Log function; Uses log subclass (log.h)
     // @param &info: Additional information this class does not have access too when created, e.g. basis
-    void log( const std::vector<std::string> &info );
+    void log( const Dense &initial_state_vector_ket );
 
     // Help function, output when --help is called
     static void help();

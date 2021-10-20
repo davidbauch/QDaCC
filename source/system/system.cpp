@@ -9,7 +9,7 @@ System::System( const std::vector<std::string> &input ) {
     operatorMatrices = OperatorMatrices( parameters );
     operatorMatrices.outputOperators( parameters );
     // Log the operator matrix base
-    parameters.log( operatorMatrices.base );
+    parameters.log( operatorMatrices.initial_state_vector_ket );
     // Create all possible file outputs
     fileoutput = FileOutput( parameters, operatorMatrices );
     // Initialize / Adjust the remaining system class
@@ -136,7 +136,7 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
 Sparse System::dgl_chirp( const double t ) {
     if ( chirp.size() == 0 )
         return Sparse( parameters.maxStates, parameters.maxStates );
-    return operatorMatrices.chirp_mat.back() * chirp.back().get( t );
+    return operatorMatrices.chirp_mat.back() * chirp.back().get( t, !parameters.numerics_use_function_caching );
 }
 
 Sparse System::dgl_pulse( const double t ) {
@@ -145,7 +145,7 @@ Sparse System::dgl_pulse( const double t ) {
         return ret;
     }
     for ( int i = 0; i < pulse.size(); i++ ) {
-        auto p = pulse[i].get( t );
+        auto p = pulse[i].get( t, !parameters.numerics_use_function_caching );
         if ( parameters.numerics_use_rwa )
             ret += operatorMatrices.pulse_mat[2 * i + 1] * p + operatorMatrices.pulse_mat[2 * i] * std::conj( p );
         else

@@ -81,6 +81,8 @@ typedef Eigen::MatrixXcd Dense;
 typedef Eigen::MatrixXd dDense;
 typedef Eigen::SparseMatrix<Scalar> Sparse;
 typedef Eigen::SparseMatrix<double> dSparse;
+typedef Eigen::VectorXd dVector;
+typedef Eigen::VectorXcd Vector;
 
 // Vector for mat/time, tuple
 class SaveState {
@@ -107,3 +109,17 @@ class SaveScalar {
 
 bool Save_State_sort_t( const SaveStateTau &ss1, const SaveStateTau &ss2 );
 bool Save_State_sort_tau( const SaveStateTau &ss1, const SaveStateTau &ss2 );
+
+template < class T >
+std::ostream& operator << (std::ostream& os, const std::vector<T>& v) 
+{
+    os << "[";
+    for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
+    {
+        os << *ii;
+        if (ii != v.end())
+            os << " ";
+    }
+    os << "]";
+    return os;
+}

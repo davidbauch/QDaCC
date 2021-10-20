@@ -34,7 +34,8 @@ class OperatorMatrices {
     std::map<std::string, int> base_index_map; // Maps the Key index string |a|b|...> onto an integer index
     //std::vector<double> phononCouplingFactor;
     dDense phononCouplingFactor;
-    std::vector<int> phononCouplingIndex; //TODO
+    std::vector<int> phononCouplingIndex;
+    std::vector<double> phononCouplingIndexValue;
 
     // 3.0 New System Matrices
     std::map<std::string, matrix_s> el_states, ph_states, el_transitions, ph_transitions;
@@ -42,6 +43,7 @@ class OperatorMatrices {
     std::vector<Sparse> polaron_factors;
     Dense timetrafo_cachematrix;
     std::vector<Sparse> pulse_mat, chirp_mat;
+    Dense initial_state_vector_ket;
 
     // Constructor
     OperatorMatrices(){};

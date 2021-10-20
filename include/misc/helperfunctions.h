@@ -188,8 +188,10 @@ int vec_find_str( std::string toFind, const std::vector<std::string> &input );
 std::vector<std::string> argv_to_vec( int argc, char **argv );
 
 double factorial( double n );
+double factorial_range( double upper, double lower );
 
 double getCoherent( double alpha, double N );
+std::complex<double> getSqueezed( double r, double phi, double N );
 
 std::string get_parameter( const std::string &key, const std::string &subkey = "" );
 

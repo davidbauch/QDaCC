@@ -106,14 +106,15 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     startCoherent = false; //TODO://get_parameter_passed( "-startCoherent" ) || ( p_initial_state_electronic.front() == 'c' );
     output_full_dm = get_parameter_passed( "-fullDM" );
     output_no_dm = get_parameter_passed( "-noDM" );
-    scale_parameters = get_parameter_passed( "-scale" );
+    scale_parameters = get_parameter_passed( "-scale" ); // MHMHMH
     numerics_use_saved_coefficients = !get_parameter_passed( "-disableMatrixCaching" );
     numerics_use_saved_hamiltons = !get_parameter_passed( "-disableHamiltonCaching" );
+    numerics_use_function_caching = !get_parameter_passed( "-disableFunctionCaching" );
     numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
-    numerics_output_raman_population = get_parameter_passed( "-raman" );
+    numerics_output_raman_population = get_parameter_passed( "-raman" ); // DEPRECATED
     logfilecounter = convertParam<int>( splitline( get_parameter( "--lfc" ), ',' ) );
-    numerics_calculate_timeresolution_indistinguishability = get_parameter_passed( "-timedepInd" );
-    numerics_output_electronic_emission = get_parameter_passed( "-oElec" );
+    numerics_calculate_timeresolution_indistinguishability = get_parameter_passed( "-timedepInd" ); //DEPRECATED
+    numerics_output_electronic_emission = get_parameter_passed( "-oElec" ); //DEPRECATED
     numerics_stretch_correlation_grid = false; //FIXME: Doesnt work right now //DEPRECATED
     numerics_interpolate_outputs = get_parameter_passed( "-interpolate" );
 
@@ -238,6 +239,10 @@ bool Parameters::adjustInput() {
         if ( t_end < 0 )
             t_end = 10E-12;
         Log::L2( "Calculate till at least {} and adjust accordingly to guarantee convergence.\n", t_end );
+    }
+
+    if (numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL) {
+        numerics_use_saved_hamiltons = false;
     }
 
     // Calculate stuff for RK
@@ -366,7 +371,7 @@ void Parameters::parse_system() {
     }
 }
 
-void Parameters::log( const std::vector<std::string> &info ) {
+void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "                                                                                                                                                      \n                                                                                                                  #################                   \n                                                                                                              ..  :::::::::::::::::  ..               \n                                                                                                            ...       -      :+:      ...             \n                                                                                                           ...       .+:     :+:       ...            \n                                                                                                          ...        =+=     :+:        ...           \n                                                                                                         ....       :+++-    :+:         ...          \n         .:----.       ::::::.        :-:          .:---:            .:---:              :---:.          ...        :-+-:    :+:         ...          \n       +@@@@@@@@@*.   =@@@@@@@@@*:   .@@@.       =%@@@@@@@=         %@@%@@@@+          =@@@%@@@*        ....         .+:     :+:          ...         \n     .%@@*:   :*@@@.  =@@#   :+@@@+  .@@@.      %@@%-   :+-         =:   =@@@.        -@@#.  *@@#       ....         .+:     :+:          ...         \n     *@@#       #@@*  =@@#     :@@@: .@@@.     *@@%.                   .:#@@#         %@@=   .@@@.      ...          .+:     :+:          ...         \n     %@@+       +@@#  =@@#      @@@= .@@@.     %@@*         .....    @@@@@@*:         @@@-    @@@:      ...          .+:     :+:          ...         \n     #@@*       #@@*  =@@#     .@@@: .@@@.     #@@#        :@@@@@%   ...:+@@@+        %@@-   .@@@.      ....         .+:     :+:          ...         \n     -@@@-     +@@@:  =@@#    :%@@*  .@@@.     -@@@+     :: ......        %@@#   :-.  *@@*   +@@#       ....         .+:     :+:          ...         \n      -%@@@##%@@@@-   =@@@%%%@@@%=   .@@@%%%%%- :%@@@%#%@@+        =@%#*#@@@%:  *@@%   #@@%*%@@#.        ...         .+:    .-+:.        ....         \n        :=+***==%@@#+ .=++++==-.      =+++++++:   :=+**+=:          -=+**+=:    .++-    :+***=:          ...         .+:    =+++-        ...          \n                 :+#%.                                                                                    ...        .+:    .++=        ...           \n                                                                                                           ...       .+:     -+:        ...           \n      -##########################################################################################           ...      .+:      =        ..             \n      .::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::             ..  ::::-::::::::::::  ...              \n                                                                                                                  #################                   \n                                                                                                                                                      \n                                                                                                                                                      \n" );
     Log::wrapInBar( "System Parameters" );
     Log::L1( "Version: {} ({})\n\n", GLOBAL_PROGRAM_VERSION, GLOBAL_PROGRAM_LASTCHANGE );
@@ -403,7 +408,7 @@ void Parameters::log( const std::vector<std::string> &info ) {
     Log::L1( "RAD rate gamma: {:.8e} Hz - {:.8} mueV\n\n", p_omega_decay, p_omega_decay.getSI( Parameter::UNIT_ENERGY_MUEV ) );
 
     Log::wrapInBar( "Initial System Parameters", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
-    Log::L1( "Initial state rho0 = {}\n\n", info.at( p_initial_state ) );
+    Log::L1( "Initial state rho0 = [{}]\n\n", initial_state_vector_ket.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ) );
 
     Log::wrapInBar( "Pulse", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( input_pulse.size() > 0 ) {
@@ -513,6 +518,10 @@ void Parameters::log( const std::vector<std::string> &info ) {
         Log::L1( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? fmt::format( "Yes (maximum {} matrices saved)", ( numerics_saved_coefficients_cutoff > 0 ) ? numerics_saved_coefficients_cutoff : numerics_saved_coefficients_max_size ) : "No" ) );
     if ( numerics_interpolate_outputs )
         Log::L1( "WARNING: Temporal outputs are interpolated!\n" );
+    if (!numerics_use_function_caching)
+        Log::L1("NOT using function caching.\n");
+    if (!numerics_use_saved_hamiltons)
+        Log::L1("NOT using Hamilton caching.\n");
     Log::L1( "\n" );
     for ( int i = 0; i < logfilecounter.size(); i++ ) {
         if ( logfilecounter[i] >= 0 )

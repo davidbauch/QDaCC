@@ -152,7 +152,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 current.front() = ket2 * bra1;
                 Sparse transition_hilbert = tensor( current ).sparseView();
                 current.front() = ket1 * bra2;
-                Sparse transition_transposed_hilbert = tensor( current ).sparseView();
+                Sparse transition_transposed_hilbert = transition_hilbert.adjoint();//tensor( current ).sparseView();
                 pulsemat += transition_hilbert;
                 pulsemat_star += transition_transposed_hilbert;
             } else {
@@ -194,8 +194,6 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     H_I = Sparse( p.maxStates, p.maxStates );
     H_used = Sparse( p.maxStates, p.maxStates );
     rho = Sparse( p.maxStates, p.maxStates );
-
-    //std::cout << std::endl;
 
     // Analytical Time Trafo Matrix
     timetrafo_cachematrix = Dense::Zero( base.size(), base.size() );
@@ -334,47 +332,109 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     else
         H_used = H;
 
-    // TODO: kann eig auch vector sein.
     phononCouplingFactor = dDense::Zero( base.size(), base.size() );
+    std::map<double, int> temp_base_indices;
+    int new_index = 0;
     for ( int i = 0; i < base.size(); i++ ) {
         for ( int j = 0; j < base.size(); j++ ) { // base is |el|...>
             std::string state1 = base.at( i ).substr( 1, 1 );
             std::string state2 = base.at( j ).substr( 1, 1 );
-            if ( i == j )
+            if ( i == j ) {
                 phononCouplingFactor( i, j ) = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
+                if ( !temp_base_indices.contains( phononCouplingFactor( i, j ) ) ) {
+                    temp_base_indices[phononCouplingFactor( i, j )] = new_index++;
+                    phononCouplingIndexValue.emplace_back( phononCouplingFactor( i, j ) );
+                }
+                phononCouplingIndex.emplace_back( temp_base_indices[phononCouplingFactor( i, j )] );
+            }
         }
     }
-    Log::L2( "Phonon Coupling Matrix:\n{}\n", phononCouplingFactor.format( CleanFmt ) );
+    //Log::L2( "Phonon Coupling Matrix:\n{}\n", phononCouplingFactor.format( CleanFmt ) );
+    Log::L2( "Phonon Coupling Index Vector: {}\n", phononCouplingIndex );
+    Log::L2( "Phonon Coupling Value Vector: {}\n", phononCouplingIndexValue );
 
     Log::L2( "Hamiltonoperator done!\n" );
+
     // Create Initial State
-    // rho, experimental: start with coherent state. in this case, always start in ground state.
-    if ( !p.startCoherent || true ) {
-        p.p_initial_state = base_index_map[p.p_initial_state_s];
-        Log::L2( "Setting initial rho as pure state with rho_0 = {}... \n", p.p_initial_state );
-        rho.coeffRef( p.p_initial_state, p.p_initial_state ) = 1;
-        //std::cout << "initial state = " << p.p_initial_state_s << " -> " << p.p_initial_state << std::endl;
-    } else {
-        //Log::L2( "Setting initial rho as pure coherent state with alpha_h = {}, alpha_v = ... \n", p.p_initial_state_photon_h, p.p_initial_state_photon_v );
-        //double trace_rest_h = 1.0;
-        //double trace_rest_v = 1.0;
-        //for ( int i = 0; i < p.p_max_photon_number; i++ ) {
-        //    auto coherent_h = getCoherent( std::sqrt( p.p_initial_state_photon_h ), i );
-        //    auto coherent_v = 0.0; //getCoherent( std::sqrt(p.p_initial_state_photon_v), i );
-        //    int state_h = 4 * ( p.p_max_photon_number + 1 ) * i;
-        //    int state_v = 4 * i;
-        //    rho.coeffRef( state_h, state_h ) = coherent_h; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
-        //    //rho.coeffRef( state_v, state_v ) = coherent_v; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
-        //    trace_rest_h -= coherent_h;
-        //    trace_rest_v -= coherent_v;
-        //    Log::L3( "Coherent state at N = {} with coefficient H = {}, V = {}\n", i, coherent_h, coherent_v );
-        //}
-        //int final_h = 4 * ( p.p_max_photon_number + 1 ) * p.p_max_photon_number;
-        //int final_v = 4 * p.p_max_photon_number;
-        //rho.coeffRef( final_h, final_h ) = trace_rest_h;
-        ////rho.coeffRef( final_v, final_v ) = trace_rest_v;
-        //Log::L3( "Coherent state at N = {} with coefficient H = {}, V = {}\n", p.p_max_photon_number, trace_rest_h, trace_rest_v );
+    // Split starting state into superposition. States can be passed as "|...>+|...>" with amplitudes
+    initial_state_vector_ket = Dense::Zero( base.size(), 1 );
+    for ( auto state : splitline( p.p_initial_state_s, '+' ) ) {
+        // For a coherent and normal input the syntax is |base>. replace number in base with 'alpha#' to indicate a coherent state. replace number in base with 'xiy&' to indicate a squeezed state. no spaces.
+        double amp = state[0] == '|' ? 1.0 : stod( splitline( state, '|' ).front() );
+        std::string pure_state = state.substr( state.find( '|' ) );
+        if ( state.find( "#" ) != std::string::npos ) {
+            auto modev = splitline( state, '#' );
+            auto front = splitline( modev.front(), '|' );
+            std::string front_base = "|";
+            for ( int i = 0; i < front.size() - 1; i++ ) {
+                front_base += front[i] + "|";
+            } 
+            double alpha = std::stod( front.back() );
+            std::string mode = modev.back().substr( 0, 1 );
+            Log::L2( "Creating superpositioned coherent state {} for mode {} with alpha = {} and scaled amplitude {}\n", pure_state, mode, alpha, amp );
+            for ( int n = 0; n < p.input_photonic[mode].numerical["MaxPhotons"]; n++ ) {
+                std::string current = front_base + std::to_string( n ) + modev.back();
+                Log::L2( "Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], getCoherent( alpha, n ) * amp );
+                // Add initial state with amplitudes
+                initial_state_vector_ket( base_index_map[current] ) += amp * getCoherent( alpha, n );
+            }
+        } else if ( state.find( "&" ) != std::string::npos ) {
+            auto modev = splitline( state, '&' );
+            auto front = splitline( modev.front(), '|' );
+            std::string front_base = "|";
+            for ( int i = 0; i < front.size() - 1; i++ ) {
+                front_base += front[i] + "|";
+            }
+            auto cmplx = splitline( front.back(), 'i' );
+            double r = std::stod( cmplx.front() );
+            double phi = std::stod( cmplx.back() );
+            std::string mode = modev.back().substr( 0, 1 );
+            Log::L2( "Creating superpositioned coherent state {} for mode {} with r = {}, phi = {} and scaled amplitude {}\n", pure_state, mode, r,phi, amp );
+            for ( int n = 0; n < p.input_photonic[mode].numerical["MaxPhotons"]; n++ ) {
+                if ( n % 2 != 0 )
+                    continue;
+                std::string current = front_base + std::to_string( n ) + modev.back();
+                Log::L2( "Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], getSqueezed( r, phi, n ) * amp );
+                // Add initial state with amplitudes
+                initial_state_vector_ket( base_index_map[current] ) += amp * getSqueezed( r, phi, n );
+            }
+        } else {
+            Log::L2( "Creating superpositioned state {} ({}) with amplitude {}\n", pure_state, base_index_map[pure_state], amp );
+            // Add initial state with amplitudes
+            initial_state_vector_ket( base_index_map[pure_state] ) += amp;
+        }
     }
+
+    initial_state_vector_ket.normalize();
+    Log::L2( "Initial State Vector: {}\n", initial_state_vector_ket );
+    rho = ( initial_state_vector_ket * initial_state_vector_ket.transpose() ).sparseView();
+
+    // if ( !p.startCoherent || true ) {
+    //p.p_initial_state = base_index_map[p.p_initial_state_s];
+    //Log::L2( "Setting initial rho as pure state with rho_0 = {}... \n", p.p_initial_state );
+    //rho.coeffRef( p.p_initial_state, p.p_initial_state ) = 1;
+    //std::cout << "initial state = " << p.p_initial_state_s << " -> " << p.p_initial_state << std::endl;
+    //} else {
+    //Log::L2( "Setting initial rho as pure coherent state with alpha_h = {}, alpha_v = ... \n", p.p_initial_state_photon_h, p.p_initial_state_photon_v );
+    //double trace_rest_h = 1.0;
+    //double trace_rest_v = 1.0;
+    //for ( int i = 0; i < p.p_max_photon_number; i++ ) {
+    //    auto coherent_h = getCoherent( std::sqrt( p.p_initial_state_photon_h ), i );
+    //    auto coherent_v = 0.0; //getCoherent( std::sqrt(p.p_initial_state_photon_v), i );
+    //    int state_h = 4 * ( p.p_max_photon_number + 1 ) * i;
+    //    int state_v = 4 * i;
+    //    rho.coeffRef( state_h, state_h ) = coherent_h; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
+    //    //rho.coeffRef( state_v, state_v ) = coherent_v; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
+    //    trace_rest_h -= coherent_h;
+    //    trace_rest_v -= coherent_v;
+    //    Log::L3( "Coherent state at N = {} with coefficient H = {}, V = {}\n", i, coherent_h, coherent_v );
+    //}
+    //int final_h = 4 * ( p.p_max_photon_number + 1 ) * p.p_max_photon_number;
+    //int final_v = 4 * p.p_max_photon_number;
+    //rho.coeffRef( final_h, final_h ) = trace_rest_h;
+    ////rho.coeffRef( final_v, final_v ) = trace_rest_v;
+    //Log::L3( "Coherent state at N = {} with coefficient H = {}, V = {}\n", p.p_max_photon_number, trace_rest_h, trace_rest_v );
+    //}
     Log::L2( "Done!\n" );
     return true;
 }

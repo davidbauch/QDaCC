@@ -53,11 +53,8 @@ class Log {
         return Get().Iwrapinbar( msg, size, level, _barOut, _barIn );
     }
 
-    static void debug( const std::string &msg, int counter = -1 ) {
-        return Get().Idebug( msg, counter );
-    }
-    static void debug( int counter = -1 ) {
-        return Get().Idebug( "", counter );
+    static void debug( const std::string &msg = "" ) {
+        return Get().Idebug( msg );
     }
     static void close() {
         return Get().Iclose();
@@ -139,8 +136,8 @@ class Log {
         inBar( msg, size, level, _barIn );
         Bar( size, level, _barOut );
     }
-    void Idebug( const std::string &msg, int counter ) {
-        L1( "[DEBUG] {}{}\n", ( counter != -1 ? fmt::format( "({})", debug_counter++ ) : "" ), msg );
+    void Idebug( const std::string &msg ) {
+        L1( "[DEBUG] {}{}\n", fmt::format( "({})", debug_counter++ ), msg );
     }
     void Iclose() {
         L1( "[END OF LOGFILE]" );

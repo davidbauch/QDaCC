@@ -1,5 +1,6 @@
 #include "solver/solver.h"
 
+//TODO: alles interpolieren der DM (aus RK45 oder pathint) hier machen! art der interpolation (linear, cubisch, monotone, ...) per parameter übergeben!
 std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveState> &input, double t_start, double t_end, int num_of_points, bool output_handler ) {
     Log::L2( " : Setting up the smooth curve interpolator... \n" );
     int matrix_dimension = input.at( 0 ).mat.rows() * input.at( 0 ).mat.cols();
