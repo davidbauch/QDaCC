@@ -29,7 +29,7 @@ std::vector<std::string> str_to_vec( std::string input ) {
     std::vector<std::string> ret;
     int s = 1; // Starting index
     int e = 1; // End
-    while ( ( e = instr( input, ",", s ) ) != -1 ) {
+    while ( ( e = QDLC::Misc::String::instr( input, ",", s ) ) != -1 ) {
         ret.emplace_back( input.substr( s, e - s ) );
         s = e + 1;
     }

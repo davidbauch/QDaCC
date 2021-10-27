@@ -7,27 +7,16 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
+#include "misc/helperfunctions_string.h"
 
 // V 1.1 - Subkeys of groups can also be read individually, e.g. --g1 arg arg with argkeys arg1,arg2 result in --arg1 arg being also a valid parameter that can be read. If the parameter does not have a subkey, it cannot be individually set
 // V 1.1.1 - Init length formatting now better
 // V 1.2 - Better help function, --help arg can now search for arg, no more sorting for now
 // V 1.2.1 - Now initialized with global init function. The global object 'cla' is now the standard CommandlineArguments class and can be accessed via the CommandlineArgument namespace.
 // V 1.2.2 - Constructor now also accepts argv in vecor format, and commandlinearguments vector get function
+// V 1.3 - Singleton class
 
-namespace CommandlineArguments {
-
-// Extracts the value between 2 lit in a string
-std::string strip( std::string input, char lit = '\'' );
-
-std::vector<std::string> strip( std::vector<std::string> input, char lit = '\'' );
-
-std::string trail( std::string input, int totallength, std::string pre = " ", int dir = 0 );
-
-std::string tail( std::string input, int totallength, std::string pre = " " );
-
-bool startswith( std::string input, std::string find );
-
-std::vector<std::string> splitString( std::string input, std::string lit = " " );
+namespace QDLC {
 
 class CommandlineArguments {
    private:
@@ -38,7 +27,7 @@ class CommandlineArguments {
     std::string cla_add_param = "add";
     std::string cla_remove_param = "rem"; //TODO
     std::string cla_edit_param = "mod";   //TODO
-    std::string version = "1.2.2";
+    std::string version = "1.3";
 
     class Parameter {
        public:
@@ -164,13 +153,13 @@ class CommandlineArguments {
         bool validfilter( std::string filter ) const {
             if ( validkey( filter ) || key.at( 0 ).find( filter ) != std::string::npos ) return true;
             if ( group.compare( filter ) == 0 || group.find( filter ) != std::string::npos ) return true;
-            for ( const auto& word : splitString( description ) ) {
+            for ( const auto& word : Misc::String::split( description ) ) {
                 if ( word.compare( filter ) == 0 || word.find( filter ) != std::string::npos ) return true;
             }
             for ( const auto& param : parameter ) {
                 if ( param.validkey( filter ) || param.subkey.find( filter ) != std::string::npos ) return true;
                 if ( param.datatype.compare( filter ) == 0 || param.datatype.find( filter ) != std::string::npos ) return true;
-                for ( const auto& word : splitString( param.description ) ) {
+                for ( const auto& word : Misc::String::split( param.description ) ) {
                     if ( word.compare( filter ) == 0 || word.find( filter ) != std::string::npos ) return true;
                 }
             }
@@ -187,8 +176,8 @@ class CommandlineArguments {
             }
             datatypes.back() = '>';
             for ( int i = 0; i < lines_needed; i++ ) {
-                std::string keyline = tail( ( i < key.size() ? ( ( type.compare( "2hyphen" ) == 0 ? "--" : " -" ) + key.at( i ) ) : "" ) + ( i == 0 ? " " + datatypes : "" ), len1 );
-                std::string desline = div + tail( ( i * len2 < description.size() ? ( description.at( i * len2 ) == ' ' ? description.substr( i * len2 + 1, len2 ) : description.substr( i * len2, len2 ) ) : "" ), len2 );
+                std::string keyline = Misc::String::tail( ( i < key.size() ? ( ( type.compare( "2hyphen" ) == 0 ? "--" : " -" ) + key.at( i ) ) : "" ) + ( i == 0 ? " " + datatypes : "" ), len1 );
+                std::string desline = div + Misc::String::tail( ( i * len2 < description.size() ? ( description.at( i * len2 ) == ' ' ? description.substr( i * len2 + 1, len2 ) : description.substr( i * len2, len2 ) ) : "" ), len2 );
                 lines.emplace_back( keyline + desline );
             }
             for ( const auto& param : parameter ) {
@@ -197,7 +186,7 @@ class CommandlineArguments {
                     int newlen = len2 - prefix.size();
                     bool doneFirstOutput = false;
                     for ( int i = 0; i < (int)( param.description.size() / newlen ) + 1; i++ ) {
-                        std::string desline = tail( ( !doneFirstOutput ? ( param.subkey.length() > 0 ? "  --" : "" ) + param.subkey : "" ), len1 ) + div + ( i == 0 ? prefix : trail( "", prefix.size() ) ) + param.description.substr( i * newlen, newlen );
+                        std::string desline = Misc::String::tail( ( !doneFirstOutput ? ( param.subkey.length() > 0 ? "  --" : "" ) + param.subkey : "" ), len1 ) + div + ( i == 0 ? prefix : Misc::String::trail( "", prefix.size() ) ) + param.description.substr( i * newlen, newlen );
                         lines.emplace_back( desline );
                         doneFirstOutput = true;
                     }
@@ -217,6 +206,7 @@ class CommandlineArguments {
             std::cerr << "Cannot open the File : " << filepath << std::endl;
             if ( !generateEmptyConfigfile( filepath ) ) return false;
         }
+        configfile.clear();
         std::string str;
         while ( std::getline( in, str ) ) {
             if ( str.size() > 0 && str.at( 0 ) != '#' ) {
@@ -231,16 +221,16 @@ class CommandlineArguments {
     // Reads all CLA Settings from input file, such as splitter, width, etc
     bool readCLA_SettingsFromConfig() {
         for ( auto line : configfile ) {
-            if ( startswith( line, "CLA_SPLIT = " ) ) {
-                cla_splitter = *strip( line ).c_str();
-            } else if ( startswith( line, "CLA_WIDTH = " ) ) {
-                cla_width = std::stoi( strip( line ) );
-            } else if ( startswith( line, "CLA_ADD_PARAMETER = " ) ) {
-                cla_add_param = strip( line );
-            } else if ( startswith( line, "CLA_REMOVE_PARAMETER = " ) ) {
-                cla_remove_param = strip( line );
-            } else if ( startswith( line, "CLA_EDIT_PARAMETER = " ) ) {
-                cla_edit_param = strip( line );
+            if ( Misc::String::startswith( line, "CLA_SPLIT = " ) ) {
+                cla_splitter = *Misc::String::strip( line ).c_str();
+            } else if ( Misc::String::startswith( line, "CLA_WIDTH = " ) ) {
+                cla_width = std::stoi( Misc::String::strip( line ) );
+            } else if ( Misc::String::startswith( line, "CLA_ADD_PARAMETER = " ) ) {
+                cla_add_param = Misc::String::strip( line );
+            } else if ( Misc::String::startswith( line, "CLA_REMOVE_PARAMETER = " ) ) {
+                cla_remove_param = Misc::String::strip( line );
+            } else if ( Misc::String::startswith( line, "CLA_EDIT_PARAMETER = " ) ) {
+                cla_edit_param = Misc::String::strip( line );
             }
         }
         // std::cout << cla_splitter << ", " << cla_width << ", " << cla_add_param
@@ -252,14 +242,14 @@ class CommandlineArguments {
     Parameter readCLA_ParameterFromConfig( long unsigned int& i ) {
         Parameter ret = Parameter();
         while ( configfile.at( i ).at( 0 ) != '}' ) {
-            if ( startswith( configfile.at( i ), "subkey = " ) )
-                ret.subkey = strip( configfile.at( i ) );
-            else if ( startswith( configfile.at( i ), "value = " ) )
-                ret.value = strip( configfile.at( i ) );
-            else if ( startswith( configfile.at( i ), "datatype = " ) )
-                ret.datatype = strip( configfile.at( i ) );
-            else if ( startswith( configfile.at( i ), "description = " ) )
-                ret.description = strip( configfile.at( i ) );
+            if ( Misc::String::startswith( configfile.at( i ), "subkey = " ) )
+                ret.subkey = Misc::String::strip( configfile.at( i ) );
+            else if ( Misc::String::startswith( configfile.at( i ), "value = " ) )
+                ret.value = Misc::String::strip( configfile.at( i ) );
+            else if ( Misc::String::startswith( configfile.at( i ), "datatype = " ) )
+                ret.datatype = Misc::String::strip( configfile.at( i ) );
+            else if ( Misc::String::startswith( configfile.at( i ), "description = " ) )
+                ret.description = Misc::String::strip( configfile.at( i ) );
             i++;
         }
         return ret;
@@ -271,21 +261,22 @@ class CommandlineArguments {
         int cla_arguments_found = 0;
         bool currently_in_cla_argument = false;
         Datastructure temp;
+        cla_datastructures.clear();
         for ( long unsigned int i = 0; i < configfile.size(); i++ ) {
-            if ( startswith( configfile.at( i ), "CLA_ARGUMENT = {" ) && !currently_in_cla_argument ) {
+            if ( Misc::String::startswith( configfile.at( i ), "CLA_ARGUMENT = {" ) && !currently_in_cla_argument ) {
                 currently_in_cla_argument = true;
                 temp = Datastructure();
             }
             if ( currently_in_cla_argument ) {
-                if ( startswith( configfile.at( i ), "type = " ) )
-                    temp.type = strip( configfile.at( i ) );
-                else if ( startswith( configfile.at( i ), "key = " ) )
-                    temp.key = strip( splitString( configfile.at( i ), " or " ) ); //TODO: Vorher die ' splits machen, sonst kann "or" nicht im key stehen!
-                else if ( startswith( configfile.at( i ), "description = " ) )
-                    temp.description = strip( configfile.at( i ) );
-                else if ( startswith( configfile.at( i ), "group = " ) )
-                    temp.group = strip( configfile.at( i ) );
-                else if ( startswith( configfile.at( i ), "CLA_PARAMETER = {" ) )
+                if ( Misc::String::startswith( configfile.at( i ), "type = " ) )
+                    temp.type = Misc::String::strip( configfile.at( i ) );
+                else if ( Misc::String::startswith( configfile.at( i ), "key = " ) )
+                    temp.key = Misc::String::strip( Misc::String::split( configfile.at( i ), " or " ) ); //TODO: Vorher die ' splits machen, sonst kann "or" nicht im key stehen!
+                else if ( Misc::String::startswith( configfile.at( i ), "description = " ) )
+                    temp.description = Misc::String::strip( configfile.at( i ) );
+                else if ( Misc::String::startswith( configfile.at( i ), "group = " ) )
+                    temp.group = Misc::String::strip( configfile.at( i ) );
+                else if ( Misc::String::startswith( configfile.at( i ), "CLA_PARAMETER = {" ) )
                     temp.parameter.emplace_back( readCLA_ParameterFromConfig( i ) );
                 else if ( configfile.at( i ).at( 0 ) == '}' ) {
                     cla_datastructures.emplace_back( temp );
@@ -312,7 +303,7 @@ class CommandlineArguments {
         int len1 = std::max( (int)( cla_width / 3 ), detlen );
         std::string div = "|     ";
         int len2 = cla_width - len1 - div.size();
-        std::cout << tail( "", cla_width, "=" ) << std::endl;
+        std::cout << Misc::String::tail( "", cla_width, "=" ) << std::endl;
         std::string current_group = "";
         bool first = true;
         if ( cla_datastructures.size() > 0 )
@@ -320,10 +311,10 @@ class CommandlineArguments {
         for ( const auto& datastructure : cla_datastructures ) {
             if ( filter.size() > 0 && !datastructure.validfilter( filter ) ) continue;
             if ( datastructure.group.compare( current_group ) != 0 ) {
-                std::cout << tail( "", cla_width, "-" ) << std::endl;
+                std::cout << Misc::String::tail( "", cla_width, "-" ) << std::endl;
                 current_group = datastructure.group;
             } else if ( !first ) {
-                std::cout << tail( "", len1 ) + "-" + tail( "", len2 + div.size() - 1 ) << std::endl; //<< tail( "", cla_width, " . " ) << std::endl;
+                std::cout << Misc::String::tail( "", len1 ) + "-" + Misc::String::tail( "", len2 + div.size() - 1 ) << std::endl; //<< Misc::String::tail( "", cla_width, " . " ) << std::endl;
             }
             datastructure.identify( len1, len2, div );
             first = false;
@@ -552,9 +543,16 @@ class CommandlineArguments {
         return true;
     }
 
-   public:
-    CommandlineArguments(){};
-    CommandlineArguments( int argc, char* argv[], std::string filepath ) {
+    // Singleton Elements:
+
+    static CommandlineArguments &Get() {
+        static CommandlineArguments instance;
+        return instance;
+    }
+    
+    CommandlineArguments( ) {
+    }
+    void Iinit( int argc, char* argv[], std::string filepath ) {
         convert_argv( argc, argv );
         if ( !readConfigFile( filepath ) ) {
             std::cerr << "No Configfile read/generated, exitting..." << std::endl;
@@ -564,7 +562,7 @@ class CommandlineArguments {
         readCLA_ArgumentsFromConfig();
         parseCLA_Arguments( commandlinearguments, filepath );
     }
-    CommandlineArguments( const std::vector<std::string>& argv, std::string filepath ) {
+    void Iinit( const std::vector<std::string>& argv, std::string filepath ) {
         commandlinearguments = argv;
         if ( !readConfigFile( filepath ) ) {
             std::cerr << "No Configfile read/generated, exitting..." << std::endl;
@@ -575,7 +573,7 @@ class CommandlineArguments {
         parseCLA_Arguments( commandlinearguments, filepath );
     }
 
-    Parameter get( std::string key, std::string subkey = "", bool use_hyphens = true ) const {
+    Parameter Iget( std::string key, std::string subkey, bool use_hyphens ) const {
         for ( const auto& datastructure : cla_datastructures ) {
             if ( datastructure.validkey( key, use_hyphens ) ) {
                 if ( subkey.size() > 0 ) {
@@ -592,16 +590,43 @@ class CommandlineArguments {
         std::cout << "Parameter with key " << key << "/" << subkey << " was not found!" << std::endl;
         return param_empty;
     }
-    inline Parameter operator()( std::string key, std::string subkey = "" ) const { return get( key, subkey ); };
-    std::vector<std::string> get_vector() const {
-        return commandlinearguments;
+
+
+   public:
+    CommandlineArguments(const CommandlineArguments& cla) = delete;
+
+    static Parameter get( std::string key, std::string subkey = "", bool use_hyphens = true ) {
+        return Get().Iget(key, subkey, use_hyphens);
     }
+    
+    //inline Parameter operator()( std::string key, std::string subkey = "" ) const { 
+    //    return get( key, subkey ); 
+    //};
+    
+    static std::vector<std::string> get_vector() {
+        return Get().commandlinearguments;
+    }
+    static void init( int argc, char* argv[], const std::string& filepath = "" ) {
+        Get().Iinit(argc, argv, filepath);
+    }
+    static void init( const std::vector<std::string>& argv, std::string filepath = "" ) {
+        Get().Iinit( argv, filepath );
+    }
+
+    // Some usefull getter functions:
+    static bool get_parameter_passed( const std::string &key, const std::string &subkey = "" ) {
+        return Get().get( key, subkey ).toBool();
+    }
+    template <class T>
+    static T get_parameter( const std::string &key, const std::string &subkey = "" ) {
+        std::string arg = Get().get( key, subkey );
+        return convertParam<T>( arg );
+    }
+    static std::string get_parameter( const std::string &key, const std::string &subkey = "" ) {
+        std::string arg = Get().get( key, subkey );
+        return arg;
+    }
+
 };
-
-extern CommandlineArguments cla;
-
-void init();
-void init( int argc, char* argv[], std::string filepath = "" );
-void init( const std::vector<std::string>& argv, std::string filepath = "" );
 
 } // namespace CommandlineArguments

@@ -64,80 +64,80 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
 bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     //Parse_Parameters params;
     // Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
-    t_start = get_parameter<double>( "--time", "tstart" );
-    t_end = get_parameter<double>( "--time", "tend" );
-    t_step = get_parameter<double>( "--time", "tstep" );
+    t_start = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstart" );
+    t_end = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tend" );
+    t_step = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstep" );
 
     // Runge Kutta Parameters
-    numerics_rk_order = get_parameter<double>( "--rk", "rkorder" );
-    numerics_rk_tol = get_parameter<double>( "--rk", "rktol" );
-    numerics_rk_stepdelta = get_parameter<double>( "--rk", "rkstepdelta" );
-    numerics_rk_stepmin = get_parameter<double>( "--rk", "rkstepmin" );
-    numerics_rk_stepmax = get_parameter<double>( "--rk", "rkstepmax" );
-    numerics_rk_interpolate = !get_parameter_passed( "-rknointerpolate" );
+    numerics_rk_order = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkorder" );
+    numerics_rk_tol = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rktol" );
+    numerics_rk_stepdelta = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepdelta" );
+    numerics_rk_stepmin = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepmin" );
+    numerics_rk_stepmax = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepmax" );
+    numerics_rk_interpolate = !QDLC::CommandlineArguments::get_parameter_passed( "-rknointerpolate" );
     numerics_rk_usediscrete_timesteps = numerics_rk_stepdelta > 0 ? true : false;
 
-    inputstring_electronic = get_parameter( "--S", "SE" );
-    inputstring_photonic = get_parameter( "--S", "SO" );
-    inputstring_pulse = get_parameter( "--S", "SP" );
-    inputstring_chirp = get_parameter( "--S", "SC" );
-    inputstring_spectrum = get_parameter( "--G", "GS" );
-    inputstring_indist = get_parameter( "--G", "GI" );
-    inputstring_conc = get_parameter( "--G", "GC" );
-    inputstring_gfunc = get_parameter( "--G", "GF" );
-    inputstring_wigner = get_parameter( "--G", "GW" );
-
-    p_omega_coupling = get_parameter<double>( "--system", "coupling" );
-    p_omega_cavity_loss = get_parameter<double>( "--system", "kappa" );
-    p_omega_pure_dephasing = get_parameter<double>( "--system", "gammapure" );
-    p_omega_decay = get_parameter<double>( "--system", "gamma" );
-    p_initial_state_s = get_parameter( "--R" );
+    inputstring_electronic = QDLC::CommandlineArguments::get_parameter( "--S", "SE" );
+    inputstring_photonic = QDLC::CommandlineArguments::get_parameter( "--S", "SO" );
+    inputstring_pulse = QDLC::CommandlineArguments::get_parameter( "--S", "SP" );
+    inputstring_chirp = QDLC::CommandlineArguments::get_parameter( "--S", "SC" );
+    inputstring_spectrum = QDLC::CommandlineArguments::get_parameter( "--G", "GS" );
+    inputstring_indist = QDLC::CommandlineArguments::get_parameter( "--G", "GI" );
+    inputstring_conc = QDLC::CommandlineArguments::get_parameter( "--G", "GC" );
+    inputstring_gfunc = QDLC::CommandlineArguments::get_parameter( "--G", "GF" );
+    inputstring_wigner = QDLC::CommandlineArguments::get_parameter( "--G", "GW" );
+ 
+    p_omega_coupling = QDLC::CommandlineArguments::get_parameter<double>( "--system", "coupling" );
+    p_omega_cavity_loss = QDLC::CommandlineArguments::get_parameter<double>( "--system", "kappa" );
+    p_omega_pure_dephasing = QDLC::CommandlineArguments::get_parameter<double>( "--system", "gammapure" );
+    p_omega_decay = QDLC::CommandlineArguments::get_parameter<double>( "--system", "gamma" );
+    p_initial_state_s = QDLC::CommandlineArguments::get_parameter( "--R" );
 
     // Look for --spectrum, if not found, no spectrum is evaluated
-    iterations_tau_resolution = get_parameter<int>( "--spectrum", "gridres" );
-    numerics_use_interactionpicture = get_parameter_passed( "-noInteractionpic" ) ? false : true;
-    numerics_use_rwa = get_parameter_passed( "-noRWA" ) ? 0 : 1;
-    numerics_maximum_threads = get_parameter<int>( "--Threads" );
+    iterations_tau_resolution = QDLC::CommandlineArguments::get_parameter<int>( "--spectrum", "gridres" );
+    numerics_use_interactionpicture = QDLC::CommandlineArguments::get_parameter_passed( "-noInteractionpic" ) ? false : true;
+    numerics_use_rwa = QDLC::CommandlineArguments::get_parameter_passed( "-noRWA" ) ? 0 : 1;
+    numerics_maximum_threads = QDLC::CommandlineArguments::get_parameter<int>( "--Threads" );
     if ( numerics_maximum_threads == -1 )
         numerics_maximum_threads = omp_get_max_threads();
-    output_handlerstrings = get_parameter_passed( "-noHandler" ) ? 0 : 1;
-    output_operators = get_parameter_passed( "-outputOp" ) ? 2 : ( get_parameter_passed( "-outputHamiltons" ) ? 1 : ( get_parameter_passed( "-outputOpStop" ) ? 3 : 0 ) );
-    numerics_order_timetrafo = get_parameter_passed( "-timeTrafoMatrixExponential" ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
-    startCoherent = false; //TODO://get_parameter_passed( "-startCoherent" ) || ( p_initial_state_electronic.front() == 'c' );
-    output_full_dm = get_parameter_passed( "-fullDM" );
-    output_no_dm = get_parameter_passed( "-noDM" );
-    scale_parameters = get_parameter_passed( "-scale" ); // MHMHMH
-    numerics_use_saved_coefficients = !get_parameter_passed( "-disableMatrixCaching" );
-    numerics_use_saved_hamiltons = !get_parameter_passed( "-disableHamiltonCaching" );
-    numerics_use_function_caching = !get_parameter_passed( "-disableFunctionCaching" );
-    numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
-    numerics_output_raman_population = get_parameter_passed( "-raman" ); // DEPRECATED
-    logfilecounter = convertParam<int>( splitline( get_parameter( "--lfc" ), ',' ) );
-    numerics_calculate_timeresolution_indistinguishability = get_parameter_passed( "-timedepInd" ); //DEPRECATED
-    numerics_output_electronic_emission = get_parameter_passed( "-oElec" ); //DEPRECATED
+    output_handlerstrings = QDLC::CommandlineArguments::get_parameter_passed( "-noHandler" ) ? 0 : 1;
+    output_operators = QDLC::CommandlineArguments::get_parameter_passed( "-outputOp" ) ? 2 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputHamiltons" ) ? 1 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputOpStop" ) ? 3 : 0 ) );
+    numerics_order_timetrafo = QDLC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
+    startCoherent = false; //TODO://QDLC::CommandlineArguments::get_parameter_passed( "-startCoherent" ) || ( p_initial_state_electronic.front() == 'c' );
+    output_full_dm = QDLC::CommandlineArguments::get_parameter_passed( "-fullDM" );
+    output_no_dm = QDLC::CommandlineArguments::get_parameter_passed( "-noDM" );
+    scale_parameters = QDLC::CommandlineArguments::get_parameter_passed( "-scale" ); // MHMHMH
+    numerics_use_saved_coefficients = !QDLC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
+    numerics_use_saved_hamiltons = !QDLC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
+    numerics_use_function_caching = !QDLC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
+    numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
+    numerics_output_raman_population = QDLC::CommandlineArguments::get_parameter_passed( "-raman" ); // DEPRECATED
+    logfilecounter = convertParam<int>( splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
+    numerics_calculate_timeresolution_indistinguishability = QDLC::CommandlineArguments::get_parameter_passed( "-timedepInd" ); //DEPRECATED
+    numerics_output_electronic_emission = QDLC::CommandlineArguments::get_parameter_passed( "-oElec" ); //DEPRECATED
     numerics_stretch_correlation_grid = false; //FIXME: Doesnt work right now //DEPRECATED
-    numerics_interpolate_outputs = get_parameter_passed( "-interpolate" );
+    numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
 
     // Phonon Parameters
-    p_phonon_alpha = get_parameter<double>( "--phonons", "phononalpha" );
-    p_phonon_wcutoff = get_parameter<double>( "--phonons", "phononwcutoff" );
-    p_phonon_tcutoff = get_parameter<double>( "--phonons", "phonontcutoff" );
-    p_phonon_T = get_parameter<double>( "--phonons", "temperature" );
-    numerics_phonon_approximation_order = get_parameter<int>( "--phonons", "phononorder" );
-    numerics_phonon_approximation_markov1 = get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
-    numerics_phonon_nork45 = get_parameter_passed( "-noPhononRK45" );                    // Disables RK45 for phonon backwards integral; use if detunings are high. //TODO: andersrum, RK backwards integral soll rkorder nehmen, dann mit nork45 für backwards integral deaktivieren!
-    output_coefficients = get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
-    p_phonon_adjust = !get_parameter_passed( "-noPhononAdjust" );
+    p_phonon_alpha = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononalpha" );
+    p_phonon_wcutoff = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononwcutoff" );
+    p_phonon_tcutoff = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phonontcutoff" );
+    p_phonon_T = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "temperature" );
+    numerics_phonon_approximation_order = QDLC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
+    numerics_phonon_approximation_markov1 = QDLC::CommandlineArguments::get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
+    numerics_phonon_nork45 = QDLC::CommandlineArguments::get_parameter_passed( "-noPhononRK45" );                    // Disables RK45 for phonon backwards integral; use if detunings are high. //TODO: andersrum, RK backwards integral soll rkorder nehmen, dann mit nork45 für backwards integral deaktivieren!
+    output_coefficients = QDLC::CommandlineArguments::get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
+    p_phonon_adjust = !QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
     p_phonon_pure_dephasing = convertParam<double>( "1mueV" );
     // Path Integral Parameters
-    p_phonon_nc = get_parameter<int>( "--pathintegral", "NC" );
-    numerics_pathintegral_stepsize_iterator = get_parameter<double>( "--pathintegral", "iteratorStepsize" );
-    numerics_pathintegral_squared_threshold = get_parameter<double>( "--pathintegral", "squaredThreshold" );
-    numerics_pathintegral_sparse_prune_threshold = get_parameter<double>( "--pathintegral", "sparsePruneThreshold" );
-    numerics_pathintegral_dynamiccutoff_iterations_max = get_parameter<double>( "--pathintegral", "iteratorStepsize" );
-    numerics_pathintegral_docutoff_propagator = get_parameter_passed( "-cutoffPropagator" );
+    p_phonon_nc = QDLC::CommandlineArguments::get_parameter<int>( "--pathintegral", "NC" );
+    numerics_pathintegral_stepsize_iterator = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
+    numerics_pathintegral_squared_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "squaredThreshold" );
+    numerics_pathintegral_sparse_prune_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "sparsePruneThreshold" );
+    numerics_pathintegral_dynamiccutoff_iterations_max = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
+    numerics_pathintegral_docutoff_propagator = QDLC::CommandlineArguments::get_parameter_passed( "-cutoffPropagator" );
     numerics_pathint_partially_summed = true;
-    t_step_pathint = get_parameter<double>( "--pathintegral", "tstepPath" );
+    t_step_pathint = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "tstepPath" );
 
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
     hbar = 1.0545718E-34; // J/s, scaling will be 1

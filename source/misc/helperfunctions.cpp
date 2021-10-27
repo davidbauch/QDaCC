@@ -20,52 +20,15 @@ double rabiFrequency( double deltaE, double g, double n ) {
     return std::sqrt( std::pow( deltaE, 2 ) + 4. * std::pow( g, 2 ) * n );
 }
 
-int in( char **arr, int len, char *target ) {
-    int i;
-    for ( i = 0; i < len; i++ ) {
-        if ( std::strncmp( arr[i], target, strlen( target ) ) == 0 ) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-int instr( const std::string &arr, const std::string tofind, int start ) {
-    bool found = true;
-    for ( int i = start; i < (int)arr.size() + 1 - (int)tofind.size(); i++ ) {
-        found = true;
-        for ( int j = 0; j < (int)tofind.size(); j++ ) {
-            //fmt::print("comparing {} and {}... ",arr.at(i+j),tofind.at(j));
-            if ( tofind.at( j ) != arr.at( i + j ) ) {
-                found = false;
-                j = (int)tofind.size();
-            }
-        }
-        if ( found ) {
-            //fmt::print("found at index {}\n",i);
-            return i;
-        }
-    }
-    return -1;
-}
-
-std::vector<std::string> str_to_vec( std::string input ) {
-    std::vector<std::string> ret;
-    if ( (int)input.size() < 3 ) {
-        ret = {};
-        return ret;
-    }
-    int s = 1; // Starting index
-    int e = 1; // End
-    while ( ( e = instr( input, ",", s ) ) != -1 ) {
-        ret.emplace_back( input.substr( s, e - s ) );
-        s = e + 1;
-    }
-    ret.emplace_back( input.substr( s, input.size() - s - 1 ) );
-    //for (std::string el : ret)
-    //    std::cout << el << "\n";
-    return ret;
-}
+//int in( char **arr, int len, char *target ) {
+//    int i;
+//    for ( i = 0; i < len; i++ ) {
+//        if ( std::strncmp( arr[i], target, strlen( target ) ) == 0 ) {
+//            return i;
+//        }
+//    }
+//    return -1;
+//}
 
 bool is_number( const std::string &s ) {
     //for (int i = 0; i < s.size(); i++) {
@@ -75,7 +38,7 @@ bool is_number( const std::string &s ) {
 }
 
 std::vector<std::string> getNextInputVectorString( const std::vector<std::string> &arguments, const std::string name, int &index ) {
-    return str_to_vec( arguments.at( index++ ) );
+    return QDLC::Misc::String::str_to_vec( arguments.at( index++ ) );
 }
 
 int vec_find_str( std::string toFind, const std::vector<std::string> &input ) {
@@ -108,19 +71,14 @@ std::complex<double> getSqueezed( double r, double phi, double N ) {
     return 1.0 / std::sqrt( std::cosh( r ) ) * std::pow(  -std::exp( 1i * phi ) * std::tanh( r ) , N ) * std::sqrt( factorial_range( 2 * N, N ) * factorial( N ) ) / factorial( N ) / std::pow( 2.0, N );
 }
 
-std::string get_parameter( const std::string &key, const std::string &subkey ) {
-    std::string arg = CommandlineArguments::cla.get( key, subkey );
-    return arg;
-}
-
-std::vector<std::string> get_parameter_vector( const std::string &key, const std::string &subkey ) {
-    std::string arg = CommandlineArguments::cla.get( key, subkey );
-    // Check if input is not a vector, then output will be a new vector with only one element
-    if ( arg.at( 0 ) != '[' ) {
-        return std::vector<std::string>( { arg } );
-    }
-    return str_to_vec( arg );
-}
+//std::vector<std::string> get_parameter_vector( const std::string &key, const std::string &subkey ) {
+//    std::string arg = QDLC::CommandlineArguments::get( key, subkey );
+//    // Check if input is not a vector, then output will be a new vector with only one element
+//    if ( arg.at( 0 ) != '[' ) {
+//        return std::vector<std::string>( { arg } );
+//    }
+//    return str_to_vec( arg );
+//}
 
 Eigen::MatrixXcd project_matrix( const Eigen::MatrixXcd &input ) {
     Eigen::MatrixXcd ret = Eigen::MatrixXcd::Zero( input.rows(), input.cols() );
@@ -145,10 +103,6 @@ std::vector<std::string> splitline( const std::string &input, const char splitte
             }
     }
     return set;
-}
-
-bool get_parameter_passed( const std::string &key, const std::string &subkey ) {
-    return CommandlineArguments::cla.get( key, subkey ).toBool();
 }
 
 std::string getNextInputString( const std::vector<std::string> &arguments, const std::string name, int &index ) {

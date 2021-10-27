@@ -13,10 +13,10 @@
 // last input: workpath
 int main( int argc, char* argv[] ) {
     // Commandline Arguments:
-    CommandlineArguments::init( argc, argv );
+    QDLC::CommandlineArguments::init( argc, argv );
     // Check for Multifile, if true parse all settings
     std::vector<std::vector<std::string>> sets;
-    std::string filename = get_parameter( "--file" );
+    std::string filename = QDLC::CommandlineArguments::get_parameter( "--file" );
     auto inputs = argv_to_vec( argc, argv );
     if ( filename.compare( "none" ) != 0 ) {
         // Multifile mode: Program will read inputfile from --file and execute all lines that dont start with '#'
@@ -67,7 +67,7 @@ int main( int argc, char* argv[] ) {
 
     // Main Program
     for ( auto& set : sets ) {
-        CommandlineArguments::init( set );
+        QDLC::CommandlineArguments::init( set );
         inputs = set;
         const std::string fp = inputs.back();
         std::filesystem::create_directories( fp );

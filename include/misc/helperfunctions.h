@@ -1,5 +1,15 @@
 #pragma once
-#include "global.h"
+#include <cmath>
+#include <complex>
+#include <string>
+#include <vector>
+// #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
+
+using namespace std::complex_literals;
+#include "misc/log.h"
+#include "misc/helperfunctions_string.h"
 
 #ifndef M_PI
 #    define M_PI 3.1415926535
@@ -17,12 +27,7 @@ double rabiFrequency( double deltaE, double g, double n );
 
 // is target in arr of length len?
 // returns index where target was found, -1 if target is not in arr
-int in( char **arr, int len, char *target );
-
-int instr( const std::string &arr, const std::string tofind, int start = 0 );
-
-// Converts an input string ( like e.g. [1,2,3,4] ) into a vector<string>
-std::vector<std::string> str_to_vec( std::string input = "[]" );
+//int in( char **arr, int len, char *target );
 
 #define toStr( x ) std::to_string( x )
 
@@ -60,7 +65,7 @@ T convertParam( const std::string input ) {
     double conversion = 1;
     int index;
     Log::L2( "Attempting to convert '{}'... ", input );
-    if ( -1 != ( index = instr( input, "eV" ) ) ) {
+    if ( -1 != ( index = QDLC::Misc::String::instr( input, "eV" ) ) ) {
         // Found 'eV' as unit (energy), now check for scaling
         if ( input.at( index - 1 ) == 'm' ) {
             // meV
@@ -81,7 +86,7 @@ T convertParam( const std::string input ) {
             Log::L2( "Conversion of input '{}' from eV failed!\n", input );
             return (T)0.0;
         }
-    } else if ( -1 != ( index = instr( input, "s" ) ) ) {
+    } else if ( -1 != ( index = QDLC::Misc::String::instr( input, "s" ) ) ) {
         // Found 's' as unit (time)
         //fmt::print("\n {} {} {} {}\n",index, input.at(index-1)=='n',input.compare(index-1,1,"n") ,input.at(index-1));
         if ( input.at( index - 1 ) == 'n' ) {
@@ -103,7 +108,7 @@ T convertParam( const std::string input ) {
             Log::L2( "Conversion from input '{}' from time failed!\n", input );
             return (T)0.0;
         }
-    } else if ( -1 != ( index = instr( input, "Hz" ) ) ) {
+    } else if ( -1 != ( index = QDLC::Misc::String::instr( input, "Hz" ) ) ) {
         // Found 'Hz' as unit (Frequency)
         Log::L2( "from Hz to Hz..." );
         if ( is_number( input.substr( index - 1, 1 ) ) ) {
@@ -113,7 +118,7 @@ T convertParam( const std::string input ) {
             Log::L2( "Conversion from input '{}' from frequency failed!\n", input );
             return (T)0.0;
         }
-    } else if ( -1 != ( index = instr( input, "pi" ) ) ) {
+    } else if ( -1 != ( index = QDLC::Misc::String::instr( input, "pi" ) ) ) {
         // Found 'Hz' as unit (Frequency)
         Log::L2( "from Xpi to rad..." );
         if ( is_number( input.substr( index - 1, 1 ) ) ) {
@@ -156,7 +161,7 @@ std::string getNextInputString( const std::vector<std::string> &arguments, const
 template <typename T>
 std::vector<T> getNextInputVector( const std::vector<std::string> &arguments, const std::string name, int &index ) {
     Log::L2( "Trying to convert input named '{}' at index '{}' to '{}'...", name, index, arguments.at( index ) );
-    return convertParam<T>( str_to_vec( arguments.at( index++ ) ) );
+    return convertParam<T>( QDLC::Misc::String::str_to_vec( arguments.at( index++ ) ) );
 }
 
 std::vector<std::string> getNextInputVectorString( const std::vector<std::string> &arguments, const std::string name, int &index );
@@ -195,26 +200,20 @@ std::complex<double> getSqueezed( double r, double phi, double N );
 
 std::string get_parameter( const std::string &key, const std::string &subkey = "" );
 
-template <class T>
-T get_parameter( const std::string &key, const std::string &subkey = "" ) {
-    std::string arg = CommandlineArguments::cla.get( key, subkey );
-    return convertParam<T>( arg );
-}
+//TODO: move to CLA
+//template <class T>
+//std::vector<T> get_parameter_vector( const std::string &key, const std::string &subkey = "" ) {
+//    std::string arg = QDLC::CommandlineArguments::get( key, subkey );
+//    // Check if input is not a vector, then output will be a new vector with only one element
+//    if ( arg.at( 0 ) != '[' ) {
+//        T elem = convertParam<T>( arg );
+//        return std::vector<T>( {elem} );
+//    }
+//    return convertParam<T>( QDLC::Misc::String::str_to_vec( arg ) );
+//}
 
-bool get_parameter_passed( const std::string &key, const std::string &subkey = "" );
-
-template <class T>
-std::vector<T> get_parameter_vector( const std::string &key, const std::string &subkey = "" ) {
-    std::string arg = CommandlineArguments::cla.get( key, subkey );
-    // Check if input is not a vector, then output will be a new vector with only one element
-    if ( arg.at( 0 ) != '[' ) {
-        T elem = convertParam<T>( arg );
-        return std::vector<T>( {elem} );
-    }
-    return convertParam<T>( str_to_vec( arg ) );
-}
-
-std::vector<std::string> get_parameter_vector( const std::string &key, const std::string &subkey = "" );
+//TODO: move to CLA
+//std::vector<std::string> get_parameter_vector( const std::string &key, const std::string &subkey = "" );
 
 // Map a vector onto comp, meaning that if in is shorter than comp, in will be filled with standard value
 template <typename T1, typename T2, typename T3>

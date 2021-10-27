@@ -129,6 +129,19 @@ Sparse ODESolver::path_integral( const Sparse &rho0, System &s, std::vector<std:
 }
 
 Sparse ODESolver::calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<SaveState> &output, const Sparse &one ) {
+    // TEST 1: (DOENST WORK)
+    if (false){
+        Sparse projector = Sparse( tensor_dim, tensor_dim );
+        projector.coeffRef( i,j ) = 1;    
+        Sparse M = iterate( output.back().mat, s, t0, t_step, output ).pruned( s.parameters.numerics_pathintegral_sparse_prune_threshold );
+        for ( double tau = t_step; tau < s.parameters.t_step_pathint; tau += t_step ) {
+            M = iterate( M, s, t0 + tau, t_step, output ).pruned( s.parameters.numerics_pathintegral_sparse_prune_threshold );
+        }
+        return M*projector;
+    }
+    // TEST 1 ENDE
+    
+    
     Sparse projector = Sparse( tensor_dim, tensor_dim );
     projector.coeffRef( i, j ) = 1;
     //auto H = getHamilton( s, t0 );
@@ -164,6 +177,7 @@ Sparse ODESolver::calculate_propagator_single( System &s, size_t tensor_dim, dou
     return M.pruned( s.parameters.numerics_pathintegral_sparse_prune_threshold );
 }
 
+// TO TEST: propagator doch mit rho_t ausrechnen, dann mit projector multiplizieren und matrixelemente nehmen.
 std::vector<std::vector<Sparse>> &ODESolver::calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<SaveState> &output ) {
     if ( pathint_propagator.count( t0 ) > 0 ) {
         return pathint_propagator[t0];
@@ -422,15 +436,17 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                                     for ( auto &[sparse_index_y, value] : inner ) {
                                         if ( abs2( value ) == 0 ) continue;
                                         auto tt = omp_get_wtime();
-                                        //Log::L3( "[PATHINT] (T{}) handling ({}),({}) -> {}\n", omp_get_thread_num(), sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), value );
+                                        Log::L3( "[PATHINT] (T{}) handling ({} > {}),({} > {}) --> {}\n", omp_get_thread_num(), gi_n,sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), gj_n,sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), value );
                                         //for ( int l = 0; l < propagator[sparse_index_x( 0 )][sparse_index_y( 0 )].outerSize(); ++l )
                                         //    for ( Sparse::InnerIterator M( propagator[sparse_index_x( 0 )][sparse_index_y( 0 )], l ); M; ++M ) {
-
+                                        
+                                        Log::L3("[PATHINT] --- Correlation Indices for tau = 0: i = {}, i' = {}, j = {}, j' = {}\n",gi_n, gi_n, gj_n, gj_n);
                                         Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
                                         for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
                                             int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )] : sparse_index_x( 0 ) ) : sparse_index_x( tau ) );
                                             int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] : sparse_index_y( 0 ) ) : sparse_index_y( tau ) );
                                             phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
+                                        Log::L3("[PATHINT] --- Correlation Indices for tau = {}: i = {}, i' = {}, j = {}, j' = {}\n",tau+1,gi_n, gi_nd, gj_n, gj_nd);
                                         }
 
                                         Scalar val = M.value() * value * std::exp( phonon_s );
