@@ -101,7 +101,7 @@ std::string Timer::format( double in ) {
     int m = std::floor( ( in - 3600. * h ) / 60 );
     int s = std::floor( ( in - 3600 * h - 60 * m ) );
     double ms = ( in - std::floor( in ) ) * 1000;
-    return fmt::format( "{}{}{}{}{}{}{:.3f}{}", h > 0 ? toStr( h ) : "", h > 0 ? "h:" : "", m > 0 ? toStr( m ) : "", m > 0 ? "m:" : "", s > 0 ? toStr( s ) : "", s > 0 ? "s:" : "", ms, "ms" );
+    return fmt::format( "{}{}{}{}{}{}{:.3f}{}", h > 0 ? std::to_string( h ) : "", h > 0 ? "h:" : "", m > 0 ? std::to_string( m ) : "", m > 0 ? "m:" : "", s > 0 ? std::to_string( s ) : "", s > 0 ? "s:" : "", ms, "ms" );
 }
 
 // returns total time taken

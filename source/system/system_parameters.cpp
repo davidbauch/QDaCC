@@ -112,7 +112,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_use_function_caching = !QDLC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
     numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
     numerics_output_raman_population = QDLC::CommandlineArguments::get_parameter_passed( "-raman" ); // DEPRECATED
-    logfilecounter = convertParam<int>( splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
+    logfilecounter = QDLC::Misc::convertParam<int>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
     numerics_calculate_timeresolution_indistinguishability = QDLC::CommandlineArguments::get_parameter_passed( "-timedepInd" ); //DEPRECATED
     numerics_output_electronic_emission = QDLC::CommandlineArguments::get_parameter_passed( "-oElec" ); //DEPRECATED
     numerics_stretch_correlation_grid = false; //FIXME: Doesnt work right now //DEPRECATED
@@ -128,7 +128,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_phonon_nork45 = QDLC::CommandlineArguments::get_parameter_passed( "-noPhononRK45" );                    // Disables RK45 for phonon backwards integral; use if detunings are high. //TODO: andersrum, RK backwards integral soll rkorder nehmen, dann mit nork45 für backwards integral deaktivieren!
     output_coefficients = QDLC::CommandlineArguments::get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
     p_phonon_adjust = !QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
-    p_phonon_pure_dephasing = convertParam<double>( "1mueV" );
+    p_phonon_pure_dephasing = QDLC::Misc::convertParam<double>( "1mueV" );
     // Path Integral Parameters
     p_phonon_nc = QDLC::CommandlineArguments::get_parameter<int>( "--pathintegral", "NC" );
     numerics_pathintegral_stepsize_iterator = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
@@ -210,9 +210,9 @@ bool Parameters::adjustInput() {
             auto pos = mat.string_v["Type"][i].find( "_pi" );
             if ( pos != std::string::npos ) {
                 if ( mat.string_v["Type"][i].find( "gauss" ) != std::string::npos )
-                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * M_PI / ( std::sqrt( 2.0 * M_PI * mat.numerical_v["Width"][i] * std::sqrt( std::pow( mat.numerical_v["Chirp"][i] / mat.numerical_v["Width"][i], 2.0 ) + std::pow( mat.numerical_v["Width"][i], 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::M_PI / ( std::sqrt( 2.0 * QDLC::Math::M_PI * mat.numerical_v["Width"][i] * std::sqrt( std::pow( mat.numerical_v["Chirp"][i] / mat.numerical_v["Width"][i], 2.0 ) + std::pow( mat.numerical_v["Width"][i], 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
                 else if ( mat.string_v["Type"][i].find( "cutoff" ) != std::string::npos )
-                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * M_PI / ( std::sqrt( 2.0 * M_PI * mat.numerical_v["Width"][i] * mat.numerical_v["Width"][i] ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::M_PI / ( std::sqrt( 2.0 * QDLC::Math::M_PI * mat.numerical_v["Width"][i] * mat.numerical_v["Width"][i] ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
                 mat.string_v["Type"][i].erase( pos, 3 );
             }
         }
@@ -277,96 +277,96 @@ bool Parameters::adjustInput() {
 
 void Parameters::parse_system() {
     // Generate the input variables for the electronic system:
-    auto levels = splitline( inputstring_electronic, ';' );
+    auto levels = QDLC::String::splitline( inputstring_electronic, ';' );
     for ( std::string &level : levels ) {
-        auto conf = splitline( level, ':' );
+        auto conf = QDLC::String::splitline( level, ':' );
         input_s conf_s;
-        conf_s.numerical["Energy"] = convertParam<Parameter>( conf[1] );           // Energy
-        conf_s.string_v["CoupledTo"] = splitline( conf[2], ',' );                  // Coupled to Levels
-        conf_s.numerical["DecayScaling"] = convertParam<Parameter>( conf[3] );     // Decay Scaling, Per Mode
-        conf_s.numerical["DephasingScaling"] = convertParam<Parameter>( conf[4] ); // Dephasing Scaling
-        conf_s.numerical["PhononCoupling"] = convertParam<Parameter>( conf[5] );   // Phonon Coupling
+        conf_s.numerical["Energy"] = QDLC::Misc::convertParam<Parameter>( conf[1] );           // Energy
+        conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[2], ',' );                  // Coupled to Levels
+        conf_s.numerical["DecayScaling"] = QDLC::Misc::convertParam<Parameter>( conf[3] );     // Decay Scaling, Per Mode
+        conf_s.numerical["DephasingScaling"] = QDLC::Misc::convertParam<Parameter>( conf[4] ); // Dephasing Scaling
+        conf_s.numerical["PhononCoupling"] = QDLC::Misc::convertParam<Parameter>( conf[5] );   // Phonon Coupling
         input_electronic[conf[0]] = conf_s;
     }
-    auto cavities = splitline( inputstring_photonic, ';' );
+    auto cavities = QDLC::String::splitline( inputstring_photonic, ';' );
     for ( std::string &cavity : cavities ) {
-        auto conf = splitline( cavity, ':' );
+        auto conf = QDLC::String::splitline( cavity, ':' );
         input_s conf_s;
-        conf_s.numerical["Energy"] = convertParam<Parameter>( conf[1] );                              // Energy
-        conf_s.numerical["MaxPhotons"] = convertParam<Parameter>( conf[2] );                          // Maximum Photons
-        conf_s.string_v["CoupledTo"] = splitline( conf[3], ',' );                                     // Coupled to Transitions
-        conf_s.numerical_v["CouplingScaling"] = convertParam<Parameter>( splitline( conf[4], ',' ) ); // Coupling Scaling, per transition INTO cavity
-        //conf_s.numerical_v["BackCouplingScaling"] = convertParam<Parameter>( splitline( conf[5], ',' ) ); // BackCoupling Scaling, per transition from cavity back into the electronic system
-        conf_s.numerical["DecayScaling"] = convertParam<Parameter>( conf[5] ); // Decay Scaling, for all transitions
+        conf_s.numerical["Energy"] = QDLC::Misc::convertParam<Parameter>( conf[1] );                              // Energy
+        conf_s.numerical["MaxPhotons"] = QDLC::Misc::convertParam<Parameter>( conf[2] );                          // Maximum Photons
+        conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[3], ',' );                                     // Coupled to Transitions
+        conf_s.numerical_v["CouplingScaling"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) ); // Coupling Scaling, per transition INTO cavity
+        //conf_s.numerical_v["BackCouplingScaling"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) ); // BackCoupling Scaling, per transition from cavity back into the electronic system
+        conf_s.numerical["DecayScaling"] = QDLC::Misc::convertParam<Parameter>( conf[5] ); // Decay Scaling, for all transitions
         input_photonic[conf[0]] = conf_s;
     }
 
     //TODO: erst pulsetype übergeben, dann parameter parsen. verschiedene types können dann auch verschieden viele paramter haben.
-    auto pulses = splitline( inputstring_pulse, ';' );
+    auto pulses = QDLC::String::splitline( inputstring_pulse, ';' );
     for ( std::string &pulse : pulses ) {
-        auto conf = splitline( pulse, ':' );
+        auto conf = QDLC::String::splitline( pulse, ':' );
         input_s conf_s;
-        conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                                                                                                                     // Coupled to Transitions
-        conf_s.numerical_v["Amplitude"] = convertParam<Parameter>( splitline( conf[2], ',' ) );                                                                                       // Pulse Amp
-        conf_s.numerical_v["Frequency"] = convertParam<Parameter>( splitline( conf[3], ',' ) );                                                                                       // Frequency
-        conf_s.numerical_v["Width"] = convertParam<Parameter>( splitline( conf[4], ',' ) );                                                                                           // Width
-        conf_s.numerical_v["Center"] = convertParam<Parameter>( splitline( conf[5], ',' ) );                                                                                          // Center
-        conf_s.numerical_v["Chirp"] = convertParam<Parameter>( splitline( conf[6], ',' ) );                                                                                           // Chirp
-        conf_s.string_v["Type"] = splitline( conf[7], ',' );                                                                                                                          // Type
-        conf_s.numerical_v["SuperAmp"] = conf.size() > 8 ? convertParam<Parameter>( splitline( conf[8], ',' ) ) : std::vector<Parameter>( conf_s.numerical_v["Center"].size(), 2.0 ); // Optional: SuperGaussian Amplitude
+        conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[1], ',' );                                                                                                                     // Coupled to Transitions
+        conf_s.numerical_v["Amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );                                                                                       // Pulse Amp
+        conf_s.numerical_v["Frequency"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );                                                                                       // Frequency
+        conf_s.numerical_v["Width"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) );                                                                                           // Width
+        conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) );                                                                                          // Center
+        conf_s.numerical_v["Chirp"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[6], ',' ) ); //TODO: move one down so it becomes optional                                                                                        // Chirp
+        conf_s.string_v["Type"] = QDLC::String::splitline( conf[7], ',' );                                                                                                                          // Type
+        conf_s.numerical_v["SuperAmp"] = conf.size() > 8 ? QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[8], ',' ) ) : std::vector<Parameter>( conf_s.numerical_v["Center"].size(), 2.0 ); // Optional: SuperGaussian Amplitude
         input_pulse[conf[0]] = conf_s;
     }
-    auto chirps = splitline( inputstring_chirp, ';' );
+    auto chirps = QDLC::String::splitline( inputstring_chirp, ';' );
     for ( std::string &chirp : chirps ) {
-        auto conf = splitline( chirp, ':' );
+        auto conf = QDLC::String::splitline( chirp, ':' );
         input_s conf_s;
-        conf_s.string_v["CoupledTo"] = splitline( conf[1], ',' );                               // Coupled to Transitions
-        conf_s.numerical_v["AmpFactor"] = convertParam<Parameter>( splitline( conf[2], ',' ) ); // Amplitude Scaling for coupled_to
-        conf_s.numerical_v["Amplitude"] = convertParam<Parameter>( splitline( conf[3], ',' ) ); // Amplitudes
-        conf_s.numerical_v["Times"] = convertParam<Parameter>( splitline( conf[4], ',' ) );     // "Times"
-        conf_s.numerical_v["ddt"] = convertParam<Parameter>( splitline( conf[5], ',' ) );       // "d/dt"
+        conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[1], ',' );                               // Coupled to Transitions
+        conf_s.numerical_v["AmpFactor"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) ); // Amplitude Scaling for coupled_to
+        conf_s.numerical_v["Amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) ); // Amplitudes
+        conf_s.numerical_v["Times"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) );     // "Times"
+        conf_s.numerical_v["ddt"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) );       // "d/dt"
         conf_s.string["Type"] = conf[6];                                                        // Type
         input_chirp[conf[0]] = conf_s;
     }
-    for ( std::string &spectrum : splitline( inputstring_spectrum, ';' ) ) {
-        auto conf = splitline( spectrum, ':' );
+    for ( std::string &spectrum : QDLC::String::splitline( inputstring_spectrum, ';' ) ) {
+        auto conf = QDLC::String::splitline( spectrum, ':' );
         input_s conf_s;
-        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                                // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
-        conf_s.numerical_v["Center"] = convertParam<Parameter>( splitline( conf[1], ',' ) ); // Center
-        conf_s.numerical_v["Range"] = convertParam<Parameter>( splitline( conf[2], ',' ) );  // Range
-        conf_s.numerical_v["resW"] = convertParam<Parameter>( splitline( conf[3], ',' ) );   // Resolution for w
+        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
+        conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) ); // Center
+        conf_s.numerical_v["Range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );  // Range
+        conf_s.numerical_v["resW"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );   // Resolution for w
         input_correlation["Spectrum"] = conf_s;
     }
-    for ( std::string &indist : splitline( inputstring_indist, ';' ) ) {
-        auto conf = splitline( indist, ':' );
+    for ( std::string &indist : QDLC::String::splitline( inputstring_indist, ';' ) ) {
+        auto conf = QDLC::String::splitline( indist, ':' );
         input_s conf_s;
-        conf_s.string_v["Modes"] = splitline( conf[0], ',' ); // Modes to calculate Indistinguishgability for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
+        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' ); // Modes to calculate Indistinguishgability for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
         input_correlation["Indist"] = conf_s;
     }
-    for ( std::string &conc : splitline( inputstring_conc, ';' ) ) {
-        auto conf = splitline( conc, ':' );
+    for ( std::string &conc : QDLC::String::splitline( inputstring_conc, ';' ) ) {
+        auto conf = QDLC::String::splitline( conc, ':' );
         input_s conf_s;
-        conf_s.string_v["Modes"] = splitline( conf[0], ',' ); // Modes to calculate Concurrence for
+        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' ); // Modes to calculate Concurrence for
         input_correlation["Conc"] = conf_s;
     }
-    for ( std::string &g_func : splitline( inputstring_gfunc, ';' ) ) {
-        auto conf = splitline( g_func, ':' );
+    for ( std::string &g_func : QDLC::String::splitline( inputstring_gfunc, ';' ) ) {
+        auto conf = QDLC::String::splitline( g_func, ':' );
         auto n = conf.size();
         input_s conf_s;
-        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                                                                                                               // Modes to calculate G1/G2 functions for
-        conf_s.numerical_v["Order"] = convertParam<Parameter>( splitline( conf[1], ',' ) );                                                                                 // 1 or 2
-        conf_s.numerical_v["Integrated"] = convertParam<Parameter>( n > 2 ? splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "2" ) ); // 0 or 1 or 2 for false/true/both
+        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                                                                                               // Modes to calculate G1/G2 functions for
+        conf_s.numerical_v["Order"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );                                                                                 // 1 or 2
+        conf_s.numerical_v["Integrated"] = QDLC::Misc::convertParam<Parameter>( n > 2 ? QDLC::String::splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "2" ) ); // 0 or 1 or 2 for false/true/both
         input_correlation["GFunc"] = conf_s;
     }
-    for ( std::string &wigner : splitline( inputstring_wigner, ';' ) ) {
-        auto conf = splitline( wigner, ':' );
+    for ( std::string &wigner : QDLC::String::splitline( inputstring_wigner, ';' ) ) {
+        auto conf = QDLC::String::splitline( wigner, ':' );
         auto n = conf.size();
         input_s conf_s;
-        conf_s.string_v["Modes"] = splitline( conf[0], ',' );                                                                                                         // Modes to calculate Wigner function for
-        conf_s.numerical_v["X"] = convertParam<Parameter>( splitline( conf[1], ',' ) );                                                                               // -X to X
-        conf_s.numerical_v["Y"] = convertParam<Parameter>( n > 2 ? splitline( conf[2], ',' ) : splitline( conf[1], ',' ) );                                           // -Y to Y
-        conf_s.numerical_v["Res"] = convertParam<Parameter>( n > 3 ? splitline( conf[3], ',' ) : std::vector<std::string>( conf_s.numerical_v["X"].size(), "100" ) ); // Resolution
-        conf_s.numerical_v["Skip"] = convertParam<Parameter>( n > 4 ? splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.numerical_v["X"].size(), "1" ) );  // Skips in t-direction
+        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                                                                                         // Modes to calculate Wigner function for
+        conf_s.numerical_v["X"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );                                                                               // -X to X
+        conf_s.numerical_v["Y"] = QDLC::Misc::convertParam<Parameter>( n > 2 ? QDLC::String::splitline( conf[2], ',' ) : QDLC::String::splitline( conf[1], ',' ) );                                           // -Y to Y
+        conf_s.numerical_v["Res"] = QDLC::Misc::convertParam<Parameter>( n > 3 ? QDLC::String::splitline( conf[3], ',' ) : std::vector<std::string>( conf_s.numerical_v["X"].size(), "100" ) ); // Resolution
+        conf_s.numerical_v["Skip"] = QDLC::Misc::convertParam<Parameter>( n > 4 ? QDLC::String::splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.numerical_v["X"].size(), "1" ) );  // Skips in t-direction
         input_correlation["Wigner"] = conf_s;
     }
 }
@@ -478,14 +478,14 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     }
     //Log::L1( "Ideal time delta for this calculation: {:.8e} s - {:.2f} fs, minimum possible: {:.8e} s - {:.2f} fs\n", getIdealTimestep(), getIdealTimestep() * 1E15, std::numeric_limits<double>::epsilon(), std::numeric_limits<double>::epsilon() * 1E15 );
     //int works = 1;
-    //if ( ( init_rabifrequenz != 0.0 ) && ( 3. * t_step > 2. * M_PI / init_rabifrequenz ) )
+    //if ( ( init_rabifrequenz != 0.0 ) && ( 3. * t_step > 2. * QDLC::Math::M_PI / init_rabifrequenz ) )
     //    works = 0;
-    //else if ( max_rabifrequenz != 0.0 && 3. * t_step > 2. * M_PI / max_rabifrequenz )
+    //else if ( max_rabifrequenz != 0.0 && 3. * t_step > 2. * QDLC::Math::M_PI / max_rabifrequenz )
     //    works = 0;
     //if ( !works ) {
     //    if ( output_handlerstrings )
-    //        fmt::print( "{} WARNING: Step may be too small to resolve predicted oscillation: dT needed vs dT: {:.10e} < {:.10e}\n", PREFIX_WARNING, 2. / 3. * M_PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
-    //    Log::L1( "WARNING: Step may be too small to resolve predicted oscillation: \n- delta T needed: {:.10e} \n- delta T used: {:.10e}\n", 2. / 3. * M_PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
+    //        fmt::print( "{} WARNING: Step may be too small to resolve predicted oscillation: dT needed vs dT: {:.10e} < {:.10e}\n", PREFIX_WARNING, 2. / 3. * QDLC::Math::M_PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
+    //    Log::L1( "WARNING: Step may be too small to resolve predicted oscillation: \n- delta T needed: {:.10e} \n- delta T used: {:.10e}\n", 2. / 3. * QDLC::Math::M_PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
     //}
     Log::L1( "Time iterations (main loop) = {}\n\n", iterations_t_max );
 

@@ -278,7 +278,7 @@ bool ODESolver::calculate_wigner( System &s, const std::string &s_mode, const do
     double g = std::sqrt( 2 );
     // Calculate Wigner functions over time:
     // Calculate Meshgrid
-    auto [X_mat, Y_mat] = meshgrid<Dense>( -x, -y, x, y, resolution );
+    auto [X_mat, Y_mat] = QDLC::Matrix::meshgrid( -x, -y, x, y, resolution );
     //Dense A = 0.5 * g * ( X_mat + 1i * Y_mat );
     Dense A = ( X_mat + 1i * Y_mat );
 
@@ -289,26 +289,23 @@ bool ODESolver::calculate_wigner( System &s, const std::string &s_mode, const do
     Timer &timer_w = Timers::create( "Wigner (" + s_mode + ")" );
     timer_w.start();
     // Iterate
-    auto factorial = []( int n ) {
-        return std::tgamma( n + 1 );
-    };
     //Calculates the Wigner function at coordinate alpha
     auto Wigner = [&]( Dense &DM, Scalar alpha ) {
         double Wval = 0.0;
         for ( int m = 0; m < DM.rows(); m++ ) {
-            if ( abs2( DM( m, m ) ) > 0.0 ) {
-                Wval += std::real( DM( m, m ) * std::pow( -1., (double)m ) * std::assoc_laguerre( m, 0, 4. * abs2( alpha ) ) );
+            if ( QDLC::Math::abs2( DM( m, m ) ) > 0.0 ) {
+                Wval += std::real( DM( m, m ) * std::pow( -1., (double)m ) * std::assoc_laguerre( m, 0, 4. * QDLC::Math::abs2( alpha ) ) );
             }
         }
 
         for ( int m = 0; m < DM.rows(); m++ ) {
             for ( int n = m + 1; n < DM.rows(); n++ ) {
-                if ( abs2( DM( m, n ) ) > 0.0 ) {
-                    Wval += 2. * std::real( DM( m, n ) * std::pow( -1., (double)m ) * std::pow( 2. * alpha, (double)( n - m ) ) * std::sqrt( factorial( m ) / factorial( n ) ) * std::assoc_laguerre( m, n - m, 4. * abs2( alpha ) ) );
+                if ( QDLC::Math::abs2( DM( m, n ) ) > 0.0 ) {
+                    Wval += 2. * std::real( DM( m, n ) * std::pow( -1., (double)m ) * std::pow( 2. * alpha, (double)( n - m ) ) * std::sqrt( QDLC::Math::factorial( m ) / QDLC::Math::factorial( n ) ) * std::assoc_laguerre( m, n - m, 4. * QDLC::Math::abs2( alpha ) ) );
                 }
             }
         }
-        return ( 1 / ( 2. * 3.1415 ) * std::exp( -2. * abs2( alpha ) ) * Wval );
+        return ( 1 / ( 2. * 3.1415 ) * std::exp( -2. * QDLC::Math::abs2( alpha ) ) * Wval );
     };
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int i = 0; i < reduced_rho.size(); i++ ) {
@@ -387,7 +384,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
     auto &conc_s = s.parameters.input_correlation["Conc"];
     for ( auto &modes : conc_s.string_v["Modes"] ) {
         std::vector<std::string> s_creator, s_annihilator;
-        for ( auto &mode : splitline( modes, '-' ) ) {
+        for ( auto &mode : QDLC::String::splitline( modes, '-' ) ) {
             const auto &[ss_creator, ss_annihilator] = get_operator_strings( mode );
             s_creator.emplace_back( ss_creator );
             s_annihilator.emplace_back( ss_annihilator );

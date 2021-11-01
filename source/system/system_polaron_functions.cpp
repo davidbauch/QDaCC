@@ -4,8 +4,8 @@
 Scalar System::dgl_phonons_phi( const double t ) {
     Scalar integral = 0;
     double stepsize = 0.01 * parameters.p_phonon_wcutoff;
-    //double eV7 = convertParam<double>( "7.0eV" );
-    //double eV35 = -convertParam<double>( "3.5eV" );
+    //double eV7 = QDLC::Misc::convertParam<double>( "7.0eV" );
+    //double eV35 = -QDLC::Misc::convertParam<double>( "3.5eV" );
     //double v_c = 5110.0;
     //double a_e = 5E-9;       //3E-9;
     //double a_h = 0.87 * a_e; //a_e / 1.15;
@@ -55,7 +55,7 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
             continue;
         explicit_time += ( param.energy + chirpcorrection ) * param.projector;
     }
-    for ( auto &[mode, param] : parameters.input_photonic ) { //FIXME: ohne cav, keine übergäng!!
+    for ( auto &[mode, param] : parameters.input_photonic ) {
         for ( auto transition : param.string_v["CoupledTo"] ) {
             std::reverse( transition.begin(), transition.end() );
             explicit_time += 1.0i * ( operatorMatrices.el_transitions[transition].energy + chirpcorrection - operatorMatrices.ph_states[mode].energy ) * operatorMatrices.el_transitions[transition].projector * operatorMatrices.ph_transitions[mode + "b"].projector;
@@ -85,7 +85,7 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
 
     Sparse hamilton = dgl_getHamilton( t );
 
-    return -1i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( project_matrix_sparse( chi ) );
+    return -1.0i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( QDLC::Matrix::sparse_projector( chi ) );
 }
 
 Sparse System::dgl_phonons_chiToX( const Sparse &chi, const char mode ) {
@@ -93,7 +93,7 @@ Sparse System::dgl_phonons_chiToX( const Sparse &chi, const char mode ) {
     if ( mode == 'g' ) {
         return chi + adjoint;
     }
-    return 1i * ( chi - adjoint );
+    return 1.0i * ( chi - adjoint );
 }
 
 Scalar System::dgl_phonons_greenf( double t, const char mode ) {
@@ -209,8 +209,8 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             } else {
                 // Index was not found, (re)calculate chi(t-tau) sum
                 // Initialize temporary matrices to zero for threads to write to
-                init_sparsevector( threadmap_1, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
-                init_sparsevector( threadmap_2, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
+                QDLC::Matrix::init_sparsevector( threadmap_1, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
+                QDLC::Matrix::init_sparsevector( threadmap_2, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
                 // Calculate backwards integral and sum it into threadmaps. Threadmaps will later be summed into one coefficient matrix.
 #pragma omp parallel for ordered schedule( dynamic ) shared( savedCoefficients ) num_threads( parameters.numerics_phonons_maximum_threads )
                 for ( int cur_thread = 0; cur_thread < parameters.numerics_phonons_maximum_threads; cur_thread++ ) {
@@ -244,7 +244,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             Sparse adjoint = integrant.adjoint();
             ret -= ( integrant + adjoint ) * parameters.t_step;
         } else {
-            init_sparsevector( threadmap_1, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
+            QDLC::Matrix::init_sparsevector( threadmap_1, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
             // Dont use markov approximation; Full integral
 #pragma omp parallel for ordered schedule( dynamic ) shared( savedCoefficients ) num_threads( parameters.numerics_phonons_maximum_threads )
             for ( int cur_thread = 0; cur_thread < parameters.numerics_phonons_maximum_threads; cur_thread++ ) {

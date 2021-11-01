@@ -58,55 +58,6 @@ class OperatorMatrices {
 
     // ##### Operator functions #####
 
-    // Calculates the tensor product of matrices a and b
-    // @param &a,&b: Input matrices
-    // @return Returns a x b where x is the tensor product
-    template <class M>
-    static M tensor( const M &a, const M &b ) {
-        assert( a.rows() == a.cols() && b.rows() == b.cols() && "Only Square matrices accepted" );
-        M ret = M::Zero( a.cols() * b.cols(), a.rows() * b.rows() );
-        for ( int i = 0; i < a.rows(); i++ )
-            for ( int j = 0; j < a.cols(); j++ )
-                for ( int k = 0; k < b.rows(); k++ )
-                    for ( int l = 0; l < b.cols(); l++ ) {
-                        ret( i * b.rows() + k, j * b.cols() + l ) = a( i, j ) * b( k, l );
-                    }
-        return ret;
-    }
-    // Chains the tensor products
-    template <class M>
-    static M tensor( const std::vector<M> &m ) {
-        if ( m.size() < 2 )
-            return m.front();
-        else if ( m.size() == 2 )
-            return tensor<M>( m[0], m[1] );
-        auto md = m;
-        md.pop_back();
-        return tensor<M>( tensor<M>( md ), m.back() );
-    }
-
-    // Determines the resulting base of the tensor product of multiple matrices
-    // @param &a,&b input string vectors containing the named base
-    // @return Returns a string vector containing the combined basis vector names
-    static std::vector<std::string> tensor( const std::vector<std::string> &a, const std::vector<std::string> &b ) {
-        std::vector<std::string> ret;
-        for ( int i = 0; i < (int)a.size(); i++ )
-            for ( int k = 0; k < (int)b.size(); k++ ) {
-                ret.emplace_back( a.at( i ) + "|" + b.at( k ) );
-            }
-        return ret;
-    }
-    // Chains the string tensor products
-    static std::vector<std::string> tensor( const std::vector<std::vector<std::string>> &m ) {
-        if ( m.size() < 2 )
-            return m.front();
-        else if ( m.size() == 2 )
-            return tensor( m[0], m[1] );
-        auto md = m;
-        md.pop_back();
-        return tensor( tensor( md ), m.back() );
-    }
-
     // Creates a bosonic creation or annihilation operator matrix
     // @param type: Either OPERATOR_PHOTONIC_CREATE of OPERATOR_PHOTONIC_ANNIHILATE
     // @param maxPhotons: Maximum number of photons; Resulting matrix will have dimension (n+1)x(n+1)

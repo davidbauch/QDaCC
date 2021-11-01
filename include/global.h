@@ -5,9 +5,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
-//#include <stdarg.h>
 #include <string>
-//#define EIGEN_SPARSEMATRIX_PLUGIN "matrixextension.h"
 #include <fmt/core.h> // -DFMT_HEADER_ONLY
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -44,15 +42,16 @@ extern std::string PREFIX_SUFFIX;
 #include "misc/commandlinearguments.h"
 #include "misc/log.h"
 #include "misc/ProgressBar.h"
+#include "misc/helperfunctions_string.h"
+#include "misc/helperfunctions_matrix.h"
+#include "misc/helperfunctions_math.h"
 #include "misc/helperfunctions.h"
 #include "misc/timer.h"
 #include "misc/sysinfo.h"
 #include "misc/FixedSizeSparseMap.h"
 
-//using Eigen::MatrixXcd;
-//using Eigen::MatrixXd;
-
-using namespace std::complex_literals;
+#include "typedef.h"
+using namespace QDLC::Type;
 
 extern std::string global_message_normaltermination;
 extern std::string global_message_error_divergent;
@@ -76,14 +75,6 @@ extern std::string global_message_error_wrong_number_input;
 #define PHONON_APPROXIMATION_MIXED 4
 #define PHONON_PATH_INTEGRAL 5
 
-typedef std::complex<double> Scalar;
-typedef Eigen::MatrixXcd Dense;
-typedef Eigen::MatrixXd dDense;
-typedef Eigen::SparseMatrix<Scalar> Sparse;
-typedef Eigen::SparseMatrix<double> dSparse;
-typedef Eigen::VectorXd dVector;
-typedef Eigen::VectorXcd Vector;
-
 // Vector for mat/time, tuple
 class SaveState {
    public:
@@ -103,21 +94,18 @@ class SaveScalar {
    public:
     Scalar scalar;
     double t, tau;
-    //SaveScalarTuple( const Sparse &mat1, const Sparse &mat2, const double t, const double tau ) : mat1( mat1 ), mat2( mat2 ), t( t ), tau( tau ){};
     SaveScalar( const Scalar &scalar, const double t, const double tau = 0.0 ) : scalar( scalar ), t( t ), tau( tau ){};
 };
 
 bool Save_State_sort_t( const SaveStateTau &ss1, const SaveStateTau &ss2 );
 bool Save_State_sort_tau( const SaveStateTau &ss1, const SaveStateTau &ss2 );
 
-template < class T >
-std::ostream& operator << (std::ostream& os, const std::vector<T>& v) 
-{
+template <class T>
+std::ostream &operator<<( std::ostream &os, const std::vector<T> &v ) {
     os << "[";
-    for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
-    {
+    for ( typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii ) {
         os << *ii;
-        if (ii != v.end())
+        if ( ii != v.end() )
             os << " ";
     }
     os << "]";

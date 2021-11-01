@@ -113,16 +113,7 @@ class ODESolver {
     bool calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 );
     bool calculate_wigner( System &s, const std::string &s_mode, const double x, const double y, const int resolution, const int skip );
     bool calculate_advanced_photon_statistics( System &s );
-    //bool calculate_advanced_photon_statistics( System &s, const Sparse &op_creator_1, const Sparse &op_annihilator_1, const Sparse &op_creator_2, const Sparse &op_annihilator_2, std::string fileOutputName );
-
-    //template <typename T>
-    //static Sparse iterate_definite_integral( const Sparse &rho, T rungefunction, const double t, const double step );
-    //static std::vector<SaveState> calculate_definite_integral_vec( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step );
-    //static SaveState calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step );
-
-    Scalar path_integral_recursive( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph, int i_n, int j_n, const std::vector<int> &indicesX, const std::vector<int> &indicesY, Scalar adm_value = 1, int current_deph = 0 );
-    Scalar path_integral_recursive_backwards( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph, int i_n, int j_n, const std::vector<int> &indicesX, const std::vector<int> &indicesY, Scalar adm_value = 1, int current_deph = -1 );
-    Sparse path_integral( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph );
+    
     Sparse calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<SaveState> &output, const Sparse &one );
     std::vector<std::vector<Sparse>> &calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<SaveState> &output );
 

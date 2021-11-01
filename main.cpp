@@ -17,7 +17,7 @@ int main( int argc, char* argv[] ) {
     // Check for Multifile, if true parse all settings
     std::vector<std::vector<std::string>> sets;
     std::string filename = QDLC::CommandlineArguments::get_parameter( "--file" );
-    auto inputs = argv_to_vec( argc, argv );
+    auto inputs = QDLC::String::argv_to_vec( argc, argv );
     if ( filename.compare( "none" ) != 0 ) {
         // Multifile mode: Program will read inputfile from --file and execute all lines that dont start with '#'
         // Catch global parameters
@@ -31,7 +31,7 @@ int main( int argc, char* argv[] ) {
         std::ifstream file( filename );
         std::string line;
         std::getline( file, line );
-        std::string outputname = splitline( line ).at( 1 );
+        std::string outputname = QDLC::String::splitline( line ).at( 1 );
         std::filesystem::create_directories( inputs.back() + outputname );
         std::ofstream fileout( inputs.back() + outputname + "/settings_" + outputname + ".txt", std::ofstream::out );
         std::vector<std::string> set;
@@ -39,7 +39,7 @@ int main( int argc, char* argv[] ) {
         while ( std::getline( file, line ) ) {
             fileout << line << std::endl;
             if ( line.size() > 5 && line.at( 0 ) != '#' && line.at( 0 ) != ' ' && line.at( 0 ) != '\t' ) {
-                set = splitline( line );
+                set = QDLC::String::splitline( line );
                 for ( auto i = set.begin(); i != set.end(); i++ )
                     if ( ( *i ).compare( "#" ) == 0 ) {
                         set = std::vector<std::string>( set.begin(), i );
@@ -47,12 +47,12 @@ int main( int argc, char* argv[] ) {
                     }
             }
             if ( set.size() > 0 ) {
-                if ( set.at( 0 ).compare( "#" ) != 0 && vec_find_str( "python3", set ) == -1 ) {
+                if ( set.at( 0 ).compare( "#" ) != 0 && QDLC::String::vec_find_str( "python3", set ) == -1 ) {
                     if ( set.size() > 1 ) {
                         // Append global parameters. Second calls wont overwrite these, so global parameters ALWAYS overwrite local parameters
                         set.insert( set.begin() + 1, globalparams.begin(), globalparams.end() );
                         // Append final path info
-                        set.emplace_back( inputs.back() + outputname + "/" + outputname + "_" + toStr( counter++ ) + "/" );
+                        set.emplace_back( inputs.back() + outputname + "/" + outputname + "_" + std::to_string( counter++ ) + "/" );
                         sets.emplace_back( set );
                     }
                 }
@@ -72,7 +72,7 @@ int main( int argc, char* argv[] ) {
         const std::string fp = inputs.back();
         std::filesystem::create_directories( fp );
         // Logfile
-        int loglevel = ( vec_find_str( "-advLog", inputs ) != -1 || vec_find_str( "-L2", inputs ) != -1 ? 2 : ( vec_find_str( "-L3", inputs ) != -1 ? 3 : 1 ) );
+        int loglevel = ( QDLC::String::vec_find_str( "-advLog", inputs ) != -1 || QDLC::String::vec_find_str( "-L2", inputs ) != -1 ? 2 : ( QDLC::String::vec_find_str( "-L3", inputs ) != -1 ? 3 : 1 ) );
         Log::init( std::string( inputs.back() ) + "logfile.log", loglevel );
 
         // System

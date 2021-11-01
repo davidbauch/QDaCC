@@ -1,4 +1,5 @@
 #include "system/operatormatrices.h"
+#include "misc/helperfunctions_matrix.h"
 //#include "system/operatormatrices_text.h"
 
 OperatorMatrices::OperatorMatrices( Parameters &p ) {
@@ -57,22 +58,22 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     // String Base Tensors
     auto subb = base_photonic;
     subb.insert( subb.begin(), base_electronic );
-    base = tensor( subb );
+    base = QDLC::Matrix::tensor( subb );
 
     // Sparse total Hilbert tensors
     for ( auto &bel : el_states ) {
         auto current = base_selfhilbert;
         current.front() = bel.second.self_hilbert; // Electronic states have basis 0 for now. Maybe change when TODO: add tensoring of multiple electronic bases
-        bel.second.hilbert = tensor( current ).sparseView();
-        bel.second.projector = project_matrix_sparse( bel.second.hilbert );
+        bel.second.hilbert = QDLC::Matrix::tensor( current ).sparseView();
+        bel.second.projector = QDLC::Matrix::sparse_projector( bel.second.hilbert );
         //std::cout << "Mat = " << bel.first << "  " << bel.second.hilbert.rows() << "\n"
         //          << Dense( bel.second.hilbert ) << std::endl;
     }
     for ( auto &phot : ph_states ) {
         auto current = base_selfhilbert;
         current[phot.second.base] = phot.second.self_hilbert;
-        phot.second.hilbert = tensor( current ).sparseView();
-        phot.second.projector = project_matrix_sparse( phot.second.hilbert );
+        phot.second.hilbert = QDLC::Matrix::tensor( current ).sparseView();
+        phot.second.projector = QDLC::Matrix::sparse_projector( phot.second.hilbert );
         //std::cout << "Mat = " << phot.first << "  " << phot.second.hilbert.rows() << "\n"
         //          << Dense( phot.second.hilbert ) << std::endl;
     }
@@ -108,14 +109,14 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     for ( auto &bel : el_transitions ) {
         auto current = base_selfhilbert;
         current.front() = bel.second.self_hilbert;
-        bel.second.hilbert = tensor( current ).sparseView();
-        bel.second.projector = project_matrix_sparse( bel.second.hilbert );
+        bel.second.hilbert = QDLC::Matrix::tensor( current ).sparseView();
+        bel.second.projector = QDLC::Matrix::sparse_projector( bel.second.hilbert );
     }
     for ( auto &phot : ph_transitions ) {
         auto current = base_selfhilbert;
         current[phot.second.base] = phot.second.self_hilbert;
-        phot.second.hilbert = tensor( current ).sparseView();
-        phot.second.projector = project_matrix_sparse( phot.second.hilbert );
+        phot.second.hilbert = QDLC::Matrix::tensor( current ).sparseView();
+        phot.second.projector = QDLC::Matrix::sparse_projector( phot.second.hilbert );
     }
 
     // Create total Hilbert space indices. This routine assumes the individual bases are added in ascending order, e.g. 0,1,2,3...:
@@ -126,7 +127,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             for ( int j = 0; j < current[i].cols(); j++ )
                 current[i]( k, j ) = ( k + 1 ) + 1i * ( j + 1 );
 
-        base_hilbert_index.emplace_back( tensor( current ) );
+        base_hilbert_index.emplace_back( QDLC::Matrix::tensor( current ) );
         //Log::L2( "Tensor for base i = {}:\nCurrent:\n{}\n\n{}\n\n", i, current[i], base_hilbert_index.back() );
     }
 
@@ -150,9 +151,9 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 auto bra2 = el_states[transition.substr( 1, 1 )].bra;
                 auto current = base_selfhilbert;
                 current.front() = ket1 * bra2;
-                Sparse transition_hilbert = tensor( current ).sparseView();
+                Sparse transition_hilbert = QDLC::Matrix::tensor( current ).sparseView();
                 current.front() = ket2 * bra1;
-                Sparse transition_transposed_hilbert = transition_hilbert.adjoint();//tensor( current ).sparseView();
+                Sparse transition_transposed_hilbert = transition_hilbert.adjoint();//QDLC::Matrix::tensor( current ).sparseView();
                 pulsemat += transition_hilbert;
                 pulsemat_star += transition_transposed_hilbert;
             } else {
@@ -201,13 +202,13 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         std::string is = iss.first;
         is.pop_back();
         is.erase( is.begin() );
-        auto i = splitline( is, '|' );
+        auto i = QDLC::String::splitline( is, '|' );
         for ( auto &jss : base_index_map ) {
             Scalar val = 0;
             std::string js = jss.first;
             js.pop_back();
             js.erase( js.begin() );
-            auto j = splitline( js, '|' );
+            auto j = QDLC::String::splitline( js, '|' );
             val += p.input_electronic[i.front()].numerical["Energy"] - p.input_electronic[j.front()].numerical["Energy"];
             for ( int a = 1; a < i.size(); a++ ) {
                 std::string ai = i[a];
@@ -287,9 +288,9 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 auto ket2 = el_states[transition.substr( 1, 1 )].ket;
                 auto current = base_selfhilbert;
                 current.front() = ket2 * bra1;
-                Sparse transition_transposed_hilbert = tensor( current ).sparseView();
+                Sparse transition_transposed_hilbert = QDLC::Matrix::tensor( current ).sparseView();
                 temp += transition_transposed_hilbert;
-                polaron_pulse_factors_explicit_time.back() += project_matrix_sparse(transition_transposed_hilbert);
+                polaron_pulse_factors_explicit_time.back() += QDLC::Matrix::sparse_projector(transition_transposed_hilbert);
             } else {
                 Log::L2( "Pulse transition {} is cavity...\n", transition );
                 temp += ph_transitions[transition + "bd"].hilbert;
@@ -358,13 +359,13 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     // Create Initial State
     // Split starting state into superposition. States can be passed as "|...>+|...>" with amplitudes
     initial_state_vector_ket = Dense::Zero( base.size(), 1 );
-    for ( auto state : splitline( p.p_initial_state_s, '+' ) ) {
+    for ( auto state : QDLC::String::splitline( p.p_initial_state_s, '+' ) ) {
         // For a coherent and normal input the syntax is |base>. replace number in base with 'alpha#' to indicate a coherent state. replace number in base with 'xiy&' to indicate a squeezed state. no spaces.
-        double amp = state[0] == '|' ? 1.0 : stod( splitline( state, '|' ).front() );
+        double amp = state[0] == '|' ? 1.0 : stod( QDLC::String::splitline( state, '|' ).front() );
         std::string pure_state = state.substr( state.find( '|' ) );
         if ( state.find( "#" ) != std::string::npos ) {
-            auto modev = splitline( state, '#' );
-            auto front = splitline( modev.front(), '|' );
+            auto modev = QDLC::String::splitline( state, '#' );
+            auto front = QDLC::String::splitline( modev.front(), '|' );
             std::string front_base = "|";
             for ( int i = 0; i < front.size() - 1; i++ ) {
                 front_base += front[i] + "|";
@@ -374,18 +375,18 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             Log::L2( "Creating superpositioned coherent state {} for mode {} with alpha = {} and scaled amplitude {}\n", pure_state, mode, alpha, amp );
             for ( int n = 0; n < p.input_photonic[mode].numerical["MaxPhotons"]; n++ ) {
                 std::string current = front_base + std::to_string( n ) + modev.back();
-                Log::L2( "Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], getCoherent( alpha, n ) * amp );
+                Log::L2( "Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getCoherent( alpha, n ) * amp );
                 // Add initial state with amplitudes
-                initial_state_vector_ket( base_index_map[current] ) += amp * getCoherent( alpha, n );
+                initial_state_vector_ket( base_index_map[current] ) += amp * QDLC::Math::getCoherent( alpha, n );
             }
         } else if ( state.find( "&" ) != std::string::npos ) {
-            auto modev = splitline( state, '&' );
-            auto front = splitline( modev.front(), '|' );
+            auto modev = QDLC::String::splitline( state, '&' );
+            auto front = QDLC::String::splitline( modev.front(), '|' );
             std::string front_base = "|";
             for ( int i = 0; i < front.size() - 1; i++ ) {
                 front_base += front[i] + "|";
             }
-            auto cmplx = splitline( front.back(), 'i' );
+            auto cmplx = QDLC::String::splitline( front.back(), 'i' );
             double r = std::stod( cmplx.front() );
             double phi = std::stod( cmplx.back() );
             std::string mode = modev.back().substr( 0, 1 );
@@ -394,9 +395,9 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 if ( n % 2 != 0 )
                     continue;
                 std::string current = front_base + std::to_string( n ) + modev.back();
-                Log::L2( "Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], getSqueezed( r, phi, n ) * amp );
+                Log::L2( "Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getSqueezed( r, phi, n ) * amp );
                 // Add initial state with amplitudes
-                initial_state_vector_ket( base_index_map[current] ) += amp * getSqueezed( r, phi, n );
+                initial_state_vector_ket( base_index_map[current] ) += amp * QDLC::Math::getSqueezed( r, phi, n );
             }
         } else {
             Log::L2( "Creating superpositioned state {} ({}) with amplitude {}\n", pure_state, base_index_map[pure_state], amp );
@@ -419,8 +420,8 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     //double trace_rest_h = 1.0;
     //double trace_rest_v = 1.0;
     //for ( int i = 0; i < p.p_max_photon_number; i++ ) {
-    //    auto coherent_h = getCoherent( std::sqrt( p.p_initial_state_photon_h ), i );
-    //    auto coherent_v = 0.0; //getCoherent( std::sqrt(p.p_initial_state_photon_v), i );
+    //    auto coherent_h = QDLC::Math::getCoherent( std::sqrt( p.p_initial_state_photon_h ), i );
+    //    auto coherent_v = 0.0; //QDLC::Math::getCoherent( std::sqrt(p.p_initial_state_photon_v), i );
     //    int state_h = 4 * ( p.p_max_photon_number + 1 ) * i;
     //    int state_v = 4 * i;
     //    rho.coeffRef( state_h, state_h ) = coherent_h; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!

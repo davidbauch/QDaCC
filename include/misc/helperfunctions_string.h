@@ -1,10 +1,9 @@
 #pragma once
 #include <string>
+#include <sstream>
 #include <vector>
 
 namespace QDLC {
-
-namespace Misc {
 
 namespace String {
 
@@ -30,8 +29,14 @@ int instr( const std::string &arr, const std::string tofind, int start = 0 );
 // Converts an input string ( like e.g. [1,2,3,4] ) into a vector<string>
 std::vector<std::string> str_to_vec( std::string input = "[]" );
 
-} // namespace String
+// Finds a string in vector and returns index of first found element
+int vec_find_str( std::string toFind, const std::vector<std::string> &input );
 
-} // namespace Misc
+// Split input string at spli
+std::vector<std::string> splitline( const std::string &input = "", const char splitter = ' ' );
+
+std::vector<std::string> argv_to_vec( int argc, char **argv );
+
+} // namespace String
 
 } // namespace QDLC

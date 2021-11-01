@@ -3,8 +3,8 @@
 Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
     Scalar integral = 0;
     double stepsize = 1.0E-4 * parameters.p_phonon_wcutoff;
-    //double eV7 = convertParam<double>( "7.0eV" );
-    //double eV35 = -convertParam<double>( "3.5eV" );
+    //double eV7 = QDLC::Misc::convertParam<double>( "7.0eV" );
+    //double eV35 = -QDLC::Misc::convertParam<double>( "3.5eV" );
     double v_c = 5110.0;
     double a_e = 5E-9;       //3E-9;
     double a_h = 0.87 * a_e; //a_e / 1.15;
