@@ -2,7 +2,7 @@
 
 System::System( const std::vector<std::string> &input ) {
     // Set Name of this system.
-    name = "Biexciton (4NS)";
+    name = "Generic Electronic System";
     Log::L2( "Creating System Class for '{}'\n", name );
     // Initialize all subclasses with the input vector
     parameters = Parameters( input );

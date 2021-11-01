@@ -47,12 +47,13 @@ void System::initialize_polaron_frame_functions() {
 }
 
 Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
+    //TODO Maybe? Cache explicit times?
     double chirpcorrection = chirp.size() > 0 ? ( chirp.back().get( t ) + t * ( chirp.back().get( t ) - parameters.scaleVariable( chirp.back().derivative( t ), parameters.scale_value ) ) ) : 0;
     Sparse explicit_time = Sparse( chi.rows(), chi.cols() );
     for ( auto &[mode, param] : operatorMatrices.el_transitions ) {
         if ( param.direction == -1 )
             continue;
-        explicit_time += 1.0i * ( param.energy + chirpcorrection ) * param.projector; //TODO: chirpcorrection * chirpfaktor
+        explicit_time += ( param.energy + chirpcorrection ) * param.projector;
     }
     for ( auto &[mode, param] : parameters.input_photonic ) { //FIXME: ohne cav, keine übergäng!!
         for ( auto transition : param.string_v["CoupledTo"] ) {
@@ -61,10 +62,11 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
         }
     }
     int p = 0;
+    int pp = 0;
     for ( auto &[mode, param] : parameters.input_pulse ) {
         for ( auto transition : param.string_v["CoupledTo"] ) {
             std::reverse( transition.begin(), transition.end() );
-            explicit_time += 1.0i * ( pulse[p].get( t ) + 1.0i * parameters.scaleVariable( pulse[p].derivative( t ), parameters.scale_value ) ) * operatorMatrices.el_transitions[transition].projector;
+            explicit_time += 1.0i * ( pulse[p].get( t ) + 1.0i * parameters.scaleVariable( pulse[p].derivative( t ), parameters.scale_value ) ) * operatorMatrices.polaron_pulse_factors_explicit_time[pp++];
         }
         p++;
     }
@@ -148,12 +150,12 @@ Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, 
     if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) {
         return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.t_step, parameters.numerics_rk_tol, parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
-        Sparse U = ( Dense( -1i * dgl_getHamilton( t ) * tau ).exp() ).sparseView();
+        Sparse U = ( Dense( -1.0i * dgl_getHamilton( t ) * tau ).exp() ).sparseView();
         return ( U * chi_tau * U.adjoint() ).eval();
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_MIXED ) {
         double threshold = 0;
         for ( auto &p : pulse )
-            threshold += std::abs( p.get( t ) / p.maximum ); //TODO: + photon zahl, wenn photon number > 0.1 oder so dann auch. für große kopplungen gibts sonst starke abweichungen
+            threshold += std::abs( p.get( t ) / p.maximum ); //TODO: + photon zahl, wenn photon number > 0.1 oder so dann auch. für große kopplungen gibts sonst starke abweichungen. vil. number*g draufaddieren.
         if ( threshold > 1E-4 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) { //TODO: threshold als parameter
             return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.t_step, parameters.numerics_rk_tol, parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
         }

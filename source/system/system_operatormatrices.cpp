@@ -149,9 +149,9 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 auto ket2 = el_states[transition.substr( 1, 1 )].ket;
                 auto bra2 = el_states[transition.substr( 1, 1 )].bra;
                 auto current = base_selfhilbert;
-                current.front() = ket2 * bra1;
-                Sparse transition_hilbert = tensor( current ).sparseView();
                 current.front() = ket1 * bra2;
+                Sparse transition_hilbert = tensor( current ).sparseView();
+                current.front() = ket2 * bra1;
                 Sparse transition_transposed_hilbert = transition_hilbert.adjoint();//tensor( current ).sparseView();
                 pulsemat += transition_hilbert;
                 pulsemat_star += transition_transposed_hilbert;
@@ -275,22 +275,25 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     for ( auto &[mode, param] : p.input_pulse ) {
         Sparse temp = Sparse( base.size(), base.size() );
         for ( auto transition : param.string_v["CoupledTo"] ) {
-            std::reverse( transition.begin(), transition.end() );
-            if ( el_transitions.count( transition ) > 0 ) {
-                temp += el_transitions[transition].hilbert;
+            polaron_pulse_factors_explicit_time.emplace_back( Sparse( base.size(), base.size() ) );
+            std::string transition_transposed = transition;
+            std::reverse( transition_transposed.begin(), transition_transposed.end() );
+            if ( el_transitions.count( transition_transposed ) > 0 ) {
+                temp += el_transitions[transition_transposed].hilbert;
+                polaron_pulse_factors_explicit_time.back() += el_transitions[transition_transposed].projector;
             } else if ( std::isupper( transition.front() ) ) {
                 Log::L2( "Electronic Pulse transition {} is not in the list of allowed electronic transitions, recreating transition matrices...\n", transition );
-                auto ket1 = el_states[transition.substr( 0, 1 )].ket;
                 auto bra1 = el_states[transition.substr( 0, 1 )].bra;
                 auto ket2 = el_states[transition.substr( 1, 1 )].ket;
-                auto bra2 = el_states[transition.substr( 1, 1 )].bra;
                 auto current = base_selfhilbert;
                 current.front() = ket2 * bra1;
                 Sparse transition_transposed_hilbert = tensor( current ).sparseView();
                 temp += transition_transposed_hilbert;
+                polaron_pulse_factors_explicit_time.back() += project_matrix_sparse(transition_transposed_hilbert);
             } else {
                 Log::L2( "Pulse transition {} is cavity...\n", transition );
                 temp += ph_transitions[transition + "bd"].hilbert;
+                polaron_pulse_factors_explicit_time.back() += ph_transitions[transition + "bd"].projector;
             }
         }
         polaron_factors.emplace_back( temp );
@@ -332,7 +335,6 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     else
         H_used = H;
 
-    phononCouplingFactor = dDense::Zero( base.size(), base.size() );
     std::map<double, int> temp_base_indices;
     int new_index = 0;
     for ( int i = 0; i < base.size(); i++ ) {
@@ -340,19 +342,17 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             std::string state1 = base.at( i ).substr( 1, 1 );
             std::string state2 = base.at( j ).substr( 1, 1 );
             if ( i == j ) {
-                phononCouplingFactor( i, j ) = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
-                if ( !temp_base_indices.contains( phononCouplingFactor( i, j ) ) ) {
-                    temp_base_indices[phononCouplingFactor( i, j )] = new_index++;
-                    phononCouplingIndexValue.emplace_back( phononCouplingFactor( i, j ) );
+                auto factor = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
+                if ( !temp_base_indices.contains( factor ) ) {
+                    temp_base_indices[factor] = new_index++;
+                    phononCouplingIndexValue.emplace_back( factor );
                 }
-                phononCouplingIndex.emplace_back( temp_base_indices[phononCouplingFactor( i, j )] );
+                phononCouplingIndex.emplace_back( temp_base_indices[factor] );
             }
         }
     }
-    //Log::L2( "Phonon Coupling Matrix:\n{}\n", phononCouplingFactor.format( CleanFmt ) );
     Log::L2( "Phonon Coupling Index Vector: {}\n", phononCouplingIndex );
     Log::L2( "Phonon Coupling Value Vector: {}\n", phononCouplingIndexValue );
-
     Log::L2( "Hamiltonoperator done!\n" );
 
     // Create Initial State

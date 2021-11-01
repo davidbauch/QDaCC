@@ -1,147 +1,134 @@
 #include "solver/solver_ode.h"
 
-Scalar ODESolver::path_integral_recursive( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph, int i_n, int j_n, const std::vector<int> &indicesX, const std::vector<int> &indicesY, Scalar adm_value, int current_deph ) {
-    int tensor_dim = rho0.rows();
-    Scalar result = 0;
-    if ( current_deph == max_deph - 1 ) {
-        for ( int k = 0; k < rho0.outerSize(); ++k ) {
-            for ( Sparse::InnerIterator it( rho0, k ); it; ++it ) {
-                int i_n_m = it.row();
-                int j_n_m = it.col();
-                auto new_indicesX = indicesX;
-                auto new_indicesY = indicesY;
-                new_indicesX.emplace_back( i_n_m );
-                new_indicesY.emplace_back( j_n_m );
-                Scalar phonon_s = 0;
-                for ( int lt = 0; lt < new_indicesX.size(); lt++ ) {
-                    int ii_n = new_indicesX.at( lt );
-                    int ij_n = new_indicesY.at( lt );
-                    for ( int ld = 0; ld <= lt; ld++ ) {
-                        int ii_nd = new_indicesX.at( ld );
-                        int ij_nd = new_indicesY.at( ld );
-                        if ( s.parameters.numerics_pathint_partially_summed )
-                            phonon_s += s.dgl_phonon_S_function( lt - ld, s.operatorMatrices.phononCouplingFactor( ii_n, ii_n ), s.operatorMatrices.phononCouplingFactor( ij_n, ij_n ), s.operatorMatrices.phononCouplingFactor( ii_nd, ii_nd ), s.operatorMatrices.phononCouplingFactor( ij_nd, ij_nd ) );
-                        else
-                            phonon_s += s.dgl_phonon_S_function( lt - ld, ii_n, ij_n, ii_nd, ij_nd );
-                    }
-                }
-                Scalar val = rho0.coeff( i_n_m, j_n_m ) * iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n ) * std::exp( phonon_s );
-                if ( fillADM && ( new_indicesX[0] == new_indicesY[0] || abs2( val ) > s.parameters.numerics_pathintegral_squared_threshold ) ) {
-                    if ( s.parameters.numerics_pathint_partially_summed ) {
-                        for ( int i = 1; i < new_indicesX.size(); i++ ) {
-                            new_indicesX[i] = s.operatorMatrices.phononCouplingFactor( new_indicesX[i], new_indicesX[i] );
-                            new_indicesY[i] = s.operatorMatrices.phononCouplingFactor( new_indicesY[i], new_indicesY[i] );
-                        }
-                    }
-
-                    adm.addTriplet( Eigen::Map<Eigen::VectorXi>( new_indicesX.data(), new_indicesX.size() ), Eigen::Map<Eigen::VectorXi>( new_indicesY.data(), new_indicesY.size() ), adm_value * val, omp_get_thread_num() );
-                }
-                result += val;
-            }
-        }
-    } else {
-        for ( int i_n_m = 0; i_n_m < tensor_dim; i_n_m++ ) {
-            for ( int j_n_m = 0; j_n_m < tensor_dim; j_n_m++ ) {
-                Scalar val = iterates[max_deph - 1 - current_deph][i_n_m][j_n_m].coeff( i_n, j_n ); //TODO: in der backwards methode: über hier i_n_m iterieren statt über i_n, dann über nonzeros von i_n iterieren, vector umgekehrt aufbauen.
-                if ( abs2( val ) == 0 ) continue;
-                Scalar phonon_s = 0;
-                auto new_indicesX = indicesX;
-                auto new_indicesY = indicesY;
-                new_indicesX.emplace_back( i_n_m );
-                new_indicesY.emplace_back( j_n_m );
-                result += val * path_integral_recursive( rho0, s, iterates, output, adm, fillADM, max_deph, i_n_m, j_n_m, new_indicesX, new_indicesY, adm_value * val, current_deph + 1 );
-            }
-        }
-    }
-    return result;
-}
-
-Scalar ODESolver::path_integral_recursive_backwards( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph, int i_n, int j_n, const std::vector<int> &indicesX, const std::vector<int> &indicesY, Scalar adm_value, int current_deph ) {
-    if ( current_deph == -1 )
-        current_deph = max_deph - 1;
-    int tensor_dim = rho0.rows();
-    Scalar result = 0;
-    if ( current_deph == max_deph - 1 ) {
-        for ( int k = 0; k < rho0.outerSize(); ++k ) {
-            for ( Sparse::InnerIterator it( rho0, k ); it; ++it ) {
-                int i_n_m = it.row();
-                int j_n_m = it.col();
-                auto new_indicesX = indicesX;
-                auto new_indicesY = indicesY;
-                new_indicesX.emplace_back( i_n_m ); // [i_0, , i_nc]
-                new_indicesY.emplace_back( j_n_m ); // [j_0, , j_nc]
-                Scalar val = rho0.coeff( i_n_m, j_n_m ) * iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n );
-                if ( current_deph == 0 ) {
-                    result += val;
-                } else {
-                    result += val * path_integral_recursive_backwards( rho0, s, iterates, output, adm, fillADM, max_deph, i_n_m, j_n_m, new_indicesX, new_indicesY, adm_value * val, current_deph - 1 );
-                }
-            }
-        }
-    } else {
-        for ( int i_n_m = 0; i_n_m < tensor_dim; i_n_m++ ) {
-            for ( int j_n_m = 0; j_n_m < tensor_dim; j_n_m++ ) {
-                Scalar phonon_s = 0;
-                auto new_indicesX = indicesX;
-                auto new_indicesY = indicesY;
-                new_indicesX.insert( new_indicesX.begin() + 1, i_n_m ); // [i_0, i_n_m, , i_nc]
-                new_indicesY.insert( new_indicesY.begin() + 1, j_n_m ); // [j_0, j_n_m, , j_nc]
-                Scalar val = iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n );
-                if ( abs2( val ) == 0 ) continue;
-                if ( current_deph == 0 ) {
-                    Scalar phonon_s = 0;
-                    for ( int lt = 0; lt < new_indicesX.size(); lt++ ) {
-                        int ii_n = new_indicesX.at( lt );
-                        int ij_n = new_indicesY.at( lt );
-                        for ( int ld = 0; ld <= lt; ld++ ) {
-                            int ii_nd = new_indicesX.at( ld );
-                            int ij_nd = new_indicesY.at( ld );
-                            phonon_s += s.dgl_phonon_S_function( lt - ld, ii_n, ij_n, ii_nd, ij_nd );
-                        }
-                    }
-                    val *= std::exp( phonon_s );
-                    result += val;
-                    if ( fillADM && ( ( new_indicesX[0] == new_indicesY[0] && abs2( val ) != 0.0 ) || abs2( val ) > s.parameters.numerics_pathintegral_squared_threshold ) ) {
-                        adm.addTriplet( Eigen::Map<Eigen::VectorXi>( new_indicesX.data(), new_indicesX.size() ), Eigen::Map<Eigen::VectorXi>( new_indicesY.data(), new_indicesY.size() ), adm_value * val, omp_get_thread_num() );
-                    }
-                } else {
-                    result += val * path_integral_recursive_backwards( rho0, s, iterates, output, adm, fillADM, max_deph, i_n_m, j_n_m, new_indicesX, new_indicesY, adm_value * val, current_deph - 1 );
-                }
-            }
-        }
-    }
-    return result;
-}
-
-Sparse ODESolver::path_integral( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph ) {
-    int tensor_dim = rho0.rows();
-    Dense rho_ret = Dense::Zero( tensor_dim, tensor_dim );
-#pragma omp parallel for collapse( 2 ) num_threads( s.parameters.numerics_phonons_maximum_threads )
-    for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
-        for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
-            rho_ret( i_n, j_n ) = path_integral_recursive( rho0, s, iterates, output, adm, fillADM, max_deph, i_n, j_n, { i_n }, { j_n } );
-        }
-    }
-    if ( fillADM ) {
-        //adm.swapAndClearCache();
-    }
-    return rho_ret.sparseView();
-}
+//Scalar ODESolver::path_integral_recursive( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph, int i_n, int j_n, const std::vector<int> &indicesX, const std::vector<int> &indicesY, Scalar adm_value, int current_deph ) {
+//    int tensor_dim = rho0.rows();
+//    Scalar result = 0;
+//    if ( current_deph == max_deph - 1 ) {
+//        for ( int k = 0; k < rho0.outerSize(); ++k ) {
+//            for ( Sparse::InnerIterator it( rho0, k ); it; ++it ) {
+//                int i_n_m = it.row();
+//                int j_n_m = it.col();
+//                auto new_indicesX = indicesX;
+//                auto new_indicesY = indicesY;
+//                new_indicesX.emplace_back( i_n_m );
+//                new_indicesY.emplace_back( j_n_m );
+//                Scalar phonon_s = 0;
+//                for ( int lt = 0; lt < new_indicesX.size(); lt++ ) {
+//                    int ii_n = new_indicesX.at( lt );
+//                    int ij_n = new_indicesY.at( lt );
+//                    for ( int ld = 0; ld <= lt; ld++ ) {
+//                        int ii_nd = new_indicesX.at( ld );
+//                        int ij_nd = new_indicesY.at( ld );
+//                        if ( s.parameters.numerics_pathint_partially_summed )
+//                            phonon_s += s.dgl_phonon_S_function( lt - ld, s.operatorMatrices.phononCouplingFactor( ii_n, ii_n ), s.operatorMatrices.phononCouplingFactor( ij_n, ij_n ), s.operatorMatrices.phononCouplingFactor( ii_nd, ii_nd ), s.operatorMatrices.phononCouplingFactor( ij_nd, ij_nd ) );
+//                        else
+//                            phonon_s += s.dgl_phonon_S_function( lt - ld, ii_n, ij_n, ii_nd, ij_nd );
+//                    }
+//                }
+//                Scalar val = rho0.coeff( i_n_m, j_n_m ) * iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n ) * std::exp( phonon_s );
+//                if ( fillADM && ( new_indicesX[0] == new_indicesY[0] || abs2( val ) > s.parameters.numerics_pathintegral_squared_threshold ) ) {
+//                    if ( s.parameters.numerics_pathint_partially_summed ) {
+//                        for ( int i = 1; i < new_indicesX.size(); i++ ) {
+//                            new_indicesX[i] = s.operatorMatrices.phononCouplingFactor( new_indicesX[i], new_indicesX[i] );
+//                            new_indicesY[i] = s.operatorMatrices.phononCouplingFactor( new_indicesY[i], new_indicesY[i] );
+//                        }
+//                    }
+//
+//                    adm.addTriplet( Eigen::Map<Eigen::VectorXi>( new_indicesX.data(), new_indicesX.size() ), Eigen::Map<Eigen::VectorXi>( new_indicesY.data(), new_indicesY.size() ), adm_value * val, omp_get_thread_num() );
+//                }
+//                result += val;
+//            }
+//        }
+//    } else {
+//        for ( int i_n_m = 0; i_n_m < tensor_dim; i_n_m++ ) {
+//            for ( int j_n_m = 0; j_n_m < tensor_dim; j_n_m++ ) {
+//                Scalar val = iterates[max_deph - 1 - current_deph][i_n_m][j_n_m].coeff( i_n, j_n ); //TODO: in der backwards methode: über hier i_n_m iterieren statt über i_n, dann über nonzeros von i_n iterieren, vector umgekehrt aufbauen.
+//                if ( abs2( val ) == 0 ) continue;
+//                Scalar phonon_s = 0;
+//                auto new_indicesX = indicesX;
+//                auto new_indicesY = indicesY;
+//                new_indicesX.emplace_back( i_n_m );
+//                new_indicesY.emplace_back( j_n_m );
+//                result += val * path_integral_recursive( rho0, s, iterates, output, adm, fillADM, max_deph, i_n_m, j_n_m, new_indicesX, new_indicesY, adm_value * val, current_deph + 1 );
+//            }
+//        }
+//    }
+//    return result;
+//}
+//
+//Scalar ODESolver::path_integral_recursive_backwards( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph, int i_n, int j_n, const std::vector<int> &indicesX, const std::vector<int> &indicesY, Scalar adm_value, int current_deph ) {
+//    if ( current_deph == -1 )
+//        current_deph = max_deph - 1;
+//    int tensor_dim = rho0.rows();
+//    Scalar result = 0;
+//    if ( current_deph == max_deph - 1 ) {
+//        for ( int k = 0; k < rho0.outerSize(); ++k ) {
+//            for ( Sparse::InnerIterator it( rho0, k ); it; ++it ) {
+//                int i_n_m = it.row();
+//                int j_n_m = it.col();
+//                auto new_indicesX = indicesX;
+//                auto new_indicesY = indicesY;
+//                new_indicesX.emplace_back( i_n_m ); // [i_0, , i_nc]
+//                new_indicesY.emplace_back( j_n_m ); // [j_0, , j_nc]
+//                Scalar val = rho0.coeff( i_n_m, j_n_m ) * iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n );
+//                if ( current_deph == 0 ) {
+//                    result += val;
+//                } else {
+//                    result += val * path_integral_recursive_backwards( rho0, s, iterates, output, adm, fillADM, max_deph, i_n_m, j_n_m, new_indicesX, new_indicesY, adm_value * val, current_deph - 1 );
+//                }
+//            }
+//        }
+//    } else {
+//        for ( int i_n_m = 0; i_n_m < tensor_dim; i_n_m++ ) {
+//            for ( int j_n_m = 0; j_n_m < tensor_dim; j_n_m++ ) {
+//                Scalar phonon_s = 0;
+//                auto new_indicesX = indicesX;
+//                auto new_indicesY = indicesY;
+//                new_indicesX.insert( new_indicesX.begin() + 1, i_n_m ); // [i_0, i_n_m, , i_nc]
+//                new_indicesY.insert( new_indicesY.begin() + 1, j_n_m ); // [j_0, j_n_m, , j_nc]
+//                Scalar val = iterates.at( max_deph - 1 - current_deph ).at( i_n_m ).at( j_n_m ).coeff( i_n, j_n );
+//                if ( abs2( val ) == 0 ) continue;
+//                if ( current_deph == 0 ) {
+//                    Scalar phonon_s = 0;
+//                    for ( int lt = 0; lt < new_indicesX.size(); lt++ ) {
+//                        int ii_n = new_indicesX.at( lt );
+//                        int ij_n = new_indicesY.at( lt );
+//                        for ( int ld = 0; ld <= lt; ld++ ) {
+//                            int ii_nd = new_indicesX.at( ld );
+//                            int ij_nd = new_indicesY.at( ld );
+//                            phonon_s += s.dgl_phonon_S_function( lt - ld, ii_n, ij_n, ii_nd, ij_nd );
+//                        }
+//                    }
+//                    val *= std::exp( phonon_s );
+//                    result += val;
+//                    if ( fillADM && ( ( new_indicesX[0] == new_indicesY[0] && abs2( val ) != 0.0 ) || abs2( val ) > s.parameters.numerics_pathintegral_squared_threshold ) ) {
+//                        adm.addTriplet( Eigen::Map<Eigen::VectorXi>( new_indicesX.data(), new_indicesX.size() ), Eigen::Map<Eigen::VectorXi>( new_indicesY.data(), new_indicesY.size() ), adm_value * val, omp_get_thread_num() );
+//                    }
+//                } else {
+//                    result += val * path_integral_recursive_backwards( rho0, s, iterates, output, adm, fillADM, max_deph, i_n_m, j_n_m, new_indicesX, new_indicesY, adm_value * val, current_deph - 1 );
+//                }
+//            }
+//        }
+//    }
+//    return result;
+//}
+//
+//Sparse ODESolver::path_integral( const Sparse &rho0, System &s, std::vector<std::vector<std::vector<Sparse>>> &iterates, std::vector<SaveState> &output, FixedSizeSparseMap<Scalar> &adm, bool fillADM, int max_deph ) {
+//    int tensor_dim = rho0.rows();
+//    Dense rho_ret = Dense::Zero( tensor_dim, tensor_dim );
+//#pragma omp parallel for collapse( 2 ) num_threads( s.parameters.numerics_phonons_maximum_threads )
+//    for ( int i_n = 0; i_n < tensor_dim; i_n++ ) {
+//        for ( int j_n = 0; j_n < tensor_dim; j_n++ ) {
+//            rho_ret( i_n, j_n ) = path_integral_recursive( rho0, s, iterates, output, adm, fillADM, max_deph, i_n, j_n, { i_n }, { j_n } );
+//        }
+//    }
+//    if ( fillADM ) {
+//        //adm.swapAndClearCache();
+//    }
+//    return rho_ret.sparseView();
+//}
 
 Sparse ODESolver::calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<SaveState> &output, const Sparse &one ) {
-    // TEST 1: (DOENST WORK)
-    if (false){
-        Sparse projector = Sparse( tensor_dim, tensor_dim );
-        projector.coeffRef( i,j ) = 1;    
-        Sparse M = iterate( output.back().mat, s, t0, t_step, output ).pruned( s.parameters.numerics_pathintegral_sparse_prune_threshold );
-        for ( double tau = t_step; tau < s.parameters.t_step_pathint; tau += t_step ) {
-            M = iterate( M, s, t0 + tau, t_step, output ).pruned( s.parameters.numerics_pathintegral_sparse_prune_threshold );
-        }
-        return M*projector;
-    }
-    // TEST 1 ENDE
-    
-    
     Sparse projector = Sparse( tensor_dim, tensor_dim );
     projector.coeffRef( i, j ) = 1;
     //auto H = getHamilton( s, t0 );
@@ -166,6 +153,7 @@ Sparse ODESolver::calculate_propagator_single( System &s, size_t tensor_dim, dou
         //Sparse DM = MM.cwiseProduct( M );
         //M = DM;
     }
+
     //M = Dense( M ).exp().sparseView();
     if ( s.parameters.numerics_pathintegral_docutoff_propagator ) {
         return M.cwiseProduct( map ).pruned( s.parameters.numerics_pathintegral_sparse_prune_threshold );
@@ -185,13 +173,13 @@ std::vector<std::vector<Sparse>> &ODESolver::calculate_propagator_vector( System
     Sparse one = Dense::Identity( tensor_dim, tensor_dim ).sparseView();
     std::vector<std::vector<Sparse>> ret( tensor_dim, { tensor_dim, Sparse( tensor_dim, tensor_dim ) } );
     // Calculate first by hand to ensure the Hamilton gets calculated correclty
-    ret[0][0] = calculate_propagator_single( s, tensor_dim, t0, t_step, 0, 0, output, one );
+    ret[0][0] = calculate_propagator_single( s, tensor_dim, t0, t_step, 0, 0, output, one ); //pathint_propagator[-1][0][0] );
 // Calculate the remaining propagators
 #pragma omp parallel for num_threads( s.parameters.numerics_phonons_maximum_threads )
     for ( int i = 0; i < tensor_dim; i++ ) {
         for ( int j = 0; j < tensor_dim; j++ ) {
             if ( i == 0 && j == 0 ) continue;
-            ret[i][j] = calculate_propagator_single( s, tensor_dim, t0, t_step, i, j, output, one );
+            ret[i][j] = calculate_propagator_single( s, tensor_dim, t0, t_step, i, j, output,one );  //pathint_propagator[-1][i][j] );
         }
     }
     // Only save propagator vector if correlation functions are calculated.
@@ -288,8 +276,8 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     int tensor_dim = rho0.rows();
 
     std::set<int> different_dimensions;
-    for ( int i = 0; i < s.operatorMatrices.phononCouplingFactor.rows(); i++ ) {
-        different_dimensions.insert( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( i, i ) : i );
+    for ( int i = 0; i < s.operatorMatrices.phononCouplingIndex.size(); i++ ) {
+        different_dimensions.insert( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i] : i );
     }
 
     pathint_tensor_dimensions = { tensor_dim };
@@ -305,7 +293,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
 
     std::vector<std::vector<int>> adm_multithreaded_indices( different_dimensions.size() );
     for ( int i = 0; i < tensor_dim; i++ ) {
-        adm_multithreaded_indices[s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingFactor( i, i ) : i].emplace_back( i );
+        adm_multithreaded_indices[s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i] : i].emplace_back( i );
     }
     Log::L2( "[PATHINT] CPU Threaded vectors are:\n" );
     for ( auto &v : adm_multithreaded_indices ) {
@@ -313,7 +301,17 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     }
 
     FixedSizeSparseMap<Scalar> adms = FixedSizeSparseMap<Scalar>( adm_multithreading_cores );
-
+    //{
+    //    std::vector<std::vector<Sparse>> ret( tensor_dim, { tensor_dim, Sparse( tensor_dim, tensor_dim ) } );
+    //    for ( auto i = 0; i < tensor_dim; i++ ) {
+    //        for ( auto j = 0; j < tensor_dim; j++ ) {
+    //            Sparse projector = Sparse( tensor_dim, tensor_dim );
+    //            projector.coeffRef( i, j ) = 1;
+    //            ret[i][j] = projector;
+    //        }
+    //    }
+    //    pathint_propagator[-1] = ret;
+    //}
     // Calculate first n_c timesteps directly
     //Log::L3( "Calculating first n_c = {} timesteps of the pathintegral directly...\n", s.parameters.p_phonon_nc );
 
@@ -436,17 +434,17 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                                     for ( auto &[sparse_index_y, value] : inner ) {
                                         if ( abs2( value ) == 0 ) continue;
                                         auto tt = omp_get_wtime();
-                                        Log::L3( "[PATHINT] (T{}) handling ({} > {}),({} > {}) --> {}\n", omp_get_thread_num(), gi_n,sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), gj_n,sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), value );
+                                        Log::L3( "[PATHINT] (T{}) handling ({} > {}),({} > {}) --> {}\n", omp_get_thread_num(), gi_n, sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), gj_n, sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), value );
                                         //for ( int l = 0; l < propagator[sparse_index_x( 0 )][sparse_index_y( 0 )].outerSize(); ++l )
                                         //    for ( Sparse::InnerIterator M( propagator[sparse_index_x( 0 )][sparse_index_y( 0 )], l ); M; ++M ) {
-                                        
-                                        Log::L3("[PATHINT] --- Correlation Indices for tau = 0: i = {}, i' = {}, j = {}, j' = {}\n",gi_n, gi_n, gj_n, gj_n);
+
+                                        Log::L3( "[PATHINT] --- Correlation Indices for tau = 0: i = {}, i' = {}, j = {}, j' = {}\n", gi_n, gi_n, gj_n, gj_n );
                                         Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
                                         for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
                                             int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )] : sparse_index_x( 0 ) ) : sparse_index_x( tau ) );
                                             int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] : sparse_index_y( 0 ) ) : sparse_index_y( tau ) );
                                             phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
-                                        Log::L3("[PATHINT] --- Correlation Indices for tau = {}: i = {}, i' = {}, j = {}, j' = {}\n",tau+1,gi_n, gi_nd, gj_n, gj_nd);
+                                            Log::L3( "[PATHINT] --- Correlation Indices for tau = {}: i = {}, i' = {}, j = {}, j' = {}\n", tau + 1, gi_n, gi_nd, gj_n, gj_nd );
                                         }
 
                                         Scalar val = M.value() * value * std::exp( phonon_s );
@@ -497,7 +495,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                     }
 
         //rho = newrho.sparseView() / newrho.trace();
-        rho = newrho.sparseView();// / newrho.trace();
+        rho = newrho.sparseView(); // / newrho.trace();
         t2 = ( omp_get_wtime() - t2 );
         Log::L3( "[PATHINT] Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting (Parallel): {:.4f}s, ADM Reduction: {:.4f}s ], Trace: {}, Elements: {}\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2, s.getTrace<Scalar>( rho ), adms.nonZeros() );
 

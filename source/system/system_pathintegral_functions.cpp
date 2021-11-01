@@ -22,15 +22,15 @@ Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
 }
 
 Scalar System::dgl_phonon_S_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd ) {
-    Scalar result = 0;
+    Scalar result = 0.0;
     if ( i_n == i_nd )
-        result -= phi_vector_int[t_delta] * ( parameters.numerics_pathint_partially_summed ? operatorMatrices.phononCouplingIndexValue[i_n] : operatorMatrices.phononCouplingFactor( i_n, i_nd ) );
+        result -= phi_vector_int[t_delta] * operatorMatrices.phononCouplingIndexValue[i_n];
     if ( j_n == j_nd )
-        result -= std::conj( phi_vector_int[t_delta] ) * ( parameters.numerics_pathint_partially_summed ? operatorMatrices.phononCouplingIndexValue[j_n] : operatorMatrices.phononCouplingFactor( j_n, j_nd ) );
+        result -= std::conj( phi_vector_int[t_delta] ) * operatorMatrices.phononCouplingIndexValue[j_n];
     if ( i_n == j_nd )
-        result += std::conj( phi_vector_int[t_delta] ) * ( parameters.numerics_pathint_partially_summed ? operatorMatrices.phononCouplingIndexValue[i_n] : operatorMatrices.phononCouplingFactor( i_n, j_nd ) );
+        result += std::conj( phi_vector_int[t_delta] ) * operatorMatrices.phononCouplingIndexValue[i_n];
     if ( j_n == i_nd )
-        result += phi_vector_int[t_delta] * ( parameters.numerics_pathint_partially_summed ? operatorMatrices.phononCouplingIndexValue[j_n] : operatorMatrices.phononCouplingFactor( j_n, i_nd ) );
+        result += phi_vector_int[t_delta] * operatorMatrices.phononCouplingIndexValue[j_n];
     return result;
 }
 
