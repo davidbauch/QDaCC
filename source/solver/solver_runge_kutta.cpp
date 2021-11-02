@@ -1,7 +1,7 @@
 #include "solver/solver_ode.h"
 #include "solver/solver.h"
 
-Sparse ODESolver::iterateRungeKutta4( const Sparse &rho, System &s, const double t, const double t_step, std::vector<SaveState> &savedStates ) {
+Sparse QDLC::Numerics::ODESolver::iterateRungeKutta4( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-4 ausrechnen
     Sparse H_calc_k1 = getHamilton( s, t );
     Sparse H_calc_k23 = getHamilton( s, t + t_step * 0.5 );
@@ -15,60 +15,60 @@ Sparse ODESolver::iterateRungeKutta4( const Sparse &rho, System &s, const double
     return rho + t_step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
 }
 
-Sparse ODESolver::iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<SaveState> &savedStates ) {
+Sparse QDLC::Numerics::ODESolver::iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-6 ausrechnen
     Sparse H_calc_k1 = getHamilton( s, t );
-    Sparse H_calc_k2 = getHamilton( s, t + Solver::a2 * t_step );
-    Sparse H_calc_k3 = getHamilton( s, t + Solver::a3 * t_step );
-    Sparse H_calc_k4 = getHamilton( s, t + Solver::a4 * t_step );
-    Sparse H_calc_k5 = getHamilton( s, t + Solver::a5 * t_step );
-    Sparse H_calc_k6 = getHamilton( s, t + Solver::a6 * t_step );
+    Sparse H_calc_k2 = getHamilton( s, t + RKCoefficients::a2 * t_step );
+    Sparse H_calc_k3 = getHamilton( s, t + RKCoefficients::a3 * t_step );
+    Sparse H_calc_k4 = getHamilton( s, t + RKCoefficients::a4 * t_step );
+    Sparse H_calc_k5 = getHamilton( s, t + RKCoefficients::a5 * t_step );
+    Sparse H_calc_k6 = getHamilton( s, t + RKCoefficients::a6 * t_step );
     // k1-6 ausrechnen
     Sparse k1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
-    Sparse k2 = s.dgl_rungeFunction( rho + t_step * Solver::b11 * k1, H_calc_k2, t + Solver::a2 * t_step, savedStates );
-    Sparse k3 = s.dgl_rungeFunction( rho + t_step * ( Solver::b21 * k1 + Solver::b22 * k2 ), H_calc_k3, t + Solver::a3 * t_step, savedStates );
-    Sparse k4 = s.dgl_rungeFunction( rho + t_step * ( Solver::b31 * k1 + Solver::b32 * k2 + Solver::b33 * k3 ), H_calc_k4, t + Solver::a4 * t_step, savedStates );
-    Sparse k5 = s.dgl_rungeFunction( rho + t_step * ( Solver::b41 * k1 + Solver::b42 * k2 + Solver::b43 * k3 + Solver::b44 * k4 ), H_calc_k5, t + Solver::a5 * t_step, savedStates );
-    Sparse k6 = s.dgl_rungeFunction( rho + t_step * ( Solver::b51 * k1 + Solver::b52 * k2 + Solver::b53 * k3 + Solver::b54 * k4 + Solver::b55 * k5 ), H_calc_k6, t + Solver::a6 * t_step, savedStates );
+    Sparse k2 = s.dgl_rungeFunction( rho + t_step * RKCoefficients::b11 * k1, H_calc_k2, t + RKCoefficients::a2 * t_step, savedStates );
+    Sparse k3 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), H_calc_k3, t + RKCoefficients::a3 * t_step, savedStates );
+    Sparse k4 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), H_calc_k4, t + RKCoefficients::a4 * t_step, savedStates );
+    Sparse k5 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), H_calc_k5, t + RKCoefficients::a5 * t_step, savedStates );
+    Sparse k6 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), H_calc_k6, t + RKCoefficients::a6 * t_step, savedStates );
     // Dichtematrix
-    return rho + t_step * ( Solver::b61 * k1 + Solver::b63 * k3 + Solver::b64 * k4 + Solver::b65 * k5 + Solver::b66 * k6 );
+    return rho + t_step * ( RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6 );
 }
 
-std::pair<Sparse, double> ODESolver::iterateRungeKutta45( const Sparse &rho, System &s, const double t, const double t_step, std::vector<SaveState> &savedStates ) {
+std::pair<Sparse, double> QDLC::Numerics::ODESolver::iterateRungeKutta45( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-6 ausrechnen
     Sparse H_calc_k1 = getHamilton( s, t );
-    Sparse H_calc_k2 = getHamilton( s, t + Solver::a2 * t_step );
-    Sparse H_calc_k3 = getHamilton( s, t + Solver::a3 * t_step );
-    Sparse H_calc_k4 = getHamilton( s, t + Solver::a4 * t_step );
-    Sparse H_calc_k5 = getHamilton( s, t + Solver::a5 * t_step );
-    Sparse H_calc_k6 = getHamilton( s, t + Solver::a6 * t_step );
+    Sparse H_calc_k2 = getHamilton( s, t + RKCoefficients::a2 * t_step );
+    Sparse H_calc_k3 = getHamilton( s, t + RKCoefficients::a3 * t_step );
+    Sparse H_calc_k4 = getHamilton( s, t + RKCoefficients::a4 * t_step );
+    Sparse H_calc_k5 = getHamilton( s, t + RKCoefficients::a5 * t_step );
+    Sparse H_calc_k6 = getHamilton( s, t + RKCoefficients::a6 * t_step );
     Sparse H_calc_k7 = getHamilton( s, t + t_step );
     // k1-6 ausrechnen
     Sparse k1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
-    Sparse k2 = s.dgl_rungeFunction( rho + t_step * Solver::b11 * k1, H_calc_k2, t + Solver::a2 * t_step, savedStates );
-    Sparse k3 = s.dgl_rungeFunction( rho + t_step * ( Solver::b21 * k1 + Solver::b22 * k2 ), H_calc_k3, t + Solver::a3 * t_step, savedStates );
-    Sparse k4 = s.dgl_rungeFunction( rho + t_step * ( Solver::b31 * k1 + Solver::b32 * k2 + Solver::b33 * k3 ), H_calc_k4, t + Solver::a4 * t_step, savedStates );
-    Sparse k5 = s.dgl_rungeFunction( rho + t_step * ( Solver::b41 * k1 + Solver::b42 * k2 + Solver::b43 * k3 + Solver::b44 * k4 ), H_calc_k5, t + Solver::a5 * t_step, savedStates );
-    Sparse k6 = s.dgl_rungeFunction( rho + t_step * ( Solver::b51 * k1 + Solver::b52 * k2 + Solver::b53 * k3 + Solver::b54 * k4 + Solver::b55 * k5 ), H_calc_k6, t + Solver::a6 * t_step, savedStates );
+    Sparse k2 = s.dgl_rungeFunction( rho + t_step * RKCoefficients::b11 * k1, H_calc_k2, t + RKCoefficients::a2 * t_step, savedStates );
+    Sparse k3 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), H_calc_k3, t + RKCoefficients::a3 * t_step, savedStates );
+    Sparse k4 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), H_calc_k4, t + RKCoefficients::a4 * t_step, savedStates );
+    Sparse k5 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), H_calc_k5, t + RKCoefficients::a5 * t_step, savedStates );
+    Sparse k6 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), H_calc_k6, t + RKCoefficients::a6 * t_step, savedStates );
 
-    Sparse drho = Solver::b61 * k1 + Solver::b63 * k3 + Solver::b64 * k4 + Solver::b65 * k5 + Solver::b66 * k6;
+    Sparse drho = RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6;
     Sparse ret = rho + t_step * drho;
     // Error
     Sparse k7 = s.dgl_rungeFunction( ret, H_calc_k7, t + t_step, savedStates );
-    dSparse errmat = ( drho - ( k1 * Solver::e1 + k3 * Solver::e3 + k4 * Solver::e4 + k5 * Solver::e5 + k6 * Solver::e6 + k7 * Solver::e7 ) ).cwiseAbs2();
+    dSparse errmat = ( drho - ( k1 * RKCoefficients::e1 + k3 * RKCoefficients::e3 + k4 * RKCoefficients::e4 + k5 * RKCoefficients::e5 + k6 * RKCoefficients::e6 + k7 * RKCoefficients::e7 ) ).cwiseAbs2();
     double err = errmat.sum() / drho.cwiseAbs2().sum();
 
     // Dichtematrix
     return std::make_pair( ret, err );
 }
 
-Sparse ODESolver::iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<SaveState> &savedStates, const int dir ) {
+Sparse QDLC::Numerics::ODESolver::iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates, const int dir ) {
     if ( s.parameters.numerics_rk_order == 4 )
         return iterateRungeKutta4( rho, s, t, t_step, savedStates );
     return iterateRungeKutta5( rho, s, t, t_step, savedStates );
 }
 
-bool ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output ) {
+bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output ) {
     if ( s.parameters.numerics_rk_order == 45 ) {
         calculate_runge_kutta_45( rho0, t_start, t_end, t_step_initial, rkTimer, progressbar, progressbar_name, s, output, do_output, s.parameters.numerics_rk_interpolate, s.parameters.numerics_rk_tol );
         return true;
@@ -109,12 +109,12 @@ bool ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_en
     return true;
 }
 
-bool ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output, bool interpolate, double tolerance ) {
+bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output, bool interpolate, double tolerance ) {
     double t_step = t_step_initial;
     // Reserve Output Vector
     output.reserve( s.parameters.iterations_t_max + 1 );
     // Create temporary out vector:
-    std::vector<SaveState> temp;
+    std::vector<QDLC::SaveState> temp;
 
     // Save initial value
     saveState( rho0, t_start, temp );

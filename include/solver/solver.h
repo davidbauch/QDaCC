@@ -2,9 +2,14 @@
 #include "global.h"
 #include "misc/interpolant.h"
 
-namespace Solver {
+namespace QDLC {
+
+namespace Numerics {
+
 // Command variables
 static const unsigned int CHANGE_TO_SINGLETHREADED_MAINPROGRAM = 1111111111;
+
+namespace RKCoefficients {
 
 // RK 4&5 coefficients (Dormand–Prince method)
 const double a1 = 0;
@@ -43,20 +48,25 @@ const double e5 = -92097. / 339200.; //-17253. / 339200.;
 const double e6 = 187. / 2100.;      //22. / 525.;
 const double e7 = 1. / 40.;          //-1. / 40.;
 
+}
+
 std::pair<Sparse, double> iterate_definite_integral( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t, const double t_step, const int order );
 
 // Description: Integrates rho from t0 to t1 via Rungefunc.
 // Type: Solver public function
-// @return: [vector<SaveState>] Vector of save state tuples (matrix, time)
-std::vector<SaveState> calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
+// @return: [vector<QDLC::SaveState>] Vector of save state tuples (matrix, time)
+std::vector<QDLC::SaveState> calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
 
 // Description: Integrates rho from t0 to t1 via Rungefunc.
 // Type: Solver public function
-// @return: [SaveState] Save state tuple (matrix, time)
-SaveState calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
+// @return: [QDLC::SaveState] Save state tuple (matrix, time)
+QDLC::SaveState calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
 
 // Description: Uses the interpolation class to monotone-cubic spline interpolate a given vector of saved states, resulting in much smoother output. Should probably not be used
 // Type: Solver public function
-// @return Returns a vector of interpolated SaveStates
-std::vector<SaveState> calculate_smooth_curve( const std::vector<SaveState> &input, double t_start, double t_end, int num_of_points, bool output_handler = true );
-}; // namespace Solver
+// @return Returns a vector of interpolated QDLC::SaveStates
+std::vector<QDLC::SaveState> calculate_smooth_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, int num_of_points, bool output_handler = true );
+
+} // namespace Numerics
+
+} // namespace QDLC

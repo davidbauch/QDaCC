@@ -13,7 +13,7 @@ System::System( const std::vector<std::string> &input ) {
     // Create all possible file outputs
     fileoutput = FileOutput( parameters, operatorMatrices );
     // Initialize / Adjust the remaining system class
-    terminate_message = global_message_normaltermination;
+    terminate_message = QDLC::Message::global_normaltermination;
     Timer &timer_systeminit = Timers::create( "System Initialization", true, false );
     Log::L2( "System initialization...\n" );
     timer_systeminit.start();
@@ -22,7 +22,7 @@ System::System( const std::vector<std::string> &input ) {
         Log::close();
         exit( EXIT_FAILURE );
     }
-    Log::L2( "Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( TIMER_MILLISECONDS ) );
+    Log::L2( "Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( Timers::MILLISECONDS ) );
     timer_systeminit.end();
 }
 
@@ -58,9 +58,9 @@ bool System::init_system() {
         initialize_polaron_frame_functions();
     }
     // Time Transformation
-    timeTrafoMatrix = ( Dense( 1i * operatorMatrices.H_0 ).exp() ).sparseView(); //.pruned();
+    timeTrafoMatrix = ( Dense( 1.0i * operatorMatrices.H_0 ).exp() ).sparseView(); //.pruned();
     // Check time trafo
-    Sparse ttrafo = ( Dense( 1i * operatorMatrices.H_0 * 505E-12 ).exp() * operatorMatrices.H_used * Dense( -1i * operatorMatrices.H_0 * 505E-12 ).exp() ).sparseView();
+    Sparse ttrafo = ( Dense( 1.0i * operatorMatrices.H_0 * 505E-12 ).exp() * operatorMatrices.H_used * Dense( -1.0i * operatorMatrices.H_0 * 505E-12 ).exp() ).sparseView();
     Sparse temp = dgl_timetrafo( operatorMatrices.H_used, 505E-12 );
     double error = std::abs( 1.0 - Dense( temp ).sum() / Dense( ttrafo ).sum() );
     if ( error >= 1E-8 ) {
@@ -69,8 +69,8 @@ bool System::init_system() {
     return true;
 }
 
-Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const double t, std::vector<SaveState> &past_rhos ) {
-    Sparse ret = -1i * dgl_kommutator( H, rho );
+Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos ) {
+    Sparse ret = -1.0i * dgl_kommutator( H, rho );
     Sparse loss = Sparse( rho.rows(), rho.cols() );
     //Photon Loss
     if ( parameters.p_omega_cavity_loss )
@@ -126,7 +126,7 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
         }
         // TIMETRANSFORMATION_MATRIXEXPONENTIAL
         else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL ) {
-            Sparse U = ( Dense( 1i * operatorMatrices.H_0 * t ).exp() ).sparseView();
+            Sparse U = ( Dense( 1.0i * operatorMatrices.H_0 * t ).exp() ).sparseView();
             return U * ret * U.adjoint();
         }
     }
@@ -154,32 +154,37 @@ Sparse System::dgl_pulse( const double t ) {
     return ret;
 }
 
-Scalar System::dgl_raman_population_increment( const std::vector<SaveState> &past_rhos, const char mode, const Scalar before, const double t ) {
+// electronic_transition1, electronic_transition2, optical_transition
+Scalar System::dgl_raman_population_increment( const std::vector<QDLC::SaveState> &past_rhos, const std::string &electronic_transition1, const std::string &electronic_transition2, const std::string &optical_transition, int pulse_index, const Scalar before, const double t ) {
+    // TODO: das hier in solver funktion umschreiben. dann auf ganzem vektor anwenden
+    Sparse m_electronic_transition3; // G -> B bzw G(HH)B, erste und letzter der beiden transitions. find in transitions or extra_transitions. create if not exist
+    Sparse m_optical_transition;
+    double chirpcorrection = chirp.back().get( t );
+    double electronic_transition_1 = 0;
+    double electronic_transition_2 = 0;
+    double w1 = electronic_transition_1 + chirpcorrection;
+    double w2 = electronic_transition_2 + chirpcorrection;
+    double wc = 0;
     Scalar ret = 0;
-    //double chirpcorrection = chirp.get( t );
-    //double w1 = ( mode == 'h' ? parameters.p_omega_atomic_G_H + chirpcorrection : parameters.p_omega_atomic_G_V + chirpcorrection );
-    //double w2 = ( mode == 'h' ? parameters.p_omega_atomic_H_B + chirpcorrection : parameters.p_omega_atomic_V_B + chirpcorrection );
-    //double wc = ( mode == 'h' ? parameters.p_omega_cavity_H : parameters.p_omega_cavity_V );
-    //double sigma1 = parameters.p_omega_pure_dephasing + parameters.p_omega_decay;
-    //double sigma2 = parameters.p_omega_pure_dephasing + 3. * parameters.p_omega_decay;
-    //Sparse op = operatorMatrices.atom_sigmaminus_G_B * ( mode == 'h' ? operatorMatrices.photon_create_H : operatorMatrices.photon_create_V );
-    //double A = std::exp( -parameters.p_omega_cavity_loss * parameters.t_step );
-    //Scalar B, R;
-    //#pragma omp parallel for ordered schedule( dynamic ) shared( past_rhos ) num_threads( parameters.numerics_phonons_maximum_threads )
-    //for ( long unsigned int i = 0; i < past_rhos.size(); i++ ) {
-    //    //for ( SaveState savestate : past_rhos ) {
-    //    double tdd = past_rhos.at( i ).t;
-    //    B = std::exp( -1i * ( w2 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma2 ) ) * ( t - tdd ) ) - std::exp( -1i * ( w1 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma1 ) ) * ( t - tdd ) );
-    //    R = dgl_expectationvalue<Sparse, Scalar>( past_rhos.at( i ).mat, op, tdd ) * ( mode == 'h' ? std::conj( pulse_H.get( tdd ) ) : std::conj( pulse_V.get( tdd ) ) );
-    //    //fmt::print("t = {}, tau = {}, A = {}, B = {}, R = {}\n",t,tdd,A,B,R);
-    //#pragma omp critical
-    //    ret += B * R;
-    //}
-    //return A * before + parameters.t_step * parameters.t_step * ret;
-    return ret;
+
+    double sigma1 = parameters.p_omega_pure_dephasing + parameters.p_omega_decay;
+    double sigma2 = parameters.p_omega_pure_dephasing + 3. * parameters.p_omega_decay;
+    Sparse op = m_electronic_transition3 * m_optical_transition;
+    double A = std::exp( -parameters.p_omega_cavity_loss * parameters.t_step );
+    Scalar B, R;
+#pragma omp parallel for ordered schedule( dynamic ) shared( past_rhos ) num_threads( parameters.numerics_maximum_threads )
+    for ( long unsigned int i = 0; i < past_rhos.size(); i++ ) {
+        double tdd = past_rhos.at( i ).t;
+        B = std::exp( -1.0i * ( w2 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma2 ) ) * ( t - tdd ) ) - std::exp( -1.0i * ( w1 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma1 ) ) * ( t - tdd ) );
+        R = dgl_expectationvalue<Sparse, Scalar>( past_rhos.at( i ).mat, op, tdd ) * std::conj( pulse.at( pulse_index ).get( tdd ) );
+        //fmt::print("t = {}, tau = {}, A = {}, B = {}, R = {}\n",t,tdd,A,B,R);
+#pragma omp critical
+        ret += B * R;
+    }
+    return A * before + parameters.t_step * parameters.t_step * ret;
 }
 
-void System::expectationValues( const std::vector<SaveState> &rhos, Timer &evalTimer ) {
+void System::expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer ) {
     for ( int i = 0; i < rhos.size(); i++ ) {
         auto &rho = rhos.at( i ).mat;
         double t = rhos.at( i ).t;
@@ -234,7 +239,7 @@ Sparse System::dgl_getHamilton( const double t ) {
 
 bool System::command( unsigned int index ) {
     // The only reason for classes using this system class to set the main programs maximum threads to 1 is, if the usual T-direction is already done.
-    if ( index == Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM ) {
+    if ( index == QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM ) {
         parameters.numerics_phonons_maximum_threads = 1;
         Log::L2( "Set maximum number of Threads for primary calculations to {}\n", parameters.numerics_phonons_maximum_threads );
     }
@@ -258,8 +263,8 @@ bool System::traceValid( Sparse &rho, double t_hit, bool force ) {
     parameters.trace.emplace_back( trace );
     if ( trace < 0.99 || trace > 1.01 || force ) {
         if ( force )
-            fmt::print( "{} {} -> trace check failed at t = {} with trace(rho) = {}\n", PREFIX_ERROR, global_message_error_divergent, t_hit, trace );
-        terminate_message = global_message_error_divergent;
+            fmt::print( "{} {} -> trace check failed at t = {} with trace(rho) = {}\n", QDLC::Message::Prefix::ERROR, QDLC::Message::global_error_divergent, t_hit, trace );
+        terminate_message = QDLC::Message::global_error_divergent;
         FILE *fp_trace = std::fopen( ( parameters.subfolder + "trace.txt" ).c_str(), "w" );
         for ( int i = 0; i < (int)parameters.trace.size() && parameters.t_step * 1.0 * i < t_hit; i++ ) {
             fmt::print( fp_trace, "{:.10e} {:.15e}\n", parameters.t_step * 1.0 * ( i + 1 ), parameters.trace.at( i ) );

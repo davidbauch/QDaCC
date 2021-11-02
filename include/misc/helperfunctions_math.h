@@ -10,7 +10,7 @@ namespace QDLC {
 
 namespace Math {
 
-const double M_PI = 3.1415926535;
+const double PI = 3.14159265358979323846264338327950288;
 
 int delta( int i, int j );
 

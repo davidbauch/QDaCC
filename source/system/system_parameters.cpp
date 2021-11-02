@@ -39,7 +39,7 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
         exit( EXIT_FAILURE );
     }
     timer_parseInput.end();
-    Log::L2( "successful. Elapsed time is {}ms\n", timer_parseInput.getWallTime( TIMER_MILLISECONDS ) );
+    Log::L2( "successful. Elapsed time is {}ms\n", timer_parseInput.getWallTime( Timers::MILLISECONDS ) );
 
     // Scaling inputs:
     if ( scale_parameters ) {
@@ -57,7 +57,7 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
         Log::close();
         exit( EXIT_FAILURE );
     }
-    Log::L2( "successful. Elapsed time is {}ms\n", timer_adjustInput.getWallTime( TIMER_MILLISECONDS ) );
+    Log::L2( "successful. Elapsed time is {}ms\n", timer_adjustInput.getWallTime( Timers::MILLISECONDS ) );
     timer_adjustInput.end();
 }
 
@@ -103,7 +103,6 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     output_handlerstrings = QDLC::CommandlineArguments::get_parameter_passed( "-noHandler" ) ? 0 : 1;
     output_operators = QDLC::CommandlineArguments::get_parameter_passed( "-outputOp" ) ? 2 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputHamiltons" ) ? 1 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputOpStop" ) ? 3 : 0 ) );
     numerics_order_timetrafo = QDLC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
-    startCoherent = false; //TODO://QDLC::CommandlineArguments::get_parameter_passed( "-startCoherent" ) || ( p_initial_state_electronic.front() == 'c' );
     output_full_dm = QDLC::CommandlineArguments::get_parameter_passed( "-fullDM" );
     output_no_dm = QDLC::CommandlineArguments::get_parameter_passed( "-noDM" );
     scale_parameters = QDLC::CommandlineArguments::get_parameter_passed( "-scale" ); // MHMHMH
@@ -114,7 +113,6 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_output_raman_population = QDLC::CommandlineArguments::get_parameter_passed( "-raman" ); // DEPRECATED
     logfilecounter = QDLC::Misc::convertParam<int>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
     numerics_calculate_timeresolution_indistinguishability = QDLC::CommandlineArguments::get_parameter_passed( "-timedepInd" ); //DEPRECATED
-    numerics_output_electronic_emission = QDLC::CommandlineArguments::get_parameter_passed( "-oElec" ); //DEPRECATED
     numerics_stretch_correlation_grid = false; //FIXME: Doesnt work right now //DEPRECATED
     numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
 
@@ -148,7 +146,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     return true;
 }
 
-//TODO: this is broken. and unncesesary actually. remove.
+//TODO: this is broken. and unncesesary actually. remove. oder vernünftig alles scalen.
 bool Parameters::scaleInputs( const double scaling ) {
     // Adjust normal parameters: time is multiplid by scaling, frequency divided
     t_start.setScale( scaling, Parameter::SCALE_TIME );
@@ -210,9 +208,9 @@ bool Parameters::adjustInput() {
             auto pos = mat.string_v["Type"][i].find( "_pi" );
             if ( pos != std::string::npos ) {
                 if ( mat.string_v["Type"][i].find( "gauss" ) != std::string::npos )
-                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::M_PI / ( std::sqrt( 2.0 * QDLC::Math::M_PI * mat.numerical_v["Width"][i] * std::sqrt( std::pow( mat.numerical_v["Chirp"][i] / mat.numerical_v["Width"][i], 2.0 ) + std::pow( mat.numerical_v["Width"][i], 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::PI / ( std::sqrt( 2.0 * QDLC::Math::PI * mat.numerical_v["Width"][i] * std::sqrt( std::pow( mat.numerical_v["Chirp"][i] / mat.numerical_v["Width"][i], 2.0 ) + std::pow( mat.numerical_v["Width"][i], 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
                 else if ( mat.string_v["Type"][i].find( "cutoff" ) != std::string::npos )
-                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::M_PI / ( std::sqrt( 2.0 * QDLC::Math::M_PI * mat.numerical_v["Width"][i] * mat.numerical_v["Width"][i] ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::PI / ( std::sqrt( 2.0 * QDLC::Math::PI * mat.numerical_v["Width"][i] * mat.numerical_v["Width"][i] ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
                 mat.string_v["Type"][i].erase( pos, 3 );
             }
         }
@@ -478,14 +476,14 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     }
     //Log::L1( "Ideal time delta for this calculation: {:.8e} s - {:.2f} fs, minimum possible: {:.8e} s - {:.2f} fs\n", getIdealTimestep(), getIdealTimestep() * 1E15, std::numeric_limits<double>::epsilon(), std::numeric_limits<double>::epsilon() * 1E15 );
     //int works = 1;
-    //if ( ( init_rabifrequenz != 0.0 ) && ( 3. * t_step > 2. * QDLC::Math::M_PI / init_rabifrequenz ) )
+    //if ( ( init_rabifrequenz != 0.0 ) && ( 3. * t_step > 2. * QDLC::Math::PI / init_rabifrequenz ) )
     //    works = 0;
-    //else if ( max_rabifrequenz != 0.0 && 3. * t_step > 2. * QDLC::Math::M_PI / max_rabifrequenz )
+    //else if ( max_rabifrequenz != 0.0 && 3. * t_step > 2. * QDLC::Math::PI / max_rabifrequenz )
     //    works = 0;
     //if ( !works ) {
     //    if ( output_handlerstrings )
-    //        fmt::print( "{} WARNING: Step may be too small to resolve predicted oscillation: dT needed vs dT: {:.10e} < {:.10e}\n", PREFIX_WARNING, 2. / 3. * QDLC::Math::M_PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
-    //    Log::L1( "WARNING: Step may be too small to resolve predicted oscillation: \n- delta T needed: {:.10e} \n- delta T used: {:.10e}\n", 2. / 3. * QDLC::Math::M_PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
+    //        fmt::print( "{} WARNING: Step may be too small to resolve predicted oscillation: dT needed vs dT: {:.10e} < {:.10e}\n", QDLC::Message::Prefix::WARNING, 2. / 3. * QDLC::Math::PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
+    //    Log::L1( "WARNING: Step may be too small to resolve predicted oscillation: \n- delta T needed: {:.10e} \n- delta T used: {:.10e}\n", 2. / 3. * QDLC::Math::PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
     //}
     Log::L1( "Time iterations (main loop) = {}\n\n", iterations_t_max );
 

@@ -13,7 +13,7 @@ Scalar System::dgl_phonons_phi( const double t ) {
     for ( double w = stepsize; w < 10 * parameters.p_phonon_wcutoff; w += stepsize ) {
         double J = parameters.p_phonon_alpha * w * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff );
         //double J = w * parameters.hbar * std::pow( eV7 * std::exp( -w * w * a_e * a_e / ( 4. * v_c * v_c ) ) - eV35 * std::exp( -w * w * a_h * a_h / ( 4. * v_c * v_c ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * rho * std::pow( v_c, 5. ) );
-        integral += stepsize * ( J * ( std::cos( w * t ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) - 1i * std::sin( w * t ) ) );
+        integral += stepsize * ( J * ( std::cos( w * t ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) - 1.0i * std::sin( w * t ) ) );
     }
     return integral;
 }
@@ -71,16 +71,16 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
         p++;
     }
 
-    //Sparse explicit_time = 1i * ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H
-    // + 1i * ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B
-    // + 1i * (
+    //Sparse explicit_time = 1.0i * ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H
+    // + 1.0i * ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B
+    // + 1.0i * (
     //  ( parameters.p_omega_atomic_H_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_H_B
     //      + ( parameters.p_omega_atomic_G_H + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_H
     //      - parameters.p_omega_cavity_H * operatorMatrices.projector_atom_sigmaplus_G_H
     //      - parameters.p_omega_cavity_H * operatorMatrices.projector_atom_sigmaplus_H_B
     //  ) * operatorMatrices.projector_photon_annihilate_H
     // + parameters.scaleVariable( pulse_H.derivative( t ), parameters.scale_value ) * ( operatorMatrices.projector_atom_sigmaplus_G_H + operatorMatrices.projector_atom_sigmaplus_H_B );
-    //explicit_time += 1i * ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V + 1i * ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + 1i * ( ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_V_B ) * operatorMatrices.projector_photon_annihilate_V + parameters.scaleVariable( pulse_V.derivative( t ), parameters.scale_value ) * ( operatorMatrices.projector_atom_sigmaplus_G_V + operatorMatrices.projector_atom_sigmaplus_V_B );
+    //explicit_time += 1.0i * ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V + 1.0i * ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + 1.0i * ( ( parameters.p_omega_atomic_V_B + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_V_B + ( parameters.p_omega_atomic_G_V + chirpcorrection ) * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_G_V - parameters.p_omega_cavity_V * operatorMatrices.projector_atom_sigmaplus_V_B ) * operatorMatrices.projector_photon_annihilate_V + parameters.scaleVariable( pulse_V.derivative( t ), parameters.scale_value ) * ( operatorMatrices.projector_atom_sigmaplus_G_V + operatorMatrices.projector_atom_sigmaplus_V_B );
     explicit_time = parameters.scaleVariable( explicit_time, 1.0 / parameters.scale_value );
 
     Sparse hamilton = dgl_getHamilton( t );
@@ -126,7 +126,7 @@ double System::dgl_phonons_lindblad_coefficients( double t, double energy, doubl
     } else if ( mode == 'C' ) {
         int i = 0;
         for ( double tau = 0; tau < parameters.p_phonon_tcutoff; tau += parameters.t_step ) {
-            ret += std::real( std::exp( 1i * sign * energy * tau ) * ( std::exp( phi_vector[t] ) - 1.0 ) );
+            ret += std::real( std::exp( 1.0i * sign * energy * tau ) * ( std::exp( phi_vector[t] ) - 1.0 ) );
             i++;
         }
         ret *= parameters.p_phonon_b * parameters.p_phonon_b * coupling * coupling * parameters.t_step;
@@ -148,7 +148,7 @@ Sparse System::dgl_phonons_chi( const double t ) {
 
 Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, double tau ) {
     if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) {
-        return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.t_step, parameters.numerics_rk_tol, parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
+        return QDLC::Numerics::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.t_step, parameters.numerics_rk_tol, parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
         Sparse U = ( Dense( -1.0i * dgl_getHamilton( t ) * tau ).exp() ).sparseView();
         return ( U * chi_tau * U.adjoint() ).eval();
@@ -157,13 +157,13 @@ Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, 
         for ( auto &p : pulse )
             threshold += std::abs( p.get( t ) / p.maximum ); //TODO: + photon zahl, wenn photon number > 0.1 oder so dann auch. für große kopplungen gibts sonst starke abweichungen. vil. number*g draufaddieren.
         if ( threshold > 1E-4 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) { //TODO: threshold als parameter
-            return Solver::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.t_step, parameters.numerics_rk_tol, parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
+            return QDLC::Numerics::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.t_step, parameters.numerics_rk_tol, parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
         }
     }
     return chi_tau;
 }
 
-Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<SaveState> &past_rhos ) {
+Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDLC::SaveState> &past_rhos ) {
     Sparse ret = Sparse( parameters.maxStates, parameters.maxStates );
     Sparse chi = dgl_phonons_chi( t );
     std::vector<Sparse> threadmap_1, threadmap_2;
@@ -235,7 +235,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 //dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, 0 );
                 if ( parameters.numerics_use_saved_coefficients ) {
 #pragma omp critical
-                    savedCoefficients[time_pair] = SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, 0 );
+                    savedCoefficients[time_pair] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, 0 );
                 }
             }
             // Calculate phonon contributions from (saved/calculated) coefficients and rho(t)
@@ -275,7 +275,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                         //dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, tau );
                         if ( parameters.numerics_use_saved_coefficients ) {
 #pragma omp critical
-                            savedCoefficients[time_pair] = SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
+                            savedCoefficients[time_pair] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
                         }
                     }
                     integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * past_rhos.at( rho_index ).mat ).eval() );

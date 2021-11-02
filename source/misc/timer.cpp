@@ -152,8 +152,8 @@ void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int ma
 }
 void Timers::IoutputTimeStrings( Timer &t, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
-        fmt::print( "{0}\t{1:.2f}\n", PREFIX_PERCENT, ( t.getTotalIterationNumber() / (double)maxItTotal * 100. ) );
-        fmt::print( "{0}\t{1:.0f}\n", PREFIX_PERCENT_TIME, ( (double)maxItTotal - t.getTotalIterationNumber() ) * t.getAverageIterationTime() );
-        fmt::print( "{0}\t{1}\n", PREFIX_SUFFIX, suffix );
+        fmt::print( "{0}\t{1:.2f}\n", QDLC::Message::Prefix::PERCENT, ( t.getTotalIterationNumber() / (double)maxItTotal * 100. ) );
+        fmt::print( "{0}\t{1:.0f}\n", QDLC::Message::Prefix::PERCENT_TIME, ( (double)maxItTotal - t.getTotalIterationNumber() ) * t.getAverageIterationTime() );
+        fmt::print( "{0}\t{1}\n", QDLC::Message::Prefix::SUFFIX, suffix );
     }
 }

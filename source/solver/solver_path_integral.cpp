@@ -1,6 +1,6 @@
 #include "solver/solver_ode.h"
 
-Sparse ODESolver::calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<SaveState> &output, const Sparse &one ) {
+Sparse QDLC::Numerics::ODESolver::calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<QDLC::SaveState> &output, const Sparse &one ) {
     Sparse projector = Sparse( tensor_dim, tensor_dim );
     projector.coeffRef( i, j ) = 1;
     Sparse M = iterate( projector, s, t0, t_step, output ).pruned( s.parameters.numerics_pathintegral_sparse_prune_threshold );
@@ -19,8 +19,7 @@ Sparse ODESolver::calculate_propagator_single( System &s, size_t tensor_dim, dou
     return M.pruned( s.parameters.numerics_pathintegral_sparse_prune_threshold );
 }
 
-// TO TEST: propagator doch mit rho_t ausrechnen, dann mit projector multiplizieren und matrixelemente nehmen.
-std::vector<std::vector<Sparse>> &ODESolver::calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<SaveState> &output ) {
+std::vector<std::vector<Sparse>> &QDLC::Numerics::ODESolver::calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<QDLC::SaveState> &output ) {
     if ( pathint_propagator.count( t0 ) > 0 ) {
         return pathint_propagator[t0];
     }
@@ -47,7 +46,7 @@ std::vector<std::vector<Sparse>> &ODESolver::calculate_propagator_vector( System
     return pathint_propagator[-1];
 }
 
-bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output ) {
+bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output ) {
     // Generate list of needed G1 and G2 functions. To save on the excessive RAM usage by caching the ADM for every timestep, we calculate the tau-direction for every t step here.
     std::map<std::string, std::vector<Sparse>> g12_settings;
     int g12_counter = 0;
@@ -154,7 +153,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
         Log::L2( "[PATHINT] - {}\n", v );
     }
 
-    FixedSizeSparseMap<Scalar> adms = FixedSizeSparseMap<Scalar>( adm_multithreading_cores );
+    Tensor adms = Tensor( adm_multithreading_cores );
 
     // First step is just rho0
     Sparse rho = rho0;
@@ -164,8 +163,8 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
         for ( int j = 0; j < tensor_dim; j++ ) {
             if ( QDLC::Math::abs2( rho.coeff( i, j ) ) == 0 )
                 continue;
-            QDLC::Type::iVector ii = QDLC::Type::iVector( 1 );
-            QDLC::Type::iVector jj = QDLC::Type::iVector( 1 );
+            iVector ii = iVector( 1 );
+            iVector jj = iVector( 1 );
             ii( 0 ) = i;
             jj( 0 ) = j;
             adms.addTriplet( ii, jj, rho.coeff( i, j ), 0 );
@@ -195,7 +194,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                 //adms.dimensions = cached_adms_dimensions;
                 //adms.rescale_dimensions();
                 int order = matrices.size() == 4 ? 2 : 1;
-                std::vector<SaveState> temp;
+                std::vector<QDLC::SaveState> temp;
                 auto &gmat = cache[purpose];
                 calculate_path_integral_correlation( adms, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, purpose, s, temp, do_output, matrices, adm_multithreaded_indices, adm_multithreading_cores );
                 for ( int32_t j = 0; j < std::min<int32_t>( temp.size(), gmat.rows() * s.parameters.iterations_t_skip ); j += s.parameters.iterations_t_skip ) {
@@ -270,8 +269,8 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
                                         if ( i_n == j_n || abs >= s.parameters.numerics_pathintegral_squared_threshold ) {
                                             // Add new indices to vectors:
                                             if ( addeddimension ) {
-                                                QDLC::Type::iVector new_sparse_index_x = QDLC::Type::iVector::Zero( sparse_index_x.size() + 1 );
-                                                QDLC::Type::iVector new_sparse_index_y = QDLC::Type::iVector::Zero( sparse_index_y.size() + 1 );
+                                                iVector new_sparse_index_x = iVector::Zero( sparse_index_x.size() + 1 );
+                                                iVector new_sparse_index_y = iVector::Zero( sparse_index_y.size() + 1 );
                                                 for ( int i = 0; i < sparse_index_x.size(); i++ ) {
                                                     new_sparse_index_x( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( i )] : sparse_index_x( i ) );
                                                     new_sparse_index_y( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( i )] : sparse_index_y( i ) );
@@ -342,7 +341,7 @@ bool ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_
     return true;
 }
 
-bool ODESolver::calculate_path_integral_correlation( FixedSizeSparseMap<Scalar> adm_correlation, Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<SaveState> &output, bool do_output, const std::vector<Sparse> &matrices, const std::vector<std::vector<int>> &adm_multithreaded_indices, int adm_multithreading_cores ) {
+bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_correlation, Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output, const std::vector<Sparse> &matrices, const std::vector<std::vector<int>> &adm_multithreaded_indices, int adm_multithreading_cores ) {
     int order = matrices.size() == 4 ? 2 : 1;
     Log::L3( "| [PATHINT SUB] Setting up Path-Integral Solver...\n" );
     int tensor_dim = rho0.rows();
@@ -407,8 +406,8 @@ bool ODESolver::calculate_path_integral_correlation( FixedSizeSparseMap<Scalar> 
                                         if ( i_n == j_n || abs >= s.parameters.numerics_pathintegral_squared_threshold ) {
                                             // Add new indices to vectors:
                                             if ( addeddimension ) {
-                                                QDLC::Type::iVector new_sparse_index_x = QDLC::Type::iVector::Zero( sparse_index_x.size() + 1 );
-                                                QDLC::Type::iVector new_sparse_index_y = QDLC::Type::iVector::Zero( sparse_index_y.size() + 1 );
+                                                iVector new_sparse_index_x = iVector::Zero( sparse_index_x.size() + 1 );
+                                                iVector new_sparse_index_y = iVector::Zero( sparse_index_y.size() + 1 );
                                                 for ( int i = 0; i < sparse_index_x.size(); i++ ) {
                                                     new_sparse_index_x( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( i )] : sparse_index_x( i ) );
                                                     new_sparse_index_y( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( i )] : sparse_index_y( i ) );

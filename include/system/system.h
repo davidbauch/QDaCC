@@ -28,7 +28,7 @@ class System {
     // Runtime efficient caching vector
     std::map<double, Scalar> phi_vector;                                 // Vector of saved phonon-phi function
     std::vector<Scalar> phi_vector_int;                                  // Same, but with integers for path integral
-    std::map<std::pair<double, double>, SaveStateTau> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
+    std::map<std::pair<double, double>, QDLC::SaveStateTau> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
 
     // ##### Helper Variables #####
     std::map<std::string, double> emission_probabilities;
@@ -63,7 +63,7 @@ class System {
     Sparse dgl_timetrafo( Sparse ret, const double t );
 
     // Calculates the differential equation for different input times for evaluation with the any-order Runge-Kutta solver
-    Sparse dgl_rungeFunction( const Sparse &rho, const Sparse &H, const double t, std::vector<SaveState> &past_rhos );
+    Sparse dgl_rungeFunction( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos );
 
     // Initializes all system parameters, cache variables and precalculates all functions that allow for caching
     bool init_system();
@@ -81,10 +81,10 @@ class System {
     Sparse dgl_pulse( const double t );
 
     // Integrates the Raman photon population. Very runtime costly. TODO: Multithread/Optimize integral.
-    Scalar dgl_raman_population_increment( const std::vector<SaveState> &past_rhos, const char mode, const Scalar before, const double t );
+    Scalar dgl_raman_population_increment( const std::vector<QDLC::SaveState> &past_rhos, const std::string& electronic_transition1, const std::string& electronic_transition2, const std::string& optical_transition, int pulse_index, const Scalar before, const double t );
 
     // Calculates and outputs expectation values for all available observables
-    void expectationValues( const std::vector<SaveState> &rhos, Timer &evalTimer );
+    void expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer );
 
     // Calculates or returns the cached(if allowed) Hamiltonian for current time t.
     // This function is important because it allows for e.g. path integral to use different definitions of H
@@ -123,7 +123,7 @@ class System {
     Sparse dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, double tau );
 
     // Calculates L_phonons(t)
-    Sparse dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<SaveState> &past_rhos );
+    Sparse dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDLC::SaveState> &past_rhos );
 
     // Path integral phonon functions
     void initialize_path_integral_functions();

@@ -12,7 +12,7 @@ OperatorMatrices::OperatorMatrices( Parameters &p ) {
         exit( EXIT_FAILURE );
     }
     timer_operatormatrices.end();
-    Log::L2( "successful. Elapsed time is {}ms\n", timer_operatormatrices.getWallTime( TIMER_MILLISECONDS ) );
+    Log::L2( "successful. Elapsed time is {}ms\n", timer_operatormatrices.getWallTime( Timers::MILLISECONDS ) );
 }
 
 bool OperatorMatrices::generateOperators( Parameters &p ) {
@@ -125,7 +125,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         int index = 1;
         for ( int k = 0; k < current[i].rows(); k++ )
             for ( int j = 0; j < current[i].cols(); j++ )
-                current[i]( k, j ) = ( k + 1 ) + 1i * ( j + 1 );
+                current[i]( k, j ) = ( k + 1 ) + 1.0i * ( j + 1 );
 
         base_hilbert_index.emplace_back( QDLC::Matrix::tensor( current ) );
         //Log::L2( "Tensor for base i = {}:\nCurrent:\n{}\n\n{}\n\n", i, current[i], base_hilbert_index.back() );
@@ -152,8 +152,26 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 auto current = base_selfhilbert;
                 current.front() = ket1 * bra2;
                 Sparse transition_hilbert = QDLC::Matrix::tensor( current ).sparseView();
+                {
+                    auto &state = extra_transitions[transition];
+                    state.ket = ket1;
+                    state.bra = state.ket.transpose();
+                    state.self_hilbert = state.ket * state.bra;
+                    state.base = 0;
+                    state.hilbert = transition_hilbert;
+                }
+
                 current.front() = ket2 * bra1;
-                Sparse transition_transposed_hilbert = transition_hilbert.adjoint();//QDLC::Matrix::tensor( current ).sparseView();
+                Sparse transition_transposed_hilbert = transition_hilbert.adjoint();
+                {
+                    auto &state = extra_transitions[transition_transposed];
+                    state.ket = ket2;
+                    state.bra = state.ket.transpose();
+                    state.self_hilbert = state.ket * state.bra;
+                    state.base = 0;
+                    state.hilbert = transition_transposed_hilbert;
+                }
+
                 pulsemat += transition_hilbert;
                 pulsemat_star += transition_transposed_hilbert;
             } else {
@@ -222,7 +240,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 //std::cout << iss.first << ", " << jss.first << " --> " << ni << " " << nj << ", modes = " << mode << std::endl;
                 val += p.input_photonic[mode].numerical["Energy"] * ( ni - nj );
             }
-            timetrafo_cachematrix( iss.second, jss.second ) = 1i * val;
+            timetrafo_cachematrix( iss.second, jss.second ) = 1.0i * val;
         }
     }
     // Precalculate Lindbladians
@@ -283,14 +301,8 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 temp += el_transitions[transition_transposed].hilbert;
                 polaron_pulse_factors_explicit_time.back() += el_transitions[transition_transposed].projector;
             } else if ( std::isupper( transition.front() ) ) {
-                Log::L2( "Electronic Pulse transition {} is not in the list of allowed electronic transitions, recreating transition matrices...\n", transition );
-                auto bra1 = el_states[transition.substr( 0, 1 )].bra;
-                auto ket2 = el_states[transition.substr( 1, 1 )].ket;
-                auto current = base_selfhilbert;
-                current.front() = ket2 * bra1;
-                Sparse transition_transposed_hilbert = QDLC::Matrix::tensor( current ).sparseView();
-                temp += transition_transposed_hilbert;
-                polaron_pulse_factors_explicit_time.back() += QDLC::Matrix::sparse_projector(transition_transposed_hilbert);
+                temp += extra_transitions[transition_transposed].hilbert;
+                polaron_pulse_factors_explicit_time.back() += QDLC::Matrix::sparse_projector( extra_transitions[transition_transposed].hilbert );
             } else {
                 Log::L2( "Pulse transition {} is cavity...\n", transition );
                 temp += ph_transitions[transition + "bd"].hilbert;
@@ -369,7 +381,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             std::string front_base = "|";
             for ( int i = 0; i < front.size() - 1; i++ ) {
                 front_base += front[i] + "|";
-            } 
+            }
             double alpha = std::stod( front.back() );
             std::string mode = modev.back().substr( 0, 1 );
             Log::L2( "Creating superpositioned coherent state {} for mode {} with alpha = {} and scaled amplitude {}\n", pure_state, mode, alpha, amp );
@@ -390,7 +402,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             double r = std::stod( cmplx.front() );
             double phi = std::stod( cmplx.back() );
             std::string mode = modev.back().substr( 0, 1 );
-            Log::L2( "Creating superpositioned coherent state {} for mode {} with r = {}, phi = {} and scaled amplitude {}\n", pure_state, mode, r,phi, amp );
+            Log::L2( "Creating superpositioned coherent state {} for mode {} with r = {}, phi = {} and scaled amplitude {}\n", pure_state, mode, r, phi, amp );
             for ( int n = 0; n < p.input_photonic[mode].numerical["MaxPhotons"]; n++ ) {
                 if ( n % 2 != 0 )
                     continue;
@@ -409,33 +421,6 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     initial_state_vector_ket.normalize();
     Log::L2( "Initial State Vector: {}\n", initial_state_vector_ket );
     rho = ( initial_state_vector_ket * initial_state_vector_ket.transpose() ).sparseView();
-
-    // if ( !p.startCoherent || true ) {
-    //p.p_initial_state = base_index_map[p.p_initial_state_s];
-    //Log::L2( "Setting initial rho as pure state with rho_0 = {}... \n", p.p_initial_state );
-    //rho.coeffRef( p.p_initial_state, p.p_initial_state ) = 1;
-    //std::cout << "initial state = " << p.p_initial_state_s << " -> " << p.p_initial_state << std::endl;
-    //} else {
-    //Log::L2( "Setting initial rho as pure coherent state with alpha_h = {}, alpha_v = ... \n", p.p_initial_state_photon_h, p.p_initial_state_photon_v );
-    //double trace_rest_h = 1.0;
-    //double trace_rest_v = 1.0;
-    //for ( int i = 0; i < p.p_max_photon_number; i++ ) {
-    //    auto coherent_h = QDLC::Math::getCoherent( std::sqrt( p.p_initial_state_photon_h ), i );
-    //    auto coherent_v = 0.0; //QDLC::Math::getCoherent( std::sqrt(p.p_initial_state_photon_v), i );
-    //    int state_h = 4 * ( p.p_max_photon_number + 1 ) * i;
-    //    int state_v = 4 * i;
-    //    rho.coeffRef( state_h, state_h ) = coherent_h; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
-    //    //rho.coeffRef( state_v, state_v ) = coherent_v; // Remember, <n> = alpha^2 -> alpha = sqrt(n) !!
-    //    trace_rest_h -= coherent_h;
-    //    trace_rest_v -= coherent_v;
-    //    Log::L3( "Coherent state at N = {} with coefficient H = {}, V = {}\n", i, coherent_h, coherent_v );
-    //}
-    //int final_h = 4 * ( p.p_max_photon_number + 1 ) * p.p_max_photon_number;
-    //int final_v = 4 * p.p_max_photon_number;
-    //rho.coeffRef( final_h, final_h ) = trace_rest_h;
-    ////rho.coeffRef( final_v, final_v ) = trace_rest_v;
-    //Log::L3( "Coherent state at N = {} with coefficient H = {}, V = {}\n", p.p_max_photon_number, trace_rest_h, trace_rest_v );
-    //}
     Log::L2( "Done!\n" );
     return true;
 }

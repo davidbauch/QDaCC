@@ -1,6 +1,6 @@
 #include "solver/solver_ode.h"
 
-bool ODESolver::calculate_t_direction( System &s ) {
+bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Sparse rho = s.operatorMatrices.rho;
 
     Timer &rkTimer = Timers::create( "RungeKutta-Main-Loop" );
@@ -17,16 +17,16 @@ bool ODESolver::calculate_t_direction( System &s ) {
         calculate_runge_kutta( rho, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
     }
     // Finalize
-    Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, "T-Direction: ", PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, s.parameters.iterations_t_max, "T-Direction: ", Timers::PROGRESS_FORCE_OUTPUT );
     rkTimer.end();
     Log::L2( "Done! Saved {} states.\n", savedStates.size() );
     Log::L2( "Hamiltons: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}. Done!\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_read );
 
     // Interpolate Matrices?
-    std::vector<SaveState> interpolate_savedstates;
+    std::vector<QDLC::SaveState> interpolate_savedstates;
     if ( s.parameters.numerics_interpolate_outputs ) {
         Log::L2( "Calculating interpolated matrices for temporal properties...\n" );
-        interpolate_savedstates = Solver::calculate_smooth_curve( savedStates, s.parameters.t_start, s.parameters.t_end, std::max( s.parameters.iterations_t_max * 5, 2500 ), s.parameters.output_handlerstrings );
+        interpolate_savedstates = QDLC::Numerics::calculate_smooth_curve( savedStates, s.parameters.t_start, s.parameters.t_end, std::max( s.parameters.iterations_t_max * 5, 2500 ), s.parameters.output_handlerstrings );
         Log::L2( "Done!\n" );
     } else {
         Log::L2( "Using the non-interpolated matrices for temporal properties\n" );

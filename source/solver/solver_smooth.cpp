@@ -1,7 +1,7 @@
 #include "solver/solver.h"
 
 //TODO: alles interpolieren der DM (aus RK45 oder pathint) hier machen! art der interpolation (linear, cubisch, monotone, ...) per parameter übergeben!
-std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveState> &input, double t_start, double t_end, int num_of_points, bool output_handler ) {
+std::vector<QDLC::SaveState> QDLC::Numerics::calculate_smooth_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, int num_of_points, bool output_handler ) {
     Log::L2( " : Setting up the smooth curve interpolator... \n" );
     int matrix_dimension = input.at( 0 ).mat.rows() * input.at( 0 ).mat.cols();
     Timer &timer = Timers::create( "Interpolator" );
@@ -10,7 +10,7 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
     timer.start();
 
     // Stuff
-    std::vector<SaveState> ret;
+    std::vector<QDLC::SaveState> ret;
     ret.reserve( num_of_points );
     double delta_t = ( t_end - t_start ) / ( (double)num_of_points );
 
@@ -27,7 +27,7 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
         ret.push_back( { mat, t_t } );
     }
 
-    //Log::L2( " : : Copying initial SaveStates into seperate vectors...\n" );
+    //Log::L2( " : : Copying initial QDLC::SaveStates into seperate vectors...\n" );
     //// Generate N^2 vectors from the initial density matrices
     //long unsigned int input_length = input.size();
     //std::vector<std::vector<double>> raw_real;
@@ -93,13 +93,13 @@ std::vector<SaveState> Solver::calculate_smooth_curve( const std::vector<SaveSta
     //            cur( i, j ) = Scalar( interpolated_real.at( index ).at( k ), interpolated_imag.at( index ).at( k ) );
     //        }
     //    }
-    //    ret.emplace_back( SaveState( cur.sparseView(), time_out.at( k ) ) );
+    //    ret.emplace_back( QDLC::SaveState( cur.sparseView(), time_out.at( k ) ) );
     //    ret.back().mat.makeCompressed();
     //    // Time
     //    timer.iterate();
     //    Timers::outputProgress( output_handler, timer, progressbar, maximum_iterations, "Interpolator: " );
     //}
-    Timers::outputProgress( output_handler, timer, progressbar, maximum_iterations, "Interpolator: ", PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( output_handler, timer, progressbar, maximum_iterations, "Interpolator: ", Timers::PROGRESS_FORCE_OUTPUT );
     timer.end();
     Log::L2( " : Done!\n" );
     return ret;

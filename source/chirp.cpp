@@ -7,7 +7,7 @@ Chirp::Chirp( Chirp::Inputs &_inputs ) : inputs( _inputs ) {
     Log::L2( "Creating Chirp with {} points of type {}...\n", inputs.t.size(), inputs.type );
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 2.0 + 5 );
     if ( inputs.order > 5 )
-        steps = { Solver::a1 * inputs.t_step, Solver::a2 * inputs.t_step, Solver::a3 * inputs.t_step, Solver::a4 * inputs.t_step, Solver::a5 * inputs.t_step };
+        steps = { QDLC::Numerics::RKCoefficients::a1 * inputs.t_step, QDLC::Numerics::RKCoefficients::a2 * inputs.t_step, QDLC::Numerics::RKCoefficients::a3 * inputs.t_step, QDLC::Numerics::RKCoefficients::a4 * inputs.t_step, QDLC::Numerics::RKCoefficients::a5 * inputs.t_step };
     else
         steps = { 0, 0.5 * inputs.t_step };
     if ( inputs.type.compare( "sine" ) != 0 ) {

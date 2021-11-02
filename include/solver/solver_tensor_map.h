@@ -8,21 +8,21 @@
 #include <functional>
 #include <array>
 
-template <typename Scalar>
-class FixedSizeSparseMap {
-   public:
-    // Index Type definition
-    typedef uint64_t Index;
-    typedef Eigen::VectorXi Vector;
+#include "typedef.h"
 
+namespace QDLC {
+
+namespace Numerics {
+
+class Tensor {
+   public:
     // https://wjngkoh.wordpress.com/2015/03/04/c-hash-function-for-eigen-matrix-and-vector/
-    template <typename T>
-    struct vector_hash : std::unary_function<T, size_t> {
-        static std::hash<typename T::Scalar> hasher;
-        std::size_t operator()( T const &matrix ) const {
+    struct vector_hash : std::unary_function<QDLC::Type::iVector, size_t> {
+        static std::hash<QDLC::Type::iVector::Scalar> hasher;
+        std::size_t operator()( QDLC::Type::iVector const &vec ) const {
             size_t seed = 0;
-            for ( size_t i = 0; i < matrix.size(); ++i ) {
-                auto elem = *( matrix.data() + i );
+            for ( size_t i = 0; i < vec.size(); ++i ) {
+                auto elem = *( vec.data() + i );
                 seed ^= hasher( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
             }
             return seed;
@@ -31,38 +31,38 @@ class FixedSizeSparseMap {
     template <typename T>
     struct vector_compare {
         bool operator()( const T &A, const T &B ) const {
-            return vector_hash<Vector>()( A ) < vector_hash<Vector>()( B );
+            return vector_hash()( A ) < vector_hash()( B );
         }
     };
 
-    typedef std::unordered_map<Vector, std::unordered_map<Vector, Scalar, vector_hash<Vector>>, vector_hash<Vector>> ValueMap; // Save Map of (ivec,jvec,value) triplets
-    typedef std::unordered_map<Index, std::unordered_map<Index, ValueMap>> TensorMap;                                          // inside of map sorted by their first two indices (i0,j0)
+    typedef std::unordered_map<QDLC::Type::iVector, std::unordered_map<QDLC::Type::iVector, QDLC::Type::Scalar, vector_hash>, vector_hash> ValueMap; // Save Map of (ivec,jvec,value) triplets
+    typedef std::unordered_map<QDLC::Type::Index, std::unordered_map<QDLC::Type::Index, ValueMap>> TensorMap;                                        // inside of map sorted by their first two indices (i0,j0)
 
     // Ordered map including SparseIndex;Value pairs.
-    std::vector<TensorMap> values; // Index is [CacheVector]
-    std::vector<TensorMap> cache;  // Index is [Thread]
+    std::vector<TensorMap> values; // index is [CacheVector]
+    std::vector<TensorMap> cache;  // index is [Thread]
 
-    // Counter for which indices/values Vector is active
+    // Counter for which indices/values QDLC::Type::iVector is active
     int current_value_vector = 0;
 
    public:
-    FixedSizeSparseMap(){};
-    FixedSizeSparseMap( int max_threads = 1 ) {
+    Tensor(){};
+    Tensor( int max_threads = 1 ) {
         auto filler = TensorMap();
         values.emplace_back( filler );
         values.emplace_back( filler );
         for ( auto i = 0; i < max_threads; i++ )
             cache.emplace_back( filler );
     }
-    FixedSizeSparseMap( const FixedSizeSparseMap &other ) : values( other.values ),
-                                                            current_value_vector( other.current_value_vector ),
-                                                            cache( other.cache ) {}
+    Tensor( const Tensor &other ) : values( other.values ),
+                                    current_value_vector( other.current_value_vector ),
+                                    cache( other.cache ) {}
 
     TensorMap &get() {
         return values[current_value_vector];
     }
 
-    void addTriplet( Vector indicesX, Vector indicesY, const Scalar &value, int thread, const int i_n = -1, const int j_n = -1, const int gi_n = -1, const int gj_n = -1 ) {
+    void addTriplet( QDLC::Type::iVector indicesX, QDLC::Type::iVector indicesY, const QDLC::Type::Scalar &value, int thread, const int i_n = -1, const int j_n = -1, const int gi_n = -1, const int gj_n = -1 ) {
         if ( i_n != -1 && j_n != -1 ) {
             for ( int i = indicesX.size() - 1; i > 0; i-- ) {
                 indicesX( i ) = indicesX( i - 1 );
@@ -117,6 +117,10 @@ class FixedSizeSparseMap {
     }
 
     int size() {
-        return nonZeros() * sizeof( Scalar );
+        return nonZeros() * sizeof( QDLC::Type::Scalar );
     }
 };
+
+} // namespace Numerics
+
+} // namespace QDLC

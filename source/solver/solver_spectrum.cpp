@@ -6,9 +6,9 @@
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
 
-bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution ) {
+bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution ) {
     // Send system command to change to single core mainprogram, because this memberfunction is already using multithreading
-    s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
+    s.command( QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Calculate G1(t,tau) with given operator matrices
     std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 );
     auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
@@ -38,7 +38,7 @@ bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, 
         std::vector<Scalar> expfunc;
         expfunc.reserve( dim / s.parameters.iterations_t_skip );
         for ( int spec_tau = 0; spec_tau < dim; spec_tau += s.parameters.iterations_t_skip ) {
-            expfunc.emplace_back( std::exp( -1i * spectrum_frequency_w.at( spec_w ) * (double)(spec_tau)*t_step ) );
+            expfunc.emplace_back( std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * (double)(spec_tau)*t_step ) );
         }
         for ( long unsigned int i = 0; i < dim; i += s.parameters.iterations_t_skip ) {
             int k = i / s.parameters.iterations_t_skip;
@@ -52,7 +52,7 @@ bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, 
                 }
                 //out.at( spec_w ) += expfunc.at( l ) * akf_mat( k, l );
                 //std::cout << "Want: tau = " << j * t_step << ", have: tau = " << ( std::imag( tt ) - std::real( tt ) ) << ", from " << tt << std::endl;
-                out.at( spec_w ) += std::exp( -1i * spectrum_frequency_w.at( spec_w ) * ( std::imag( tt( k, l ) ) - std::real( tt( k, l ) ) ) ) * akf_mat( k, l );
+                out.at( spec_w ) += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * ( std::imag( tt( k, l ) ) - std::real( tt( k, l ) ) ) ) * akf_mat( k, l );
             }
         }
         Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum (" + s_g1 + "): " );
@@ -60,7 +60,7 @@ bool ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, 
         timer.iterate();
     }
     // Final output and timer end
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum (" + s_g1 + ")", PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum (" + s_g1 + ")", Timers::PROGRESS_FORCE_OUTPUT );
     timer.end();
     // Save output
     to_output["Spectrum_frequency"][s_g1] = spectrum_frequency_w;

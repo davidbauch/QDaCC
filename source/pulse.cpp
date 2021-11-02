@@ -8,7 +8,7 @@ Pulse::Pulse( Pulse::Inputs &inputs ) : inputs( inputs ) {
     maximum = 0;
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 6.0 + 5 );
     if ( inputs.order > 5 )
-        steps = { Solver::a1 * inputs.t_step, Solver::a2 * inputs.t_step, Solver::a3 * inputs.t_step, Solver::a4 * inputs.t_step, Solver::a5 * inputs.t_step };
+        steps = { QDLC::Numerics::RKCoefficients::a1 * inputs.t_step, QDLC::Numerics::RKCoefficients::a2 * inputs.t_step, QDLC::Numerics::RKCoefficients::a3 * inputs.t_step, QDLC::Numerics::RKCoefficients::a4 * inputs.t_step, QDLC::Numerics::RKCoefficients::a5 * inputs.t_step };
     else
         steps = { 0, 0.5 * inputs.t_step };
     Log::L2( "Done initializing class, creating precalculated pulse...\n" );
@@ -20,13 +20,13 @@ Scalar Pulse::evaluate( double t ) {
     Scalar ret = 0;
     for ( int i = 0; i < (int)inputs.amp.size(); i++ ) {
         if ( inputs.type.at( i ).compare( "cw" ) == 0 && t >= inputs.center.at( i ) ) {
-            ret += inputs.amp.at( i ) * std::exp( -1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + inputs.omega_chirp.at( i ) * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
+            ret += inputs.amp.at( i ) * std::exp( -1.0i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + inputs.omega_chirp.at( i ) * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
         } else if ( inputs.type.at( i ).compare( "gauss" ) == 0 ) {
             double amp = std::sqrt( std::pow( inputs.omega_chirp.at( i ) / inputs.sigma.at( i ), 2.0 ) + std::pow( inputs.sigma.at( i ), 2.0 ) );
             double freq = inputs.omega_chirp.at( i ) / ( std::pow( inputs.omega_chirp.at( i ), 2.0 ) + std::pow( inputs.sigma.at( i ), 4.0 ) );
-            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / amp, inputs.super_amp.at( i ) ) - 1i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + 0.5 * freq * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
+            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / amp, inputs.super_amp.at( i ) ) - 1.0i * ( inputs.omega.at( i ) * ( t - inputs.center.at( i ) ) + 0.5 * freq * std::pow( ( t - inputs.center.at( i ) ), 2.0 ) ) );
         } else if ( inputs.type.at( i ).compare( "cutoff" ) == 0 ) {
-            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / inputs.sigma.at( i ), 2. ) ) * ( std::exp( -1i * ( ( inputs.omega.at( i ) - inputs.omega_chirp.at( i ) ) * ( t - inputs.center.at( i ) ) ) ) + std::exp( -1i * ( ( inputs.omega.at( i ) + inputs.omega_chirp.at( i ) ) * ( t - inputs.center.at( i ) ) ) ) );
+            ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / inputs.sigma.at( i ), 2. ) ) * ( std::exp( -1.0i * ( ( inputs.omega.at( i ) - inputs.omega_chirp.at( i ) ) * ( t - inputs.center.at( i ) ) ) ) + std::exp( -1.0i * ( ( inputs.omega.at( i ) + inputs.omega_chirp.at( i ) ) * ( t - inputs.center.at( i ) ) ) ) );
         }
     }
     return ret;

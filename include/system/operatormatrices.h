@@ -36,7 +36,7 @@ class OperatorMatrices {
     std::vector<double> phononCouplingIndexValue;
 
     // 3.0 New System Matrices
-    std::map<std::string, matrix_s> el_states, ph_states, el_transitions, ph_transitions;
+    std::map<std::string, matrix_s> el_states, ph_states, el_transitions, ph_transitions, extra_transitions;
     std::vector<Sparse> lindblad_factors;
     std::vector<Sparse> polaron_factors, polaron_pulse_factors_explicit_time;
     Dense timetrafo_cachematrix;

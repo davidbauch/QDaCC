@@ -4,13 +4,6 @@
 #include "system/system.h"
 #include "solver/solver_ode.h"
 
-// g++-8 '/Users/davidbauch/OneDrive - Universität Paderborn/Kot/BP/QDLC-C/main.cpp' -o /Users/davidbauch/bin/QDLC-4LS-1.2.7.out misc/ALGLIB/MAC/*.o -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'/Users/davidbauch/OneDrive - Universita<0308>t Paderborn/Kot/BP/QDLC-C/' -Wall 2>&1  | tee fuck.txt
-// g++ 'main.cpp' -o QDLC-4LS-1.2.7.out misc/ALGLIB/CLUSTER/*.o -std=c++17 -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'.' -I'../fmt/include/' -Wall 2>&1  | tee fuck.txt
-// g++ .\main.cpp -o ..\..\Threadhandler\QDLC-4LS-1.2.7.exe .\misc\ALGLIB\LAP\*.o -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -static -I'C:\msys64\mingw64\include\eigen3'  2>&1  | tee fuck.txt
-// test
-// 1 g++ -c source/solver/*.cpp source/system/*.cpp source/misc/*.cpp source/*.cpp -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'C:\msys2\myinclude' -I'include'
-// 2 g++ '.\main.cpp' -o main.exe obj/*.o include/misc/ALGLIB/WIN/*.o -std=c++2a -O3 -DFMT_HEADER_ONLY -fopenmp -lstdc++fs -I'C:\msys2\myinclude' -I'include' -g  2>&1  | tee fuck.txt
-// last input: workpath
 int main( int argc, char* argv[] ) {
     // Commandline Arguments:
     QDLC::CommandlineArguments::init( argc, argv );
@@ -78,7 +71,7 @@ int main( int argc, char* argv[] ) {
         // System
         System system = System( inputs );
         // Solver
-        ODESolver solver = ODESolver( system );
+        auto solver = QDLC::Numerics::ODESolver( system );
         // Normal Time direction
         solver.calculate_t_direction( system );
         // G1 and G2 statistics
@@ -112,8 +105,8 @@ int main( int argc, char* argv[] ) {
 
         Log::close();
         if ( system.parameters.output_handlerstrings ) {
-            fmt::print( "\n{0} {1:.1f}\n", PREFIX_PERCENT_TIME_FINAL, finalTime );
-            fmt::print( "{0} Done in {1}\n", PREFIX_SUFFIX, Timer::format( finalTime ) );
+            fmt::print( "\n{0} {1:.1f}\n", QDLC::Message::Prefix::PERCENT_TIME_FINAL, finalTime );
+            fmt::print( "{0} Done in {1}\n", QDLC::Message::Prefix::SUFFIX, Timer::format( finalTime ) );
         }
         Timers::reset();
     }

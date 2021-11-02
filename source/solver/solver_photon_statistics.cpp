@@ -1,9 +1,11 @@
 #include "solver/solver_ode.h"
+#include <cmath>
+#include <complex>
 
 // Description: Calculates G2 Indistinguishability
-bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
+bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
-    s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
+    s.command( QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Progress
     int pbsize = (int)savedStates.size() / s.parameters.iterations_t_skip;
     ProgressBar progressbar = ProgressBar( pbsize );
@@ -72,7 +74,7 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
         outp[k] = 1.0 - std::abs( topsum / bottomsum );
     }
     // Final output and timer end
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (" + fout + "): ", PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (" + fout + "): ", Timers::PROGRESS_FORCE_OUTPUT );
     timer.end();
 
     // Add to Fileoutput:
@@ -86,11 +88,11 @@ bool ODESolver::calculate_indistinguishability( System &s, const std::string &s_
 }
 
 // Description: Calculates Concurrence
-bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 ) {
+bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 ) {
     Log::L2( "Conc for modes {} {} and {} {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2 );
 
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
-    s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
+    s.command( QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Progress
     int pbsize = 2 * (int)savedStates.size() / s.parameters.iterations_t_skip;
     ProgressBar progressbar = ProgressBar( pbsize );
@@ -251,7 +253,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
         timer_c.iterate();
     }
     // Final output and timer end
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence (" + fout + ")", PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence (" + fout + ")", Timers::PROGRESS_FORCE_OUTPUT );
     timer_c.end();
     // Add to Fileoutput:
     if ( to_output["Conc"].size() == 0 )
@@ -264,7 +266,7 @@ bool ODESolver::calculate_concurrence( System &s, const std::string &s_op_creato
     return true;
 }
 
-bool ODESolver::calculate_wigner( System &s, const std::string &s_mode, const double x, const double y, const int resolution, const int skips ) {
+bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &s_mode, const double x, const double y, const int resolution, const int skips ) {
     // Partially trace the mode to wigner:
     std::vector<Dense> reduced_rho;
     std::vector<Scalar> time;
@@ -279,8 +281,8 @@ bool ODESolver::calculate_wigner( System &s, const std::string &s_mode, const do
     // Calculate Wigner functions over time:
     // Calculate Meshgrid
     auto [X_mat, Y_mat] = QDLC::Matrix::meshgrid( -x, -y, x, y, resolution );
-    //Dense A = 0.5 * g * ( X_mat + 1i * Y_mat );
-    Dense A = ( X_mat + 1i * Y_mat );
+    //Dense A = 0.5 * g * ( X_mat + 1.0i * Y_mat );
+    Dense A = ( X_mat + 1.0i * Y_mat );
 
     std::vector<Dense> wigner( reduced_rho.size(), Dense::Zero( A.rows(), A.cols() ) );
     Log::L2( "First Matrix for Wigner:\n{}\n", reduced_rho.front() );
@@ -366,7 +368,7 @@ bool ODESolver::calculate_wigner( System &s, const std::string &s_mode, const do
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
 
-bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
+bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s ) {
     // Calculate Spectra
     //BIG TODO: nur operator A (vernichter) übergeben!!! Erzeuger dann über "adjoint" bauen, dann ist man auf der sicheren seite!
     auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
@@ -571,7 +573,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //    bool output_full_ind = s.parameters.numerics_calculate_timeresolution_indistinguishability;
 //    bool calculate_concurrence_with_g2_of_zero = s.parameters.numerics_use_simplified_g2;
 //    // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
-//    s.command( Solver::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
+//    s.command( QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
 //    int pbsize = (int)savedStates.size() / s.parameters.iterations_t_skip;
 //    // Progress
 //    ProgressBar progressbar = ProgressBar( pbsize );
@@ -738,7 +740,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //            timer_c.iterate();
 //        }
 //        // Final output and timer end
-//        Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence", PROGRESS_FORCE_OUTPUT );
+//        Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence", Timers::PROGRESS_FORCE_OUTPUT );
 //        timer_c.end();
 //    }
 //    // Calculating indistinguishability
@@ -801,7 +803,7 @@ bool ODESolver::calculate_advanced_photon_statistics( System &s ) {
 //            timer.iterate();
 //        }
 //        // Final output and timer end
-//        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability: ", PROGRESS_FORCE_OUTPUT );
+//        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability: ", Timers::PROGRESS_FORCE_OUTPUT );
 //        timer.end();
 //    }
 //    // Save output

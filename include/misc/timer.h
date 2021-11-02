@@ -1,10 +1,11 @@
 #pragma once
-#include "global.h"
-
-#define PROGRESS_FORCE_OUTPUT 1
-#define TIMER_SECONDS 1.0
-#define TIMER_MILLISECONDS 1E3
-#define TIMER_MICROSECONDS 1E6
+#include <omp.h>
+#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/ostream.h>
+#include "misc/ProgressBar.h"
+#include "misc/log.h"
+#include "typedef.h"
 
 /* Timer Functions */
 class Timer {
@@ -32,11 +33,11 @@ class Timer {
     void end();
     void iterate( int num = 1 );
     void add( time_t cpu, double wall );
-    double getWallTime( int scale = TIMER_SECONDS );
-    double getWallTimeOnce( int scale = TIMER_SECONDS );
-    double getCPUTime( int scale = TIMER_SECONDS );
-    double getCPUTimeOnce( int scale = TIMER_SECONDS );
-    double getAverageIterationTime( int scale = TIMER_SECONDS );
+    double getWallTime( int scale = 1.0 );
+    double getWallTimeOnce( int scale = 1.0 );
+    double getCPUTime( int scale = 1.0 );
+    double getCPUTimeOnce( int scale = 1.0 );
+    double getAverageIterationTime( int scale = 1.0 );
     double getTotalIterationNumber();
     bool doOutput();
     void setOutputModTime( double s );
@@ -46,6 +47,11 @@ class Timer {
 
 class Timers {
    public:
+    static constexpr int PROGRESS_FORCE_OUTPUT = 1;
+    static constexpr double SECONDS = 1.0;
+    static constexpr double MILLISECONDS = 1E3;
+    static constexpr double MICROSECONDS = 1E6;
+
     Timers( Timers & ) = delete;
     static Timers &Get() {
         static Timers instance;
@@ -84,7 +90,7 @@ class Timers {
         }
     }
     Timer &Icreate( const std::string &name, bool addToTotalStatistic, bool printToSummary ) {
-        timers.push_back( {name, addToTotalStatistic, printToSummary} );
+        timers.push_back( { name, addToTotalStatistic, printToSummary } );
         Log::L2( "Created timer with name '{}'{}.\n", name, ( addToTotalStatistic ? " which will be added to total statistics" : "" ) );
         return timers.back();
     }
@@ -96,9 +102,3 @@ class Timers {
     }
     double Isummary( bool output );
 };
-
-//extern std::vector<Timer> allTimers;
-//void outputTimeStrings( Timer &t, const long unsigned int maxItTotal, std::string suffix = "", int final = 0 );
-//void outputProgressBar( Timer &t, ProgressBar &p, const long unsigned int maxItTotal, std::string suffix = "", int final = 0 );
-//void outputProgress( int handler, Timer &t, ProgressBar &p, const long unsigned int maxItTotal, std::string suffix = "", int final = 0 );
-//Timer &createTimer( std::string _name = "Generic timer", bool _addtoTotalStatistic = true, bool _printToSummary = true );
