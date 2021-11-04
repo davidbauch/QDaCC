@@ -356,7 +356,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             std::string state2 = base.at( j ).substr( 1, 1 );
             if ( i == j ) {
                 auto factor = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
-                if ( !temp_base_indices.contains( factor ) ) {
+                if ( !temp_base_indices.count( factor ) > 0 ) {
                     temp_base_indices[factor] = new_index++;
                     phononCouplingIndexValue.emplace_back( factor );
                 }
