@@ -98,14 +98,14 @@ class Log {
     template <class Args>
     void Ilevel2_log( const std::string &msg, const Args &args ) {
         if ( max_loglevel > LEVEL_1 ) {
-            fmt::vprint( " | " + msg, args );
+            fmt::vprint( "| \033[38;2;100;100;100m " + msg + "\033[0m", args );
             fmt::vprint( file, " | " + msg, args );
         }
     }
     template <class Args>
     void Ilevel3_log( const std::string &msg, const Args &args ) {
         if ( max_loglevel > LEVEL_2 ) {
-            fmt::vprint( " | - " + msg, args );
+            fmt::vprint( " | \033[31m- \033[93m" + msg + "\033[0m", args );
             fmt::vprint( file, " | - " + msg, args );
         }
     }
@@ -137,7 +137,7 @@ class Log {
         Bar( size, level, _barOut );
     }
     void Idebug( const std::string &msg ) {
-        L1( "[DEBUG] {}{}\n", fmt::format( "({})", debug_counter++ ), msg );
+        L1( "[\033[31mDEBUG\033[0m] {}{}\n", fmt::format( "({}) ", debug_counter++ ), msg );
     }
     void Iclose() {
         L1( "[END OF LOGFILE]" );

@@ -3,7 +3,7 @@
 System::System( const std::vector<std::string> &input ) {
     // Set Name of this system.
     name = "Generic Electronic System";
-    Log::L2( "Creating System Class for '{}'\n", name );
+    Log::L2( "[System] Creating System Class for '{}'\n", name );
     // Initialize all subclasses with the input vector
     parameters = Parameters( input );
     operatorMatrices = OperatorMatrices( parameters );
@@ -15,14 +15,14 @@ System::System( const std::vector<std::string> &input ) {
     // Initialize / Adjust the remaining system class
     terminate_message = QDLC::Message::global_normaltermination;
     Timer &timer_systeminit = Timers::create( "System Initialization", true, false );
-    Log::L2( "System initialization...\n" );
+    Log::L2( "[System] Initialization...\n" );
     timer_systeminit.start();
     if ( !init_system() ) {
-        Log::L2( "System initialization failed! Exitting program...\n" );
+        Log::L2( "[System] Initialization failed! Exitting program...\n" );
         Log::close();
         exit( EXIT_FAILURE );
     }
-    Log::L2( "Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( Timers::MILLISECONDS ) );
+    Log::L2( "[System] Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( Timers::MILLISECONDS ) );
     timer_systeminit.end();
 }
 
@@ -64,7 +64,7 @@ bool System::init_system() {
     Sparse temp = dgl_timetrafo( operatorMatrices.H_used, 505E-12 );
     double error = std::abs( 1.0 - Dense( temp ).sum() / Dense( ttrafo ).sum() );
     if ( error >= 1E-8 ) {
-        Log::L1( "Unitary timetransformation error is {:.3f}\%!\n", error * 100.0 );
+        Log::L1( "[System] Unitary timetransformation error is {:.3f}\%!\n", error * 100.0 );
     }
     return true;
 }
@@ -241,7 +241,7 @@ bool System::command( unsigned int index ) {
     // The only reason for classes using this system class to set the main programs maximum threads to 1 is, if the usual T-direction is already done.
     if ( index == QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM ) {
         parameters.numerics_phonons_maximum_threads = 1;
-        Log::L2( "Set maximum number of Threads for primary calculations to {}\n", parameters.numerics_phonons_maximum_threads );
+        Log::L2( "[System] Set maximum number of Threads for primary calculations to {}\n", parameters.numerics_phonons_maximum_threads );
     }
     return true;
 }
@@ -251,9 +251,9 @@ bool System::exit_system( const int failure ) {
         p.log();
     for ( auto &c : chirp )
         c.log();
-    Log::L2( "Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
-    Log::L2( "Number of approx+/- adjustments: {}\n", globaltries );
-    Log::L1( "Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
+    Log::L2( "[System] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
+    Log::L2( "[System] Number of approx+/- adjustments: {}\n", globaltries );
+    Log::L1( "[System] Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
     fileoutput.close();
     return true;
 }
@@ -263,7 +263,7 @@ bool System::traceValid( Sparse &rho, double t_hit, bool force ) {
     parameters.trace.emplace_back( trace );
     if ( trace < 0.99 || trace > 1.01 || force ) {
         if ( force )
-            fmt::print( "{} {} -> trace check failed at t = {} with trace(rho) = {}\n", QDLC::Message::Prefix::ERROR, QDLC::Message::global_error_divergent, t_hit, trace );
+            fmt::print( "[System] {} {} -> trace check failed at t = {} with trace(rho) = {}\n", QDLC::Message::Prefix::ERROR, QDLC::Message::global_error_divergent, t_hit, trace );
         terminate_message = QDLC::Message::global_error_divergent;
         FILE *fp_trace = std::fopen( ( parameters.subfolder + "trace.txt" ).c_str(), "w" );
         for ( int i = 0; i < (int)parameters.trace.size() && parameters.t_step * 1.0 * i < t_hit; i++ ) {

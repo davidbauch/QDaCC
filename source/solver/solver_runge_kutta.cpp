@@ -95,7 +95,6 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
             Log::L3( "[RKSOLVER] Adjusted Calculation end from {} to {}\n", t_end, t_end + 10.0 * t_step_initial );
             t_end += 10.0 * t_step_initial;
             s.parameters.iterations_t_max = (int)std::ceil( ( t_end - t_start ) / t_step_initial );
-            progressbar.maximumIterations = s.parameters.iterations_t_max;
         }
     }
     if ( s.parameters.numerics_calculate_till_converged ) {
@@ -159,7 +158,6 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
             // Adjust t_end until ground state is reached.we assume the ground state is the first entry of the DM
             if ( s.parameters.numerics_calculate_till_converged and t_t + t_step > t_end and std::real( temp.back().mat.coeff( 0, 0 ) ) < 0.999 ) {
                 t_end += 10.0 * t_step;
-                progressbar.maximumIterations = rkTimer.getTotalIterationNumber();
                 Log::L3( "[RK45SOLVER{}] Adjusted Calculation end to {}\n", omp_get_thread_num(), t_end );
             }
         }

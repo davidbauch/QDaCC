@@ -35,17 +35,17 @@ Scalar System::dgl_phonon_S_function( const int t_delta, const int i_n, const in
 }
 
 void System::initialize_path_integral_functions() {
-    Log::L2( "Initializing Path-Integral functions...\n" );
+    Log::L2( "[PathIntegral] Initializing Path-Integral functions...\n" );
     // kernel in phi-vector schreiben
     int tau_max = parameters.p_phonon_nc + 1;
-    Log::L2( "Initializing Kernel Memory functions...\n" );
+    Log::L2( "[PathIntegral] Initializing Kernel Memory functions...\n" );
     phi_vector_int.clear();
     for ( double tau = 0.0; tau < parameters.t_step_pathint * tau_max; tau += parameters.t_step_pathint ) {
         phi_vector[tau] = dgl_phonons_kernel( tau, parameters.t_step_pathint );
         phi_vector_int.emplace_back( phi_vector[tau] );
     }
 
-    Log::L2( "Outputting phonon functions to phonons.txt from phi_vector({})...\n", phi_vector.size() );
+    Log::L2( "[PathIntegral] Outputting phonon functions to phonons.txt from phi_vector({})...\n", phi_vector.size() );
     // Output Phonon Functions
     FILE *fp_phonons = std::fopen( ( parameters.subfolder + "phonons.txt" ).c_str(), "w" );
     fmt::print( fp_phonons, "t\tabs(K(t))\treal(K(t))\timag(K(t))\tabs(K(t))\treal(K(t))\timag(K(t))\n" );
@@ -72,5 +72,5 @@ void System::initialize_path_integral_functions() {
     //    fmt::print( fp_phonons, "{}\t{}\t{}\t{}\n", t, std::abs( phi_vector_o.at( i ) ), std::real( phi_vector_o.at( i ) ), std::imag( phi_vector_o.at( i ) ) );
     //}
     std::fclose( fp_phonons );
-    Log::L2( "Done...\n" );
+    Log::L2( "[PathIntegral] Done...\n" );
 }

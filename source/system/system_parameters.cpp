@@ -31,33 +31,33 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     Timer &timer_parseInput = Timers::create( "Parsing parameters", true, false );
     Log::wrapInBar( "Conversion of input variables", Log::BAR_SIZE_FULL, Log::LEVEL_2, Log::BAR_0 );
     Log::L2( "\n" );
-    Log::L2( "Parsing input variables... " );
+    Log::L2( "[System] Parsing input variables...\n" );
     timer_parseInput.start();
     if ( !parseInput( arguments ) ) {
-        Log::L2( "Parsing input variables failed! Exitting program...\n" );
+        Log::L2( "[System] Parsing input variables failed! Exitting program...\n" );
         Log::close();
         exit( EXIT_FAILURE );
     }
     timer_parseInput.end();
-    Log::L2( "successful. Elapsed time is {}ms\n", timer_parseInput.getWallTime( Timers::MILLISECONDS ) );
+    Log::L2( "[System] Successful. Elapsed time is {}ms\n", timer_parseInput.getWallTime( Timers::MILLISECONDS ) );
 
     // Scaling inputs:
     if ( scale_parameters ) {
-        Log::L2( "Rescaling parameters to {}... ", scale_value );
+        Log::L2( "[System] Rescaling parameters to {}...\n", scale_value );
         scaleInputs( scale_value );
-        Log::L2( "Done!\n" );
+        Log::L2( "[System] Done!\n" );
     }
 
     // Adjusting inputs:
     Timer &timer_adjustInput = Timers::create( "Adjusting parameters", true, false );
-    Log::L2( "Adjusting input variables... " );
+    Log::L2( "[System] Adjusting input variables...\n" );
     timer_adjustInput.start();
     if ( !adjustInput() ) {
-        Log::L2( "Adjusting input variables failed! Exitting program...\n" );
+        Log::L2( "[System] Adjusting input variables failed! Exitting program...\n" );
         Log::close();
         exit( EXIT_FAILURE );
     }
-    Log::L2( "successful. Elapsed time is {}ms\n", timer_adjustInput.getWallTime( Timers::MILLISECONDS ) );
+    Log::L2( "[System] Successful. Elapsed time is {}ms\n", timer_adjustInput.getWallTime( Timers::MILLISECONDS ) );
     timer_adjustInput.end();
 }
 
@@ -195,7 +195,7 @@ bool Parameters::scaleInputs( const double scaling ) {
 }
 
 bool Parameters::adjustInput() {
-    Log::L2( "Adjusting Inputs...\n" );
+    Log::L2( "[System] Adjusting Inputs...\n" );
 
     // For threadsafety
     if ( numerics_rk_order > 5 )
@@ -236,7 +236,7 @@ bool Parameters::adjustInput() {
         }
         if ( t_end < 0 )
             t_end = 10E-12;
-        Log::L2( "Calculate till at least {} and adjust accordingly to guarantee convergence.\n", t_end );
+        Log::L2( "[System] Calculate till at least {} and adjust accordingly to guarantee convergence.\n", t_end );
     }
 
     if (numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL) {
@@ -269,7 +269,7 @@ bool Parameters::adjustInput() {
     trace.reserve( iterations_t_max + 5 );
 
     numerics_saved_coefficients_cutoff = 0; //( numerics_calculate_spectrum || numerics_calculate_g2 ) ? 0 : ( p_phonon_tcutoff / t_step ) * 5;
-    Log::L2( "Adjusting Inputs Done!\n" );
+    Log::L2( "[System] Adjusting Inputs Done!\n" );
     return true;
 }
 

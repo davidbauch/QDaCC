@@ -11,9 +11,17 @@
 #include <fmt/core.h> // -DFMT_HEADER_ONLY
 #include <fmt/format.h>
 #include <fmt/ostream.h>
+#include <vector>
 
 #define BAR_HORIZONTAL 0
 #define BAR_VERTICAL 1
+
+namespace ProgressBarSetting {
+    const std::vector<std::string> sym1 = {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"};
+    const std::vector<std::string> sym2 = { " ", ".", ":", "|" };
+    const std::vector<std::string> sym3 = {" ","\033[38;2;25;25;25m|\033[0m","\033[38;2;50;50;50m|\033[0m","\033[38;2;75;75;75m|\033[0m","\033[38;2;100;100;100m|\033[0m","\033[38;2;125;125;125m|\033[0m","\033[38;2;150;150;150m|\033[0m","\033[38;2;175;175;175m|\033[0m","\033[38;2;200;200;200m|\033[0m","\033[38;2;225;225;225m|\033[0m","\033[38;2;250;250;250m|\033[0m"};
+    const std::vector<std::string> sym4 = {" ","\033[38;2;25;25;25m=\033[0m","\033[38;2;50;50;50m=\033[0m","\033[38;2;75;75;75m=\033[0m","\033[38;2;100;100;100m=\033[0m","\033[38;2;125;125;125m=\033[0m","\033[38;2;150;150;150m=\033[0m","\033[38;2;175;175;175m=\033[0m","\033[38;2;200;200;200m=\033[0m","\033[38;2;225;225;225m=\033[0m","\033[38;2;250;250;250m=\033[0m"};
+}
 
 class ProgressBar {
    private:
@@ -31,7 +39,6 @@ class ProgressBar {
     }
 
    public:
-    int maximumIterations;
     int barLength, decimalPoints;
     std::string barEnd;
     std::vector<std::string> spin;
@@ -42,8 +49,8 @@ class ProgressBar {
     double spinPS;
     int maxSize;
     int type;
-    ProgressBar( int _maximumIterations, int _barLength = 60, int _decimalPoints = 0, int _type = BAR_VERTICAL, bool _isSpinning = true, double _spinPS = 0.1, std::vector<std::string> _sym = { " ", ".", ":", "|" }, std::vector<std::string> _spin = { "|", "/", "-", "\\" }, std::string _barEnd = "Done" ) { //{" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"}
-        maximumIterations = _maximumIterations;
+    
+    ProgressBar( int _barLength = 60, int _decimalPoints = 0, int _type = BAR_VERTICAL, bool _isSpinning = true, double _spinPS = 0.1, const std::vector<std::string>& _sym = ProgressBarSetting::sym4, const std::vector<std::string>& _spin = { "|", "/", "-", "\\" }, std::string _barEnd = "Done" ) {
         barLength = _barLength;
         decimalPoints = _decimalPoints;
         isSpinning = _isSpinning;
@@ -58,7 +65,7 @@ class ProgressBar {
         strBarStart = "[ ";
         strBarEnd = "]";
     }
-    void calculate( int currentIterations ) {
+    void calculate( int currentIterations, int maximumIterations ) {
         currentPercent = std::min( 1.0 * currentIterations / maximumIterations, 1.0 );
         int size = (int)sym.size() - 1;
         if ( type == 0 ) {
@@ -72,8 +79,8 @@ class ProgressBar {
             //num2 = std::max(0,barLength-1-num0); // Redundant
         }
     }
-    std::string print( int currentIterations, std::string barSuffix = "", std::string barPrefix = "" ) {
-        calculate( currentIterations );
+    std::string print( int currentIterations, int maximumIterations, std::string barSuffix = "", std::string barPrefix = "" ) {
+        calculate( currentIterations, maximumIterations );
         std::string ret = "";
         if ( type == 0 )
             ret = addstr( num2, sym.at( ( num0 + 1 ) % sym.size() ) ) + addstr( num1, sym.at( num0 ) );
@@ -84,7 +91,7 @@ class ProgressBar {
             lastSpin = omp_get_wtime();
             c++;
         }
-        ret = barPrefix + strBarStart + ret + strBarEnd + ( decimalPoints >= 0 ? fmt::format( " {:.{}f}\%", 1.0 * currentIterations / maximumIterations * 100, decimalPoints ) : "" ) + ( ( isSpinning && currentIterations < maximumIterations ) ? fmt::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + ( currentIterations < maximumIterations ? barSuffix : barEnd );
+        ret = "\033[38;2;255;255;255m" + barPrefix + strBarStart + "\033[0m" + ret + "\033[38;2;255;255;255m" + strBarEnd + ( decimalPoints >= 0 ? fmt::format( " {:.{}f}\%", 1.0 * currentIterations / maximumIterations * 100, decimalPoints ) : "" ) + ( ( isSpinning && currentIterations < maximumIterations ) ? fmt::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + ( currentIterations < maximumIterations ? barSuffix : barEnd ) + "\033[0m";
         maxSize = ( (int)ret.size() > maxSize ) ? (int)ret.size() : maxSize;
         fmt::print( "{:<{}}\r", ret, maxSize );
         return ret;

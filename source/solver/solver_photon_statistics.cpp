@@ -8,7 +8,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
     s.command( QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Progress
     int pbsize = (int)savedStates.size() / s.parameters.iterations_t_skip;
-    ProgressBar progressbar = ProgressBar( pbsize );
+    ProgressBar progressbar = ProgressBar( );
 
     // Calculate G2(t,tau) with given operator matrices
     std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 );
@@ -30,7 +30,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
     timer.start();
 
     auto T = std::min<int32_t>( akf_mat_g1.rows() * s.parameters.iterations_t_skip, savedStates.size() ); //savedStates.size();
-    Log::L2( "Using matstep = {} -> matdim = {}\n", s.parameters.iterations_t_skip, T );
+    Log::L2( "[Indistinguishability] Using matstep = {} -> matdim = {}\n", s.parameters.iterations_t_skip, T );
 
     std::vector<Scalar> top, bottom, topv;
     for ( int i = 0; i < T; i += s.parameters.iterations_t_skip ) {
@@ -89,13 +89,13 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
 
 // Description: Calculates Concurrence
 bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 ) {
-    Log::L2( "Conc for modes {} {} and {} {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2 );
+    Log::L2( "[Concurrence] Conc for modes {} {} and {} {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2 );
 
     // Send system command to change to single core subprogram, because this memberfunction is already using multithreading
     s.command( QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Progress
     int pbsize = 2 * (int)savedStates.size() / s.parameters.iterations_t_skip;
-    ProgressBar progressbar = ProgressBar( pbsize );
+    ProgressBar progressbar = ProgressBar( );
 
     std::string fout = s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
     // Calculate G2(t,tau) with given operator matrices
@@ -117,7 +117,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     cache[s_g2_2211] = cache[s_g2_1122].conjugate();
     cache[s_g2_1212] = cache[s_g2_2121].conjugate();
 
-    Log::L2( "Using matstep = {}\n", s.parameters.iterations_t_skip );
+    Log::L2( "[Concurrence] Using matstep = {}\n", s.parameters.iterations_t_skip );
 
     std::map<std::string, std::vector<Scalar>> rho;
     std::map<std::string, std::vector<Scalar>> rho_g2zero;
@@ -136,7 +136,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     auto T = std::min<int32_t>( cache[s_g2_1111].rows() * s.parameters.iterations_t_skip, savedStates.size() );
 
     double deltaT = s.parameters.t_step * ( 1.0 * s.parameters.iterations_t_skip );
-    Log::L2( "Calculating Concurrence... Integral Timestep: {}\n", deltaT );
+    Log::L2( "[Concurrence] Calculating Concurrence... Integral Timestep: {}, Vector Size: {}\n", deltaT, T );
 
     for ( long unsigned int t = 0; t < T; t += s.parameters.iterations_t_skip ) {
         for ( auto &mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
@@ -187,22 +187,21 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     std::vector<Scalar> output, output_g2zero;
     std::vector<Scalar> time;
     std::vector<Dense> twophotonmatrix, twophotonmatrix_g2zero;
-    for ( long unsigned int i = 0; i < T; i++ ) {
+    for ( long unsigned int i = 0; i < cache[s_g2_1111].rows(); i++ ) { // cache[s_g2_1111].rows() statt T?
         output.emplace_back( 0 );
         output_g2zero.emplace_back( 0 );
         time.emplace_back( 0 );
         twophotonmatrix.emplace_back( Dense::Zero( 4, 4 ) );
         twophotonmatrix_g2zero.emplace_back( Dense::Zero( 4, 4 ) );
     }
-
     Dense spinflip = Dense::Zero( 4, 4 );
     spinflip( 0, 3 ) = -1;
     spinflip( 1, 2 ) = 1;
     spinflip( 2, 1 ) = 1;
     spinflip( 3, 0 ) = -1;
-    Log::L3( "Spinflip Matrix: {}\n", spinflip );
+    Log::L3( "[Concurrence] Spinflip Matrix: {}\n", spinflip );
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( long unsigned int k = 0; k < T; k++ ) {
+    for ( long unsigned int k = 0; k < cache[s_g2_1111].rows(); k++ ) { // cache[s_g2_1111].rows() statt T?
         //Log::L3( "Creating 2 photon matrix\n" );
         Dense rho_2phot = Dense::Zero( 4, 4 );
         Dense rho_2phot_g2zero = Dense::Zero( 4, 4 );
@@ -242,8 +241,22 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         //Log::L3( "Calculating Eigenvalues\n" );
         auto eigenvalues = R5.eigenvalues();
         auto eigenvalues_g2zero = R5_g2zero.eigenvalues();
+        // Sometimes, the numerical method for eigenvalue evaluation yields crap (first element really big, rest shifted), so we check this here:
+        if (QDLC::Math::abs2(eigenvalues(3)) > 2.0) {
+            eigenvalues(3) = eigenvalues(2);
+            eigenvalues(2) = eigenvalues(1);
+            eigenvalues(1) = eigenvalues(0);
+            eigenvalues(0) = 0.0;
+        }
+        if (QDLC::Math::abs2(eigenvalues_g2zero(3)) > 2.0) {
+            eigenvalues_g2zero(3) = eigenvalues_g2zero(2);
+            eigenvalues_g2zero(2) = eigenvalues_g2zero(1);
+            eigenvalues_g2zero(1) = eigenvalues_g2zero(0);
+            eigenvalues_g2zero(0) = 0.0;
+        }
         //Log::L1( "rho2phot = {}\n\nsqrtrho2phot = {}\n\nR = {}\n\nRS = {}\nEigenvalues at t = {} are {}\n", rho_2phot, sqrtrho2phot, R, R5, getTimeAt( i ), eigenvalues );
         auto conc = eigenvalues( 3 ) - eigenvalues( 2 ) - eigenvalues( 1 ) - eigenvalues( 0 );
+        //Log::L1("Eigenvalues {}: C = {} - {} - {} - {}\n",k,eigenvalues(3),eigenvalues(2),eigenvalues(1),eigenvalues(0));
         auto conc_g2zero = eigenvalues_g2zero( 3 ) - eigenvalues_g2zero( 2 ) - eigenvalues_g2zero( 1 ) - eigenvalues_g2zero( 0 );
         output.at( k ) = conc;
         output_g2zero.at( k ) = conc_g2zero;
@@ -271,7 +284,7 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
     std::vector<Dense> reduced_rho;
     std::vector<Scalar> time;
     int base = s.operatorMatrices.el_states.count( s_mode ) != 0 ? s.operatorMatrices.el_states[s_mode].base : s.operatorMatrices.ph_states[s_mode].base;
-    Log::L2( "Calculating Wigner function for mode {}/{}\n", s_mode, base );
+    Log::L2( "[Wigner] Calculating Wigner function for mode {}/{}\n", s_mode, base );
     for ( int i = 0; i < savedStates.size(); i += skips ) {
         reduced_rho.emplace_back( s.partialTrace( getRhoAt( i ), base ) );
         time.emplace_back( getTimeAt( i ) );
@@ -285,9 +298,9 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
     Dense A = ( X_mat + 1.0i * Y_mat );
 
     std::vector<Dense> wigner( reduced_rho.size(), Dense::Zero( A.rows(), A.cols() ) );
-    Log::L2( "First Matrix for Wigner:\n{}\n", reduced_rho.front() );
+    Log::L2( "[Wigner] First Matrix for Wigner:\n{}\n", reduced_rho.front() );
 
-    ProgressBar progressbar = ProgressBar( reduced_rho.size() );
+    ProgressBar progressbar = ProgressBar(  );
     Timer &timer_w = Timers::create( "Wigner (" + s_mode + ")" );
     timer_w.start();
     // Iterate
@@ -449,7 +462,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         }
         // G2(t,0) and G2(tau)
         if ( gs_s.numerical_v["Integrated"][i] == 1 || gs_s.numerical_v["Integrated"][i] == 2 ) {
-            Log::L2( "Saving G{} integrated function to {}.txt...\n", order, purpose );
+            Log::L2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
             FILE *f_gfunc = std::fopen( ( s.parameters.subfolder + purpose + ".txt" ).c_str(), "w" );
             fmt::print( f_gfunc, "Time\tAbs(g2(tau))\tReal(g2(tau))\tImag(g2(tau))\tAbs(g2(t,0))\tReal(g2(t,0))\tImag(g2(t,0))\tAbs(g2(0))\tReal(g2(0))\tImag(g2(0))\n" );
             for ( int l = 0; l < topv.size(); l++ ) { //gmat.cols()
@@ -463,7 +476,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             }
             std::fclose( f_gfunc );
         }
-        Log::L2( "Done!\n" );
+        Log::L2( "[PhotonStatistics] Done!\n" );
     }
     // Calculate Conc
     auto &wigner_s = s.parameters.input_correlation["Wigner"];
@@ -473,43 +486,43 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
 
     // Output Spectra and Rest in seperate Files
     for ( auto &[mode, data] : to_output["Spectrum"] ) {
-        Log::L2( "Saving Emission Spectrum to spectrum_" + mode + ".txt...\n" );
+        Log::L2( "[PhotonStatistics] Saving Emission Spectrum to spectrum_" + mode + ".txt...\n" );
         FILE *f_spectrum = std::fopen( ( s.parameters.subfolder + "spectrum_" + mode + ".txt" ).c_str(), "w" );
         fmt::print( f_spectrum, "Omega\t{}\n", mode );
         for ( int i = 0; i < to_output["Spectrum"][mode].size(); i++ ) {
             fmt::print( f_spectrum, "{:.8e}\t{:.8e}\n", std::real( to_output["Spectrum_frequency"][mode][i] ), std::real( to_output["Spectrum"][mode][i] ) );
         }
         std::fclose( f_spectrum );
-        Log::L2( "Done!\n" );
+        Log::L2( "[PhotonStatistics] Done!\n" );
     }
     for ( auto &[mode, data] : to_output["Indist"] ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
-        Log::L2( "Saving Indistinguishability and Visibility to indist_" + mode + ".txt...\n" );
+        Log::L2( "[PhotonStatistics] Saving Indistinguishability and Visibility to indist_" + mode + ".txt...\n" );
         FILE *f_indist = std::fopen( ( s.parameters.subfolder + "indist_" + mode + ".txt" ).c_str(), "w" );
         fmt::print( f_indist, "Time\tIndist_{}\tVisibility_{}\n", mode, mode );
         for ( int i = 0; i < to_output["Indist"][mode].size(); i++ ) {
             fmt::print( f_indist, "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Indist"]["Time"][i] ), std::real( to_output["Indist"][mode][i] ), std::real( to_output["Visibility"][mode][i] ) );
         }
         std::fclose( f_indist );
-        Log::L2( "Done!\n" );
+        Log::L2( "[PhotonStatistics] Done!\n" );
     }
     for ( auto &[mode, data] : to_output["Conc"] ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
-        Log::L2( "Saving Concurrence to conc_" + mode + ".txt...\n" );
+        Log::L2( "[PhotonStatistics] Saving Concurrence to conc_" + mode + ".txt...\n" );
         FILE *f_indist = std::fopen( ( s.parameters.subfolder + "conc_" + mode + ".txt" ).c_str(), "w" );
         fmt::print( f_indist, "Time\t{}\t{}(g2(0))\n", mode, mode );
         for ( int i = 0; i < to_output["Conc"][mode].size(); i++ ) {
             fmt::print( f_indist, "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ) );
         }
         std::fclose( f_indist );
-        Log::L2( "Done!\n" );
+        Log::L2( "[PhotonStatistics] Done!\n" );
     }
     for ( auto &[mode, data] : to_output_m["TwoPMat"] ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
-        Log::L2( "Saving Two-Photon Matrix to twopmat_" + mode + ".txt...\n" );
+        Log::L2( "[PhotonStatistics] Saving Two-Photon Matrix to twopmat_" + mode + ".txt...\n" );
         FILE *f_twophot = std::fopen( ( s.parameters.subfolder + "twopmat_" + mode + ".txt" ).c_str(), "w" );
         fmt::print( f_twophot, "Time\t" );
         std::vector<std::string> modes = { "11", "12", "21", "22" };
@@ -539,12 +552,12 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             fmt::print( f_twophot, "\n" );
         }
         std::fclose( f_twophot );
-        Log::L2( "Done!\n" );
+        Log::L2( "[PhotonStatistics] Done!\n" );
     }
     for ( auto &[mode, data] : to_output_m["Wigner"] ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
-        Log::L2( "Saving Wigner function to wigner_" + mode + ".txt...\n" );
+        Log::L2( "[PhotonStatistics] Saving Wigner function to wigner_" + mode + ".txt...\n" );
         FILE *f_wigner = std::fopen( ( s.parameters.subfolder + "wigner_" + mode + ".txt" ).c_str(), "w" );
         fmt::print( f_wigner, "Time\t{}\n", mode );
         for ( int i = 0; i < data.size(); i++ ) {
@@ -558,6 +571,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             fmt::print( f_wigner, "\n" );
         }
         std::fclose( f_wigner );
+        Log::L2("[PhotonStatistics] Done!\n");
     }
     return true;
 }

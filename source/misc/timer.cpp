@@ -143,9 +143,9 @@ void Timers::IoutputProgress( bool handler, Timer &t, ProgressBar &p, const unsi
 void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
         if ( !final )
-            p.print( t.getTotalIterationNumber(), fmt::format( "T - {}", Timer::format( ( (double)maxItTotal - t.getTotalIterationNumber() ) * t.getAverageIterationTime() ) ), suffix );
+            p.print( t.getTotalIterationNumber(), maxItTotal, fmt::format( "T - {}", Timer::format( ( (double)maxItTotal - t.getTotalIterationNumber() ) * t.getAverageIterationTime() ) ), suffix );
         else {
-            p.print( maxItTotal, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
+            p.print( maxItTotal, maxItTotal, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
             fmt::print( "\n" );
         }
     }

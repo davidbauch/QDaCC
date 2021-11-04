@@ -6,7 +6,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::calculate_smooth_curve( const std::
     int matrix_dimension = input.at( 0 ).mat.rows() * input.at( 0 ).mat.cols();
     Timer &timer = Timers::create( "Interpolator" );
     int maximum_iterations = matrix_dimension * 2 + num_of_points;
-    ProgressBar progressbar = ProgressBar( maximum_iterations, 60, 0, BAR_VERTICAL, true, 0.1, { " ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█" } );
+    ProgressBar progressbar = ProgressBar();
     timer.start();
 
     // Stuff
