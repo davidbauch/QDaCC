@@ -66,7 +66,7 @@ class ProgressBar {
         strBarEnd = "]";
     }
     void calculate( int currentIterations, int maximumIterations ) {
-        currentPercent = std::min( 1.0 * currentIterations / maximumIterations, 1.0 );
+        currentPercent = std::min( (1.0 * currentIterations) / maximumIterations, 1.0 );
         int size = (int)sym.size() - 1;
         if ( type == 0 ) {
             num0 = std::floor( currentPercent * size ); // min(*,sym.size()-1)
@@ -91,9 +91,10 @@ class ProgressBar {
             lastSpin = omp_get_wtime();
             c++;
         }
-        ret = "\033[38;2;255;255;255m" + barPrefix + strBarStart + "\033[0m" + ret + "\033[38;2;255;255;255m" + strBarEnd + ( decimalPoints >= 0 ? fmt::format( " {:.{}f}\%", 1.0 * currentIterations / maximumIterations * 100, decimalPoints ) : "" ) + ( ( isSpinning && currentIterations < maximumIterations ) ? fmt::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + ( currentIterations < maximumIterations ? barSuffix : barEnd ) + "\033[0m";
+        ret = "\033[2K\033[38;2;255;255;255m" + barPrefix + strBarStart + "\033[0m" + ret + "\033[38;2;255;255;255m" + strBarEnd + ( decimalPoints >= 0 ? fmt::format( " {:.{}f}\%", 1.0 * currentIterations / maximumIterations * 100, decimalPoints ) : "" ) + ( ( isSpinning && currentIterations < maximumIterations ) ? fmt::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + ( currentIterations < maximumIterations ? barSuffix : barSuffix + " - " + barEnd ) + "\033[0m";
         maxSize = ( (int)ret.size() > maxSize ) ? (int)ret.size() : maxSize;
-        fmt::print( "{:<{}}\r", ret, maxSize );
+        //fmt::print( "{:<{}}\r", ret, maxSize );
+        fmt::print( "{}\r", ret );
         return ret;
     }
 };

@@ -17,7 +17,7 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
     // Create Timer and Progressbar for the spectrum loop
     Timer &timer = Timers::create( "Spectrum (" + s_g1 + ")" );
     int totalIterations = resolution; //getIterationNumberSpectrum( s );
-    ProgressBar progressbar = ProgressBar( resolution );
+    ProgressBar progressbar = ProgressBar( );
     timer.start();
     Log::L2( "Calculating spectrum... Calculating frequencies...\n" );
 
@@ -55,12 +55,12 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
                 out.at( spec_w ) += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * ( std::imag( tt( k, l ) ) - std::real( tt( k, l ) ) ) ) * akf_mat( k, l );
             }
         }
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum (" + s_g1 + "): " );
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + "): " );
         out.at( spec_w ) = std::real( out.at( spec_w ) ) * t_step * t_step * s.parameters.iterations_t_skip * s.parameters.iterations_t_skip;
         timer.iterate();
     }
     // Final output and timer end
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, "Spectrum (" + s_g1 + ")", Timers::PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + ")", Timers::PROGRESS_FORCE_OUTPUT );
     timer.end();
     // Save output
     to_output["Spectrum_frequency"][s_g1] = spectrum_frequency_w;

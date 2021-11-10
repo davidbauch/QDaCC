@@ -4,7 +4,7 @@
 bool QDLC::Numerics::ODESolver::scale_grid( System &s, Dense &cache, std::vector<std::vector<QDLC::SaveScalar>> &cache_noneq ) {
     Log::L2( "Scaling grid... " );
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( long unsigned int i = 0; i < cache_noneq.size(); i++ ) {
+    for ( size_t i = 0; i < cache_noneq.size(); i++ ) {
         // Interpolant for real and imag of cache.at(i)
         // fill cache(i,j) with evaluated interpolant
         std::vector<double> real, imag, times;
@@ -12,7 +12,7 @@ bool QDLC::Numerics::ODESolver::scale_grid( System &s, Dense &cache, std::vector
         real.reserve( cache_noneq.size() );
         imag.reserve( cache_noneq.size() );
         times.reserve( cache_noneq.size() );
-        for ( long unsigned int j = 0; j < cache_noneq.size(); j++ ) {
+        for ( size_t j = 0; j < cache_noneq.size(); j++ ) {
             if ( i < cache_noneq.at( j ).size() ) {
                 real.emplace_back( std::real( cache_noneq.at( j ).at( i ).scalar ) );
                 imag.emplace_back( std::imag( cache_noneq.at( j ).at( i ).scalar ) );
@@ -28,8 +28,8 @@ bool QDLC::Numerics::ODESolver::scale_grid( System &s, Dense &cache, std::vector
         }
 
         Scalar scalar;
-        for ( long unsigned int i = 0; i < dim; i++ ) {
-            for ( long unsigned int j = 0; j < dim; j++ ) {
+        for ( size_t i = 0; i < dim; i++ ) {
+            for ( size_t j = 0; j < dim; j++ ) {
                 if ( i + j >= dim ) {
                     break;
                 }
@@ -83,7 +83,9 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
     auto &gmat = cache[purpose];
     Log::L2( "[G1Correlation] Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, skip is {}...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, s.parameters.iterations_t_skip );
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( long unsigned int i = 0; i < matdim; i += s.parameters.iterations_t_skip ) {
+    for ( size_t i = 0; i < savedStates.size(); i += s.parameters.iterations_t_skip ) {
+        if (i/s.parameters.iterations_t_skip >= matdim)
+            continue;
         std::vector<QDLC::SaveState> savedRhos;
         // Get Time from saved State
         double t_t = getTimeAt( i );
@@ -91,18 +93,18 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
         Sparse rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
         // Calculate Runge Kutta
         calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, s.parameters.t_step, timer, progressbar, progressstring, s, savedRhos, false );
-        for ( long unsigned int j = 0; j < savedRhos.size() and j / s.parameters.iterations_t_skip < matdim; j += s.parameters.iterations_t_skip ) {
+        for ( size_t j = 0; j < savedRhos.size() and j / s.parameters.iterations_t_skip < matdim; j += s.parameters.iterations_t_skip ) {
             double t_tau = savedRhos.at( j ).t;
             gmat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, op_creator, t_tau );
             if ( filltime ) {
                 cache["Time"]( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = t_t + 1.0i * t_tau;
             }
         }
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, i, savedStates.size(), progressstring );
     }
 
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, Timers::PROGRESS_FORCE_OUTPUT );
     timer.end();
+    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, savedStates.size(), savedStates.size(), progressstring, Timers::PROGRESS_FORCE_OUTPUT );
     Log::L2( "[G1Correlation] Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return { op_creator, op_annihilator };
 }
@@ -137,10 +139,12 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
     Log::L2( "[G2Correlation] Preparing Cache Matrices...\n" );
     cache[purpose] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
-    Log::L2( "[G2Correlation] Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}...\n", purpose, gmat.rows(), gmat.cols() );
+    Log::L2( "[G2Correlation] Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, skip is {}...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, s.parameters.iterations_t_skip );
     // Main G2 Loop
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( long unsigned int i = 0; i < matdim; i += s.parameters.iterations_t_skip ) {
+    for ( size_t i = 0; i < savedStates.size(); i += s.parameters.iterations_t_skip ) {
+        if (i/s.parameters.iterations_t_skip >= matdim)
+            continue;
         // Create and reserve past rho's vector
         std::vector<QDLC::SaveState> savedRhos;
         // Get Time from saved State
@@ -149,18 +153,18 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
         Sparse rho_tau = s.dgl_calc_rhotau_2( getRhoAt( i ), op_annihilator_2, op_creator_1, t_t );
         // Calculate Runge Kutta
         calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, s.parameters.t_step, timer, progressbar, progressstring, s, savedRhos, false );
-        for ( long unsigned int j = 0; j < savedRhos.size() and j / s.parameters.iterations_t_skip < matdim; j += s.parameters.iterations_t_skip ) {
+        for ( size_t j = 0; j < savedRhos.size() and j / s.parameters.iterations_t_skip < matdim; j += s.parameters.iterations_t_skip ) {
             double t_tau = savedRhos.at( j ).t;
             gmat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, evalOperator, t_tau );
             if ( filltime ) {
                 cache["Time"]( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = t_t + 1.0i * t_tau;
             }
         }
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring );
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, i, savedStates.size(), progressstring );
     }
 
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, totalIterations, progressstring, Timers::PROGRESS_FORCE_OUTPUT );
     timer.end();
+    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, savedStates.size(), savedStates.size(), progressstring, Timers::PROGRESS_FORCE_OUTPUT );
     Log::L2( "[G2Correlation] G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return { op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2 };
 }

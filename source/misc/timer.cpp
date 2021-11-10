@@ -47,26 +47,26 @@ void Timer::add( time_t cpu, double wall ) {
     iterate();
 }
 // Elapsed Wall Time between all start,end and between last start/end
-double Timer::getWallTime( int scale ) {
+double Timer::getWallTime( double scale ) {
     return totalWallTime * scale;
 }
 // Elapsed Wall Time between start and now
-double Timer::getWallTimeOnce( int scale ) {
+double Timer::getWallTimeOnce( double scale ) {
     if ( running )
         return ( omp_get_wtime() - wallTimeStarted ) * scale;
     return ( wallTimeEnded - wallTimeStarted ) * scale;
 }
 // Elapsed CPU Time between all start,end and between last start/end
-double Timer::getCPUTime( int scale ) {
+double Timer::getCPUTime( double scale ) {
     return totalCPUTime * scale;
 }
-double Timer::getCPUTimeOnce( int scale ) {
+double Timer::getCPUTimeOnce( double scale ) {
     if ( running )
         return (double)( clock() - cpuTimeStarted ) / CLOCKS_PER_SEC * scale;
     return (double)( cpuTimeEnded - cpuTimeStarted ) / CLOCKS_PER_SEC * scale;
 }
 // Average Iteration Number (walltime)
-double Timer::getAverageIterationTime( int scale ) {
+double Timer::getAverageIterationTime( double scale ) {
     if ( running )
         return getWallTimeOnce() / totalIterationNum * scale;
     return totalWallTime / totalIterationNum * scale;
@@ -134,26 +134,30 @@ double Timers::Isummary( bool output ) {
     return totalWallTime;
 }
 
-void Timers::IoutputProgress( bool handler, Timer &t, ProgressBar &p, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
+void Timers::IoutputProgress( bool handler, Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
     if ( handler )
-        outputTimeStrings( t, maxItTotal, suffix, final );
+        outputTimeStrings( t, currentIt, maxItTotal, suffix, final );
     else
-        outputProgressBar( t, p, maxItTotal, suffix, final );
+        outputProgressBar( t, p, currentIt, maxItTotal, suffix, final );
 }
-void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
+void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
         if ( !final )
-            p.print( t.getTotalIterationNumber(), maxItTotal, fmt::format( "T - {}", Timer::format( ( (double)maxItTotal - t.getTotalIterationNumber() ) * t.getAverageIterationTime() ) ), suffix );
+            p.print( currentIt, maxItTotal, fmt::format( "T - {}", Timer::format( ( (double)maxItTotal - currentIt ) * (omp_get_wtime()-last_progress)/omp_get_max_threads() ) ), suffix );
         else {
             p.print( maxItTotal, maxItTotal, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
             fmt::print( "\n" );
         }
+        if (omp_get_thread_num() == 0)
+            last_progress = omp_get_wtime();
     }
 }
-void Timers::IoutputTimeStrings( Timer &t, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
+void Timers::IoutputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
-        fmt::print( "{0}\t{1:.2f}\n", QDLC::Message::Prefix::PERCENT, ( t.getTotalIterationNumber() / (double)maxItTotal * 100. ) );
-        fmt::print( "{0}\t{1:.0f}\n", QDLC::Message::Prefix::PERCENT_TIME, ( (double)maxItTotal - t.getTotalIterationNumber() ) * t.getAverageIterationTime() );
+        fmt::print( "{0}\t{1:.2f}\n", QDLC::Message::Prefix::PERCENT, ( currentIt / (double)maxItTotal * 100. ) );
+        fmt::print( "{0}\t{1:.0f}\n", QDLC::Message::Prefix::PERCENT_TIME, ( (double)maxItTotal - currentIt ) *  (omp_get_wtime()-last_progress) );
         fmt::print( "{0}\t{1}\n", QDLC::Message::Prefix::SUFFIX, suffix );
+        if (omp_get_thread_num() == 0)
+            last_progress = omp_get_wtime();
     }
 }

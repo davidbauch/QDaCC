@@ -56,7 +56,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
             bottom[k] += 2.0 * gpop - gbot * std::conj( gbot );
             topv[k] += std::pow( std::abs( akf_mat_g1( k, l ) ), 2.0 );
         }
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (Simplified) (" + fout + "): " );
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber(), pbsize, "Indistinguishability (Simplified) (" + fout + "): " );
         timer.iterate();
     }
     Scalar topsum = 0;
@@ -74,8 +74,8 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
         outp[k] = 1.0 - std::abs( topsum / bottomsum );
     }
     // Final output and timer end
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, pbsize, "Indistinguishability (" + fout + "): ", Timers::PROGRESS_FORCE_OUTPUT );
     timer.end();
+    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber() ,pbsize, "Indistinguishability (" + fout + "): ", Timers::PROGRESS_FORCE_OUTPUT );
 
     // Add to Fileoutput:
     if ( to_output["Indist"].size() == 0 )
@@ -179,7 +179,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
             if ( not didout ) {
                 didout = true;
                 timer_c.iterate();
-                Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence (" + fout + "): " );
+                Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, timer_c.getTotalIterationNumber(),pbsize, "Concurrence (" + fout + "): " );
             }
         }
     }
@@ -242,13 +242,13 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         auto eigenvalues = R5.eigenvalues();
         auto eigenvalues_g2zero = R5_g2zero.eigenvalues();
         // Sometimes, the numerical method for eigenvalue evaluation yields crap (first element really big, rest shifted), so we check this here:
-        if (QDLC::Math::abs2(eigenvalues(3)) > 2.0) {
+        if (QDLC::Math::abs2(eigenvalues(3)) > 5.0) {
             eigenvalues(3) = eigenvalues(2);
             eigenvalues(2) = eigenvalues(1);
             eigenvalues(1) = eigenvalues(0);
             eigenvalues(0) = 0.0;
         }
-        if (QDLC::Math::abs2(eigenvalues_g2zero(3)) > 2.0) {
+        if (QDLC::Math::abs2(eigenvalues_g2zero(3)) > 5.0) {
             eigenvalues_g2zero(3) = eigenvalues_g2zero(2);
             eigenvalues_g2zero(2) = eigenvalues_g2zero(1);
             eigenvalues_g2zero(1) = eigenvalues_g2zero(0);
@@ -266,8 +266,8 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         timer_c.iterate();
     }
     // Final output and timer end
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, pbsize, "Concurrence (" + fout + ")", Timers::PROGRESS_FORCE_OUTPUT );
     timer_c.end();
+    Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, timer_c.getTotalIterationNumber(),pbsize, "Concurrence (" + fout + ")", Timers::PROGRESS_FORCE_OUTPUT );
     // Add to Fileoutput:
     if ( to_output["Conc"].size() == 0 )
         to_output["Conc"]["Time"] = time;
@@ -363,9 +363,10 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
         */
 
         timer_w.iterate();
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer_w, progressbar, reduced_rho.size(), "Wigner (" + s_mode + "): " );
+        Timers::outputProgress( s.parameters.output_handlerstrings, timer_w, progressbar, timer_w.getTotalIterationNumber(), reduced_rho.size(), "Wigner (" + s_mode + "): " );
     }
     timer_w.end();
+    Timers::outputProgress( s.parameters.output_handlerstrings, timer_w, progressbar, timer_w.getTotalIterationNumber(), reduced_rho.size(), "Wigner (" + s_mode + "): ", Timers::PROGRESS_FORCE_OUTPUT );
     // Add to Fileoutput:
     if ( to_output["Wigner"].size() == 0 )
         to_output["Wigner"]["Time"] = time;

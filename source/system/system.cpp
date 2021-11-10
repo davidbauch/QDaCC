@@ -254,7 +254,7 @@ bool System::exit_system( const int failure ) {
     Log::L2( "[System] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
     Log::L2( "[System] Number of approx+/- adjustments: {}\n", globaltries );
     Log::L1( "[System] Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
-    fileoutput.close();
+    fileoutput.close(); 
     return true;
 }
 
@@ -263,7 +263,7 @@ bool System::traceValid( Sparse &rho, double t_hit, bool force ) {
     parameters.trace.emplace_back( trace );
     if ( trace < 0.99 || trace > 1.01 || force ) {
         if ( force )
-            fmt::print( "[System] {} {} -> trace check failed at t = {} with trace(rho) = {}\n", QDLC::Message::Prefix::ERROR, QDLC::Message::global_error_divergent, t_hit, trace );
+            fmt::print( "[System] {} {} -> trace check failed at t = {} with trace(rho) = {}\n", QDLC::Message::Prefix::PERROR, QDLC::Message::global_error_divergent, t_hit, trace );
         terminate_message = QDLC::Message::global_error_divergent;
         FILE *fp_trace = std::fopen( ( parameters.subfolder + "trace.txt" ).c_str(), "w" );
         for ( int i = 0; i < (int)parameters.trace.size() && parameters.t_step * 1.0 * i < t_hit; i++ ) {

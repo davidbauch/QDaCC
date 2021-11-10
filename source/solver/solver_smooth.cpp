@@ -99,7 +99,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::calculate_smooth_curve( const std::
     //    timer.iterate();
     //    Timers::outputProgress( output_handler, timer, progressbar, maximum_iterations, "Interpolator: " );
     //}
-    Timers::outputProgress( output_handler, timer, progressbar, maximum_iterations, "Interpolator: ", Timers::PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( output_handler, timer, progressbar, timer.getTotalIterationNumber(),maximum_iterations, "Interpolator: ", Timers::PROGRESS_FORCE_OUTPUT );
     timer.end();
     Log::L2( " : Done!\n" );
     return ret;

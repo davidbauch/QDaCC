@@ -33,11 +33,11 @@ class Timer {
     void end();
     void iterate( int num = 1 );
     void add( time_t cpu, double wall );
-    double getWallTime( int scale = 1.0 );
-    double getWallTimeOnce( int scale = 1.0 );
-    double getCPUTime( int scale = 1.0 );
-    double getCPUTimeOnce( int scale = 1.0 );
-    double getAverageIterationTime( int scale = 1.0 );
+    double getWallTime( double scale = 1.0 );
+    double getWallTimeOnce( double scale = 1.0 );
+    double getCPUTime( double scale = 1.0 );
+    double getCPUTimeOnce( double scale = 1.0 );
+    double getAverageIterationTime( double scale = 1.0 );
     double getTotalIterationNumber();
     bool doOutput();
     void setOutputModTime( double s );
@@ -63,14 +63,14 @@ class Timers {
     static Timer &create( const std::string &name, bool addToTotalStatistics = true, bool printToSummary = true ) {
         return Get().Icreate( name, addToTotalStatistics, printToSummary );
     }
-    static void outputTimeStrings( Timer &t, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
-        return Get().IoutputTimeStrings( t, maxItTotal, suffix, final );
+    static void outputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
+        return Get().IoutputTimeStrings( t, currentIt, maxItTotal, suffix, final );
     }
-    static void outputProgressBar( Timer &t, ProgressBar &p, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
-        return Get().IoutputProgressBar( t, p, maxItTotal, suffix, final );
+    static void outputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
+        return Get().IoutputProgressBar( t, p, currentIt, maxItTotal, suffix, final );
     }
-    static void outputProgress( bool handler, Timer &t, ProgressBar &p, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
-        return Get().IoutputProgress( handler, t, p, maxItTotal, suffix, final );
+    static void outputProgress( bool handler, Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
+        return Get().IoutputProgress( handler, t, p, currentIt, maxItTotal, suffix, final );
     }
     static void reset() {
         return Get().Ireset();
@@ -81,6 +81,7 @@ class Timers {
 
    private:
     std::vector<Timer> timers;
+    double last_progress = 0.0;
     Timers(){};
     Timer &Iget( const std::string &name ) {
         for ( unsigned int i = 0; i < timers.size(); i++ ) {
@@ -94,9 +95,9 @@ class Timers {
         Log::L2( "[Timer] Created timer with name '{}'{}.\n", name, ( addToTotalStatistic ? " which will be added to total statistics" : "" ) );
         return timers.back();
     }
-    void IoutputTimeStrings( Timer &t, const unsigned int maxItTotal, const std::string &suffix, bool final );
-    void IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int maxItTotal, const std::string &suffix, bool final );
-    void IoutputProgress( bool handler, Timer &t, ProgressBar &p, const unsigned int maxItTotal, const std::string &suffix, bool final );
+    void IoutputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
+    void IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
+    void IoutputProgress( bool handler, Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
     void Ireset() {
         timers.clear();
     }
