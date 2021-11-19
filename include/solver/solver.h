@@ -65,9 +65,8 @@ QDLC::SaveState calculate_definite_integral( Sparse rho, std::function<Sparse( c
 // Description: Uses the interpolation class to monotone-cubic spline interpolate a given vector of saved states, resulting in much smoother output. Should probably not be used
 // Type: Solver public function
 // @return Returns a vector of interpolated QDLC::SaveStates
-std::vector<QDLC::SaveState> interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, double t_step, bool output_handler = false );
+std::vector<QDLC::SaveState> interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, double t_step, int threads, int order = 0, bool output_handler = false );
 std::vector<QDLC::SaveState> interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double, size_t> &t_index, bool output_handler = false );
-std::vector<QDLC::SaveState> interpolate_curve_for_correlation_function( const std::vector<QDLC::SaveState> &input, double t_start, const std::vector<double> &t_ends, const std::vector<double> &t_steps, bool output_handler = false );
 
 double get_tdelta( const Dense &gmat_time, size_t fixed_index, size_t var_index );
 double get_taudelta( const Dense &gmat_time, size_t fixed_index, size_t var_index );

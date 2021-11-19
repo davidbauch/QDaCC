@@ -185,10 +185,15 @@ Scalar System::dgl_raman_population_increment( const std::vector<QDLC::SaveState
 }
 
 void System::expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer ) {
-    for ( int i = 0; i < rhos.size(); i++ ) {
-        auto &rho = rhos.at( i ).mat;
-        double t = rhos.at( i ).t;
-        double dt = i > 0 ? t - rhos.at( i - 1 ).t : parameters.t_step.get();
+    // Interpolate Rhos to the actual timestep if a grid was passed.
+    // Output expectation Values
+    //for ( int i = 0; i < rhos.size(); i++ ) {
+    double t_pre = rhos.front().t;
+    for (auto& tup : rhos) {
+        auto &rho = tup.mat;
+        double t = tup.t;
+        double dt = t-t_pre;
+        t_pre = t;
         std::string el_out = fmt::format( "{:.5e}", t );
         std::string ph_out = fmt::format( "{:.5e}", t );
         std::string el_em = "";

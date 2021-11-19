@@ -119,7 +119,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
 
 bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output, bool interpolate, double tolerance ) {
     size_t t_index = std::min<size_t>(size_t(std::lower_bound(s.parameters.grid_values.begin(), s.parameters.grid_values.end(), t_start) - s.parameters.grid_values.begin()),s.parameters.grid_values.size()-2);//s.parameters.grid_value_indices[t_start];
-    double t_step_initial = s.parameters.grid_steps[t_index];
+    double t_step_initial = s.parameters.t_step; //s.parameters.grid_steps[t_index];
     double t_step = t_step_initial;
     // Reserve Output Vector
     output.reserve( s.parameters.iterations_t_max + 1 );

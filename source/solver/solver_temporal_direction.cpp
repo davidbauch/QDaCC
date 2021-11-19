@@ -22,18 +22,6 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Log::L2( "[Solver] Done! Saved {} states.\n", savedStates.size() );
     Log::L2( "[Solver] Hamiltons: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}. Done!\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_read );
 
-    // DEPRECATED
-    // Interpolate Matrices? //TODO: das hier und RK45 interpolation ist doppelt. wenn rk45, dann hier interpolieren und am ende savedStates = interpolatedSavedStates
-    //std::vector<QDLC::SaveState> interpolate_savedstates;
-    //if ( s.parameters.numerics_interpolate_outputs ) {
-    //    Log::L2( "[Solver] Calculating interpolated matrices for temporal properties...\n" );
-    //    interpolate_savedstates = QDLC::Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, (s.parameters.t_end-s.parameters.t_start)/std::max( s.parameters.iterations_t_max * 5.0, 2500.0 ), s.parameters.output_handlerstrings );
-    //    Log::L2( "[Solver] Done!\n" );
-    //} else {
-    //    Log::L2( "[Solver] Using the non-interpolated matrices for temporal properties\n" );
-    //    interpolate_savedstates = savedStates;
-    //}
-
     // Index Map:
     for (int i = 0; i < savedStates.size(); i++) {
         rho_index_map[getTimeAt(i)] = i;
@@ -42,7 +30,8 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Timer &evalTimer = Timers::create( "Expectation-Value-Loop" );
     evalTimer.start();
     Log::L2( "[Solver] Calculating expectation values...\n" );
-    s.expectationValues( savedStates, evalTimer );
+    //TODO: interpolation sollte ausschaltbar/wechselbar per parameter sien.
+    s.expectationValues( ( s.parameters.input_correlation_resolution.count("Modified") ? Numerics::interpolate_curve(savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, 3) : savedStates ), evalTimer );
     evalTimer.end();
     Log::L2( "[Solver] Done!\n" );
 

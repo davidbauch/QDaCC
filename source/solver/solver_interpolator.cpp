@@ -4,10 +4,10 @@
 
 #include "solver/solver.h"
 
-//TODO: alles interpolieren der DM (aus RK45 oder pathint) hier machen! art der interpolation (linear, cubisch, monotone, ...) per parameter übergeben!
-std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double,size_t>& t_index, bool output_handler ) {
-    size_t current_index = std::min<size_t>(size_t(std::lower_bound(t_values.begin(), t_values.end(), t_start) - t_values.begin()),t_values.size()-2);//t_index.at(t_start);
+std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double, size_t> &t_index, bool output_handler ) {
+    size_t current_index = std::min<size_t>( size_t( std::lower_bound( t_values.begin(), t_values.end(), t_start ) - t_values.begin() ), t_values.size() - 2 ); //t_index.at(t_start);
     size_t num_of_points = (size_t)( t_values.size() - current_index );
+    size_t max_index = t_values.size() - 2;
     std::vector<QDLC::SaveState> ret;
     //Log::L2("Interpolating from {} to {} to vector of size {} with timevector of size {}, anticipaed return suize is {}\n",t_start,t_end,input.size(), t_values.size(), t_values.size() - current_index);
     // Do a very simple linear interpolation. Linear and monotone interpolation should be changed by paramter
@@ -21,16 +21,19 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         double f = ( t_t - first ) / ( second - first );
         Sparse mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
         ret.push_back( { mat, t_t } );
-        current_index = std::min<size_t>( current_index + 1, t_values.size() - 2 );
+        //current_index = std::min<size_t>( current_index + 1, t_values.size() - 2 );
+        if ( current_index < max_index )
+            current_index++;
     }
     //Log::L2("Done interpolating, returnign vector of size {}\n",ret.size());
     return ret;
 }
-std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, double t_step, bool output_handler ) {
+
+std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, double t_step, int threads, int order, bool output_handler ) {
     size_t num_of_points = (size_t)( ( t_end - t_start ) / t_step );
     std::vector<QDLC::SaveState> ret;
-
-    if ( true ) {
+    Log::L2("Interpolation order = {}\n",order);
+    if ( order == 0 ) {
         // Linear Interpolation
         ret.reserve( num_of_points );
 
@@ -46,74 +49,71 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
             Sparse mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
             ret.push_back( { mat, t_t } );
         }
-    } else if ( false ) {
-        // Cubic interpolation
+    } else if ( order == 1 ) {
+        // Quintic Hermite Interpolation
+        Log::L2("Using Quintic Hermite Interpolation...\n");
         // Derivatives
-        std::vector<Sparse> dys, ms;
-        std::vector<double> dxs;
-        for ( size_t i = 0; i < input.size() - 1; i++ ) {
-            dxs.emplace_back( input[i + 1].t - input[i].t );
-            dys.emplace_back( input[i + 1].mat - input[i].mat );
-            ms.emplace_back( ( input[i + 1].mat - input[i].mat ) / ( input[i + 1].t - input[i].t ) );
+        std::vector<Sparse> first_derivative, second_derivative;
+        Log::L2("Calculating first derivatives...\n");
+        for ( int i = 0; i < input.size() - 1; i++ ) {
+            first_derivative.emplace_back( ( input[i + 1].mat - input[i].mat ) / ( input[i + 1].t - input[i].t ) );
         }
-        // Degree-1 coefficients
-        std::vector<Sparse> c1s;
-        c1s.reserve( dxs.size() - 1 );
-        c1s.emplace_back( ms.front() );
-        for ( size_t i = 0; i < dxs.size() - 1; i++ ) {
-            Sparse m = ms[i];
-            Sparse mNext = ms[i + 1];
-            double dx = dxs[i];
-            double dxNext = dxs[i + 1];
-            double common = dx + dxNext;
-            Sparse map_real = ( m * mNext ).unaryExpr( []( Scalar x ) { return std::real( x ) <= 0 ? Scalar( 0.0 ) : Scalar( 1.0 ); } );
-            Sparse map_imag = ( m * mNext ).unaryExpr( []( Scalar x ) { return std::imag( x ) <= 0 ? Scalar( 0.0 ) : Scalar( 1.0 ); } );
-            Sparse mat = 3.0 * common * ( ( common + dxNext ) * m.cwiseInverse() + ( common + dx ) * mNext.cwiseInverse() ).cwiseInverse();
-            c1s.emplace_back( mat.real().cwiseProduct( map_real ) + 1.0i * mat.imag().cwiseProduct( map_imag ) );
+        first_derivative.emplace_back( first_derivative.back() );
+        Log::L2("Calculating second derivatives...\n");
+        for ( int i = 0; i < first_derivative.size() - 1; i++ ) {
+            second_derivative.emplace_back( ( first_derivative[i + 1] - first_derivative[i] ) / ( input[i+1].t - input[i].t ) );
         }
-        // Degree-2 and Degree-3 coefficients
-        std::vector<Sparse> c2s, c3s;
-        c2s.reserve( c1s.size() );
-        c3s.reserve( c1s.size() );
-        for ( size_t i = 0; i < c1s.size() - 1; i++ ) {
-            double invDx = 1.0 / dxs[i];
-            Sparse common = c1s[i] + c1s[i + 1] - 2.0 * ms[i];
-            c2s.emplace_back( ( ms[i] - c1s[i] - common ) * invDx );
-            c3s.emplace_back( common * invDx * invDx );
-        }
+        second_derivative.emplace_back( second_derivative.back() );
+        Log::L2( "Sizes: {} {} {}\n",input.size(), first_derivative.size(), second_derivative.size() );
 
-        //Log::L2("Sizes: mat: {}, c1s: {}, c2s: {}, c3s: {}\n",input.size(),c1s.size(),c2s.size(),c3s.size());
         // Interpolate
-        size_t i;
+        size_t i = 1;
+        ret.push_back( { input[0].mat, t_start } );
         for ( double t_t = t_start; t_t < t_end; t_t += t_step ) {
             while ( i < input.size() - 1 and t_t > input[i].t ) {
                 i++;
             }
-            i = std::max<int>( 0, i - 1 );
-            if ( i >= c3s.size() )
-                break;
+            i--;
             if ( input[i].t == t_t ) {
                 ret.push_back( { input[i].mat, t_t } );
                 continue;
             }
-            double diff = t_t - input[i].t;
-            Sparse mat = input[i].mat + c1s[i] * diff + c2s[i] * diff * diff + c3s[i] * diff * diff * diff;
+            double x = t_t;
+            double xmx0 = x - input[i].t;
+            double x1mx0 = input[i + 1].t - input[i].t;
+            double xmx1 = x - input[i + 1].t;
+            const Sparse &fx0 = input[i].mat;
+            const Sparse &fx1 = input[i + 1].mat;
+            const Sparse &fdx0 = first_derivative[i];
+            const Sparse &fdx1 = first_derivative[i + 1];
+            const Sparse &fddx0 = second_derivative[i];
+            const Sparse &fddx1 = second_derivative[i + 1];
+
+            double xmx0_x1mx0 = xmx0/x1mx0;
+            double xmx1_x1mx0 = xmx1/x1mx0;
+
+            auto d1 = ( fx1 - fx0 - fdx0 * x1mx0 - 0.5 * fddx0 * x1mx0 * x1mx0 ) * xmx0_x1mx0*xmx0_x1mx0*xmx0_x1mx0;
+            auto d2 = ( 3.0 * fx0 - 3.0 * fx1 + ( 2 * fdx0 + fdx1 ) * x1mx0 + 0.5 * fddx0 * x1mx0 * x1mx0 ) *xmx0_x1mx0*xmx0_x1mx0*xmx0_x1mx0*xmx1_x1mx0;
+            auto d3 = ( 6.0 * fx1 - 6.0 * fx0 - 3.0 * ( fdx0 + fdx1 ) * x1mx0 + 0.5 * ( fddx1 - fddx0 ) * x1mx0 * x1mx0 ) * xmx0_x1mx0*xmx0_x1mx0*xmx0_x1mx0*xmx1_x1mx0*xmx1_x1mx0;
+            Sparse mat = fx0 + fdx0 * xmx0 + 0.5 * fddx0 * xmx0 * xmx0 + d1 + d2 + d3;
             ret.push_back( { mat, t_t } );
         }
     } else {
         // Cubic monotone with library
         // Generate N^2 vectors from the initial density matrices
+        Log::L2("Using Monotone Hermite Interpolation\n");
         size_t matrix_dimension = input.front().mat.rows();
         long unsigned int input_length = input.size();
-        std::vector<std::vector<double>> raw_real;
-        std::vector<std::vector<double>> raw_imag;
+        std::vector<std::vector<double>> raw_real(matrix_dimension*matrix_dimension);
+        std::vector<std::vector<double>> raw_imag(matrix_dimension*matrix_dimension);
         std::vector<double> time_raw;
         time_raw.reserve( input_length );
         for ( int k = 0; k < input_length; k++ ) {
             time_raw.emplace_back( input.at( k ).t );
         }
-        for ( int i = 0; i < input.at( 0 ).mat.rows(); i++ ) {
-            for ( int j = 0; j < input.at( 0 ).mat.cols(); j++ ) {
+        #pragma omp parallel for collapse( 2 ) num_threads( threads )
+        for ( int i = 0; i < matrix_dimension; i++ ) {
+            for ( int j = 0; j < matrix_dimension; j++ ) {
                 std::vector<double> cur_real;
                 std::vector<double> cur_imag;
                 cur_real.reserve( input_length );
@@ -123,38 +123,36 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
                     cur_real.emplace_back( std::real( mat( i, j ) ) );
                     cur_imag.emplace_back( std::imag( mat( i, j ) ) );
                 }
-                raw_real.emplace_back( cur_real );
-                raw_imag.emplace_back( cur_imag );
+                raw_real[i*matrix_dimension+j] = cur_real;
+                raw_imag[i*matrix_dimension+j] = cur_imag;
             }
         }
 
         // Interpolate each vector on its own
-        std::vector<std::vector<double>> interpolated_real;
-        std::vector<std::vector<double>> interpolated_imag;
-        interpolated_real.reserve( matrix_dimension );
-        interpolated_imag.reserve( matrix_dimension );
-        Interpolant interpolant_real;
-        Interpolant interpolant_imag;
+        std::vector<std::vector<double>> interpolated_real(matrix_dimension*matrix_dimension);
+        std::vector<std::vector<double>> interpolated_imag(matrix_dimension*matrix_dimension);
         std::vector<double> time_out;
         time_out.reserve( input_length );
         for ( long unsigned int k = 0; k < num_of_points; k++ ) {
             time_out.emplace_back( t_start + k * t_step );
         }
-        for ( int i = 0; i < input.at( 0 ).mat.rows(); i++ ) {
-            for ( int j = 0; j < input.at( 0 ).mat.cols(); j++ ) {
-                int index = i * input.at( 0 ).mat.cols() + j;
-                interpolant_real = Interpolant( time_raw, raw_real.at( index ), "monotone" );
-                interpolant_imag = Interpolant( time_raw, raw_imag.at( index ), "monotone" );
-                interpolated_real.emplace_back( interpolant_real.evaluate( time_out ) );
-                interpolated_imag.emplace_back( interpolant_imag.evaluate( time_out ) );
+        #pragma omp parallel for collapse( 2 ) num_threads( threads )
+        for ( int i = 0; i < matrix_dimension; i++ ) {
+            for ( int j = 0; j < matrix_dimension; j++ ) {
+                int index = i * matrix_dimension + j;
+                Interpolant interpolant_real = Interpolant( time_raw, raw_real.at( index ), "monotone" );
+                Interpolant interpolant_imag = Interpolant( time_raw, raw_imag.at( index ), "monotone" );
+                interpolated_real[i*matrix_dimension + j] = interpolant_real.evaluate( time_out );
+                interpolated_imag[i*matrix_dimension + j] = interpolant_imag.evaluate( time_out );
             }
         }
         // Write new vectors back into matices
         for ( int k = 0; k < num_of_points; k++ ) {
-            Dense cur( input.at( 0 ).mat.rows(), input.at( 0 ).mat.cols() );
-            for ( int i = 0; i < input.at( 0 ).mat.rows(); i++ ) {
-                for ( int j = 0; j < input.at( 0 ).mat.cols(); j++ ) {
-                    int index = i * input.at( 0 ).mat.cols() + j;
+            Dense cur( matrix_dimension, matrix_dimension );
+            #pragma omp parallel for collapse( 2 ) num_threads( threads )
+            for ( int i = 0; i < matrix_dimension; i++ ) {
+                for ( int j = 0; j < matrix_dimension; j++ ) {
+                    int index = i * matrix_dimension + j;
                     cur( i, j ) = Scalar( interpolated_real.at( index ).at( k ), interpolated_imag.at( index ).at( k ) );
                 }
             }
