@@ -32,7 +32,7 @@ std::vector<std::vector<Sparse>> &QDLC::Numerics::ODESolver::calculate_propagato
     for ( int i = 0; i < tensor_dim; i++ ) {
         for ( int j = 0; j < tensor_dim; j++ ) {
             if ( i == 0 && j == 0 ) continue;
-            ret[i][j] = calculate_propagator_single( s, tensor_dim, t0, t_step, i, j, output,one );  //pathint_propagator[-1][i][j] );
+            ret[i][j] = calculate_propagator_single( s, tensor_dim, t0, t_step, i, j, output, one ); //pathint_propagator[-1][i][j] );
         }
     }
     // Only save propagator vector if correlation functions are calculated.
@@ -119,14 +119,14 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         for ( auto &[purpose, matrices] : g12_settings ) {
             Log::L2( "[PathIntegral] Calculating G-Function with purpose {} in place with path integral.\n", purpose );
             cache[purpose] = Dense::Zero( matdim, matdim );
+            cache[purpose + "_time"] = Dense::Zero( matdim, matdim );
         }
-        if ( cache.size() > 0 )
-            cache["Time"] = Dense::Zero( matdim, matdim );
     }
 
     Log::L2( "[PathIntegral] Setting up Path-Integral Solver...\n" );
-    output.reserve( s.parameters.iterations_t_max + 1 ); 
+    output.reserve( s.parameters.iterations_t_max + 1 );
     int tensor_dim = rho0.rows();
+    size_t total_progressbar_iterations = std::floor( ( s.parameters.t_end - s.parameters.t_start ) / s.parameters.t_step_pathint * ( 1 + 0.5 * g12_settings.size() * ( s.parameters.t_end - s.parameters.t_start ) / s.parameters.t_step_pathint ) );
 
     std::set<int> different_dimensions;
     for ( int i = 0; i < s.operatorMatrices.phononCouplingIndex.size(); i++ ) {
@@ -187,8 +187,6 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         // Calculate Correlation functions:
         if ( g12_settings.size() > 0 and g12_counter % s.parameters.iterations_t_skip == 0 ) {
             //auto cached_adms_dimensions = adm_tensor.dimensions;
-            bool filled_time = false;
-            auto &timemat = cache["Time"];
             for ( auto &[purpose, matrices] : g12_settings ) {
                 Log::L3( "[PathIntegral] Calculating sub-rk for {}\n", purpose );
                 //adm_tensor.dimensions = cached_adms_dimensions;
@@ -196,22 +194,21 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
                 int order = matrices.size() == 4 ? 2 : 1;
                 std::vector<QDLC::SaveState> temp;
                 auto &gmat = cache[purpose];
-                calculate_path_integral_correlation( adm_tensor, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, purpose, s, temp, do_output, matrices, adm_multithreaded_indices, adm_multithreading_cores );
+                auto &timemat = cache[purpose + "_time"];
+                calculate_path_integral_correlation( adm_tensor, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, total_progressbar_iterations, purpose, s, temp, do_output, matrices, adm_multithreaded_indices, adm_multithreading_cores );
                 for ( int32_t j = 0; j < std::min<int32_t>( temp.size(), gmat.rows() * s.parameters.iterations_t_skip ); j += s.parameters.iterations_t_skip ) {
                     double t_tau = temp.at( j ).t;
                     //Log::L3( "Filling gmat for t = {}, tau = {}\n", t_t, t_tau );
                     if ( order == 2 )
                         //gmat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = ( ( matrices[OP2] * matrices[OP3] ).cwiseProduct( temp.at( j ).mat ) ).sum();
                         gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[2] * matrices[1], t_tau );
-                    else
+                    else 
                         //gmat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = ( matrices[1].cwiseProduct( temp.at( j ).mat ) ).sum();
                         gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = std::conj( s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[1], t_tau ) ); // conj ammenakoyum?????
-                    //gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[1], t_tau );
-                    if ( not filled_time ) {
-                        timemat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = Scalar( t_t, t_tau );
-                    }
+                        //gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[1], t_tau );
+                    timemat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = Scalar( t_t, t_tau );
+                    
                 }
-                filled_time = true;
             }
             //adm_tensor.dimensions = cached_adms_dimensions;
             //adm_tensor.rescale_dimensions();
@@ -249,17 +246,17 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
                                     for ( auto &[sparse_index_y, value] : inner ) {
                                         if ( QDLC::Math::abs2( value ) == 0 ) continue;
                                         auto tt = omp_get_wtime();
-                                        Log::L3( "[PathIntegral] (T{}) handling ({} > {}),({} > {}) --> {}\n", omp_get_thread_num(), gi_n, sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), gj_n, sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), value );
+                                        //Log::L3( "[PathIntegral] (T{}) handling ({} > {}),({} > {}) --> {}\n", omp_get_thread_num(), gi_n, sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), gj_n, sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), value );
                                         //for ( int l = 0; l < propagator[sparse_index_x( 0 )][sparse_index_y( 0 )].outerSize(); ++l )
                                         //    for ( Sparse::InnerIterator M( propagator[sparse_index_x( 0 )][sparse_index_y( 0 )], l ); M; ++M ) {
 
-                                        Log::L3( "[PathIntegral] --- Correlation Indices for tau = 0: i = {}, i' = {}, j = {}, j' = {}\n", gi_n, gi_n, gj_n, gj_n );
+                                        //Log::L3( "[PathIntegral] --- Correlation Indices for tau = 0: i = {}, i' = {}, j = {}, j' = {}\n", gi_n, gi_n, gj_n, gj_n );
                                         Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
                                         for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
                                             int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )] : sparse_index_x( 0 ) ) : sparse_index_x( tau ) );
                                             int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] : sparse_index_y( 0 ) ) : sparse_index_y( tau ) );
                                             phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
-                                            Log::L3( "[PathIntegral] --- Correlation Indices for tau = {}: i = {}, i' = {}, j = {}, j' = {}\n", tau + 1, gi_n, gi_nd, gj_n, gj_nd );
+                                            //Log::L3( "[PathIntegral] --- Correlation Indices for tau = {}: i = {}, i' = {}, j = {}, j' = {}\n", tau + 1, gi_n, gi_nd, gj_n, gj_nd );
                                         }
 
                                         Scalar val = M.value() * value * std::exp( phonon_s );
@@ -292,8 +289,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
                             }
 
         t1 = ( omp_get_wtime() - t1 );
-
-        adm_tensor.swapAndClearCache( tensor_dim, s.parameters.numerics_phonons_maximum_threads );
+        adm_tensor.swapAndClearCache( tensor_dim, adm_multithreading_cores );
 
         Log::L3( "[PathIntegral] Reducing ADM\n" );
         // Calculate the reduced density matrix by tracing over all past times for each entry
@@ -330,7 +326,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         rkTimer.iterate();
         g12_counter++;
         if ( do_output ) {
-            Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, rkTimer.getTotalIterationNumber(), s.parameters.iterations_t_max, progressbar_name );
+            Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );
         }
     }
 
@@ -341,13 +337,14 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     return true;
 }
 
-bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_correlation, Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output, const std::vector<Sparse> &matrices, const std::vector<std::vector<int>> &adm_multithreaded_indices, int adm_multithreading_cores ) {
+bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_correlation, Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, size_t total_progressbar_iterations, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output, const std::vector<Sparse> &matrices, const std::vector<std::vector<int>> &adm_multithreaded_indices, int adm_multithreading_cores ) {
     int order = matrices.size() == 4 ? 2 : 1;
-    Log::L3( "| [PathIntegralCorrelation] Setting up Path-Integral Solver...\n" );
+    Log::L3( "- [PathIntegralCorrelation] Setting up Path-Integral Solver...\n" );
     int tensor_dim = rho0.rows();
     output.reserve( s.parameters.iterations_t_max + 1 );
     //saveState( rho0, t_start, output );
     bool modified = false;
+    //saveState(rho0,t_start,output);
 
     for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
         // Path-Integral iteration
@@ -373,10 +370,11 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
         bool addeddimension = std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) < ( s.parameters.p_phonon_nc - 2 );
 
         // Main Iteration loop
-        Log::L3( "| [PathIntegralCorrelation] Current Correlation Tensor Size: {} elements at a total of {} MB\r", adm_correlation.nonZeros(), adm_correlation.size() / 1024. / 1024. );
+        Log::L3( "- [PathIntegralCorrelation] Current Correlation Tensor Size: {} elements at a total of {} MB\r", adm_correlation.nonZeros(), adm_correlation.size() / 1024. / 1024. );
         auto t1 = omp_get_wtime();
         double total_append_time = 0;
         double total_time = 0;
+
 
 #pragma omp parallel for collapse( 2 ) num_threads( adm_multithreading_cores )
         for ( auto &idx : adm_multithreaded_indices )
@@ -434,7 +432,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
         adm_correlation.swapAndClearCache( tensor_dim, adm_multithreading_cores );
         ts = omp_get_wtime() - ts;
 
-        Log::L3( "| [PathIntegralCorrelation] Reducing Correlation ADM\n" );
+        Log::L3( "- [PathIntegralCorrelation] Reducing Correlation ADM\n" );
         // Calculate the reduced density matrix by tracing over all past times for each entry
         auto t2 = omp_get_wtime();
         Dense cache = Dense::Zero( tensor_dim, tensor_dim );
@@ -448,7 +446,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
                     }
         auto rho = cache.sparseView();
         t2 = ( omp_get_wtime() - t2 );
-        Log::L3( "| [PathIntegralCorrelation] Correlation Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting: {:.4f}s, ADM Reduction: {:.4f}s ]\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2 );
+        Log::L3( "- [PathIntegralCorrelation] Correlation Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting: {:.4f}s, ADM Reduction: {:.4f}s ]\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2 );
 
         // Dynamic Cutoff
         if ( s.parameters.numerics_pathintegral_dynamiccutoff_iterations_max > 0 ) {
@@ -457,15 +455,15 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
             s.parameters.numerics_pathintegral_squared_threshold *= ratio; // Adjust Cutoff by squared ratio
             if ( s.parameters.numerics_pathintegral_squared_threshold < 1E-30 ) s.parameters.numerics_pathintegral_squared_threshold = 1E-30;
             if ( s.parameters.numerics_pathintegral_squared_threshold > 1E4 ) s.parameters.numerics_pathintegral_squared_threshold = 1E4;
-            Log::L3( "| [PathIntegralCorrelation] Adjusted Cutoff Threshold to {} (x{})\n", std::sqrt( s.parameters.numerics_pathintegral_squared_threshold ), ratio );
+            Log::L3( "- [PathIntegralCorrelation] Adjusted Cutoff Threshold to {} (x{})\n", std::sqrt( s.parameters.numerics_pathintegral_squared_threshold ), ratio );
         }
         // Save Rho
         saveState( rho, t_t + s.parameters.t_step_pathint, output );
         rkTimer.iterate();
         if ( do_output ) {
-            Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar,rkTimer.getTotalIterationNumber() ,s.parameters.iterations_t_max, progressbar_name );
+            Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );
         }
     }
-    Log::L3( "| [PathIntegralCorrelation] Correlation Done!\n" );
+    Log::L3( "- [PathIntegralCorrelation] Correlation Done!\n" );
     return true;
 }

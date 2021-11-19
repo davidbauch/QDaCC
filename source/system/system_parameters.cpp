@@ -86,6 +86,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     inputstring_conc = QDLC::CommandlineArguments::get_parameter( "--G", "GC" );
     inputstring_gfunc = QDLC::CommandlineArguments::get_parameter( "--G", "GF" );
     inputstring_wigner = QDLC::CommandlineArguments::get_parameter( "--G", "GW" );
+    inputstring_correlation_resolution = QDLC::CommandlineArguments::get_parameter( "--G", "grid" );
 
     p_omega_coupling = QDLC::CommandlineArguments::get_parameter<double>( "--system", "coupling" );
     p_omega_cavity_loss = QDLC::CommandlineArguments::get_parameter<double>( "--system", "kappa" );
@@ -247,6 +248,25 @@ bool Parameters::adjustInput() {
     iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
     iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
 
+    // Build dt vector. Use standard if not specified otherwise for all calculations. Path integral cannot use other timestep than the original.
+    {
+        auto &settings = input_correlation_resolution.count( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
+        double skip = input_correlation_resolution.count( "Modified" ) == 0 ? 1.0*iterations_t_skip : 1.0;
+        double t_t = 0;
+        int current = 0;
+        grid_values.emplace_back( t_start );
+        grid_value_indices[t_start] = 0;
+        while ( t_t < t_end ) {
+            if ( t_t > settings.numerical_v["Time"][current] and current < settings.numerical_v["Time"].size() )
+                current++;
+            grid_steps.emplace_back( settings.numerical_v["Delta"][current]*skip );
+            t_t += grid_steps.back();
+            grid_values.emplace_back( t_t );
+            grid_value_indices[t_t] = grid_values.size()-1;
+        }
+        //std::cout << "Values for "<<mode<<": " << t_values[mode] << std::endl;
+    }
+
     // No phonon adjust if pathintegral is chosen
     if ( numerics_phonon_approximation_order == 5 ) {
         p_phonon_adjust = false;
@@ -367,6 +387,25 @@ void Parameters::parse_system() {
         conf_s.numerical_v["Skip"] = QDLC::Misc::convertParam<Parameter>( n > 4 ? QDLC::String::splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.numerical_v["X"].size(), "1" ) );  // Skips in t-direction
         input_correlation["Wigner"] = conf_s;
     }
+    for ( std::string &gconf : QDLC::String::splitline( inputstring_correlation_resolution, ';' ) ) { // Redundant, only the latest will be used.
+        auto single = QDLC::String::splitline( gconf, ':' );
+        input_s conf_s;
+        std::vector<Parameter> times, dts;
+        for ( int i = 0; i < single.size(); i++ ) {
+            auto cur = QDLC::String::splitline( single[i], '-' );
+            times.emplace_back( QDLC::Misc::convertParam<Parameter>( cur[0] ) );
+            dts.emplace_back( QDLC::Misc::convertParam<Parameter>( cur[1] ) );
+        }
+        conf_s.numerical_v["Time"] = times;
+        conf_s.numerical_v["Delta"] = dts;
+        input_correlation_resolution["Modified"] = conf_s;
+    }
+    {
+        input_s conf_s;
+        conf_s.numerical_v["Time"] = { t_end };
+        conf_s.numerical_v["Delta"] = { t_step };
+        input_correlation_resolution["Standard"] = conf_s;
+    }
 }
 
 void Parameters::log( const Dense &initial_state_vector_ket ) {
@@ -419,7 +458,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             for ( int i = 0; i < mat.numerical_v["Amplitude"].size(); i++ ) {
                 Log::L1( " - Single Pulse:\n" );
                 Log::L1( " - - Amplitude: {} Hz - {:.8} mueV\n", mat.numerical_v["Amplitude"][i], mat.numerical_v["Amplitude"][i].getSI( Parameter::UNIT_ENERGY_MUEV ) );
-                Log::L1( " - - Frequency: {} Hz - {:.8} mueV\n", mat.numerical_v["Frequency"][i], mat.numerical_v["Frequency"][i].getSI( Parameter::UNIT_ENERGY_EV ) );
+                Log::L1( " - - Frequency: {} Hz - {:.8} eV\n", mat.numerical_v["Frequency"][i], mat.numerical_v["Frequency"][i].getSI( Parameter::UNIT_ENERGY_EV ) );
                 Log::L1( " - - Width: {} s - {:.8} ps\n", mat.numerical_v["Width"][i], mat.numerical_v["Width"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 Log::L1( " - - Center: {} s - {:.8} ps\n", mat.numerical_v["Center"][i], mat.numerical_v["Center"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 Log::L1( " - - Chirp: {}\n", mat.numerical_v["Chirp"][i] );

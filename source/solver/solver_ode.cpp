@@ -72,7 +72,7 @@ int QDLC::Numerics::ODESolver::getIterationNumberSpectrum( System &s ) {
 // @param i: [int] Iteration number
 // @return: [double] Time corresponding to iteration number i
 
-double QDLC::Numerics::ODESolver::getTimeAt( int i ) {
+double& QDLC::Numerics::ODESolver::getTimeAt( int i ) {
     return savedStates.at( i ).t;
 }
 
@@ -81,7 +81,7 @@ double QDLC::Numerics::ODESolver::getTimeAt( int i ) {
 // @param i: [int] Iteration number
 // @return: [Sparse] (Density-) Matrix corresponding to iteration number i
 
-Sparse QDLC::Numerics::ODESolver::getRhoAt( int i ) {
+Sparse& QDLC::Numerics::ODESolver::getRhoAt( int i ) {
     return savedStates.at( i ).mat;
 }
 

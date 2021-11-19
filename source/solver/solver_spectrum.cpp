@@ -13,6 +13,7 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
     std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 );
     auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
     auto &akf_mat = cache[s_g1];
+    auto &akf_mat_time = cache[s_g1+"_time"];
 
     // Create Timer and Progressbar for the spectrum loop
     Timer &timer = Timers::create( "Spectrum (" + s_g1 + ")" );
@@ -31,37 +32,25 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
     Log::L2( "Done, calculating fourier transform via direct integral...\n" );
     double t_step = ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step );
     Log::L2( "Size = {} x {}, using dt = {}\n", akf_mat.rows(), akf_mat.cols(), t_step );
-    auto &tt = cache["Time"];
     // Calculate main fourier transform integral
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
-        std::vector<Scalar> expfunc;
-        expfunc.reserve( dim / s.parameters.iterations_t_skip );
-        for ( int spec_tau = 0; spec_tau < dim; spec_tau += s.parameters.iterations_t_skip ) {
-            expfunc.emplace_back( std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * (double)(spec_tau)*t_step ) );
-        }
-        for ( long unsigned int i = 0; i < dim; i += s.parameters.iterations_t_skip ) {
-            int k = i / s.parameters.iterations_t_skip;
-            double t_t = ( (double)i ) * t_step;
-            int dim2 = (int)std::floor( ( s.parameters.t_end - s.parameters.t_start - t_t ) / t_step );
-            for ( int j = 0; j < dim2; j += s.parameters.iterations_t_skip ) {
-                int l = j / s.parameters.iterations_t_skip;
-                if ( k >= akf_mat.rows() or l >= akf_mat.cols() ) {
-                    Log::L3( "AKF Index out of bounds!\n" );
-                    break;
-                }
-                //out.at( spec_w ) += expfunc.at( l ) * akf_mat( k, l );
-                //std::cout << "Want: tau = " << j * t_step << ", have: tau = " << ( std::imag( tt ) - std::real( tt ) ) << ", from " << tt << std::endl;
-                out.at( spec_w ) += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * ( std::imag( tt( k, l ) ) - std::real( tt( k, l ) ) ) ) * akf_mat( k, l );
+        for ( long unsigned int i = 0; i < akf_mat.rows(); i++ ) {
+            double dt = Numerics::get_tdelta(akf_mat_time,0,i);
+            double t_t = std::real(akf_mat_time(i,0));
+            for ( int j = 0; j < akf_mat.cols()-i; j++ ) { // -i because of triangular grid
+                double tau = std::imag( akf_mat_time( i, j ) ) - std::real( akf_mat_time( i, j ) );
+                double dtau = Numerics::get_taudelta(akf_mat_time,i,j);
+                out.at( spec_w ) += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * akf_mat( i, j ) * dtau * dt;
             }
         }
         Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + "): " );
-        out.at( spec_w ) = std::real( out.at( spec_w ) ) * t_step * t_step * s.parameters.iterations_t_skip * s.parameters.iterations_t_skip;
+        out.at( spec_w ) = std::real( out.at( spec_w ) );
         timer.iterate();
     }
     // Final output and timer end
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + ")", Timers::PROGRESS_FORCE_OUTPUT );
     timer.end();
+    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + ")", Timers::PROGRESS_FORCE_OUTPUT );
     // Save output
     to_output["Spectrum_frequency"][s_g1] = spectrum_frequency_w;
     to_output["Spectrum"][s_g1] = out;

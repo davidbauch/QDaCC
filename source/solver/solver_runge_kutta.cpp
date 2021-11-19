@@ -68,11 +68,14 @@ Sparse QDLC::Numerics::ODESolver::iterate( const Sparse &rho, System &s, const d
     return iterateRungeKutta5( rho, s, t, t_step, savedStates );
 }
 
-bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output ) {
+bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output ) {
     if ( s.parameters.numerics_rk_order == 45 ) {
-        calculate_runge_kutta_45( rho0, t_start, t_end, t_step_initial, rkTimer, progressbar, progressbar_name, s, output, do_output, s.parameters.numerics_rk_interpolate, s.parameters.numerics_rk_tol );
+        calculate_runge_kutta_45( rho0, t_start, t_end, rkTimer, progressbar, progressbar_name, s, output, do_output, s.parameters.numerics_rk_interpolate, s.parameters.numerics_rk_tol );
         return true;
     }
+    size_t t_index = std::min<size_t>(size_t(std::lower_bound(s.parameters.grid_values.begin(), s.parameters.grid_values.end(), t_start) - s.parameters.grid_values.begin()),s.parameters.grid_values.size()-2);//s.parameters.grid_value_indices[t_start];
+    double t_step_initial = s.parameters.grid_steps[t_index];
+    //Log::L2("t_index = {}, t_step_initial = {}\n",t_index, t_step_initial);
 
     // Reserve Output Vector
     output.reserve( s.parameters.iterations_t_max + 1 );
@@ -96,19 +99,27 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
             t_end += 10.0 * t_step_initial;
             s.parameters.iterations_t_max = (int)std::ceil( ( t_end - t_start ) / t_step_initial );
         }
+        t_index = std::min<size_t>(t_index+1, s.parameters.grid_values.size()-2);
+        t_step_initial = s.parameters.grid_steps[t_index];
     }
     if ( s.parameters.numerics_calculate_till_converged ) {
         s.parameters.numerics_calculate_till_converged = false;
         s.parameters.t_end = t_end;
         s.parameters.iterations_t_max = output.size();
         s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.iterations_tau_resolution ) );
+        //TODO: für den t_step vector und so solle hier s.parameters.adjust aufgerufen werden?!
         reset( s );
         Log::L1( "[RKSOLVER] Adjusted t_end to {}.\n", s.parameters.t_end );
     }
+    //TODO: wenn step im grid < dt, dann interpolieren? kp. oder immer RK45? dann hätte man das problem gar nicht.
+    // oder, wenn gridstep > step, dann rechne mit step aber speicher gridstep? aber dann was wenn gridstep/step nicht grade ist? keeeeekw
+    // aktuell ist es so, das man genauso viele rhos speichern muss wie man am ende braucht, also die zwischen den skips liegen NICHT speichern, da die korrelationsfunktionen keine ahnung haben wie sie an den skip kommen.
     return true;
 }
 
-bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output, bool interpolate, double tolerance ) {
+bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output, bool interpolate, double tolerance ) {
+    size_t t_index = std::min<size_t>(size_t(std::lower_bound(s.parameters.grid_values.begin(), s.parameters.grid_values.end(), t_start) - s.parameters.grid_values.begin()),s.parameters.grid_values.size()-2);//s.parameters.grid_value_indices[t_start];
+    double t_step_initial = s.parameters.grid_steps[t_index];
     double t_step = t_step_initial;
     // Reserve Output Vector
     output.reserve( s.parameters.iterations_t_max + 1 );
@@ -153,7 +164,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
             // Progress and time output
             rkTimer.iterate();
             if ( do_output ) {
-                Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, (int)(t_t/t_step_initial), s.parameters.iterations_t_max, progressbar_name );
+                Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, temp.size(), s.parameters.iterations_t_max, progressbar_name );
             }
             // Adjust t_end until ground state is reached.we assume the ground state is the first entry of the DM
             if ( s.parameters.numerics_calculate_till_converged and t_t + t_step > t_end and std::real( temp.back().mat.coeff( 0, 0 ) ) < 0.999 ) {
@@ -166,17 +177,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
     // Interpolate if neccessary
     if ( s.parameters.numerics_rk_interpolate ) {
         output.clear();
-        // Do a very simple linear interpolation:
-        int i = 1;
-        for ( double t_t = t_start; t_t < t_end; t_t += t_step_initial ) {
-            while ( i < temp.size() - 1 and t_t > temp[i].t ) {
-                i++;
-            }
-            double first = i > 0 ? temp[i - 1].t : 0.0;
-            double second = temp[i].t;
-            double f = ( t_t - first ) / ( second - first );
-            saveState( temp[i - 1].mat + f * ( temp[i].mat - temp[i - 1].mat ), t_t, output );
-        }
+        output = Numerics::interpolate_curve( temp, t_start, t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false );
     } else {
         output = temp;
     }
@@ -185,6 +186,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
         s.parameters.t_end = t_end;
         s.parameters.iterations_t_max = output.size();
         s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.iterations_tau_resolution ) );
+        //TODO: für den t_step vector und so solle hier s.parameters.adjust aufgerufen werden?!
         reset( s );
         Log::L1( "[RK45SOLVER] Adjusted t_end to {}.\n", s.parameters.t_end );
     }

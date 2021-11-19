@@ -56,6 +56,8 @@ class Parameters {
     // System Parameters
     // Time variables
     Parameter t_start, t_end, t_step, t_step_pathint;
+    std::vector<double> grid_steps, grid_values; // Calculate T and Correlation Grid for these timesteps. maps Index -> t_t, t_step
+    std::map<double,size_t> grid_value_indices; // maps t_t -> Index
     // System Dimensions
     int maxStates;
     // Starting state:
@@ -81,22 +83,32 @@ class Parameters {
         std::map<std::string, std::vector<Parameter>> numerical_v;
         std::map<std::string, std::vector<std::string>> string_v;
         friend std::ostream &operator<<( std::ostream &os, const input_s &is ) {
-            //os << "Numerical Values:\n";
-            //for ( auto &p : is.numerical )
-            //    os << p.first << " = " << p.second << "\n";
-            //os << "Coupled_to Values:\n";
-            //for ( auto &p : is.coupled_to )
-            //    os << p << " ";
-            //os << std::endl;
-            //if ( is.numerical_v.size() > 0 ) {
-            //    os << "Numerical Vector Values:\n";
-            //    for ( auto &p : is.numerical_v ) {
-            //        os << p.first << " = ";
-            //        for ( auto &u : p.second )
-            //            os << u << " ";
-            //        os << std::endl;
-            //    }
-            //}
+            os << "Numerical Values:\n";
+            for ( auto &p : is.numerical )
+                os << p.first << " = " << p.second << "\n";
+            os << std::endl;
+            os << "String Values:\n";
+            for ( auto &p : is.string )
+                os << p.first << " = " << p.second << "\n";
+            os << std::endl;
+            if ( is.numerical_v.size() > 0 ) {
+                os << "Numerical Vector Values:\n";
+                for ( auto &p : is.numerical_v ) {
+                    os << p.first << " = ";
+                    for ( auto &u : p.second )
+                        os << u << " ";
+                    os << std::endl;
+                }
+            }
+            if ( is.string_v.size() > 0 ) {
+                os << "String Vector Values:\n";
+                for ( auto &p : is.string_v ) {
+                    os << p.first << " = ";
+                    for ( auto &u : p.second )
+                        os << u << " ";
+                    os << std::endl;
+                }
+            }
             return os;
         };
     };
@@ -104,12 +116,13 @@ class Parameters {
     std::string inputstring_photonic;  
     std::string inputstring_pulse;     
     std::string inputstring_chirp;     
-    std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner;
+    std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_correlation_resolution;
     std::map<std::string, input_s> input_electronic;
     std::map<std::string, input_s> input_photonic;
     std::map<std::string, input_s> input_pulse;
     std::map<std::string, input_s> input_chirp;
     std::map<std::string, input_s> input_correlation; //spectrum, indist, conc
+    std::map<std::string, input_s> input_correlation_resolution; //g1/g2 correlation timesteps. length of g will be determined by gridres
     // Converts the input strings into input vectors.
     // These Vectors will then be used to generate the operators and to output the inputsystem
     void parse_system();
