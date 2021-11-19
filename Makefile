@@ -30,9 +30,9 @@ else
 		COMPILER = g++-10
 	endif
 	ifeq ($(UNAME_S),Linux)
-		LIB_FLAGS += -std=c++20
+		LIB_FLAGS += -std=c++2a
 		TARGET_EXEC = QDLC-3.3.1.out
-		TARGET_DIR = /Users/davidbauch/bin
+		TARGET_DIR = ./
 		BUILD_DIR = ./build/linux
 		COMPILER = g++
 	endif
