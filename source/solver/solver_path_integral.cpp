@@ -326,7 +326,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         rkTimer.iterate();
         g12_counter++;
         if ( do_output ) {
-            Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );
+            Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );
         }
     }
 
@@ -461,7 +461,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
         saveState( rho, t_t + s.parameters.t_step_pathint, output );
         rkTimer.iterate();
         if ( do_output ) {
-            Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );
+            Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );
         }
     }
     Log::L3( "- [PathIntegralCorrelation] Correlation Done!\n" );

@@ -44,13 +44,13 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
                 out.at( spec_w ) += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * akf_mat( i, j ) * dtau * dt;
             }
         }
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + "): " );
+        Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + "): " );
         out.at( spec_w ) = std::real( out.at( spec_w ) );
         timer.iterate();
     }
     // Final output and timer end
     timer.end();
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + ")", Timers::PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + ")", Timers::PROGRESS_FORCE_OUTPUT );
     // Save output
     to_output["Spectrum_frequency"][s_g1] = spectrum_frequency_w;
     to_output["Spectrum"][s_g1] = out;

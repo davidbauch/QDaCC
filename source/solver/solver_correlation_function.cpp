@@ -101,11 +101,11 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
             gmat( i , j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, op_creator, t_tau );
             gmat_time( i , j  ) = t_t + 1.0i * t_tau;
         }
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, i, savedStates.size(), progressstring );
+        Timers::outputProgress( timer, progressbar, i, savedStates.size(), progressstring );
     }
 
     timer.end();
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, savedStates.size(), savedStates.size(), progressstring, Timers::PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( timer, progressbar, savedStates.size(), savedStates.size(), progressstring, Timers::PROGRESS_FORCE_OUTPUT );
     Log::L2( "[G1Correlation] Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return { op_creator, op_annihilator };
 }
@@ -153,11 +153,11 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
             gmat( i , j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, evalOperator, t_tau );
             gmat_time( i , j ) = t_t + 1.0i * t_tau;
         }
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, i, savedStates.size(), progressstring );
+        Timers::outputProgress( timer, progressbar, i, savedStates.size(), progressstring );
     }
 
     timer.end();
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, savedStates.size(), savedStates.size(), progressstring, Timers::PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( timer, progressbar, savedStates.size(), savedStates.size(), progressstring, Timers::PROGRESS_FORCE_OUTPUT );
     Log::L2( "[G2Correlation] G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
     return { op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2 };
 }

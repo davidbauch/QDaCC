@@ -134,8 +134,8 @@ double Timers::Isummary( bool output ) {
     return totalWallTime;
 }
 
-void Timers::IoutputProgress( bool handler, Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
-    if ( handler )
+void Timers::IoutputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
+    if ( output_handler )
         outputTimeStrings( t, currentIt, maxItTotal, suffix, final );
     else
         outputProgressBar( t, p, currentIt, maxItTotal, suffix, final );
@@ -143,21 +143,21 @@ void Timers::IoutputProgress( bool handler, Timer &t, ProgressBar &p, const unsi
 void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
         if ( !final )
-            p.print( currentIt, maxItTotal, fmt::format( "T - {}", Timer::format( ( (double)maxItTotal - currentIt ) * (omp_get_wtime()-last_progress)/omp_get_max_threads() ) ), suffix );
+            p.print( currentIt, maxItTotal, fmt::format( "T - {}", Timer::format( ( (double)maxItTotal - currentIt ) * ( omp_get_wtime() - last_progress ) / omp_get_max_threads() ) ), suffix );
         else {
             p.print( maxItTotal, maxItTotal, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
             fmt::print( "\n" );
         }
-        if (omp_get_thread_num() == 0)
+        if ( omp_get_thread_num() == 0 )
             last_progress = omp_get_wtime();
     }
 }
 void Timers::IoutputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
         fmt::print( "{0}\t{1:.2f}\n", QDLC::Message::Prefix::PERCENT, ( currentIt / (double)maxItTotal * 100. ) );
-        fmt::print( "{0}\t{1:.0f}\n", QDLC::Message::Prefix::PERCENT_TIME, ( (double)maxItTotal - currentIt ) *  (omp_get_wtime()-last_progress) );
+        fmt::print( "{0}\t{1:.0f}\n", QDLC::Message::Prefix::PERCENT_TIME, ( (double)maxItTotal - currentIt ) * ( omp_get_wtime() - last_progress ) );
         fmt::print( "{0}\t{1}\n", QDLC::Message::Prefix::SUFFIX, suffix );
-        if (omp_get_thread_num() == 0)
+        if ( omp_get_thread_num() == 0 )
             last_progress = omp_get_wtime();
     }
 }

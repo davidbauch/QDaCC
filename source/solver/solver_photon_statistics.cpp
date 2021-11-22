@@ -58,7 +58,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
             bottom[i] += ( 2.0 * gpop - gbot * std::conj( gbot ) ) * dt * dtau;
             topv[i] += std::pow( std::abs( akf_mat_g1( i, j ) ), 2.0 ) * dt * dtau;
         }
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber(), pbsize, "Indistinguishability (Simplified) (" + fout + "): " );
+        Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), pbsize, "Indistinguishability (Simplified) (" + fout + "): " );
         timer.iterate();
     }
     Scalar topsum = 0;
@@ -77,7 +77,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
     }
     // Final output and timer end
     timer.end();
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer, progressbar, timer.getTotalIterationNumber(), pbsize, "Indistinguishability (" + fout + "): ", Timers::PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), pbsize, "Indistinguishability (" + fout + "): ", Timers::PROGRESS_FORCE_OUTPUT );
 
     // Add to Fileoutput:
     if ( to_output["Indist"].size() == 0 )
@@ -139,7 +139,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     auto T = std::min<size_t>( cache[s_g2_1111].rows(), savedStates.size() );
     auto &mat_time = cache[s_g2_1111 + "_time"];
 
-    for ( long unsigned int t = 0; t < T; t++ ) {
+    for ( size_t t = 0; t < T; t++ ) {
         for ( auto &mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
             rho[mode].emplace_back( 0 );
             rho_g2zero[mode].emplace_back( 0 );
@@ -148,9 +148,9 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     for ( auto &mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
         auto &gmat_time = cache[mode + "_time"];
         bool didout = false;
-        rho[mode][0] = cache[mode]( 0, 0 );
+        rho[mode][0] = cache[mode]( 0, 0 )*Numerics::get_tdelta( gmat_time, 0, 0 )*Numerics::get_taudelta( gmat_time, 0, 0 ); //*dt*dtau
         rho_g2zero[mode][0] = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( 0 ), matmap_g2zero[mode], getTimeAt( 0 ) ) * Numerics::get_tdelta( gmat_time, 0, 0 );
-        for ( long unsigned int i = 1; i < T; i++ ) {
+        for ( size_t i = 1; i < T; i++ ) {
             double dt = Numerics::get_tdelta( gmat_time, 0, i );
             rho[mode][i] = rho[mode][i - 1];
             for ( int tau = 0; tau < T - i; tau++ ) {
@@ -163,7 +163,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
             if ( not didout ) {
                 didout = true;
                 timer_c.iterate();
-                Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + "): " );
+                Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + "): " );
             }
         }
     }
@@ -171,7 +171,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     std::vector<Scalar> output, output_g2zero;
     std::vector<Scalar> time;
     std::vector<Dense> twophotonmatrix, twophotonmatrix_g2zero;
-    for ( long unsigned int i = 0; i < T; i++ ) {
+    for ( size_t i = 0; i < T; i++ ) {
         output.emplace_back( 0 );
         output_g2zero.emplace_back( 0 );
         time.emplace_back( 0 );
@@ -185,7 +185,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     spinflip( 3, 0 ) = -1;
     Log::L3( "[Concurrence] Spinflip Matrix: {}\n", spinflip );
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( long unsigned int k = 0; k < T; k++ ) { // cache[s_g2_1111].rows() statt T?
+    for ( size_t k = 0; k < T; k++ ) { // cache[s_g2_1111].rows() statt T?
         //Log::L3( "Creating 2 photon matrix\n" );
         Dense rho_2phot = Dense::Zero( 4, 4 );
         Dense rho_2phot_g2zero = Dense::Zero( 4, 4 );
@@ -251,7 +251,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     }
     // Final output and timer end
     timer_c.end();
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + ")", Timers::PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + ")", Timers::PROGRESS_FORCE_OUTPUT );
     // Add to Fileoutput:
     if ( to_output["Conc"].size() == 0 )
         to_output["Conc"]["Time"] = time;
@@ -316,10 +316,10 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
         }
         wigner.at( i ) = W;
         timer_w.iterate();
-        Timers::outputProgress( s.parameters.output_handlerstrings, timer_w, progressbar, timer_w.getTotalIterationNumber(), reduced_rho.size(), "Wigner (" + s_mode + "): " );
+        Timers::outputProgress( timer_w, progressbar, timer_w.getTotalIterationNumber(), reduced_rho.size(), "Wigner (" + s_mode + "): " );
     }
     timer_w.end();
-    Timers::outputProgress( s.parameters.output_handlerstrings, timer_w, progressbar, timer_w.getTotalIterationNumber(), reduced_rho.size(), "Wigner (" + s_mode + "): ", Timers::PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( timer_w, progressbar, timer_w.getTotalIterationNumber(), reduced_rho.size(), "Wigner (" + s_mode + "): ", Timers::PROGRESS_FORCE_OUTPUT );
     // Add to Fileoutput:
     if ( to_output["Wigner"].size() == 0 )
         to_output["Wigner"]["Time"] = time;

@@ -198,6 +198,9 @@ bool Parameters::scaleInputs( const double scaling ) {
 bool Parameters::adjustInput() {
     Log::L2( "[System] Adjusting Inputs...\n" );
 
+    if (output_handlerstrings)
+        Timers::toggleHandler();
+
     // For threadsafety
     if ( numerics_rk_order > 5 )
         numerics_use_saved_hamiltons = false;
@@ -513,22 +516,11 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     if ( numerics_phonon_approximation_order == 5 ) {
         Log::L1( "Timeborder delta path integral: {:.8e} s - {:.2f} ps\n", t_step_pathint, t_step_pathint * 1E12 );
     }
-    //Log::L1( "Ideal time delta for this calculation: {:.8e} s - {:.2f} fs, minimum possible: {:.8e} s - {:.2f} fs\n", getIdealTimestep(), getIdealTimestep() * 1E15, std::numeric_limits<double>::epsilon(), std::numeric_limits<double>::epsilon() * 1E15 );
-    //int works = 1;
-    //if ( ( init_rabifrequenz != 0.0 ) && ( 3. * t_step > 2. * QDLC::Math::PI / init_rabifrequenz ) )
-    //    works = 0;
-    //else if ( max_rabifrequenz != 0.0 && 3. * t_step > 2. * QDLC::Math::PI / max_rabifrequenz )
-    //    works = 0;
-    //if ( !works ) {
-    //    if ( output_handlerstrings )
-    //        fmt::print( "{} WARNING: Step may be too small to resolve predicted oscillation: dT needed vs dT: {:.10e} < {:.10e}\n", QDLC::Message::Prefix::WARNING, 2. / 3. * QDLC::Math::PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
-    //    Log::L1( "WARNING: Step may be too small to resolve predicted oscillation: \n- delta T needed: {:.10e} \n- delta T used: {:.10e}\n", 2. / 3. * QDLC::Math::PI / std::max( init_rabifrequenz, max_rabifrequenz ), t_step );
-    //}
     Log::L1( "Time iterations (main loop) = {}\n\n", iterations_t_max );
 
     Log::wrapInBar( "G-Function Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( input_correlation.size() > 0 ) {
-        Log::L1( "Anticipated tau-grid resolution is {}x{} resulting in {} skips per timestep\n", iterations_tau_resolution, iterations_tau_resolution, iterations_t_skip );
+        Log::L1( "Tau-grid resolution is {}x{}\n", grid_values.size(), grid_values.size() );
         Log::L1( "Calculating:\n" );
         for ( auto &[name, mat] : input_correlation ) {
             Log::L1( " - {} on mode(s) ", name );

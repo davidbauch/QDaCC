@@ -91,7 +91,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
         // Progress and time output
         rkTimer.iterate();
         if ( do_output ) {
-            Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, rkTimer.getTotalIterationNumber() , s.parameters.iterations_t_max, progressbar_name );
+            Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber() , s.parameters.iterations_t_max, progressbar_name );
         }
         // Adjust t_end until ground state is reached. we assume the ground state is the first entry of the DM
         if ( s.parameters.numerics_calculate_till_converged and t_t + t_step_initial > t_end and std::real( rho.coeff( 0, 0 ) ) < 0.999 ) {
@@ -164,7 +164,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
             // Progress and time output
             rkTimer.iterate();
             if ( do_output ) {
-                Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, temp.size(), s.parameters.iterations_t_max, progressbar_name );
+                Timers::outputProgress( rkTimer, progressbar, temp.size(), s.parameters.iterations_t_max, progressbar_name );
             }
             // Adjust t_end until ground state is reached.we assume the ground state is the first entry of the DM
             if ( s.parameters.numerics_calculate_till_converged and t_t + t_step > t_end and std::real( temp.back().mat.coeff( 0, 0 ) ) < 0.999 ) {
@@ -191,6 +191,6 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
         Log::L1( "[RK45SOLVER] Adjusted t_end to {}.\n", s.parameters.t_end );
     }
     if ( do_output )
-        Timers::outputProgress( s.parameters.output_handlerstrings, rkTimer, progressbar, rkTimer.getTotalIterationNumber(), rkTimer.getTotalIterationNumber(), progressbar_name );
+        Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), rkTimer.getTotalIterationNumber(), progressbar_name );
     return true;
 }

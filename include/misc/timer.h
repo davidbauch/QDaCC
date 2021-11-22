@@ -69,8 +69,8 @@ class Timers {
     static void outputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
         return Get().IoutputProgressBar( t, p, currentIt, maxItTotal, suffix, final );
     }
-    static void outputProgress( bool handler, Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
-        return Get().IoutputProgress( handler, t, p, currentIt, maxItTotal, suffix, final );
+    static void outputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
+        return Get().IoutputProgress( t, p, currentIt, maxItTotal, suffix, final );
     }
     static void reset() {
         return Get().Ireset();
@@ -78,10 +78,14 @@ class Timers {
     static double summary( bool output = true ) {
         return Get().Isummary( output );
     }
+    static bool toggleHandler() {
+        return Get().ItoggleHandler();
+    }
 
    private:
     std::vector<Timer> timers;
     double last_progress = 0.0;
+    bool output_handler = false;
     Timers(){};
     Timer &Iget( const std::string &name ) {
         for ( unsigned int i = 0; i < timers.size(); i++ ) {
@@ -97,9 +101,13 @@ class Timers {
     }
     void IoutputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
     void IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
-    void IoutputProgress( bool handler, Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
+    void IoutputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
     void Ireset() {
         timers.clear();
+    }
+    bool ItoggleHandler() {
+        output_handler = not output_handler;
+        return output_handler;
     }
     double Isummary( bool output );
 };

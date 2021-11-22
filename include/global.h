@@ -66,6 +66,7 @@ using namespace QDLC::Type;
 template <class T>
 std::ostream &operator<<( std::ostream &os, const std::vector<T> &v ) {
     os << "[";
+    //std::for_each(v.begin(), v.end(), [os](T& el){os << el;});
     for ( typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii ) {
         os << *ii;
         if ( ii != v.end() )
