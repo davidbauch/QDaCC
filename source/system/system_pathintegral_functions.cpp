@@ -41,8 +41,9 @@ void System::initialize_path_integral_functions() {
     Log::L2( "[PathIntegral] Initializing Kernel Memory functions...\n" );
     phi_vector_int.clear();
     for ( double tau = 0.0; tau < parameters.t_step_pathint * tau_max; tau += parameters.t_step_pathint ) {
-        phi_vector[tau] = dgl_phonons_kernel( tau, parameters.t_step_pathint );
-        phi_vector_int.emplace_back( phi_vector[tau] );
+        Scalar kernel = dgl_phonons_kernel( tau, parameters.t_step_pathint );
+        phi_vector[tau] = kernel;
+        phi_vector_int.emplace_back( kernel );
     }
 
     Log::L2( "[PathIntegral] Outputting phonon functions to phonons.txt from phi_vector({})...\n", phi_vector.size() );

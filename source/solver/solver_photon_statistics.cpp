@@ -48,12 +48,12 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
         double t_t = std::real( akf_mat_g1_time( i, 0 ) );
         auto rho = getRhoAt( rho_index_map[t_t] );
         for ( int j = 0; j < T - i and i + j < T; j++ ) {
-            double t_tau = std::real( akf_mat_g1_time( i + j, 0 ) );
+            double t_tau = std::real( akf_mat_g1_time( i + j, 0 ) ); //das hier is t+tau und nicht tau...
             auto rho_tau = getRhoAt( rho_index_map[t_tau] );
             Scalar gpop = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
             Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t_t );
-            double dt = Numerics::get_tdelta( akf_mat_g1_time, j, i );
-            double dtau = Numerics::get_taudelta( akf_mat_g1_time, i, j );
+            double dt = Numerics::get_tdelta( akf_mat_g1_time, 0, i );
+            double dtau = Numerics::get_tdelta( akf_mat_g1_time, 0, i+j );//Numerics::get_taudelta( akf_mat_g1_time, i, j );
             top[i] += ( gpop + akf_mat_g2( i, j ) - akf_mat_g1( i, j ) * std::conj( akf_mat_g1( i, j ) ) ) * dt * dtau;
             bottom[i] += ( 2.0 * gpop - gbot * std::conj( gbot ) ) * dt * dtau;
             topv[i] += std::pow( std::abs( akf_mat_g1( i, j ) ), 2.0 ) * dt * dtau;

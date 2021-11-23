@@ -161,16 +161,16 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
             for ( int i = 0; i < matrix_dimension; i++ ) {
                 for ( int j = 0; j < matrix_dimension; j++ ) {
                     int index = i * matrix_dimension + j;
-                    cur( i, j ) = Scalar( interpolated_real.at( index ).at( k ), interpolated_imag.at( index ).at( k ) );
+                    cur( i, j ) = Scalar( interpolated_real[index][k], interpolated_imag[index][k] );
                 }
             }
-            ret.emplace_back( QDLC::SaveState( cur.sparseView(), time_out.at( k ) ) );
+            ret.push_back( { cur.sparseView(), time_out[k] } );
             ret.back().mat.makeCompressed();
             interpolateTimer.iterate();
             Timers::outputProgress( interpolateTimer, progressbar, k, num_of_points, "Writing Vectors back into DM" );
         }
         interpolateTimer.end();
-        Timers::outputProgress( interpolateTimer, progressbar, interpolateTimer.getTotalIterationNumber(),interpolateTimer.getTotalIterationNumber(), "Monotone Spline Interpolation", true );
+        Timers::outputProgress( interpolateTimer, progressbar, interpolateTimer.getTotalIterationNumber(), interpolateTimer.getTotalIterationNumber(), "Monotone Spline Interpolation", true );
     }
     Log::L3( "Done Interpolating!\n" );
     return ret;

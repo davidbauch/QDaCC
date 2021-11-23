@@ -107,6 +107,12 @@ CLA_ARGUMENT = {
 		datatype = 'string'
 		description = 'Temporal resolution for Time and G1/2-functions. Syntax: [to-dt:to-dt:...]'. Standard is [t_1-dt]
 	}
+	CLA_PARAMETER = {
+		subkey = 'gridres'
+		value = '-1'
+		datatype = 'int'
+		description = 'Positive Integer. Resolution for tau-calculation. If set to -1, the full grid will be used instead. Can be overwritten by --grid.'
+	}
 }
 CLA_ARGUMENT = {
 	type = '2hyphen'
@@ -148,18 +154,6 @@ CLA_ARGUMENT = {
 		value = ''
 		datatype = 'string'
 		description = 'Initial State'
-	}
-}
-CLA_ARGUMENT = {
-	type = '2hyphen'
-	key = 'spectrum'
-	description = 'Spectral properties.'
-	group = 'SpectrumParams'
-	CLA_PARAMETER = {
-		subkey = 'gridres'
-		value = '500'
-		datatype = 'int'
-		description = 'Positive Integer. Resolution for t'-calculation'
 	}
 }
 CLA_ARGUMENT = {
@@ -332,7 +326,7 @@ CLA_ARGUMENT = {
 	group = 'RungeKuttaParameters'
 	CLA_PARAMETER = {
 		subkey = 'rkorder'
-		value = '4'
+		value = '45'
 		datatype = 'int'
 		description = 'Order of the Runge-Kutta method. Can be 4,5 or 45.'
 	}

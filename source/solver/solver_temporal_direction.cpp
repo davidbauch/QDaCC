@@ -26,12 +26,13 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     for (int i = 0; i < savedStates.size(); i++) {
         rho_index_map[getTimeAt(i)] = i;
     }
+    //TODO: interpolation sollte ausschaltbar/wechselbar per parameter sein.
+    const auto& states = s.parameters.input_correlation_resolution.count("Modified") and s.parameters.numerics_interpolate_outputs ? Numerics::interpolate_curve(savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, 3) : savedStates;
     // Calculate expectation values
     Timer &evalTimer = Timers::create( "Expectation-Value-Loop" );
     evalTimer.start();
     Log::L2( "[Solver] Calculating expectation values...\n" );
-    //TODO: interpolation sollte ausschaltbar/wechselbar per parameter sien.
-    s.expectationValues( ( s.parameters.input_correlation_resolution.count("Modified") ? Numerics::interpolate_curve(savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, 3) : savedStates ), evalTimer );
+    s.expectationValues( states, evalTimer );
     evalTimer.end();
     Log::L2( "[Solver] Done!\n" );
 

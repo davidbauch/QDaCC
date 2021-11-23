@@ -348,21 +348,22 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     else
         H_used = H;
 
-    std::map<double, int> temp_base_indices;
+    std::map<std::string, int> temp_base_indices;
     int new_index = 0;
     for ( int i = 0; i < base.size(); i++ ) {
-        for ( int j = 0; j < base.size(); j++ ) { // base is |el|...>
+        //for ( int j = 0; j < base.size(); j++ ) { // base is |el|...>
             std::string state1 = base.at( i ).substr( 1, 1 );
-            std::string state2 = base.at( j ).substr( 1, 1 );
-            if ( i == j ) {
-                auto factor = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
-                if ( !temp_base_indices.count( factor ) > 0 ) {
-                    temp_base_indices[factor] = new_index++;
+            //std::string state2 = base.at( j ).substr( 1, 1 );
+            //if ( i == j ) {
+                //auto factor = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
+                double factor = (double)p.input_electronic[state1].numerical["PhononCoupling"].get();
+                if ( !temp_base_indices.count( state1 ) > 0 ) {
+                    temp_base_indices[state1] = new_index++;
                     phononCouplingIndexValue.emplace_back( factor );
                 }
-                phononCouplingIndex.emplace_back( temp_base_indices[factor] );
-            }
-        }
+                phononCouplingIndex.emplace_back( temp_base_indices[state1] );
+            //}
+        //}
     }
     Log::L2( "Phonon Coupling Index Vector: {}\n", phononCouplingIndex );
     Log::L2( "Phonon Coupling Value Vector: {}\n", phononCouplingIndexValue );

@@ -163,6 +163,8 @@ Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, 
     return chi_tau;
 }
 
+//TODO: variabler timestep für rk45 und varGrid
+// an das dt sollte man eigentlich über past_rhos kommen. statt über tau_max dann einfach while (t-dt > t-cutoff)
 Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDLC::SaveState> &past_rhos ) {
     Sparse ret = Sparse( parameters.maxStates, parameters.maxStates );
     Sparse chi = dgl_phonons_chi( t );
@@ -173,26 +175,6 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
         Sparse XUT = dgl_phonons_chiToX( chi, 'u' );
         Sparse XGT = dgl_phonons_chiToX( chi, 'g' );
         int _taumax = (int)std::min( parameters.p_phonon_tcutoff / parameters.t_step, t / parameters.t_step );
-        // Index vector for thread ordering
-        //std::vector<int> thread_index;
-        //thread_index.reserve( _taumax );
-        //int thread_increment = std::ceil( _taumax / parameters.numerics_maximum_threads );
-        //for ( int thread = 0; thread < parameters.numerics_maximum_threads; thread++ ) {
-        //    for ( int cur = 0; cur < parameters.numerics_maximum_threads; cur++ ) {
-        //        int vec_index = thread + cur * parameters.numerics_maximum_threads;
-        //        if ( vec_index < _taumax ) {
-        //            thread_index.emplace_back( vec_index );
-        //        } else {
-        //            break;
-        //        }
-        //    }
-        //}
-        // debug
-        //Log::L2("Vec index:\n");
-        //for ( auto &a : thread_index) {
-        //    Log::L2("{}, ",a);
-        //}
-        //Log::L2("\nVec index done!\n");
         // Use markov approximation
         if ( parameters.numerics_phonon_approximation_markov1 ) {
             // Temporary variables
@@ -200,12 +182,12 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             // Look if we already calculated coefficient sum for this specific t-value
             //int index = dgl_get_coefficient_index( t, 0 );
             std::pair<double, double> time_pair = std::make_pair( t, 0.0 );
-            // FIXME: multithreading mit der map is RIP wenn RK 45
+            // FIXME: multithreading mit der map is RIP wenn RK 45. sollte aber auch nur ein problem sein, wenn G1/2 calc ist, und dann ist threads_phonons = 1 eh.
             if ( parameters.numerics_use_saved_coefficients && savedCoefficients.count( time_pair ) > 0 ) {
                 // Index was found, chi(t-tau) sum used from saved vector
                 auto &coeff = savedCoefficients[time_pair];
-                chi_tau_back_u = coeff.mat1; //savedCoefficients.at( index ).mat1;
-                chi_tau_back_g = coeff.mat2; //savedCoefficients.at( index ).mat2;
+                chi_tau_back_u = coeff.mat1;
+                chi_tau_back_g = coeff.mat2;
             } else {
                 // Index was not found, (re)calculate chi(t-tau) sum
                 // Initialize temporary matrices to zero for threads to write to
@@ -278,8 +260,8 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                             savedCoefficients[time_pair] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
                         }
                     }
-                    integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * past_rhos.at( rho_index ).mat ).eval() );
-                    integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_back_g * past_rhos.at( rho_index ).mat ).eval() );
+                    integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * past_rhos.at( rho_index ).mat ).eval() ); //FIXME: mit rk45 oder var gitter passt das rho hier nicht mehr!
+                    integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_back_g * past_rhos.at( rho_index ).mat ).eval() ); //FIXME: mit rk45 oder var gitter passt das rho hier nicht mehr!
                     Sparse adjoint = integrant.adjoint();
                     auto thread = omp_get_thread_num();
                     threadmap_1.at( thread ) += ( integrant + adjoint ) * parameters.t_step;
@@ -318,23 +300,6 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 ret += dgl_phonons_lindblad_coefficients( t, delta_E, mat.numerical_v["CouplingScaling"][c++] * parameters.p_omega_coupling, 0.0, 'C', 1 ) * dgl_lindblad( rho, transition_transposed * optical_transition, transition * optical_transition_transposed );
             }
         }
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H + chirpcorrection, 'L', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_H, operatorMatrices.atom_sigmaplus_G_H );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H + chirpcorrection, 'L', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_H, operatorMatrices.atom_sigmaminus_G_H );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H + chirpcorrection, 'C', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_H * operatorMatrices.photon_create_H, operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_H + chirpcorrection, 'C', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_H * operatorMatrices.photon_annihilate_H, operatorMatrices.atom_sigmaminus_G_H * operatorMatrices.photon_create_H );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B + chirpcorrection, 'L', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B, operatorMatrices.atom_sigmaplus_H_B );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B + chirpcorrection, 'L', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_H_B, operatorMatrices.atom_sigmaminus_H_B );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B + chirpcorrection, 'C', 'H', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_H_B * operatorMatrices.photon_create_H, operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_H_B + chirpcorrection, 'C', 'H', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_H_B * operatorMatrices.photon_annihilate_H, operatorMatrices.atom_sigmaminus_H_B * operatorMatrices.photon_create_H );
-        //
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V + chirpcorrection, 'L', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_V, operatorMatrices.atom_sigmaplus_G_V );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V + chirpcorrection, 'L', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_V, operatorMatrices.atom_sigmaminus_G_V );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V + chirpcorrection, 'C', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_G_V * operatorMatrices.photon_create_V, operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_G_V + chirpcorrection, 'C', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_G_V * operatorMatrices.photon_annihilate_V, operatorMatrices.atom_sigmaminus_G_V * operatorMatrices.photon_create_V );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B + chirpcorrection, 'L', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B, operatorMatrices.atom_sigmaplus_V_B );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B + chirpcorrection, 'L', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_V_B, operatorMatrices.atom_sigmaminus_V_B );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B + chirpcorrection, 'C', 'V', -1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaminus_V_B * operatorMatrices.photon_create_V, operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V );
-        //ret += dgl_phonons_lindblad_coefficients( t, parameters.p_omega_atomic_V_B + chirpcorrection, 'C', 'V', 1.0 ) * dgl_lindblad( rho, operatorMatrices.atom_sigmaplus_V_B * operatorMatrices.photon_annihilate_V, operatorMatrices.atom_sigmaminus_V_B * operatorMatrices.photon_create_V );
     }
     return ret;
 }

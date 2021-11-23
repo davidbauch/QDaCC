@@ -249,6 +249,8 @@ bool Parameters::adjustInput() {
 
     // Calculate stuff for RK
     iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
+    if (iterations_tau_resolution < 1)
+        iterations_tau_resolution = iterations_t_max+1;
     iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
 
     // Build dt vector. Use standard if not specified otherwise for all calculations. Path integral cannot use other timestep than the original.
