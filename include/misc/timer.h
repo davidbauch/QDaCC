@@ -84,7 +84,6 @@ class Timers {
 
    private:
     std::vector<Timer> timers;
-    double last_progress = 0.0;
     bool output_handler = false;
     Timers(){};
     Timer &Iget( const std::string &name ) {
