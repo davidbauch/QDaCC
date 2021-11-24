@@ -155,7 +155,7 @@ Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, 
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_MIXED ) {
         double threshold = 0;
         for ( auto &p : pulse )
-            threshold += std::abs( p.get( t ) / p.maximum ); //TODO: + photon zahl, wenn photon number > 0.1 oder so dann auch. für große kopplungen gibts sonst starke abweichungen. vil. number*g draufaddieren.
+            threshold += std::abs( p.get( t ) / p.maximum );                                   //TODO: + photon zahl, wenn photon number > 0.1 oder so dann auch. für große kopplungen gibts sonst starke abweichungen. vil. number*g draufaddieren.
         if ( threshold > 1E-4 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) { //TODO: threshold als parameter
             return QDLC::Numerics::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.t_step, parameters.numerics_rk_tol, parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
         }
@@ -163,13 +163,22 @@ Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, 
     return chi_tau;
 }
 
-//TODO: variabler timestep für rk45 und varGrid
-// an das dt sollte man eigentlich über past_rhos kommen. statt über tau_max dann einfach while (t-dt > t-cutoff)
+//TODO: im RK45 fall chis einfach aus t-richtung cachen, für tau richtung dann interpolieren. d.h. wenn ich t einsetze und t zwischen t0,t1 liegt _(t0,t1 schon gespeichert) dann interpoliere einfach linear zwischen den beiden. mal testen.
+// t-richtung sollte eigentlich schon genug infos berechnen für chi. lineare interpolation sollte legit sein. NICHT neu integrieren für tau (auch im RK4 oder RK5 fall nicht, da hat man eh schon alle gecached)
+// im tau-fall eifnach direkt auslesen und ggf interpolieren. dazu interpolate_single funktion schreiben, in solver interpolator auch die nehmen. inlined.
+/**
+ * @brief Test kekw
+ * 
+ * @param rho 
+ * @param t 
+ * @param past_rhos 
+ * @return Sparse 
+ */
 Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDLC::SaveState> &past_rhos ) {
     Sparse ret = Sparse( parameters.maxStates, parameters.maxStates );
     Sparse chi = dgl_phonons_chi( t );
     std::vector<Sparse> threadmap_1, threadmap_2;
-
+    Log::L3("{} Entering for t = {}...\n",omp_get_thread_num(), t);
     // Most precise approximation used. Caclulate polaron fram Chi by integrating backwards from t to t-tau.
     if ( parameters.numerics_phonon_approximation_order != PHONON_APPROXIMATION_LINDBLAD_FULL ) {
         Sparse XUT = dgl_phonons_chiToX( chi, 'u' );
@@ -179,16 +188,32 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
         if ( parameters.numerics_phonon_approximation_markov1 ) {
             // Temporary variables
             Sparse chi_tau_back_u, chi_tau_back_g, integrant;
-            // Look if we already calculated coefficient sum for this specific t-value
-            //int index = dgl_get_coefficient_index( t, 0 );
-            std::pair<double, double> time_pair = std::make_pair( t, 0.0 );
-            // FIXME: multithreading mit der map is RIP wenn RK 45. sollte aber auch nur ein problem sein, wenn G1/2 calc ist, und dann ist threads_phonons = 1 eh.
-            if ( parameters.numerics_use_saved_coefficients && savedCoefficients.count( time_pair ) > 0 ) {
-                // Index was found, chi(t-tau) sum used from saved vector
-                auto &coeff = savedCoefficients[time_pair];
+            // Look if we already calculated coefficient sum for this specific t-value or any value for t > t-value, then interpolate to that specific matrix
+            //std::pair<double, double> time_pair = std::make_pair( t, 0.0 );
+
+            // Index was found, chi(t-tau) sum used from saved vector
+            auto map_index_to = savedCoefficients.begin();
+            if ( parameters.numerics_use_saved_coefficients and savedCoefficients.count( t ) > 0 ) {
+                Log::L3("{} Found {}\n",omp_get_thread_num(), t);
+                auto &coeff = savedCoefficients[t][0.0];
                 chi_tau_back_u = coeff.mat1;
                 chi_tau_back_g = coeff.mat2;
+            } else if ( parameters.numerics_use_saved_coefficients and savedCoefficients.size() > 2 and savedCoefficients.rbegin()->first > t) {
+                Log::L3("Element {} should be in here as max is {}, tryint to find it...\n",t,savedCoefficients.rbegin()->first);
+                QDLC::SaveStateTau* min;
+                QDLC::SaveStateTau* max;
+                for (auto &[nt, other] : savedCoefficients) {
+                    max = &other.begin()->second;
+                    if (nt > t)
+                        break;
+                    min = max;
+                }
+                
+                Log::L3("Found Phonon index! Interpolating from {} - {} to {}\n",min->t, max->t, t);
+                chi_tau_back_u = min->mat1 + (t - min->t)/(max->t - min->t)*max->mat1;
+                chi_tau_back_g = min->mat2 + (t - min->t)/(max->t - min->t)*max->mat2;
             } else {
+                Log::L3("{} (Re)Calculating {}\n",omp_get_thread_num(), t);
                 // Index was not found, (re)calculate chi(t-tau) sum
                 // Initialize temporary matrices to zero for threads to write to
                 QDLC::Matrix::init_sparsevector( threadmap_1, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
@@ -214,16 +239,16 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 chi_tau_back_u = std::accumulate( threadmap_1.begin(), threadmap_1.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
                 chi_tau_back_g = std::accumulate( threadmap_2.begin(), threadmap_2.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
                 // Save coefficients
-                //dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, 0 );
                 if ( parameters.numerics_use_saved_coefficients ) {
-#pragma omp critical
-                    savedCoefficients[time_pair] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, 0 );
+#pragma omp master
+                    savedCoefficients[t][0.0] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, 0 );
                 }
             }
             // Calculate phonon contributions from (saved/calculated) coefficients and rho(t)
             integrant = dgl_kommutator( XUT, ( chi_tau_back_u * rho ).eval() );
             integrant += dgl_kommutator( XGT, ( chi_tau_back_g * rho ).eval() );
             Sparse adjoint = integrant.adjoint();
+            Log::L3("{} adding ret value for {}\n",omp_get_thread_num(),t);
             ret -= ( integrant + adjoint ) * parameters.t_step;
         } else {
             QDLC::Matrix::init_sparsevector( threadmap_1, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
@@ -238,12 +263,12 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                     double tau = ( 1.0 * _tau ) * parameters.t_step;
                     // Check if chi(t-tau) has to be recalculated, or can just be retaken from saved matrices, since chi(t-tau) is only dependant on time
                     //int index = dgl_get_coefficient_index( t, tau );
-                    std::pair<double, double> time_pair = std::make_pair( t, tau );
-                    if ( parameters.numerics_use_saved_coefficients && savedCoefficients.count( time_pair ) > 0 ) {
+                    //std::pair<double, double> time_pair = std::make_pair( t, tau );
+                    if ( parameters.numerics_use_saved_coefficients and savedCoefficients.count( t ) > 0 and savedCoefficients[t].count( tau ) > 0 ) {
 // Index was found, chi(t-tau) used from saved vector
 #pragma omp critical
                         {
-                            auto &coeff = savedCoefficients[time_pair];
+                            auto &coeff = savedCoefficients[t][tau];
                             chi_tau_back_u = coeff.mat1;
                             chi_tau_back_g = coeff.mat2;
                         }
@@ -257,10 +282,10 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                         //dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, tau );
                         if ( parameters.numerics_use_saved_coefficients ) {
 #pragma omp critical
-                            savedCoefficients[time_pair] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
+                            savedCoefficients[t][tau] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
                         }
                     }
-                    integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * past_rhos.at( rho_index ).mat ).eval() ); //FIXME: mit rk45 oder var gitter passt das rho hier nicht mehr!
+                    integrant = dgl_phonons_greenf( tau, 'u' ) * dgl_kommutator( XUT, ( chi_tau_back_u * past_rhos.at( rho_index ).mat ).eval() );  //FIXME: mit rk45 oder var gitter passt das rho hier nicht mehr!
                     integrant += dgl_phonons_greenf( tau, 'g' ) * dgl_kommutator( XGT, ( chi_tau_back_g * past_rhos.at( rho_index ).mat ).eval() ); //FIXME: mit rk45 oder var gitter passt das rho hier nicht mehr!
                     Sparse adjoint = integrant.adjoint();
                     auto thread = omp_get_thread_num();
@@ -301,5 +326,6 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             }
         }
     }
+    Log::L2("{} returning for {}\n",omp_get_thread_num(), t);
     return ret;
 }

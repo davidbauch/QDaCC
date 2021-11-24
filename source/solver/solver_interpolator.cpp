@@ -4,7 +4,8 @@
 
 #include "solver/solver.h"
 
-std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double, size_t> &t_index, bool output_handler ) {
+//TODO: implement monotone interpolation of vector here.
+std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double, size_t> &t_index, int order, bool output_handler ) {
     size_t current_index = std::min<size_t>( size_t( std::lower_bound( t_values.begin(), t_values.end(), t_start ) - t_values.begin() ), t_values.size() - 2 ); //t_index.at(t_start);
     size_t num_of_points = (size_t)( t_values.size() - current_index );
     size_t max_index = t_values.size() - 2;
@@ -32,7 +33,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
 std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, double t_step, int threads, int order, bool output_handler ) {
     size_t num_of_points = (size_t)( ( t_end - t_start ) / t_step );
     std::vector<QDLC::SaveState> ret;
-    Log::L2( "Interpolation order = {}\n", order );
+    Log::L2( "[Interpolator] Interpolation order = {}\n", order );
     if ( order == 0 ) {
         // Linear Interpolation
         ret.reserve( num_of_points );
@@ -51,20 +52,20 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         }
     } else if ( order == 1 ) {
         // Quintic Hermite Interpolation
-        Log::L2( "Using Quintic Hermite Interpolation...\n" );
+        Log::L2( "[Interpolator] Using Quintic Hermite Interpolation...\n" );
         // Derivatives
         std::vector<Sparse> first_derivative, second_derivative;
-        Log::L2( "Calculating first derivatives...\n" );
+        Log::L2( "[Interpolator] Calculating first derivatives...\n" );
         for ( int i = 0; i < input.size() - 1; i++ ) {
             first_derivative.emplace_back( ( input[i + 1].mat - input[i].mat ) / ( input[i + 1].t - input[i].t ) );
         }
         first_derivative.emplace_back( first_derivative.back() );
-        Log::L2( "Calculating second derivatives...\n" );
+        Log::L2( "[Interpolator] Calculating second derivatives...\n" );
         for ( int i = 0; i < first_derivative.size() - 1; i++ ) {
             second_derivative.emplace_back( ( first_derivative[i + 1] - first_derivative[i] ) / ( input[i + 1].t - input[i].t ) );
         }
         second_derivative.emplace_back( second_derivative.back() );
-        Log::L2( "Sizes: {} {} {}\n", input.size(), first_derivative.size(), second_derivative.size() );
+        Log::L2( "[Interpolator] Sizes: {} {} {}\n", input.size(), first_derivative.size(), second_derivative.size() );
 
         // Interpolate
         size_t i = 1;
@@ -101,11 +102,12 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
     } else {
         // Cubic monotone with library
         // Generate N^2 vectors from the initial density matrices
-        Log::L2( "Using Monotone Hermite Interpolation\n" );
+        Log::L2( "[Interpolator] Using Monotone Hermite Interpolation\n" );
         Timer &interpolateTimer = Timers::create( "Monotone Spline Interpolation" );
         ProgressBar progressbar = ProgressBar();
         interpolateTimer.start();
 
+        Log::L2("[Interpolator] Copying DM Elements into single Vector\n");
         size_t matrix_dimension = input.front().mat.rows();
         long unsigned int input_length = input.size();
         std::vector<std::vector<double>> raw_real( matrix_dimension * matrix_dimension );
@@ -135,6 +137,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         }
 
         // Interpolate each vector on its own
+        Log::L2("[Interpolator] Interpolating Vectors\n");
         std::vector<std::vector<double>> interpolated_real( matrix_dimension * matrix_dimension );
         std::vector<std::vector<double>> interpolated_imag( matrix_dimension * matrix_dimension );
         std::vector<double> time_out;
@@ -154,7 +157,9 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
             interpolateTimer.iterate();
             Timers::outputProgress( interpolateTimer, progressbar, i, matrix_dimension, "Interpolating Vectors" );
         }
+
         // Write new vectors back into matices
+        Log::L2("[Interpolator] Writing Vectors back into DM\n");
         for ( int k = 0; k < num_of_points; k++ ) {
             Dense cur( matrix_dimension, matrix_dimension );
 #pragma omp parallel for num_threads( threads )
@@ -172,6 +177,6 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         interpolateTimer.end();
         Timers::outputProgress( interpolateTimer, progressbar, interpolateTimer.getTotalIterationNumber(), interpolateTimer.getTotalIterationNumber(), "Monotone Spline Interpolation", true );
     }
-    Log::L3( "Done Interpolating!\n" );
+    Log::L3( "[Interpolator] Done Interpolating!\n" );
     return ret;
 }

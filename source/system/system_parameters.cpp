@@ -74,7 +74,6 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_rk_stepdelta = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepdelta" );
     numerics_rk_stepmin = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepmin" );
     numerics_rk_stepmax = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepmax" );
-    numerics_rk_interpolate = !QDLC::CommandlineArguments::get_parameter_passed( "-rknointerpolate" );
     numerics_rk_usediscrete_timesteps = numerics_rk_stepdelta > 0 ? true : false;
 
     inputstring_electronic = QDLC::CommandlineArguments::get_parameter( "--S", "SE" );
@@ -95,7 +94,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     p_initial_state_s = QDLC::CommandlineArguments::get_parameter( "--R" );
 
     // Look for --spectrum, if not found, no spectrum is evaluated
-    iterations_tau_resolution = QDLC::CommandlineArguments::get_parameter<int>( "--spectrum", "gridres" );
+    iterations_tau_resolution = QDLC::CommandlineArguments::get_parameter<int>( "--G", "gridres" );
     numerics_use_interactionpicture = QDLC::CommandlineArguments::get_parameter_passed( "-noInteractionpic" ) ? false : true;
     numerics_use_rwa = QDLC::CommandlineArguments::get_parameter_passed( "-noRWA" ) ? 0 : 1;
     numerics_maximum_threads = QDLC::CommandlineArguments::get_parameter<int>( "--Threads" );
@@ -113,9 +112,9 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
     numerics_output_raman_population = QDLC::CommandlineArguments::get_parameter_passed( "-raman" ); // DEPRECATED
     logfilecounter = QDLC::Misc::convertParam<int>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
-    numerics_calculate_timeresolution_indistinguishability = QDLC::CommandlineArguments::get_parameter_passed( "-timedepInd" ); //DEPRECATED
-    numerics_stretch_correlation_grid = false;                                                                                  //FIXME: Doesnt work right now //DEPRECATED
+    numerics_calculate_timeresolution_indistinguishability = QDLC::CommandlineArguments::get_parameter_passed( "-timedepInd" ); //DEPRECATED                                                                             //FIXME: Doesnt work right now //DEPRECATED
     numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
+    s_numerics_interpolate = QDLC::CommandlineArguments::get_parameter( "--interpolateOrder" );
 
     // Phonon Parameters
     p_phonon_alpha = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononalpha" );
@@ -257,6 +256,7 @@ bool Parameters::adjustInput() {
     {
         auto &settings = input_correlation_resolution.count( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
         double skip = input_correlation_resolution.count( "Modified" ) == 0 ? 1.0*iterations_t_skip : 1.0;
+        Log::L2("[System] Iteration Skip for Grid is {}.\n",iterations_t_skip);
         double t_t = 0;
         int current = 0;
         grid_values.emplace_back( t_start );
@@ -270,6 +270,16 @@ bool Parameters::adjustInput() {
             grid_value_indices[t_t] = grid_values.size()-1;
         }
         //std::cout << "Values for "<<mode<<": " << t_values[mode] << std::endl;
+    }
+
+    // Set interpolation order:
+    {
+        auto orders = QDLC::String::splitline( s_numerics_interpolate, ',');
+        std::map<std::string, int> methods = { {"monotone", 3}, {"linear",0} };
+        std::string method_time = orders.front();
+        std::string method_tau = orders.size() > 1 ? orders.back() : "linear";
+        numerics_interpolate_method_time = methods[method_time];
+        numerics_interpolate_method_tau = methods[method_tau];
     }
 
     // No phonon adjust if pathintegral is chosen

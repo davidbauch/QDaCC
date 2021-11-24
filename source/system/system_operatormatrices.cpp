@@ -348,7 +348,8 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     else
         H_used = H;
 
-    std::map<std::string, int> temp_base_indices;
+    //std::map<std::string, int> temp_base_indices;
+    std::map<double, int> temp_base_indices;
     int new_index = 0;
     for ( int i = 0; i < base.size(); i++ ) {
         //for ( int j = 0; j < base.size(); j++ ) { // base is |el|...>
@@ -357,11 +358,12 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             //if ( i == j ) {
                 //auto factor = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
                 double factor = (double)p.input_electronic[state1].numerical["PhononCoupling"].get();
-                if ( !temp_base_indices.count( state1 ) > 0 ) {
-                    temp_base_indices[state1] = new_index++;
+                auto index = factor;//state1;
+                if ( !temp_base_indices.count( index ) > 0 ) {
+                    temp_base_indices[index] = new_index++;
                     phononCouplingIndexValue.emplace_back( factor );
                 }
-                phononCouplingIndex.emplace_back( temp_base_indices[state1] );
+                phononCouplingIndex.emplace_back( temp_base_indices[index] );
             //}
         //}
     }

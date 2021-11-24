@@ -21,18 +21,24 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), rkTimer.getTotalIterationNumber(), "T-Direction: ", Timers::PROGRESS_FORCE_OUTPUT );
     Log::L2( "[Solver] Done! Saved {} states.\n", savedStates.size() );
     Log::L2( "[Solver] Hamiltons: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}. Done!\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_read );
+    size_t sum = 0;
+    std::for_each( s.savedCoefficients.begin(), s.savedCoefficients.end(), [&]( const std::pair<double, std::map<double, QDLC::SaveStateTau>> &m ) { sum += m.second.size(); } );
+    Log::L2( "[Solver] Cached {} phonon matrices.\n", sum );
 
     // Index Map:
-    for (int i = 0; i < savedStates.size(); i++) {
-        rho_index_map[getTimeAt(i)] = i;
+    for ( int i = 0; i < savedStates.size(); i++ ) {
+        rho_index_map[getTimeAt( i )] = i;
     }
-    //TODO: interpolation sollte ausschaltbar/wechselbar per parameter sein.
-    const auto& states = s.parameters.input_correlation_resolution.count("Modified") and s.parameters.numerics_interpolate_outputs ? Numerics::interpolate_curve(savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, 3) : savedStates;
+    //Interpolate Outputstates with spline interpolation
+    auto output_states = s.parameters.numerics_interpolate_outputs ? Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, s.parameters.numerics_interpolate_method_time ) : savedStates;
+    // Interpolate savedStates if RK45 was used or grid was modified (WHY THO LOL)
+    if ( s.parameters.numerics_rk_order > 5 )
+        savedStates = Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau ); //Numerics::interpolate_curve(savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, 0);
     // Calculate expectation values
     Timer &evalTimer = Timers::create( "Expectation-Value-Loop" );
     evalTimer.start();
     Log::L2( "[Solver] Calculating expectation values...\n" );
-    s.expectationValues( states, evalTimer );
+    s.expectationValues( output_states, evalTimer );
     evalTimer.end();
     Log::L2( "[Solver] Done!\n" );
 

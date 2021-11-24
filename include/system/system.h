@@ -28,7 +28,7 @@ class System {
     // Runtime efficient caching vector
     std::map<double, Scalar> phi_vector;                                 // Vector of saved phonon-phi function
     std::vector<Scalar> phi_vector_int;                                  // Same, but with integers for path integral
-    std::map<std::pair<double, double>, QDLC::SaveStateTau> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
+    std::map<double, std::map<double, QDLC::SaveStateTau>> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
 
     // ##### Helper Variables #####
     std::map<std::string, double> emission_probabilities;

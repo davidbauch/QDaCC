@@ -36,9 +36,11 @@ class Parameters {
     long unsigned int numerics_saved_coefficients_cutoff; // True: Only save last few coefficients (only viable for T-direction, not for G1/2)
     long unsigned int numerics_saved_coefficients_max_size;
     std::vector<int> logfilecounter;
-    bool numerics_stretch_correlation_grid, numerics_interpolate_outputs;
+    bool numerics_interpolate_outputs;
+    std::string s_numerics_interpolate;
+    int numerics_interpolate_method_time, numerics_interpolate_method_tau;
     Parameter numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax, numerics_rk_order, numerics_rk_tol;
-    bool numerics_rk_interpolate, numerics_rk_usediscrete_timesteps;
+    bool numerics_rk_usediscrete_timesteps;
     bool numerics_pathint_partially_summed;
     bool numerics_phonon_nork45;
     bool numerics_use_function_caching;
