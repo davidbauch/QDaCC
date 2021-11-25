@@ -44,6 +44,7 @@ class Parameters {
     bool numerics_pathint_partially_summed;
     bool numerics_phonon_nork45;
     bool numerics_use_function_caching;
+    size_t numerics_groundstate;
     
     // Path Integral Numerics
     double numerics_pathintegral_stepsize_iterator;      // = 1E-12;

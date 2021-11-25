@@ -326,6 +326,6 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             }
         }
     }
-    Log::L3("{} returning for {}\n",omp_get_thread_num(), t);
+    Log::L2("{} returning for {}\n",omp_get_thread_num(), t);
     return ret;
 }

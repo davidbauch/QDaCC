@@ -67,6 +67,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     t_start = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstart" );
     t_end = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tend" );
     t_step = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstep" );
+    numerics_groundstate = QDLC::CommandlineArguments::get_parameter<int>( "--groundstate" );
 
     // Runge Kutta Parameters
     numerics_rk_order = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkorder" );

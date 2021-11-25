@@ -14,9 +14,6 @@
 - Concurrence of any two electronic or optical transition
 - Wigner function of any single electronic or optical transition   
 
-# Basic Syntax for defining a system
-... 
-
 # Usage
 
 All numerical parameters support the following units:
@@ -24,7 +21,7 @@ Units of Energy:
 - `Hz` - Hertz, can also be omitted, meaning any energy related value without a unit is treated as `Hz`
 - `eV` - Electron Volt
 - `meV` - Milli Electron Volt `= 1E-3eV`
-- `mueV` - Mucro Electron Volt `= 1E-6eV`
+- `mueV` - Micro Electron Volt `= 1E-6eV`
 
 Units of Time:
 - `s` - Seconds, can also be omitted, meaning any time related value without a unit is treated as `s`
@@ -33,9 +30,11 @@ Units of Time:
 - `fs` - Femtoseconds `= 1E-15s`
 
 ---
+## Inputting Parameters
 
     --file [FILEPATH]
 The program can read multiple parameter subsets from a given file. The first line of this file should start with a `#`, followed by the name of the project, which is also the subfolder that will be created for the project. Every other `#` indicates a comment, which can start at any point of the line.
+
 
 Example:
     
@@ -44,12 +43,126 @@ Example:
     # Random Comment
     [Parameterset2] # Comment
 
-***
+---
 
 ## System Parameters
+The program accepts two types of systems which will be transformed into a total system by using the tensor product of the single bases. A single electronic system can be tensored with multiple optical systems, where every electronic transition can be coupled to any optical system.
 
-    --S []
+### Electronic Sytem
+The general syntax for a system with a single electronic state reads:
+    
+    --SE [...;Name:Energy:CoupledTo:DecayScaling:DephasingScaling:PhononCoupling;...]
+Multiple electronic states can be chained by using the chain operator `;`. The parameters for a state read as follows:
 
+- `Name` : **Single Uppercase** Character Identifier. **Must** be unique.
+- `Energy` : Energy of the state. Supports the Units of Energy.
+- `CoupledTo` : Comma seperated Single Character Indentifier of any other state that this state is coupled to. Using `-` indicates the state is not coupled to anything.
+- `DecayScaling` : Scaling factor (float) for the radiative decay rate for this state
+- `DephasingScaling` : Scaling factor (float) for the dephasing rate for this state
+- `PhononCoupling` : Scaling factor (float) for the electron-phonon coupling
+
+Example:
+
+    --SE 'G:0:X:0:1:0;X:1.5eV:-:1:1:1'
+- Ground State `Name = G` with `Energy = 0`. The groundstate cannot decay radiatively, such that `DecayScaling = 0`. Because the phase relation of this and other states can decay, `DephasingScaling = 1`. This state should not be influenced by phonons with `PhononCoupling = 0`.
+- Excited State  `Name = X` with `Energy = 1.5eV`. The excited state can decay radiatively, with `DecayScaling = 1`. Because the phase relation of this and other states can decay, `DephasingScaling = 1`. This state is affected by electron-phonon coupling, hence `PhononCoupling = 1`.
+
+### Photonic System
+The general syntax for a system with a single optical resonator reads:
+
+    --SO [...;Name:Energy:MaxPhotons:CoupledToTransition:CouplingScaling:DecayScaling;...]
+Multiple photonic states can be chained by using the chain operator `;`. The parameters for a state read as follows:
+
+- `Name` : **Single Lowercase** Character Identifier. **Must** be unique.
+- `Energy` : Energy of the resonator. Supports the Units of Energy.
+- `MaxPhotons` : Maximum Photon Number for this resonator. 
+- `CoupledToTransition` : Comma seperated Electronic Transitions this resonator is coupled to. Uses the *upwards* transition of two states. The transition has to exist in the electronic system.
+- `CouplingScaling` : Scaling factor (float) for the transitions. When multiple transitions are provided, an qual number of scaling factors, seperated by commas, have to be defined.
+- `DecayScaling` : Scaling factor (float) for the decay rate of photon population inside the resonator.
+
+Example:
+
+    --SE 'c:1.5eV:2:GX:1:1'
+- Cavity with `Name = c` with `Energy = 1.5eV`. The maximum number of photons allowed is `MaxPhotons = 2`. The resonator is coupled to the electronic transition `CoupledToTransition = GX` with a coupling scaling of `CouplingScaling = 1`. The photons inside the resonator decay with a scaled rate of `DecayScaling = 1`.
+
+### Further Examples
+- Single Exciton with no Cavity. Hilbert Space Dimensions: `2 by 2`.
+`--SE 'G:0:X:0:1:0;X:1.5eV:-:1:1:1'`
+- Single Exciton coupled to a single mode Resonator with a maximum of two photons. Hilbert Space Dimensions: 6 by 6
+`--SE 'G:0:X:0:1:0;X:1.5eV:-:1:1:1'`
+`--SO 'c:1.5eV:2:GX:1:1'`     
+- Three Level System with cavity at two-photon resonance. No direct Ground-to-Highest State transition is allowed in this system. Phonons scaled doubled for the upper state. Hilbert Space Dimensions: `9 by 9`.
+`--SE 'G:0:L:0:1:0;L:1.5eV:U:1:1:1;U:2.8eV:-:1:1:2'`
+`--SO 'c:1.6eV:2:GL,LU:1,1:1'`
+- [Polarized Biexciton with polarization dependent cavity modes](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308). The excitons are seperated by a large finestructuresplitting energy of `100mueV` and the biexciton is reduced by a binding energy of `20meV`. The resonators lie at the two-photon resonance of the biexciton and only couple to their specific polarized exciton transitions. Hilbert Space Dimensions: `36 by 36`.
+`--SE 'G:0:H,V:0:1:0;H:1.5001eV:Z:1:1:1;V:1.4999eV:Z:1:1:1;Z:2.98eV:-:1:1:1'`
+`--SO 'h:1.49eV:2:GH,HZ:1,1:1;v:1.49eV:2:GV,VZ:1,1:1'`
+- Polarized Biexciton with polarization dependend bi-modal cavity modes. The two energetically distinguishable resonator modes enhance the ground-exciton as well as the exciton-biexciton transitions. Hilbert Space Dimensions: `324 by 324`.
+`--SE 'G:0:H,V:0:1:0;H:1.5001eV:Z:1:1:1;V:1.4999eV:Z:1:1:1;Z:2.98eV:-:1:1:1'`
+`--SO 'h:1.5eV:2:GH,HZ:1,1:1;v:1.5eV:2:GV,VZ:1,1:1;k:1.48eV:2:GH,HZ:1,1:1;l:1.48eV:2:GV,VZ:1,1:1'`
+
+### Optical Pulse
+The electronic states as well as the resonator modes can be driven by an optical pulse. The general syntax reads:
+
+    --SP '[...;Name:CoupledToTransition:Amp:Freq:Width:Center:Chirp:Type(:GaussAmp);...]'
+Multiple transitions can be driven by multiple pulses, and multiple pulses can be chained by using the chain operator `;`. The parameters read as follows:
+
+- `Name` : **Single Lowercase** Character Identifier. **Must** be unique.
+- `CoupledToTransition` : Comma seperated list of electronic transitions or optical resonators this set of pulses is coupled to.
+- `Amp` : Amplitude of the pulse. When defined as a Gaussian pulse (see `Type`), this amplitude is assumed to be the pulse area in units of PI. In any other case, this value supports the Units of Energy.
+- `Freq` : Frequency of the pulse using `e^(-i*omega)` where omega is the pulse frequency. This parameter supports the Units of Energy.
+- `Width` : Temporal pulse width. This parameter supports the Units of Time.
+- `Center` : Temporal center of the pulse. This parameter supports the Units of Time.
+- `Chirp` : [Pulse Chirp](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.106.166801) rate. This parameter supports the Units of Energy.
+- `Type` : Type of the pulse, can either be `gauss`, `gauss_pi` or `cw` (continuous wave)
+- `GaussAmp` : **Optional Parameter**. Amplitude of the gaussian function `e^[(t-t0)^A]`, where `A = GaussAmp`. The default value is `GaussAmp = 2`.
+
+Multiple pulses can be applied onto the same transitions by using comma sperated values for `Amp`,`Freq`,`Width`,`Center`,`Chirp`,`Type` (and optionally `GaussAmp`). In the case of `Type = cw`, the parameter `Width` does nothing.
+
+Examples:
+
+    --SP 'p:GX:1:1.5eV:2ps:20ps:0:gauss_pi'
+Pulse for a single exciton with `Amp = PulseArea = 1*PI`, `Energy = 1.5eV`, centered at `Center = 20ps` with width `Width = 2ps`. The pulse is not chirped such that `Chirp = 0`. A Gaussian shape is used. Not that with `Type = gauss`, this pulse would have an energy equivalent of `Energy = 1Hz` due to the missing specification for the type. Since no `GaussAmp` was provided, the default value of `2` is used.
+
+    --SP 'p:GH,HZ:5.4:1.48eV:5ps:30ps:0:gauss_pi:12'
+Pulse for the horizontally polarized biexciton transition. A `GaussAmp = 12` is used to approximate a flat-top Gaussian shape.
+
+    --SP 'p:GH,HZ:5.4,1,1:1.48eV,1.5eV,1.5eV:5ps,1ps,1ps:30ps,50ps,60ps:0,0,0:gauss_pi,gauss_pi,gauss_pi'
+The same pulse as before, followed by two short PI-pulses at later times.
+
+    --SP 'p:GL:1:1.5eV:2ps:20ps:0:gauss_pi;q:LU:1:1.4eV:2ps:24ps:0:gauss_pi'
+Two pulses for different electronic transitions for the three level system.
+
+    --SP 'p:h:0.15meV:1.5eV:0:69fs:0:cw'
+A continuous wave pulse with an amplitude of `Amp = 0.15meV`, frequency `Freq = 1.5eV` driving the resonator `h`. Make sure `h` actually exists as a resonator, or the program will crash. The `Center = 69fs` equals a phase shift relative to zero.
+
+### Electronic Chirp - Temporal Detuning of the electronic states
+...
+
+---
+
+## Temporal Settings
+The program calculates the temporal dynamics of the provided system in a single given interval using either the fixed-stepsize RK4/RK5 or the variable order RK45 method. The timer interval is given by
+
+    --time [START] [END] [STEP]
+and supports the Units of Time. If `END` is set to `-1`, the temporal dynamics are calculated until the density matrix ground state is reached by at least `99.9%`. The density matrix diagonal index for the ground state can be provided by
+    
+    --groundstate [DM_INDEX]
+where the default value for `DM_INDEX` is `0`.
+
+If only a single parameter is to be changed, the following parameters can be used:
+
+    --tstart [START]
+    --tend [END]
+    --tstep [STEP]
+
+Examples:
+
+    --time 0 2ns 100fs
+Calculate from `0` to `2ns` using a timestep of `100fs`.
+
+    --tstep 200fs
+Use a timestep of `200fs`. If no `--tend [END]` is provided, the calculation will continue until the system is converged in its ground state. **Caution**: If the groundstate can never be reached, the program will fail to terminate.
 
 ---
 ---
@@ -76,8 +189,8 @@ Uses 500 timesteps for the correlation grid.
 Uses `10ps/100fs + 20ps/200fs + 30ps/300fs = 300` points for the grid, where for the first 10ps a timestep of 100fs is used, between 10ps and 20ps a timestep of 200fs is used, and between 20ps and 30ps a timestep of 300fs is used.
 
 ---
-### Interpolation Parameters
-The program uses interpolation for creating equidistant grids for the G1 and G2 calculations, as well as creating smooth outputs for the raw data that is calculated using varying timesteps. If not specified, the temporal outputs are not interpolated. The correlation functions are always at least linearly interpolated to guarantee all G1 and G2 functions are compatible with each other.
+### Interpolation
+The program uses interpolation for creating equidistant grids for the G1 and G2 calculations, as well as creating smooth outputs for the raw data that is calculated using varying timesteps. If not specified, the temporal outputs are not interpolated. The correlation functions are always at least linearly interpolated onto equidistant grids to guarantee all G1 and G2 functions are compatible with each other.
 
     -interpolate
 Enables interpolation of the temporal output data. The standard interpolation method used is the [Monotone Hermite Spline Interpolation](https://jbrd.github.io/2020/12/27/monotone-cubic-interpolation.html) provided by the [ALGLIB](https://www.alglib.net/) package. If this flag ist not passed, the temporal outputs will **NOT** be interpolated.

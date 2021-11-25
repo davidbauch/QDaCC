@@ -24,7 +24,7 @@ CLA_ARGUMENT = {
 	}
 	CLA_PARAMETER = {
 		subkey = 'tend'
-		value = '1ns'
+		value = '-1'
 		datatype = 'string'
 		description = 'Maximum time'
 	}
@@ -33,6 +33,18 @@ CLA_ARGUMENT = {
 		value = '-1'
 		datatype = 'string'
 		description = 'Timestep'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'groundstate'
+	description = 'Ground State Index'
+	group = 'Timeparameter'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = '0'
+		datatype = 'int'
+		description = 'Ground State Index'
 	}
 }
 CLA_ARGUMENT = {
