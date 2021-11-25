@@ -19,8 +19,30 @@
 
 # Usage
 
-time formats s,ns,ps,fs
-energy formats Hz(standard,nothing),eV,meV,mueV
+All numerical parameters support the following units:
+Units of Energy:
+- `Hz` - Hertz, can also be omitted, meaning any energy related value without a unit is treated as `Hz`
+- `eV` - Electron Volt
+- `meV` - Milli Electron Volt `= 1E-3eV`
+- `mueV` - Mucro Electron Volt `= 1E-6eV`
+
+Units of Time:
+- `s` - Seconds, can also be omitted, meaning any time related value without a unit is treated as `s`
+- `ns` - Nanoseconds `= 1E-9s`
+- `ps` - Picoseconds `= 1E-12s`
+- `fs` - Femtoseconds `= 1E-15s`
+
+---
+
+    --file [FILEPATH]
+The program can read multiple parameter subsets from a given file. The first line of this file should start with a `#`, followed by the name of the project, which is also the subfolder that will be created for the project. Every other `#` indicates a comment, which can start at any point of the line.
+
+Example:
+    
+    # NameOfTheProject
+    [Parameterset2] # Comment
+    # Random Comment
+    [Parameterset2] # Comment
 
 ***
 
@@ -50,7 +72,7 @@ Examples:
     --gridres 500
 Uses 500 timesteps for the correlation grid.
 
-    --grid '10ps-100fs:20ps-200fs:30ps-300fs'
+    --grid '10ps-100fs:30ps-200fs:60ps-300fs'
 Uses `10ps/100fs + 20ps/200fs + 30ps/300fs = 300` points for the grid, where for the first 10ps a timestep of 100fs is used, between 10ps and 20ps a timestep of 200fs is used, and between 20ps and 30ps a timestep of 300fs is used.
 
 ---
@@ -66,7 +88,20 @@ Defines the interpolation method for both the temporal output data as well as th
 Examples:
 
     --interpolateOrder 'monotone,monotone'
-Changes the interpolation method for the correlation functions to use the Monotone Interpolation as well.
+Changes the interpolation method for the correlation functions to use the Monotone Interpolation as well. Note that to change to interpolation method for the correlation function, the interpolation method for the temporal direction also has to be defined.
 
     --interpolateOrder linear
 Changes the interpolation method for the temporal output data to use the Linear Interpolation.
+
+---
+### Logfile Output
+The program generates `logfile.log` which contains information about the input parameters as well as the calculated outputs. While general information is always logged, higher tiers of logging can be enabled, mostly for debugging purposes because the creator of this program refuses to read into actual g++ debugging :)
+
+    -L2
+This flag enables subroutine logging, meaning more information about the parameters passed into a function are output to the console and to the logfile.
+
+    -L3
+This flag enables deep logging, where all subroutines log everything they do. Soley for debugging.
+
+    -handler
+This flag enables handler outputs for the [Threadhandler](https://github.com/davidbauch/Threadhandler), an ancient project.
