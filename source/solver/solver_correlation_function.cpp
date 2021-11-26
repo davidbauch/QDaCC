@@ -1,51 +1,5 @@
 #include "solver/solver_ode.h"
 
-// DEPRECATED
-//bool QDLC::Numerics::ODESolver::scale_grid( System &s, Dense &cache, std::vector<std::vector<QDLC::SaveScalar>> &cache_noneq ) {
-//    Log::L2( "Scaling grid... " );
-//#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
-//    for ( size_t i = 0; i < cache_noneq.size(); i++ ) {
-//        // Interpolant for real and imag of cache.at(i)
-//        // fill cache(i,j) with evaluated interpolant
-//        std::vector<double> real, imag, times;
-//        Interpolant interpolant_real, interpolant_imag;
-//        real.reserve( cache_noneq.size() );
-//        imag.reserve( cache_noneq.size() );
-//        times.reserve( cache_noneq.size() );
-//        for ( size_t j = 0; j < cache_noneq.size(); j++ ) {
-//            if ( i < cache_noneq.at( j ).size() ) {
-//                real.emplace_back( std::real( cache_noneq.at( j ).at( i ).scalar ) );
-//                imag.emplace_back( std::imag( cache_noneq.at( j ).at( i ).scalar ) );
-//                times.emplace_back( cache_noneq.at( j ).at( i ).t );
-//            } else {
-//                break;
-//            }
-//        }
-//
-//        if ( real.size() > 1 ) {
-//            interpolant_real = Interpolant( times, real, "linear" );
-//            interpolant_imag = Interpolant( times, imag, "linear" );
-//        }
-//
-//        Scalar scalar;
-//        for ( size_t i = 0; i < dim; i++ ) {
-//            for ( size_t j = 0; j < dim; j++ ) {
-//                if ( i + j >= dim ) {
-//                    break;
-//                }
-//                double t = ( (double)j ) * s.parameters.t_step;
-//                if ( real.size() > 1 )
-//                    scalar = Scalar( interpolant_real.evaluate( t ), interpolant_imag.evaluate( t ) );
-//                else
-//                    scalar = Scalar( real.front(), imag.front() );
-//                cache( j, i ) = scalar;
-//            }
-//        }
-//    }
-//    Log::L2( "Done!\n" );
-//    return true;
-//}
-
 double QDLC::Numerics::get_tdelta(const Dense& gmat_time, size_t fixed_index, size_t var_index) {
     return var_index == 0 ? std::real(gmat_time(var_index+1,fixed_index) - gmat_time(var_index,fixed_index)) : std::real(gmat_time(var_index,fixed_index) - gmat_time(var_index-1,fixed_index));
 }
@@ -96,6 +50,8 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
         Sparse rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
         // Calculate Runge Kutta
         calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, progressstring, s, savedRhos, false );
+        // Interpolate saved states to equidistant timestep
+        savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
         for ( size_t j = 0; j < savedRhos.size() and i+j < matdim; j++ ) {
             double t_tau = savedRhos.at( j ).t;
             gmat( i , j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, op_creator, t_tau );
@@ -148,6 +104,8 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
         Sparse rho_tau = s.dgl_calc_rhotau_2( getRhoAt( i ), op_annihilator_2, op_creator_1, t_t );
         // Calculate Runge Kutta
         calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, progressstring, s, savedRhos, false );
+        // Interpolate saved states to equidistant timestep
+        savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
         for ( size_t j = 0; j < savedRhos.size() and i+j < matdim; j++ ) {
             double t_tau = savedRhos.at( j ).t;
             gmat( i , j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, evalOperator, t_tau );
