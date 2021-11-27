@@ -242,11 +242,10 @@ Calculating the emission spectra for the resonator mode `h`, the radiative trans
 
 ## Single Photon Indistinguishability and Visibility
 The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%E2%80%93Ou%E2%80%93Mandel_effect) is a figure of merit for the consistentcy and quality of a single photon source. The indistinguishability is calculated [via](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.045309)  
-<img src="https://bit.ly/3HZM8jt">  
-
-<img src="https://render.githubusercontent.com/render/math?math=\mathcal{I}_{i} = 1-p_{c,i} = 1-\frac{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t} 2G_{\text{HOM},i}^{(2)}(t,t')dt'dt}{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t}\left( 2G_{\text{pop},i}^{(2)}(t,t')- \abs{\ev{\hat{a}_i(t+t')} \ev{\hat{a}_i^\dagger(t)}}^2 \right)dt'dt}">  
+![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BI%7D_%7Bi%7D%20%3D%201-p_%7Bc%2Ci%7D%20%3D%201-%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29dt%27dt%7D%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%5Cleft%28%202G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29-%20%7C%5Clangle%5Chat%7Ba%7D_i%28t&plus;t%27%29%5Crangle%20%5Clangle%5Chat%7Ba%7D_i%5E%5Cdagger%28t%29%5Crangle%7C%5E2%20%5Cright%29dt%27dt%7D)
+<img src="https://render.githubusercontent.com/render/math?math=\mathcal{I}_{i} = 1-p_{c,i} = 1-\frac{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t} 2G_{\text{HOM},i}^{(2)}(t,t')dt'dt}{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t}\left( 2G_{\text{pop},i}^{(2)}(t,t')- |\ev{\hat{a}_i(t+t')} \ev{\hat{a}_i^\dagger(t)}|^2 \right)dt'dt}">  
 with  
-<img src="https://render.githubusercontent.com/render/math?math=G_{\text{HOM},i}^{(2)}(t,t') = \frac{1}{2}\left( G_{\text{pop},i}^{(2)}(t,t') \right.\nonumber\\&+ \left.G^{(2)}_{i,i}(t,t') - \abs{G_i^{(1)}(t,t')}^2 \right)">  
+<img src="https://render.githubusercontent.com/render/math?math=G_{\text{HOM},i}^{(2)}(t,t') = \frac{1}{2}\left( G_{\text{pop},i}^{(2)}(t,t') \right.\nonumber\\&+ \left.G^{(2)}_{i,i}(t,t') - |G_i^{(1)}(t,t')|^2 \right)">  
 and  
 <img src="https://render.githubusercontent.com/render/math?math=G_{\text{pop},i}^{(2)} = \ev{\hat{b}_i^\dagger\hat{b}_i}(t)\ev{\hat{b}_i^\dagger\hat{b}_i}(t+t')">.
 
