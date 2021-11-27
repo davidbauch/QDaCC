@@ -189,13 +189,13 @@ Use a timestep of `200fs`. If no `--tend [END]` is provided, the calculation wil
 ## Correlation functions
 Two different types of correlation functions can be evaluated: `G1(t,tau)` and `G2(t,tau)`. From these two, quantum properties such as the `indistinguishability` or the `two-photon concurrence` can be evaluated. If the evaluation of any property that needs either G1 or G2 is provided, the correlation functions are calculated automatically. In this case, explicitely specifying to calculate the corresponding G1 or G2 functions is not neccessary. If the output of the corresponding function is needed, specification becomes neccessary again.
 
-The G1 function is calculated via  
-![G1function](http://www.sciweavers.org/tex2img.php?eq=G_i%5E%7B%281%29%7D%28t%2Ct%27%29%20%26%3D%5CTr%7B%5Crho%27%28t%27%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29%7D%20%5Clabel%7Beqn%3Ag1%7D%20%5Ctext%7B%20with%20%7D%20%5Crho%27%280%29%20%3D%20%5Chat%7Bb%7D_i%280%29%5Crho%28t%29&bc=Transparent&fc=Black&im=png&fs=12&ff=cmbright&edit=0)
+The G1 function is calculated via 
+$G_i^{(1)}(t,t') =\text{Tr}{\rho'(t')\hat{b}_i^\dagger(0)}$ with $\rho'(0) = \hat{b}_i(0)\rho(t)$
 
-The G2 function is calculated via  
-![G1function](http://www.sciweavers.org/tex2img.php?eq=G_%7Bi%2Cj%7D%5E%7B%282%29%7D%28t%2Ct%27%29%20%3D%20%5CTr%7B%5Crho%27%28t%27%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29%5Chat%7Bb%7D_j%280%29%7D%5Ctext%7B%20with%20%7D%5Crho%27%280%29%20%3D%20%5Chat%7Bb%7D_j%280%29%5Crho%28t%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29&bc=Transparent&fc=Black&im=png&fs=12&ff=cmbright&edit=0)
+The G2 function is calculated via 
+$G_{i,j}^{(2)}(t,t') = \text{Tr}{\rho'(t')\hat{b}_i^\dagger(0)\hat{b}_j(0)}$ with $\rho'(0) = \hat{b}_j(0)\rho(t)\hat{b}_i^\dagger(0)$
 
-The general Syntax for both functions read:
+The general Syntax for both functions reads:
 
     --GF [Modes:Orders:Integration]
 The parameters read as follows:
