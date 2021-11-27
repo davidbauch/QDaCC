@@ -189,11 +189,11 @@ Use a timestep of `200fs`. If no `--tend [END]` is provided, the calculation wil
 ## Correlation functions
 Two different types of correlation functions can be evaluated: `G1(t,tau)` and `G2(t,tau)`. From these two, quantum properties such as the `indistinguishability` or the `two-photon concurrence` can be evaluated. If the evaluation of any property that needs either G1 or G2 is provided, the correlation functions are calculated automatically. In this case, explicitely specifying to calculate the corresponding G1 or G2 functions is not neccessary. If the output of the corresponding function is needed, specification becomes neccessary again.
 
-The G1 function is calculated via 
-$G_i^{(1)}(t,t') =\text{Tr}{\rho'(t')\hat{b}_i^\dagger(0)}$ with $\rho'(0) = \hat{b}_i(0)\rho(t)$
+The G1 function is calculated via  
+<img src="https://render.githubusercontent.com/render/math?math=G_i^{(1)}(t,t') =\text{Tr}{\rho'(t')\hat{b}_i^\dagger(0)}$ with $\rho'(0) = \hat{b}_i(0)\rho(t)">.
 
-The G2 function is calculated via 
-$G_{i,j}^{(2)}(t,t') = \text{Tr}{\rho'(t')\hat{b}_i^\dagger(0)\hat{b}_j(0)}$ with $\rho'(0) = \hat{b}_j(0)\rho(t)\hat{b}_i^\dagger(0)$
+The G2 function is calculated via  
+<img src="https://render.githubusercontent.com/render/math?math=G_{i,j}^{(2)}(t,t') = \text{Tr}{\rho'(t')\hat{b}_i^\dagger(0)\hat{b}_j(0)}$ with $\rho'(0) = \hat{b}_j(0)\rho(t)\hat{b}_i^\dagger(0)">.
 
 The general Syntax for both functions reads:
 
@@ -218,7 +218,7 @@ Calculating the G1 and G2 functions for the resonator mode `h`.
 
 ## Emission Spectrum
 The emission characteristics of any transition can be calculated by using the [Eberly-Wodkiewicz](https://www.osapublishing.org/josa/abstract.cfm?uri=josa-67-9-1252) Spectrum and is calculated via 
-$\mathcal{S}_i(t_\text{max},\omega) = \Re \int_{0}^{t_\text{max}}\int_0^{t_\text{max}-t}G_i^{(1)}(t,t')e^{-i\omega t'}\text{d}t'\text{d}t$.
+<img src="https://render.githubusercontent.com/render/math?math=\mathcal{S}_i(t_\text{max},\omega) = \Re \int_{0}^{t_\text{max}}\int_0^{t_\text{max}-t}G_i^{(1)}(t,t')e^{-i\omega t'}\text{d}t'\text{d}t">.
 
 If the neccessary `G1` function is not yet available, it will be calculated automatically. The fourier transformation is brute-forced for a set number of points. The general syntax for spectrum calculation reads:
 
@@ -228,7 +228,7 @@ The parameters read as follows:
 - `Mode` : Comma sperated list of resonator modes or electronic transitions or any superposition of any of the available transitions. Multiple transitions can be added using the `+` operator.
 - `Center` : Comma sperated list of spectral centers for the Fourier transformation of the corresponding mode. This parameter supports the Units of Energy.
 - `Range` : Comma sperated list of spectral ranges for the Fourier transformation of the corresponding mode. This paramter suppports the Units of Energy.
-- `Points` : Number of points the Fourier transformation should be avaluated on. The $d\omega$ step of the integral is then determined by $d\omega=2\omega_\text{Range}/N_\text{Points}$.
+- `Points` : Number of points the Fourier transformation should be avaluated on. The `dw` step of the integral is then determined by `dw=2w_Range/N_Points`.
 
 Examples:
 
@@ -240,12 +240,38 @@ Calculating the emission spectra for the resonator mode `h`, the radiative trans
 
 ---
 
-## Single Photon Indistinguishability
-<img src="https://render.githubusercontent.com/render/math?math=e^{i \pi} = -1">
+## Single Photon Indistinguishability and Visibility
+The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%E2%80%93Ou%E2%80%93Mandel_effect) is a figure of merit for the consistentcy and quality of a single photon source. The indistinguishability is calculated [via](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.045309)  
+<img src="https://render.githubusercontent.com/render/math?math=\mathcal{I}_{i} = 1-p_{c,i} = 1-\frac{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t} 2G_{\text{HOM},i}^{(2)}(t,t')dt'dt}{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t}\left( 2G_{\text{pop},i}^{(2)}(t,t')- \abs{\ev{\hat{a}_i(t+t')} \ev{\hat{a}_i^\dagger(t)}}^2 \right)dt'dt}">  
+with  
+<img src="https://render.githubusercontent.com/render/math?math=G_{\text{HOM},i}^{(2)}(t,t') = \frac{1}{2}\left( G_{\text{pop},i}^{(2)}(t,t') \right.\nonumber\\&+ \left.G^{(2)}_{i,i}(t,t') - \abs{G_i^{(1)}(t,t')}^2 \right)">  
+and  
+<img src="https://render.githubusercontent.com/render/math?math=G_{\text{pop},i}^{(2)} = \ev{\hat{b}_i^\dagger\hat{b}_i}(t)\ev{\hat{b}_i^\dagger\hat{b}_i}(t+t')">.
+
+The single photon visibility is a more simple figure of merit for the photon quality and is calculated [via](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.125.233605)    
+<img src="https://render.githubusercontent.com/render/math?math=\mathcal{v}_{i} = \frac{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t} 2|G_{i}^{(1)}(t,t')|^2\text{d}t'\text{d}t}{\left(\int_0^{t_\text{max}}\ev{\hat{a}^\dagger_i(t)\hat{a}_i(t)}\text{d}t\right)^2}">.  
+
+If any of the neccessary `G1` or `G2` correlation function was not yet available, it will be automatically calculated. The general syntax reads:
+
+    --GI [Modes]
+
+The parameters read as follows:
+- `Modes` : Comma seperated list of modes to calculate both the indistinguishability as well as the visibility for.
+
+Since both properties require at least `G1(t,tau)`, they can always both be calculated without significantly increasing the required calculation times.
+
+Examples:
+
+    --GI 'h'
+Calculate both properties for a single resonator mode `h`.
+
+    --GI 'h,GH,h+GH'
+Calculate both properties for the resonator mode `h`, the radiative transition `GH` and the superposition of both.
 
 ## Two-Photon Concurrence - Measurement for the entanglement of two transitions
 
 ## Wigner Function
+<img src="https://render.githubusercontent.com/render/math?math=1+1">
 
 ---
 ---
