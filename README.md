@@ -204,7 +204,7 @@ The parameters read as follows:
 - `Orders` : Comma sperated list of the order corresponding to the specified mode.
 - `Integration` : `0` for the `G(t,tau)` function, `1` for both the `t` and `tau` integrated functions and `2` for both. Note that the `G(t,tau)` output will be a possibly giant matrix resulting in filesizes of several hundreds of megabytes.
 
-To specify the resolution for the G1 and G2 grid, see `Numerical Parameters` -> `Grid Resolution`
+To specify the resolution for the `G1` and `G2` grid, see `Numerical Parameters` -> `Grid Resolution`
 
 Examples:
 
@@ -214,9 +214,34 @@ Calculating the G1 functions for the resonator mode `h` and the radiative electr
     --GF 'h,h:1,2:2:2'
 Calculating the G1 and G2 functions for the resonator mode `h`.
 
+---
+
 ## Emission Spectrum
+The emission characteristics of any transition can be calculated by using the [Eberly-Wodkiewicz](https://www.osapublishing.org/josa/abstract.cfm?uri=josa-67-9-1252) Spectrum and is calculated via 
+$\mathcal{S}_i(t_\text{max},\omega) = \Re \int_{0}^{t_\text{max}}\int_0^{t_\text{max}-t}G_i^{(1)}(t,t')e^{-i\omega t'}\text{d}t'\text{d}t$.
+
+If the neccessary `G1` function is not yet available, it will be calculated automatically. The fourier transformation is brute-forced for a set number of points. The general syntax for spectrum calculation reads:
+
+    --GS [Mode:Center:Resolution:Points]
+
+The parameters read as follows:
+- `Mode` : Comma sperated list of resonator modes or electronic transitions or any superposition of any of the available transitions. Multiple transitions can be added using the `+` operator.
+- `Center` : Comma sperated list of spectral centers for the Fourier transformation of the corresponding mode. This parameter supports the Units of Energy.
+- `Range` : Comma sperated list of spectral ranges for the Fourier transformation of the corresponding mode. This paramter suppports the Units of Energy.
+- `Points` : Number of points the Fourier transformation should be avaluated on. The $d\omega$ step of the integral is then determined by $d\omega=2\omega_\text{Range}/N_\text{Points}$.
+
+Examples:
+
+    --GS 'h:1.5eV:500mueV:1000'
+Calculating the emission spectrum for the resonator mode `h` centered around `1.5meV` expanding for `500mueV` in both directions. The Fourier transformation is evaluated for `1000` points, resulting in $d\omega=1\mu eV$.
+
+    --GS 'h,GX,h+GX:1.5eV,1.5eV,1.5eV:1meV,1meV,1meV:2000,2000,2000'
+Calculating the emission spectra for the resonator mode `h`, the radiative transition `GX` and the superposition of both `h+GX` using the same parameters as before.
+
+---
 
 ## Single Photon Indistinguishability
+<img src="https://render.githubusercontent.com/render/math?math=e^{i \pi} = -1">
 
 ## Two-Photon Concurrence - Measurement for the entanglement of two transitions
 
