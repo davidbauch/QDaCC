@@ -242,7 +242,7 @@ Calculating the emission spectra for the resonator mode `h`, the radiative trans
 
 ## Single Photon Indistinguishability and Visibility
 The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%E2%80%93Ou%E2%80%93Mandel_effect) is a figure of merit for the consistentcy and quality of a single photon source. The indistinguishability is calculated [via](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.045309)  
-<img src="http://www.sciweavers.org/tex2img.php?eq=%5Cmathcal%7BI%7D_%7Bi%7D%20%3D%201-p_%7Bc%2Ci%7D%20%3D%201-%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29dt%27dt%7D%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%5Cleft%28%202G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29-%20%5Cabs%7B%5Cev%7B%5Chat%7Ba%7D_i%28t%2Bt%27%29%7D%20%5Cev%7B%5Chat%7Ba%7D_i%5E%5Cdagger%28t%29%7D%7D%5E2%20%5Cright%29dt%27dt%7D&bc=Transparent&fc=Black&im=png&fs=12&ff=cmbright&edit=0">  
+<img src="https://bit.ly/3HZM8jt">  
 <img src="https://render.githubusercontent.com/render/math?math=\mathcal{I}_{i} = 1-p_{c,i} = 1-\frac{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t} 2G_{\text{HOM},i}^{(2)}(t,t')dt'dt}{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t}\left( 2G_{\text{pop},i}^{(2)}(t,t')- \abs{\ev{\hat{a}_i(t+t')} \ev{\hat{a}_i^\dagger(t)}}^2 \right)dt'dt}">  
 with  
 <img src="https://render.githubusercontent.com/render/math?math=G_{\text{HOM},i}^{(2)}(t,t') = \frac{1}{2}\left( G_{\text{pop},i}^{(2)}(t,t') \right.\nonumber\\&+ \left.G^{(2)}_{i,i}(t,t') - \abs{G_i^{(1)}(t,t')}^2 \right)">  
