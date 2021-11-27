@@ -243,6 +243,7 @@ Calculating the emission spectra for the resonator mode `h`, the radiative trans
 ## Single Photon Indistinguishability and Visibility
 The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%E2%80%93Ou%E2%80%93Mandel_effect) is a figure of merit for the consistentcy and quality of a single photon source. The indistinguishability is calculated [via](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.045309)  
 <img src="https://bit.ly/3HZM8jt">  
+
 <img src="https://render.githubusercontent.com/render/math?math=\mathcal{I}_{i} = 1-p_{c,i} = 1-\frac{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t} 2G_{\text{HOM},i}^{(2)}(t,t')dt'dt}{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t}\left( 2G_{\text{pop},i}^{(2)}(t,t')- \abs{\ev{\hat{a}_i(t+t')} \ev{\hat{a}_i^\dagger(t)}}^2 \right)dt'dt}">  
 with  
 <img src="https://render.githubusercontent.com/render/math?math=G_{\text{HOM},i}^{(2)}(t,t') = \frac{1}{2}\left( G_{\text{pop},i}^{(2)}(t,t') \right.\nonumber\\&+ \left.G^{(2)}_{i,i}(t,t') - \abs{G_i^{(1)}(t,t')}^2 \right)">  
