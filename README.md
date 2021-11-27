@@ -190,10 +190,10 @@ Use a timestep of `200fs`. If no `--tend [END]` is provided, the calculation wil
 Two different types of correlation functions can be evaluated: `G1(t,tau)` and `G2(t,tau)`. From these two, quantum properties such as the `indistinguishability` or the `two-photon concurrence` can be evaluated. If the evaluation of any property that needs either G1 or G2 is provided, the correlation functions are calculated automatically. In this case, explicitely specifying to calculate the corresponding G1 or G2 functions is not neccessary. If the output of the corresponding function is needed, specification becomes neccessary again.
 
 The G1 function is calculated via  
-<img src="https://render.githubusercontent.com/render/math?math=G_i^{(1)}(t,t') =\text{Tr}{\rho'(t')\hat{b}_i^\dagger(0)}$ with $\rho'(0) = \hat{b}_i(0)\rho(t)">.
+![](https://latex.codecogs.com/svg.latex?G_i%5E%7B%281%29%7D%28t%2Ct%27%29%20%3D%5Ctext%7BTr%7D%5B%7B%5Crho%27%28t%27%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29%7D%5D%5Ctext%7B%20with%20%7D%5Crho%27%280%29%20%3D%20%5Chat%7Bb%7D_i%280%29%5Crho%28t%29).
 
 The G2 function is calculated via  
-<img src="https://render.githubusercontent.com/render/math?math=G_{i,j}^{(2)}(t,t') = \text{Tr}{\rho'(t')\hat{b}_i^\dagger(0)\hat{b}_j(0)}$ with $\rho'(0) = \hat{b}_j(0)\rho(t)\hat{b}_i^\dagger(0)">.
+![](https://latex.codecogs.com/svg.latex?G_%7Bi%2Cj%7D%5E%7B%282%29%7D%28t%2Ct%27%29%20%3D%20%5Ctext%7BTr%7D%5B%7B%5Crho%27%28t%27%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29%5Chat%7Bb%7D_j%280%29%7D%5D%5Ctext%7B%20with%20%7D%5Crho%27%280%29%20%3D%20%5Chat%7Bb%7D_j%280%29%5Crho%28t%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29).
 
 The general Syntax for both functions reads:
 
@@ -217,8 +217,8 @@ Calculating the G1 and G2 functions for the resonator mode `h`.
 ---
 
 ## Emission Spectrum
-The emission characteristics of any transition can be calculated by using the [Eberly-Wodkiewicz](https://www.osapublishing.org/josa/abstract.cfm?uri=josa-67-9-1252) Spectrum and is calculated via 
-<img src="https://render.githubusercontent.com/render/math?math=\mathcal{S}_i(t_\text{max},\omega) = \Re \int_{0}^{t_\text{max}}\int_0^{t_\text{max}-t}G_i^{(1)}(t,t')e^{-i\omega t'}\text{d}t'\text{d}t">.
+The emission characteristics of any transition can be calculated by using the [Eberly-Wodkiewicz](https://www.osapublishing.org/josa/abstract.cfm?uri=josa-67-9-1252) Spectrum and is calculated via  
+![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BS%7D_i%28t_%5Ctext%7Bmax%7D%2C%5Comega%29%20%3D%20%5CRe%20%5Cint_%7B0%7D%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D-t%7DG_i%5E%7B%281%29%7D%28t%2Ct%27%29e%5E%7B-i%5Comega%20t%27%7D%5Ctext%7Bd%7Dt%27%5Ctext%7Bd%7Dt).
 
 If the neccessary `G1` function is not yet available, it will be calculated automatically. The fourier transformation is brute-forced for a set number of points. The general syntax for spectrum calculation reads:
 
@@ -242,15 +242,14 @@ Calculating the emission spectra for the resonator mode `h`, the radiative trans
 
 ## Single Photon Indistinguishability and Visibility
 The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%E2%80%93Ou%E2%80%93Mandel_effect) is a figure of merit for the consistentcy and quality of a single photon source. The indistinguishability is calculated [via](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.045309)  
-![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BI%7D_%7Bi%7D%20%3D%201-p_%7Bc%2Ci%7D%20%3D%201-%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29dt%27dt%7D%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%5Cleft%28%202G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29-%20%7C%5Clangle%5Chat%7Ba%7D_i%28t&plus;t%27%29%5Crangle%20%5Clangle%5Chat%7Ba%7D_i%5E%5Cdagger%28t%29%5Crangle%7C%5E2%20%5Cright%29dt%27dt%7D)
-<img src="https://render.githubusercontent.com/render/math?math=\mathcal{I}_{i} = 1-p_{c,i} = 1-\frac{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t} 2G_{\text{HOM},i}^{(2)}(t,t')dt'dt}{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t}\left( 2G_{\text{pop},i}^{(2)}(t,t')- |\ev{\hat{a}_i(t+t')} \ev{\hat{a}_i^\dagger(t)}|^2 \right)dt'dt}">  
+![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BI%7D_%7Bi%7D%20%3D%201-p_%7Bc%2Ci%7D%20%3D%201-%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29dt%27dt%7D%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%5Cleft%28%202G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29-%20%7C%5Clangle%5Chat%7Ba%7D_i%28t&plus;t%27%29%5Crangle%20%5Clangle%5Chat%7Ba%7D_i%5E%5Cdagger%28t%29%5Crangle%7C%5E2%20%5Cright%29dt%27dt%7D)  
 with  
-<img src="https://render.githubusercontent.com/render/math?math=G_{\text{HOM},i}^{(2)}(t,t') = \frac{1}{2}\left( G_{\text{pop},i}^{(2)}(t,t') \right.\nonumber\\&+ \left.G^{(2)}_{i,i}(t,t') - |G_i^{(1)}(t,t')|^2 \right)">  
+![](https://latex.codecogs.com/svg.latex?G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29%20%3D%20%5Cfrac%7B1%7D%7B2%7D%5Cleft%28%20G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29&plus;G%5E%7B%282%29%7D_%7Bi%2Ci%7D%28t%2Ct%27%29%20-%20%7CG_i%5E%7B%281%29%7D%28t%2Ct%27%29%7C%5E2%20%5Cright%29)  
 and  
-<img src="https://render.githubusercontent.com/render/math?math=G_{\text{pop},i}^{(2)} = \ev{\hat{b}_i^\dagger\hat{b}_i}(t)\ev{\hat{b}_i^\dagger\hat{b}_i}(t+t')">.
+![](https://latex.codecogs.com/svg.latex?G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%20%3D%20%5Clangle%5Chat%7Bb%7D_i%5E%5Cdagger%5Chat%7Bb%7D_i%5Crangle%28t%29%5Clangle%5Chat%7Bb%7D_i%5E%5Cdagger%5Chat%7Bb%7D_i%5Crangle%28t&plus;t%27%29).
 
 The single photon visibility is a more simple figure of merit for the photon quality and is calculated [via](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.125.233605)    
-<img src="https://render.githubusercontent.com/render/math?math=\mathcal{v}_{i} = \frac{\int_0^{t_\text{max}}\int_0^{{t_\text{max}}-t} 2|G_{i}^{(1)}(t,t')|^2\text{d}t'\text{d}t}{\left(\int_0^{t_\text{max}}\ev{\hat{a}^\dagger_i(t)\hat{a}_i(t)}\text{d}t\right)^2}">.  
+![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BV%7D_%7Bi%7D%20%3D%20%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202%7CG_%7Bi%7D%5E%7B%281%29%7D%28t%2Ct%27%29%7C%5E2%5Ctext%7Bd%7Dt%27%5Ctext%7Bd%7Dt%7D%7B%5Cleft%28%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Clangle%5Chat%7Ba%7D%5E%5Cdagger_i%28t%29%5Chat%7Ba%7D_i%28t%29%5Crangle%5Ctext%7Bd%7Dt%5Cright%29%5E2%7D).  
 
 If any of the neccessary `G1` or `G2` correlation function was not yet available, it will be automatically calculated. The general syntax reads:
 
