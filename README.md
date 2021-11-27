@@ -258,12 +258,12 @@ The single photon visibility is a more simple figure of merit for the photon qua
 
 ![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BV%7D_%7Bi%7D%20%3D%20%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202%7CG_%7Bi%7D%5E%7B%281%29%7D%28t%2Ct%27%29%7C%5E2%5Ctext%7Bd%7Dt%27%5Ctext%7Bd%7Dt%7D%7B%5Cleft%28%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Clangle%5Chat%7Ba%7D%5E%5Cdagger_i%28t%29%5Chat%7Ba%7D_i%28t%29%5Crangle%5Ctext%7Bd%7Dt%5Cright%29%5E2%7D).  
 
-If any of the neccessary `G1` or `G2` correlation function was not yet available, it will be automatically calculated. The general syntax reads:
+If any of the neccessary `G1` or `G2` correlation functions is not yet available, it will be automatically calculated. The general syntax reads:
 
     --GI [Modes]
 
 The parameters read as follows:
-- `Modes` : Comma seperated list of modes to calculate both the indistinguishability as well as the visibility for.
+- `Modes` : Comma seperated list of modes to calculate both the indistinguishability as well as the visibility for. The superposition of multiple modes can be calculated using the `+` operator.
 
 Since both properties require at least `G1(t,tau)`, they can always both be calculated without significantly increasing the required calculation times.
 
@@ -281,18 +281,32 @@ The [Two-Photon Concurrence](https://journals.aps.org/prl/abstract/10.1103/PhysR
 
 The Two-Photon Matrix results in  
 
-![](https://latex.codecogs.com/svg.latex?%5Crho_%5Ctext%7B2phot%7D%3D%5Cbegin%7Bbmatrix%7D%5Crho_%7Biiii%7D%20%26%200%20%26%200%20%26%20%5Crho_%7Biijj%7D%20%5Ccr%200%20%26%20%5Crho_%7Bijij%7D%20%26%20%5Crho_%7Bijji%7D%20%26%200%20%5Ccr%200%20%26%20%5Crho_%7Bjiij%7D%20%26%20%5Crho%5E*_%7Bijij%7D%20%26%200%20%5Ccr%20%5Crho%5E*_%7Biijj%7D%20%26%200%20%26%200%20%26%20%5Crho_%7Bjjjj%7D%5Cend%7Bbmatrix%7D%20%5Ctext%7B%20with%20%7D%20%5Crho_%7Bijkl%7D%20%3D%20%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D-t%7DG_%7Bij%2Ckl%7D%5E%7B%282%29%7D%28t%2Ct%27%29%5Ctext%7Bd%7Dt%27%5Ctext%7Bd%7Dt)
+![](https://latex.codecogs.com/svg.latex?%5Crho_%5Ctext%7B2phot%7D%3D%5Cbegin%7Bbmatrix%7D%5Crho_%7Biiii%7D%20%26%200%20%26%200%20%26%20%5Crho_%7Biijj%7D%20%5Ccr%200%20%26%20%5Crho_%7Bijij%7D%20%26%20%5Crho_%7Bijji%7D%20%26%200%20%5Ccr%200%20%26%20%5Crho_%7Bjiij%7D%20%26%20%5Crho%5E*_%7Bijij%7D%20%26%200%20%5Ccr%20%5Crho%5E*_%7Biijj%7D%20%26%200%20%26%200%20%26%20%5Crho_%7Bjjjj%7D%5Cend%7Bbmatrix%7D%20%5Ctext%7B%20with%20%7D%20%5Crho_%7Bijkl%7D%20%3D%20%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D-t%7DG_%7Bij%2Ckl%7D%5E%7B%282%29%7D%28t%2Ct%27%29%5Ctext%7Bd%7Dt%27%5Ctext%7Bd%7Dt)  
 
 Because of symmetry of the operators, only 6 of the 8 `G2` functions have to be calculated. The concurrence is then evaluated by calculating the Eigenvalues of  
 
-![](https://latex.codecogs.com/svg.latex?R%3D%5Csqrt%7B%5Csqrt%7B%5Crho_%5Ctext%7B2ph%7D%7D%28%5Csigma_y%20%5Cotimes%20%5Csigma_y%29%5Crho_%5Ctext%7B2ph%7D%5E*%28%5Csigma_y%20%5Cotimes%20%5Csigma_y%29%5Csqrt%7B%5Crho_%5Ctext%7B2ph%7D%7D%7D)
+![](https://latex.codecogs.com/svg.latex?R%3D%5Csqrt%7B%5Csqrt%7B%5Crho_%5Ctext%7B2ph%7D%7D%28%5Csigma_y%20%5Cotimes%20%5Csigma_y%29%5Crho_%5Ctext%7B2ph%7D%5E*%28%5Csigma_y%20%5Cotimes%20%5Csigma_y%29%5Csqrt%7B%5Crho_%5Ctext%7B2ph%7D%7D%7D)  
 
 where
 
-![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BC%7D%20%3D%20%5Ctext%7Bmax%7D%5Cleft%5C%7B%7B0%2C%5Clambda_4-%5Clambda_3-%5Clambda_2-%5Clambda_1%7D%5Cright%5C%7D%20%5Ctext%7B%20with%20%7D%20%5Clambda_i%20%5Ctext%7B%20%5Ctextit%7Bi%7D%27th%20Eigenvalue%20of%20%7D%20R)
+![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BC%7D%20%3D%20%5Ctext%7Bmax%7D%5Cleft%5C%7B%7B0%2C%5Clambda_4-%5Clambda_3-%5Clambda_2-%5Clambda_1%7D%5Cright%5C%7D%20%5Ctext%7B%20with%20%7D%20%5Clambda_i%20%5Ctext%7B%20%5Ctextit%7Bi%7D%27th%20Eigenvalue%20of%20%7D%20R)  
+
+If any of the neccessary `G2` correlation functions is not yet available, it will be automatically calculated. Note that if the Hilbert space of the system does not allow `G2` to be non-zero (e.g only a single photon allowed in a resonator mode), the concurrence will be undefined. The general syntax reads:
+
+    --GC [Mode1-Mode2]
+
+The parameters read as follows:
+- `Mode1-Mode2` : Comma seperated list of modes. Two modes are connected using the `-` operator, indicating the Concurrence between those two modes is calculated. The superposition of multiple modes can be calculated using the `+` operator.
+
+Examples:
+
+    --GC 'h-v'
+Calculating the concurrence for the two resonator modes of the polarization dependent biexciton.
+
+    --GC 'h+GH+HZ-v+GV+VZ'
+Calculating the concurrence for every cavity or radiative mode of the polarization dependent biexciton.
 
 ## Wigner Function
-<img src="https://render.githubusercontent.com/render/math?math=1+1">
 
 ---
 ---
