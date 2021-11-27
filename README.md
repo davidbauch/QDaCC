@@ -48,7 +48,7 @@ Example:
 ## System Parameters
 The program accepts two types of systems which will be transformed into a total system by using the tensor product of the single bases. A single electronic system can be tensored with multiple optical systems, where every electronic transition can be coupled to any optical system.
 
-### Electronic Sytem
+### Electronic Sytem - Fermionic States
 The general syntax for a system with a single electronic state reads:
     
     --SE [...;Name:Energy:CoupledTo:DecayScaling:DephasingScaling:PhononCoupling;...]
@@ -67,7 +67,7 @@ Example:
 - Ground State `Name = G` with `Energy = 0`. The groundstate cannot decay radiatively, such that `DecayScaling = 0`. Because the phase relation of this and other states can decay, `DephasingScaling = 1`. This state should not be influenced by phonons with `PhononCoupling = 0`.
 - Excited State  `Name = X` with `Energy = 1.5eV`. The excited state can decay radiatively, with `DecayScaling = 1`. Because the phase relation of this and other states can decay, `DephasingScaling = 1`. This state is affected by electron-phonon coupling, hence `PhononCoupling = 1`.
 
-### Photonic System
+### Photonic System - Bosonic Cavity Resonator
 The general syntax for a system with a single optical resonator reads:
 
     --SO [...;Name:Energy:MaxPhotons:CoupledToTransition:CouplingScaling:DecayScaling;...]
@@ -101,7 +101,7 @@ Example:
 `--SE 'G:0:H,V:0:1:0;H:1.5001eV:Z:1:1:1;V:1.4999eV:Z:1:1:1;Z:2.98eV:-:1:1:1'`
 `--SO 'h:1.5eV:2:GH,HZ:1,1:1;v:1.5eV:2:GV,VZ:1,1:1;k:1.48eV:2:GH,HZ:1,1:1;l:1.48eV:2:GV,VZ:1,1:1'`
 
-### Optical Pulse
+### Optical Pulse - Optical Driving of the electronic or optical transitions
 The electronic states as well as the resonator modes can be driven by an optical pulse. The general syntax reads:
 
     --SP '[...;Name:CoupledToTransition:Amp:Freq:Width:Center:Chirp:Type(:GaussAmp);...]'
@@ -137,7 +137,27 @@ Two pulses for different electronic transitions for the three level system.
 A continuous wave pulse with an amplitude of `Amp = 0.15meV`, frequency `Freq = 1.5eV` driving the resonator `h`. Make sure `h` actually exists as a resonator, or the program will crash. The `Center = 69fs` equals a phase shift relative to zero.
 
 ### Electronic Chirp - Temporal Detuning of the electronic states
-...
+The energy of the electronic states can be shifted over time by the electronic chirp. The general syntax reads:
+
+    --SC [...;Name:CoupledTo:AmpFactors:Amps:Times:DDTs:Type;...]
+Multiple levels can be changed by the same chirp, and multiple chirps can be chained using the chain operator `;`. The parameters read as follows:
+
+- `Name` : **Single Lowercase** Character indentifier. **Must** be unique.
+- `CoupledTo` : Comma seperated list of uppercase electronic state identifiers this chirp should influence.
+- `AmpFactors` : Comma seperated list of scaling factors for the identifiers listet prior.
+- `Amps` : Comma seperated list of amplitudes.
+- `Times` : Comma seperated list of times.
+- `DDTs` : Comma sperated list of derivatives. This list of parameters is only used if `hermite` is chosen as the chirp generation method.
+- `Type` : Type of chirp, can be one of the following: `linear`, `spline`, `monotone` and `hermite`, which is the interpolation method the chirp class uses to generate curves from the initial points specified.
+
+
+Examples:
+
+    --SC 'c:X:1:0,1meV,0,0:50ps,100ps,150ps,200ps:0,0,0,0:monotone'
+A chirp for a single state `CoupledTo = X` with an amplitude scaling of `AmpFactors = 1`. The curve will follow the list of points provided using a monotone interpolation method.
+
+    --SC 'c:H,V,Z:1,1,2:0,1meV,0,0:50ps,100ps,150ps,200ps:0,0,0,0:monotone'
+The same chirp but for the biexciton system. The two single excitons are shifted with factor `1`, while the biexciton shifts twice with factor `2` because of its energy definition.
 
 ---
 
@@ -163,6 +183,44 @@ Calculate from `0` to `2ns` using a timestep of `100fs`.
 
     --tstep 200fs
 Use a timestep of `200fs`. If no `--tend [END]` is provided, the calculation will continue until the system is converged in its ground state. **Caution**: If the groundstate can never be reached, the program will fail to terminate.
+
+---
+
+## Correlation functions
+Two different types of correlation functions can be evaluated: `G1(t,tau)` and `G2(t,tau)`. From these two, quantum properties such as the `indistinguishability` or the `two-photon concurrence` can be evaluated. If the evaluation of any property that needs either G1 or G2 is provided, the correlation functions are calculated automatically. In this case, explicitely specifying to calculate the corresponding G1 or G2 functions is not neccessary. If the output of the corresponding function is needed, specification becomes neccessary again.
+
+The G1 function is calculated via  
+![G1function](http://www.sciweavers.org/tex2img.php?eq=G_i%5E%7B%281%29%7D%28t%2Ct%27%29%20%26%3D%5CTr%7B%5Crho%27%28t%27%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29%7D%20%5Clabel%7Beqn%3Ag1%7D%20%5Ctext%7B%20with%20%7D%20%5Crho%27%280%29%20%3D%20%5Chat%7Bb%7D_i%280%29%5Crho%28t%29&bc=Transparent&fc=Black&im=png&fs=12&ff=cmbright&edit=0)
+
+The G2 function is calculated via  
+![G1function](http://www.sciweavers.org/tex2img.php?eq=G_%7Bi%2Cj%7D%5E%7B%282%29%7D%28t%2Ct%27%29%20%3D%20%5CTr%7B%5Crho%27%28t%27%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29%5Chat%7Bb%7D_j%280%29%7D%5Ctext%7B%20with%20%7D%5Crho%27%280%29%20%3D%20%5Chat%7Bb%7D_j%280%29%5Crho%28t%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29&bc=Transparent&fc=Black&im=png&fs=12&ff=cmbright&edit=0)
+
+The general Syntax for both functions read:
+
+    --GF [Modes:Orders:Integration]
+The parameters read as follows:
+
+- `Modes` : Comma sperated list of modes to calculate the function for. Miltiple transitions can be combined via the `+` operator.
+- `Orders` : Comma sperated list of the order corresponding to the specified mode.
+- `Integration` : `0` for the `G(t,tau)` function, `1` for both the `t` and `tau` integrated functions and `2` for both. Note that the `G(t,tau)` output will be a possibly giant matrix resulting in filesizes of several hundreds of megabytes.
+
+To specify the resolution for the G1 and G2 grid, see `Numerical Parameters` -> `Grid Resolution`
+
+Examples:
+
+    --GF 'h,GX:1,1:2,2'
+Calculating the G1 functions for the resonator mode `h` and the radiative electronic mode `GX`. Both of order `1` and both output as a matrix and integrated.
+
+    --GF 'h,h:1,2:2:2'
+Calculating the G1 and G2 functions for the resonator mode `h`.
+
+## Emission Spectrum
+
+## Single Photon Indistinguishability
+
+## Two-Photon Concurrence - Measurement for the entanglement of two transitions
+
+## Wigner Function
 
 ---
 ---
