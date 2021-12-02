@@ -16,12 +16,16 @@ double QDLC::Math::Hz_to_wavelength( double hz, double scaling ) {
     return 299792458.0 * 2.0 * QDLC::Math::PI / hz * scaling;
 }
 
+double QDLC::Math::wavelength_to_Hz( double wl ) {
+    return 299792458.0 * 2.0 * QDLC::Math::PI / wl;
+}
+
 double QDLC::Math::rabiFrequency( double deltaE, double g, double n ) {
     return std::sqrt( std::pow( deltaE, 2 ) + 4. * std::pow( g, 2 ) * n );
 }
 
 double QDLC::Math::factorial( double n ) {
-    return std::tgamma( n + 1.0 );//( n == 1.0 || n == 0.0 ) ? 1.0 : QDLC::Math::factorial( n - 1.0 ) * n;
+    return std::tgamma( n + 1.0 ); //( n == 1.0 || n == 0.0 ) ? 1.0 : QDLC::Math::factorial( n - 1.0 ) * n;
 }
 
 double QDLC::Math::factorial_range( double upper, double lower ) {
@@ -32,7 +36,7 @@ double QDLC::Math::getCoherent( double alpha, double N ) {
     return std::exp( -std::pow( alpha, 2.0 ) ) * std::pow( std::pow( alpha, 2.0 ), N ) / QDLC::Math::factorial( N );
 }
 QDLC::Type::Scalar QDLC::Math::getSqueezed( double r, double phi, double N ) {
-    return 1.0 / std::sqrt( std::cosh( r ) ) * std::pow(  -std::exp( 1.0i * phi ) * std::tanh( r ) , N ) * std::sqrt( factorial_range( 2 * N, N ) * factorial( N ) ) / factorial( N ) / std::pow( 2.0, N );
+    return 1.0 / std::sqrt( std::cosh( r ) ) * std::pow( -std::exp( 1.0i * phi ) * std::tanh( r ), N ) * std::sqrt( factorial_range( 2 * N, N ) * factorial( N ) ) / factorial( N ) / std::pow( 2.0, N );
 }
 
 bool QDLC::Math::is_number( const std::string &s ) {

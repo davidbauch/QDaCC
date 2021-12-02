@@ -10,7 +10,6 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Log::L2( "[Solver] Calculating t-direction from {} to {} at stepsize {}...\n", s.parameters.t_start, s.parameters.t_end, s.parameters.t_step );
 
     // Calculate Time evolution on time vector timestamps.
-    //TODO: if pathintegral then calculate_path_integral else calculate_runge_kutta
     if ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
         calculate_path_integral( rho, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
     } else {
@@ -30,12 +29,12 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     // Interpolate savedStates if RK45 was used or grid was modified
     if ( s.parameters.numerics_rk_order > 5 )
         savedStates = Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau ); //Numerics::interpolate_curve(savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, 0);
-    
+
     // Index Map:
     for ( int i = 0; i < savedStates.size(); i++ ) {
         rho_index_map[getTimeAt( i )] = i;
     }
-    
+
     // Calculate expectation values
     Timer &evalTimer = Timers::create( "Expectation-Value-Loop" );
     evalTimer.start();

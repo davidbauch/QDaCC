@@ -1,13 +1,13 @@
 #include "solver/solver_ode.h"
 
-double QDLC::Numerics::get_tdelta(const Dense& gmat_time, size_t fixed_index, size_t var_index) {
-    return var_index == 0 ? std::real(gmat_time(var_index+1,fixed_index) - gmat_time(var_index,fixed_index)) : std::real(gmat_time(var_index,fixed_index) - gmat_time(var_index-1,fixed_index));
+double QDLC::Numerics::get_tdelta( const Dense &gmat_time, size_t fixed_index, size_t var_index ) {
+    return var_index == 0 ? std::real( gmat_time( var_index + 1, fixed_index ) - gmat_time( var_index, fixed_index ) ) : std::real( gmat_time( var_index, fixed_index ) - gmat_time( var_index - 1, fixed_index ) );
 }
-double QDLC::Numerics::get_taudelta(const Dense& gmat_time, size_t fixed_index, size_t var_index) {
-    return var_index == 0 ? std::imag(gmat_time(fixed_index,var_index+1) - gmat_time(fixed_index,var_index)) : std::imag(gmat_time(fixed_index,var_index) - gmat_time(fixed_index,var_index-1));
+double QDLC::Numerics::get_taudelta( const Dense &gmat_time, size_t fixed_index, size_t var_index ) {
+    return var_index == 0 ? std::imag( gmat_time( fixed_index, var_index + 1 ) - gmat_time( fixed_index, var_index ) ) : std::imag( gmat_time( fixed_index, var_index ) - gmat_time( fixed_index, var_index - 1 ) );
 }
-double QDLC::Numerics::get_tdelta(const std::vector<SaveState>& savedStates, size_t var_index) {
-    return var_index == 0 ? savedStates[var_index+1].t-savedStates[var_index].t : savedStates[var_index].t-savedStates[var_index-1].t;
+double QDLC::Numerics::get_tdelta( const std::vector<SaveState> &savedStates, size_t var_index ) {
+    return var_index == 0 ? savedStates[var_index + 1].t - savedStates[var_index].t : savedStates[var_index].t - savedStates[var_index - 1].t;
 }
 
 // Description: Calculates the G1(tau) function. Uses akf_mat temporary variable to save the tau-direction expectation values. Calculates <b^+(t) * b(t+tau)> via quantum regression theorem. Logs and outputs progress.
@@ -22,7 +22,7 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
     Log::L2( "[G1Correlation] Generating Sparse Operator Matrices from String input...\n" );
     auto [op_creator, op_annihilator] = get_operators_matrices( s, s_op_creator, s_op_annihilator );
 
-    int matdim = s.parameters.grid_values.size();//int( savedStates.size() / s.parameters.iterations_t_skip );
+    int matdim = s.parameters.grid_values.size(); //int( savedStates.size() / s.parameters.iterations_t_skip );
 
     if ( cache.count( purpose ) != 0 ) {
         Log::L2( "[G1Correlation] G1(tau) for {} already exists.\n", purpose );
@@ -40,22 +40,22 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
     cache[purpose + "_time"] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
     auto &gmat_time = cache[purpose + "_time"];
-    Log::L2( "[G1Correlation] Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, std::min<size_t>(matdim,savedStates.size()) );
+    Log::L2( "[G1Correlation] Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, std::min<size_t>( matdim, savedStates.size() ) );
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( size_t i = 0; i < std::min<size_t>(matdim,savedStates.size()); i++ ) {
+    for ( size_t i = 0; i < std::min<size_t>( matdim, savedStates.size() ); i++ ) {
         std::vector<QDLC::SaveState> savedRhos;
         // Get Time from saved State
-        double t_t = getTimeAt(i);
+        double t_t = getTimeAt( i );
         // Calculate New Modified Density Matrix
         Sparse rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
         // Calculate Runge Kutta
         calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, progressstring, s, savedRhos, false );
         // Interpolate saved states to equidistant timestep
         savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
-        for ( size_t j = 0; j < savedRhos.size() and i+j < matdim; j++ ) {
+        for ( size_t j = 0; j < savedRhos.size() and i + j < matdim; j++ ) {
             double t_tau = savedRhos.at( j ).t;
-            gmat( i , j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, op_creator, t_tau );
-            gmat_time( i , j  ) = t_t + 1.0i * t_tau;
+            gmat( i, j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, op_creator, t_tau );
+            gmat_time( i, j ) = t_t + 1.0i * t_tau;
         }
         Timers::outputProgress( timer, progressbar, i, savedStates.size(), progressstring );
     }
@@ -92,24 +92,24 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
     cache[purpose + "_time"] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
     auto &gmat_time = cache[purpose + "_time"];
-    Log::L2( "[G2Correlation] Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, std::min<size_t>(matdim,savedStates.size()) );
+    Log::L2( "[G2Correlation] Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, std::min<size_t>( matdim, savedStates.size() ) );
     // Main G2 Loop
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( size_t i = 0; i < std::min<size_t>(matdim,savedStates.size()); i++ ) {
+    for ( size_t i = 0; i < std::min<size_t>( matdim, savedStates.size() ); i++ ) {
         // Create and reserve past rho's vector
         std::vector<QDLC::SaveState> savedRhos;
         // Get Time from saved State
-        double t_t = getTimeAt(i);
+        double t_t = getTimeAt( i );
         // Calculate New Modified Density Matrix
         Sparse rho_tau = s.dgl_calc_rhotau_2( getRhoAt( i ), op_annihilator_2, op_creator_1, t_t );
         // Calculate Runge Kutta
         calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, progressstring, s, savedRhos, false );
         // Interpolate saved states to equidistant timestep
         savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
-        for ( size_t j = 0; j < savedRhos.size() and i+j < matdim; j++ ) {
+        for ( size_t j = 0; j < savedRhos.size() and i + j < matdim; j++ ) {
             double t_tau = savedRhos.at( j ).t;
-            gmat( i , j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, evalOperator, t_tau );
-            gmat_time( i , j ) = t_t + 1.0i * t_tau;
+            gmat( i, j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, evalOperator, t_tau );
+            gmat_time( i, j ) = t_t + 1.0i * t_tau;
         }
         Timers::outputProgress( timer, progressbar, i, savedStates.size(), progressstring );
     }

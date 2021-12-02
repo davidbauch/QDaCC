@@ -43,6 +43,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
         topv.emplace_back( 0 );
         time.emplace_back( std::real( akf_mat_g1_time( i, 0 ) ) );
     }
+    //TODO: indist timedependent
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int i = 0; i < T; i++ ) {
         double t_t = std::real( akf_mat_g1_time( i, 0 ) );
@@ -53,7 +54,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
             Scalar gpop = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
             Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t_t );
             double dt = Numerics::get_tdelta( akf_mat_g1_time, 0, i );
-            double dtau = Numerics::get_tdelta( akf_mat_g1_time, 0, i + j ); //Numerics::get_taudelta( akf_mat_g1_time, i, j );
+            double dtau = Numerics::get_taudelta( akf_mat_g1_time, i, j ); //Numerics::get_tdelta( akf_mat_g1_time, 0, i + j );
             top[i] += ( gpop + akf_mat_g2( i, j ) - akf_mat_g1( i, j ) * std::conj( akf_mat_g1( i, j ) ) ) * dt * dtau;
             bottom[i] += ( 2.0 * gpop - gbot * std::conj( gbot ) ) * dt * dtau;
             topv[i] += std::pow( std::abs( akf_mat_g1( i, j ) ), 2.0 ) * dt * dtau;
@@ -145,20 +146,21 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
             rho_g2zero[mode].emplace_back( 0 );
         }
     }
+#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
     for ( auto mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
         auto &gmat_time = cache[mode + "_time"];
         bool didout = false;
-        rho[mode][0] = cache[mode]( 0, 0 ) * Numerics::get_tdelta( gmat_time, 0, 0 ) *Numerics::get_tdelta( gmat_time, 0, 0 );// * Numerics::get_taudelta( gmat_time, 0, 0 ); //*dt*dtau
-        rho_g2zero[mode][0] = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( 0 ), matmap_g2zero[mode], getTimeAt( 0 ) ) * Numerics::get_tdelta( gmat_time, 0, 0 );
-        for ( size_t i = 1; i < T; i++ ) {
+        //rho[mode][0] = cache[mode]( 0, 0 ) * Numerics::get_tdelta( gmat_time, 0, 0 ) * Numerics::get_taudelta( gmat_time, 0, 0 ); //*dt*dtau* Numerics::get_tdelta( gmat_time, 0, 0 );
+        //rho_g2zero[mode][0] = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( 0 ), matmap_g2zero[mode], getTimeAt( 0 ) ) * Numerics::get_tdelta( gmat_time, 0, 0 );
+        for ( size_t i = 0; i < T; i++ ) {
             double dt = Numerics::get_tdelta( gmat_time, 0, i );
-            rho[mode][i] = rho[mode][i - 1];
+            rho[mode][i] = i > 0 ? rho[mode][i - 1] : 0.0;
             for ( int tau = 0; tau < T - i; tau++ ) {
-                double dtau = Numerics::get_tdelta( gmat_time, 0, i+tau );//Numerics::get_taudelta( gmat_time, i, tau );
+                double dtau = Numerics::get_taudelta( gmat_time, i, tau ); //Numerics::get_tdelta( gmat_time, 0, i + tau );
                 rho[mode][i] += cache[mode]( i, tau ) * dt * dtau;
             }
             double t_t = std::real( gmat_time( i, 0 ) ); //Note: all correlation functions have to have the same times. cache[mode+"_time"] else.
-            rho_g2zero[mode][i] = rho_g2zero[mode][i - 1] + s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( rho_index_map[t_t] ), matmap_g2zero[mode], t_t ) * dt;
+            rho_g2zero[mode][i] = i > 0 ? rho_g2zero[mode][i - 1] + s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( rho_index_map[t_t] ), matmap_g2zero[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( 0 ), matmap_g2zero[mode], getTimeAt( 0 ) ) * dt;
             if ( not didout ) {
                 didout = true;
                 timer_c.iterate();
@@ -171,30 +173,30 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     std::vector<Scalar> output_g2zero( T, 0 );
     std::vector<Scalar> output_simple( T, 0 );
     std::vector<Scalar> output_g2zero_simple( T, 0 );
-    std::vector<Scalar> time(T, 0);
-    std::vector<Dense> twophotonmatrix(T, Dense::Zero(4,4));
-    std::vector<Dense> twophotonmatrix_g2zero(T, Dense::Zero(4,4));
-    
+    std::vector<Scalar> time( T, 0 );
+    std::vector<Dense> twophotonmatrix( T, Dense::Zero( 4, 4 ) );
+    std::vector<Dense> twophotonmatrix_g2zero( T, Dense::Zero( 4, 4 ) );
+
     Dense spinflip = Dense::Zero( 4, 4 );
     spinflip( 0, 3 ) = -1;
     spinflip( 1, 2 ) = 1;
     spinflip( 2, 1 ) = 1;
     spinflip( 3, 0 ) = -1;
     Log::L2( "[Concurrence] Spinflip Matrix: {}\n", spinflip );
-//#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
     for ( size_t k = 0; k < T; k++ ) { // cache[s_g2_1111].rows() statt T?
         //Log::L3( "Creating 2 photon matrix\n" );
         Dense rho_2phot = Dense::Zero( 4, 4 );
         Dense rho_2phot_g2zero = Dense::Zero( 4, 4 );
         rho_2phot( 0, 0 ) = rho[s_g2_1111][k];
-        rho_2phot( 3, 3 ) = rho[s_g2_2222][k]; //std::cout << "Setting rho(0,0) to " << rho_2phot( 0, 0 ) << ", Setting rho(3,3) to " << rho_2phot( 3, 3 ) << std::endl; 
+        rho_2phot( 3, 3 ) = rho[s_g2_2222][k]; //std::cout << "Setting rho(0,0) to " << rho_2phot( 0, 0 ) << ", Setting rho(3,3) to " << rho_2phot( 3, 3 ) << std::endl;
         rho_2phot( 0, 3 ) = rho[s_g2_2211][k];
         rho_2phot( 3, 0 ) = rho[s_g2_1122][k];
         rho_2phot( 1, 2 ) = rho[s_g2_2121][k];
         rho_2phot( 2, 1 ) = rho[s_g2_1212][k];
         rho_2phot( 1, 1 ) = std::abs( rho[s_g2_2112][k] ) != 0 ? rho[s_g2_2112][k] : 1E-100;
         rho_2phot( 2, 2 ) = std::abs( rho[s_g2_1221][k] ) != 0 ? rho[s_g2_1221][k] : 1E-100;
-        rho_2phot = rho_2phot / std::abs(rho_2phot.trace());
+        rho_2phot = rho_2phot / std::abs( rho_2phot.trace() );
         rho_2phot_g2zero( 0, 0 ) = rho_g2zero[s_g2_1111][k];
         rho_2phot_g2zero( 3, 3 ) = rho_g2zero[s_g2_2222][k];
         rho_2phot_g2zero( 0, 3 ) = rho_g2zero[s_g2_2211][k];
@@ -203,7 +205,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         rho_2phot_g2zero( 2, 1 ) = rho_g2zero[s_g2_1212][k];
         rho_2phot_g2zero( 1, 1 ) = std::abs( rho_g2zero[s_g2_2112][k] ) != 0 ? rho_g2zero[s_g2_2112][k] : 1E-100;
         rho_2phot_g2zero( 2, 2 ) = std::abs( rho_g2zero[s_g2_1221][k] ) != 0 ? rho_g2zero[s_g2_1221][k] : 1E-100;
-        rho_2phot_g2zero = rho_2phot_g2zero / std::abs(rho_2phot_g2zero.trace());
+        rho_2phot_g2zero = rho_2phot_g2zero / std::abs( rho_2phot_g2zero.trace() );
         //Log::L3( "Normalizing 2 photon matrix\n" );
         //if ( std::abs( rho_2phot.trace() ) != 0 ) {
         //Log::L3( "Rho_2phot = {}\n", rho_2phot );
@@ -240,9 +242,9 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         //Log::L1("Eigenvalues {}: C = {} - {} - {} - {}\n",k,eigenvalues(3),eigenvalues(2),eigenvalues(1),eigenvalues(0));
         auto conc_g2zero = eigenvalues_g2zero( 3 ) - eigenvalues_g2zero( 2 ) - eigenvalues_g2zero( 1 ) - eigenvalues_g2zero( 0 );
         output.at( k ) = conc;
-        output_simple.at( k ) = 2.0 * std::abs( rho_2phot( 3, 0 ));// / rho_2phot.trace()  );
+        output_simple.at( k ) = 2.0 * std::abs( rho_2phot( 3, 0 ) ); // / rho_2phot.trace()  );
         output_g2zero.at( k ) = conc_g2zero;
-        output_g2zero_simple.at( k ) = 2.0 * std::abs( rho_2phot_g2zero( 3, 0 ));// / ( rho_2phot_g2zero( 0, 0 ) + rho_2phot_g2zero( 3, 3 ) ) );
+        output_g2zero_simple.at( k ) = 2.0 * std::abs( rho_2phot_g2zero( 3, 0 ) ); // / ( rho_2phot_g2zero( 0, 0 ) + rho_2phot_g2zero( 3, 3 ) ) );
         time.at( k ) = std::real( mat_time( k, 0 ) );
         //std::cout << "Rho(3,0) = "<<rho_2phot( 3, 0 )<<", rho.trace() = "<<rho_2phot.trace()<<", Rho before saving :\n" << rho_2phot.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
         //std::cout << "Rho_g20(3,0) = "<<rho_2phot_g2zero( 3, 0 )<<", rho_g20.trace() = "<<rho_2phot_g2zero.trace()<<", Rho_g20 before saving :\n" << rho_2phot_g2zero.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
@@ -262,8 +264,8 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     to_output["Conc_g2zero_simple"][fout] = output_g2zero_simple;
     to_output_m["TwoPMat"][fout] = twophotonmatrix;
     to_output_m["TwoPMat"][fout + "_g2zero"] = twophotonmatrix_g2zero;
-    Log::L1( "Final Concurrence: {:.10f} ({:.10f} simple) {}\n", std::real( output.back() ), std::real(output_simple.back()), fout );
-    Log::L1( "Final Concurrence with g2(0): {:.10f} ({:.10f} simple) {}\n", std::real( output_g2zero.back() ), std::real(output_g2zero_simple.back()), fout );
+    Log::L1( "Final Concurrence: {:.10f} ({:.10f} simple) {}\n", std::real( output.back() ), std::real( output_simple.back() ), fout );
+    Log::L1( "Final Concurrence with g2(0): {:.10f} ({:.10f} simple) {}\n", std::real( output_g2zero.back() ), std::real( output_g2zero_simple.back() ), fout );
     return true;
 }
 
@@ -503,7 +505,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         fmt::print( f_twophot, "\n" );
         for ( int i = 0; i < to_output_m["TwoPMat"][mode].size(); i++ ) {
             fmt::print( f_twophot, "{:.8e}\t", std::real( to_output["Conc"]["Time"][i] ) );
-            auto& mat = to_output_m["TwoPMat"][mode][i];
+            auto &mat = to_output_m["TwoPMat"][mode][i];
             for ( int k = 0; k < 4; k++ ) {
                 for ( int l = 0; l < 4; l++ ) {
                     fmt::print( f_twophot, "{:.8e}\t", std::real( mat( k, l ) ) );
@@ -514,7 +516,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
                     fmt::print( f_twophot, "{:.8e}\t", std::imag( mat( k, l ) ) );
                 }
             }
-            
+
             fmt::print( f_twophot, "\n" );
         }
         std::fclose( f_twophot );

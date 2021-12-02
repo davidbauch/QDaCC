@@ -19,18 +19,35 @@ namespace Misc {
 // Valid conversions from ns,ps,Hz,eV,meV,mueV to corresponding SI unit (not scaled)
 template <typename T>
 T convertParam( const std::string input ) {
-    double value = 0;
-    double conversion = 1;
+    T value = (T)0;
+    T conversion = (T)1;
     int index;
     Log::L3( "Attempting to convert '{}'...\n", input );
-    if ( -1 != ( index = QDLC::String::instr( input, "eV" ) ) ) {
+    // "Meter" Scale
+    if ( input.back() == 'm' ) {
+        index = input.size() - 1;
+        if ( input.at( index - 1 ) == 'm' ) {
+            Log::L3( "\tfrom mm to Hz...\n" );
+            value = QDLC::Math::wavelength_to_Hz( 1E-3 * std::stod( input.substr( 0, index - 1 ) ) );
+        }
+        if ( input.at( index - 2 ) == 'm' and input.at( index - 1 ) == 'u' ) {
+            Log::L3( "\tfrom mum to Hz...\n" );
+            value = QDLC::Math::wavelength_to_Hz( 1E-6 * std::stod( input.substr( 0, index - 2 ) ) );
+        }
+        if ( input.at( index - 1 ) == 'n' ) {
+            Log::L3( "\tfrom nm to Hz...\n" );
+            value = QDLC::Math::wavelength_to_Hz( 1E-9 * std::stod( input.substr( 0, index - 1 ) ) );
+        }
+    }
+    // Electron Volt Scale
+    else if ( -1 != ( index = QDLC::String::instr( input, "eV" ) ) ) {
         // Found 'eV' as unit (energy), now check for scaling
         if ( input.at( index - 1 ) == 'm' ) {
             // meV
             Log::L3( "\tfrom meV to Hz...\n" );
             value = QDLC::Math::eV_to_Hz( std::stod( input.substr( 0, index - 1 ) ) );
             conversion = 1E-3;
-        } else if ( input.at( index - 2 ) == 'm' && input.at( index - 1 ) == 'u' ) {
+        } else if ( input.at( index - 2 ) == 'm' and input.at( index - 1 ) == 'u' ) {
             // mueV
             Log::L3( "\tfrom mueV to Hz...\n" );
             value = QDLC::Math::eV_to_Hz( std::stod( input.substr( 0, index - 2 ) ) );
@@ -44,7 +61,9 @@ T convertParam( const std::string input ) {
             Log::L3( "Conversion of input '{}' from eV failed!\n", input );
             return (T)0.0;
         }
-    } else if ( -1 != ( index = QDLC::String::instr( input, "s" ) ) ) {
+    }
+    // Second Scale
+    else if ( -1 != ( index = QDLC::String::instr( input, "s" ) ) ) {
         // Found 's' as unit (time)
         //fmt::print("\n {} {} {} {}\n",index, input.at(index-1)=='n',input.compare(index-1,1,"n") ,input.at(index-1));
         if ( input.at( index - 1 ) == 'n' ) {
@@ -119,7 +138,7 @@ T vec_max( std::vector<T> input, bool norm = true ) {
         return (T)( 0.0 );
     T ret = input.at( 0 );
     for ( T element : input )
-        if ( ( norm && ( std::abs( element ) > std::abs( ret ) ) ) || ( !norm && ( element > ret ) ) )
+        if ( ( norm and ( std::abs( element ) > std::abs( ret ) ) ) || ( !norm and ( element > ret ) ) )
             ret = element;
     return ret;
 }
@@ -129,7 +148,7 @@ T vec_min( std::vector<T> input, bool norm = true ) {
         return (T)( 0.0 );
     T ret = input.at( 0 );
     for ( T element : input )
-        if ( ( norm && ( std::abs( element ) < std::abs( ret ) ) ) || ( !norm && ( element < ret ) ) )
+        if ( ( norm and ( std::abs( element ) < std::abs( ret ) ) ) || ( !norm and ( element < ret ) ) )
             ret = element;
     return ret;
 }
