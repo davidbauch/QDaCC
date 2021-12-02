@@ -186,6 +186,12 @@ Use a timestep of `200fs`. If no `--tend [END]` is provided, the calculation wil
 
 ---
 
+## Electron-Phonon Coupling
+...
+
+---
+---
+
 ## Correlation functions
 Two different types of correlation functions can be evaluated: `G1(t,tau)` and `G2(t,tau)`. From these two, quantum properties such as the `indistinguishability` or the `two-photon concurrence` can be evaluated. If the evaluation of any property that needs either G1 or G2 is provided, the correlation functions are calculated automatically. In this case, explicitely specifying to calculate the corresponding G1 or G2 functions is not neccessary. If the output of the corresponding function is needed, specification becomes neccessary again.
 
@@ -275,6 +281,8 @@ Calculate both properties for a single resonator mode `h`.
     --GI 'h,GH,h+GH'
 Calculate both properties for the resonator mode `h`, the radiative transition `GH` and the superposition of both.
 
+---
+
 ## Two-Photon Concurrence - Measurement for the entanglement of two transitions
 
 The [Two-Photon Concurrence](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.80.2245) is calculated by reducing the densitymatrix from its total Hilbert Space onto a two photon densitymatrix. The elements of this densitymatrix are calculated using the `G2` correlation function. A single element is calculated by integrating `G2_ijkl`, where `i`,`j`,`k` and `l` are one of the two modes that the concurrence is evaluated for.
@@ -306,7 +314,29 @@ Calculating the concurrence for the two resonator modes of the polarization depe
     --GC 'h+GH+HZ-v+GV+VZ'
 Calculating the concurrence for every cavity or radiative mode of the polarization dependent biexciton.
 
+---
+
 ## Wigner Function
+The Wigner function is calculated using the weighted superposition of Laguerre polynomials. A reduced denistymatrix for a given mode is calculated by using a partial trace over the total Hilbert space. This densitymatrix is then assumed to be in a Fock-base containing the different weights for the Laguerre polynomials.
+
+The general syntax to calculate the Wigner function reads:
+
+    --GW [Modes,X(,Y,Resolution,Skip)]
+
+The parameters read as follows:
+- `Modes` : Comma seperated list of (resonator) modes to calculate the Wigner function for
+- `X` : Comma sperated list of X-Resolutions, where the total interval will be `-X:X`
+- `Y` : Optional Parameter, comma seperated list of Y-Resolutions. As default it is assumed that X=Y
+- `Resolution` : Optional Parameter, comma sperated list of resolutions, where `dx,dy = 2X/Resolution, 2Y/Resolution`. The default value is `100`.
+- `Skip` : Number of timesteps to skip. Higher values will result in faster calculations. The default value is `1`.
+
+Examples:  
+
+    --GW 'h:5'
+Calculate the Wigner function using the parameterset `h:5:5:100:1`.
+
+    --GW 'h:4:6:200:2'
+Calculating the Wigner function using `-X:X = -4:4`, `-Y:Y = -6:6` with `200` Points for each axis, resulting in `dx = 0.04` and `dy = 0.06`. The Wigner function is only evaluated for every second timestep, even if those timesteps are not equidistant (e.g. for RK45 or a modified grid without interpolation).
 
 ---
 ---
