@@ -50,8 +50,8 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         state.self_hilbert = create_photonic_operator<Dense>( OPERATOR_PHOTONIC_STATE, max_photons );
         state.base = ++curcav;
         state.energy = cav.second.numerical["Energy"];
-        //std::cout << "Matrix " << cav.first << "\n"
-        //          << state.self_hilbert << std::endl;
+        // std::cout << "Matrix " << cav.first << "\n"
+        //           << state.self_hilbert << std::endl;
     }
 
     // Tensor all matrices into the total Hilbert Space.
@@ -66,16 +66,16 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         current.front() = bel.second.self_hilbert; // Electronic states have basis 0 for now. Maybe change when TODO: add tensoring of multiple electronic bases
         bel.second.hilbert = QDLC::Matrix::tensor( current ).sparseView();
         bel.second.projector = QDLC::Matrix::sparse_projector( bel.second.hilbert );
-        //std::cout << "Mat = " << bel.first << "  " << bel.second.hilbert.rows() << "\n"
-        //          << Dense( bel.second.hilbert ) << std::endl;
+        // std::cout << "Mat = " << bel.first << "  " << bel.second.hilbert.rows() << "\n"
+        //           << Dense( bel.second.hilbert ) << std::endl;
     }
     for ( auto &phot : ph_states ) {
         auto current = base_selfhilbert;
         current[phot.second.base] = phot.second.self_hilbert;
         phot.second.hilbert = QDLC::Matrix::tensor( current ).sparseView();
         phot.second.projector = QDLC::Matrix::sparse_projector( phot.second.hilbert );
-        //std::cout << "Mat = " << phot.first << "  " << phot.second.hilbert.rows() << "\n"
-        //          << Dense( phot.second.hilbert ) << std::endl;
+        // std::cout << "Mat = " << phot.first << "  " << phot.second.hilbert.rows() << "\n"
+        //           << Dense( phot.second.hilbert ) << std::endl;
     }
     // Generate Transition Matrices
     for ( auto &bel : el_states ) {
@@ -83,11 +83,11 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             if ( trans_to.front() == '-' ) continue;
             std::string transition = bel.first + trans_to;
             el_transitions[transition].self_hilbert = bel.second.ket * el_states[trans_to].bra;
-            el_transitions[transition].direction = -1; //DOWN
+            el_transitions[transition].direction = -1; // DOWN
             el_transitions[transition].energy = std::abs( p.input_electronic[trans_to].numerical["Energy"] - p.input_electronic[bel.first].numerical["Energy"] );
             std::string transition_transposed = trans_to + bel.first;
             el_transitions[transition_transposed].self_hilbert = el_states[trans_to].ket * bel.second.bra;
-            el_transitions[transition_transposed].direction = 1; //UP
+            el_transitions[transition_transposed].direction = 1; // UP
             el_transitions[transition_transposed].energy = std::abs( p.input_electronic[trans_to].numerical["Energy"] - p.input_electronic[bel.first].numerical["Energy"] );
         }
     }
@@ -128,7 +128,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 current[i]( k, j ) = ( k + 1 ) + 1.0i * ( j + 1 );
 
         base_hilbert_index.emplace_back( QDLC::Matrix::tensor( current ) );
-        //Log::L2( "Tensor for base i = {}:\nCurrent:\n{}\n\n{}\n\n", i, current[i], base_hilbert_index.back() );
+        // Log::L2( "Tensor for base i = {}:\nCurrent:\n{}\n\n{}\n\n", i, current[i], base_hilbert_index.back() );
     }
 
     // Generate prechaced pulse and chirp matrices. 2 matrices are generated per pulse for Omega and Omega^*
@@ -189,7 +189,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         Sparse chirpmat_star = Sparse( base.size(), base.size() );
         for ( int i = 0; i < chirp.second.string_v["CoupledTo"].size(); i++ ) {
             std::string state = chirp.second.string_v["CoupledTo"][i];
-            chirpmat += chirp.second.numerical_v["AmpFactor"][i] * el_states[state].hilbert; //TODO: chirp cavity
+            chirpmat += chirp.second.numerical_v["AmpFactor"][i] * el_states[state].hilbert; // TODO: chirp cavity
         }
         chirp_mat.emplace_back( chirpmat );
     }
@@ -201,11 +201,9 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         b = "|" + b + ">";
         base_index_map[b] = index++;
         Log::L1( "{} ", b );
-        //std::cout << b << " ";
+        // std::cout << b << " ";
     }
     Log::L1( "\n" );
-
-    //FIXME:
     p.maxStates = base.size();
 
     H = Sparse( p.maxStates, p.maxStates );
@@ -237,7 +235,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 aj.pop_back();
                 double ni = std::stod( ai.c_str() );
                 double nj = std::stod( aj.c_str() );
-                //std::cout << iss.first << ", " << jss.first << " --> " << ni << " " << nj << ", modes = " << mode << std::endl;
+                // std::cout << iss.first << ", " << jss.first << " --> " << ni << " " << nj << ", modes = " << mode << std::endl;
                 val += p.input_photonic[mode].numerical["Energy"] * ( ni - nj );
             }
             timetrafo_cachematrix( iss.second, jss.second ) = 1.0i * val;
@@ -246,7 +244,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     // Precalculate Lindbladians
     lindblad_factors = std::vector<Sparse>( 6, Sparse( base.size(), base.size() ) );
     // Cavity Terms //TODO: Testen das die hier richtig sind!
-    //for ( auto &cav : ph_transitions ) {
+    // for ( auto &cav : ph_transitions ) {
     //    if ( cav.second.direction == 1 )
     //        continue;
     //    std::string mode = cav.first.substr( 0, 1 );
@@ -257,29 +255,29 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     //    lindblad_factors[3] += 0.5 * p.p_omega_cavity_loss * params.numerical["DecayScaling"] * ph_transitions[mode + "bd"].hilbert * ph_transitions[mode + "b"].hilbert;
     //}
     //// Radiative decay //TODO: Testen das die hier richtig sind!
-    //for ( auto &trans : el_transitions ) {
-    //    if ( trans.second.direction == 1 )
-    //        continue;
-    //    std::string transition = trans.first;
-    //    std::string state = transition.substr( transition.size() - 1, 1 );
-    //    auto &params = p.input_electronic[state];
-    //    //std::cout << "Transition " << transition << " with state info from " << state << " --> " << params.numerical["DecayScaling"] << std::endl;
-    //    std::string trans_transposed = transition;
-    //    std::reverse( trans_transposed.begin(), trans_transposed.end() );
-    //    lindblad_factors[0] += 0.5 * p.p_omega_decay * params.numerical["DecayScaling"] * el_transitions[transition].hilbert;
-    //    lindblad_factors[1] += el_transitions[trans_transposed].hilbert;
-    //    lindblad_factors[2] += 0.5 * p.p_omega_decay * params.numerical["DecayScaling"] * el_transitions[trans_transposed].hilbert * el_transitions[transition].hilbert;
-    //    lindblad_factors[3] += 0.5 * p.p_omega_decay * params.numerical["DecayScaling"] * el_transitions[transition].hilbert * el_transitions[trans_transposed].hilbert;
-    //}
+    // for ( auto &trans : el_transitions ) {
+    //     if ( trans.second.direction == 1 )
+    //         continue;
+    //     std::string transition = trans.first;
+    //     std::string state = transition.substr( transition.size() - 1, 1 );
+    //     auto &params = p.input_electronic[state];
+    //     //std::cout << "Transition " << transition << " with state info from " << state << " --> " << params.numerical["DecayScaling"] << std::endl;
+    //     std::string trans_transposed = transition;
+    //     std::reverse( trans_transposed.begin(), trans_transposed.end() );
+    //     lindblad_factors[0] += 0.5 * p.p_omega_decay * params.numerical["DecayScaling"] * el_transitions[transition].hilbert;
+    //     lindblad_factors[1] += el_transitions[trans_transposed].hilbert;
+    //     lindblad_factors[2] += 0.5 * p.p_omega_decay * params.numerical["DecayScaling"] * el_transitions[trans_transposed].hilbert * el_transitions[transition].hilbert;
+    //     lindblad_factors[3] += 0.5 * p.p_omega_decay * params.numerical["DecayScaling"] * el_transitions[transition].hilbert * el_transitions[trans_transposed].hilbert;
+    // }
     //// Electronic Dephasing
-    //for ( auto &state_a : el_states ) {
-    //    for ( auto &state_b : el_states ) {
-    //        if ( state_a.first.compare( state_b.first ) == 0 )
-    //            continue;
-    //        lindblad_factors[4] += 0.5 * p.p_omega_pure_dephasing * p.input_electronic[state_a.first].numerical["DephasingScaling"] * el_states[state_a.first].hilbert;
-    //        lindblad_factors[5] += p.input_electronic[state_b.first].numerical["DephasingScaling"] * el_states[state_b.first].hilbert;
-    //    }
-    //}
+    // for ( auto &state_a : el_states ) {
+    //     for ( auto &state_b : el_states ) {
+    //         if ( state_a.first.compare( state_b.first ) == 0 )
+    //             continue;
+    //         lindblad_factors[4] += 0.5 * p.p_omega_pure_dephasing * p.input_electronic[state_a.first].numerical["DephasingScaling"] * el_states[state_a.first].hilbert;
+    //         lindblad_factors[5] += p.input_electronic[state_b.first].numerical["DephasingScaling"] * el_states[state_b.first].hilbert;
+    //     }
+    // }
 
     // Precalculate Polaron Matrices
     polaron_factors.emplace_back( Sparse( base.size(), base.size() ) );
@@ -348,23 +346,23 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     else
         H_used = H;
 
-    //std::map<std::string, int> temp_base_indices;
+    // std::map<std::string, int> temp_base_indices;
     std::map<double, int> temp_base_indices;
     int new_index = 0;
     for ( int i = 0; i < base.size(); i++ ) {
-        //for ( int j = 0; j < base.size(); j++ ) { // base is |el|...>
-            std::string state1 = base.at( i ).substr( 1, 1 );
-            //std::string state2 = base.at( j ).substr( 1, 1 );
-            //if ( i == j ) {
-                //auto factor = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
-                double factor = (double)p.input_electronic[state1].numerical["PhononCoupling"].get();
-                auto index = factor;//state1;
-                if ( !temp_base_indices.count( index ) > 0 ) {
-                    temp_base_indices[index] = new_index++;
-                    phononCouplingIndexValue.emplace_back( factor );
-                }
-                phononCouplingIndex.emplace_back( temp_base_indices[index] );
-            //}
+        // for ( int j = 0; j < base.size(); j++ ) { // base is |el|...>
+        std::string state1 = base.at( i ).substr( 1, 1 );
+        // std::string state2 = base.at( j ).substr( 1, 1 );
+        // if ( i == j ) {
+        // auto factor = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
+        double factor = (double)p.input_electronic[state1].numerical["PhononCoupling"].get();
+        auto index = factor; // state1;
+        if ( !temp_base_indices.count( index ) > 0 ) {
+            temp_base_indices[index] = new_index++;
+            phononCouplingIndexValue.emplace_back( factor );
+        }
+        phononCouplingIndex.emplace_back( temp_base_indices[index] );
+        //}
         //}
     }
     Log::L2( "Phonon Coupling Index Vector: {}\n", phononCouplingIndex );
@@ -442,11 +440,11 @@ void OperatorMatrices::outputOperators( Parameters &p ) {
             << Dense( H_used ).format( CleanFmt ) << std::endl;
         out << "rho\n"
             << Dense( rho ).format( CleanFmt ) << std::endl;
-        //out << "test1\n" << test1.format(CleanFmt)<< "\ntest2\n" << test2.format(CleanFmt) << std::endl;
+        // out << "test1\n" << test1.format(CleanFmt)<< "\ntest2\n" << test2.format(CleanFmt) << std::endl;
         Log::L2( out.str() );
         Log::L2( "Outputting String Matrices...\n" );
-        //OperatorMatricesText test = OperatorMatricesText();
-        //test.generateOperators( p );
+        // OperatorMatricesText test = OperatorMatricesText();
+        // test.generateOperators( p );
         if ( p.output_operators == 3 )
             exit( 0 );
     }

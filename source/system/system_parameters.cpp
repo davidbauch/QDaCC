@@ -62,8 +62,8 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
 }
 
 bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
-    //Parse_Parameters params;
-    // Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
+    // Parse_Parameters params;
+    //  Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
     t_start = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstart" );
     t_end = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tend" );
     t_step = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstep" );
@@ -113,7 +113,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
     numerics_output_raman_population = QDLC::CommandlineArguments::get_parameter_passed( "-raman" ); // DEPRECATED
     logfilecounter = QDLC::Misc::convertParam<int>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
-    numerics_calculate_timeresolution_indistinguishability = QDLC::CommandlineArguments::get_parameter_passed( "-timedepInd" ); //DEPRECATED                                                                             //FIXME: Doesnt work right now //DEPRECATED
+    numerics_calculate_timeresolution_indistinguishability = QDLC::CommandlineArguments::get_parameter_passed( "-timedepInd" ); // DEPRECATED                                                                             //FIXME: Doesnt work right now //DEPRECATED
     numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
     s_numerics_interpolate = QDLC::CommandlineArguments::get_parameter( "--interpolateOrder" );
 
@@ -147,7 +147,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     return true;
 }
 
-//TODO: this is broken. and unncesesary actually. remove. oder vernünftig alles scalen.
+// TODO: this is broken. and unncesesary actually. remove. oder vernünftig alles scalen.
 bool Parameters::scaleInputs( const double scaling ) {
     // Adjust normal parameters: time is multiplid by scaling, frequency divided
     t_start.setScale( scaling, Parameter::SCALE_TIME );
@@ -155,26 +155,26 @@ bool Parameters::scaleInputs( const double scaling ) {
     t_step.setScale( scaling, Parameter::SCALE_TIME );
     numerics_rk_stepdelta.setScale( scaling, Parameter::SCALE_TIME );
 
-    //TODO: inputs scalen! pulse un chirp auch!
-    //p_omega_atomic_G_H.setScale( scaling, Parameter::SCALE_ENERGY );
-    //p_omega_atomic_G_V.setScale( scaling, Parameter::SCALE_ENERGY );
-    //p_omega_atomic_H_B.setScale( scaling, Parameter::SCALE_ENERGY );
-    //p_omega_atomic_V_B.setScale( scaling, Parameter::SCALE_ENERGY );
-    //p_deltaE.setScale( scaling, Parameter::SCALE_ENERGY );
-    //p_biexciton_bindingenergy.setScale( scaling, Parameter::SCALE_ENERGY );
-    //p_omega_cavity_H.setScale( scaling, Parameter::SCALE_ENERGY );
-    //p_omega_cavity_V.setScale( scaling, Parameter::SCALE_ENERGY );
+    // TODO: inputs scalen! pulse un chirp auch!
+    // p_omega_atomic_G_H.setScale( scaling, Parameter::SCALE_ENERGY );
+    // p_omega_atomic_G_V.setScale( scaling, Parameter::SCALE_ENERGY );
+    // p_omega_atomic_H_B.setScale( scaling, Parameter::SCALE_ENERGY );
+    // p_omega_atomic_V_B.setScale( scaling, Parameter::SCALE_ENERGY );
+    // p_deltaE.setScale( scaling, Parameter::SCALE_ENERGY );
+    // p_biexciton_bindingenergy.setScale( scaling, Parameter::SCALE_ENERGY );
+    // p_omega_cavity_H.setScale( scaling, Parameter::SCALE_ENERGY );
+    // p_omega_cavity_V.setScale( scaling, Parameter::SCALE_ENERGY );
     p_omega_coupling.setScale( scaling, Parameter::SCALE_ENERGY );
     p_omega_cavity_loss.setScale( scaling, Parameter::SCALE_ENERGY );
     p_omega_pure_dephasing.setScale( scaling, Parameter::SCALE_ENERGY );
     p_omega_decay.setScale( scaling, Parameter::SCALE_ENERGY );
     // Adjust chirp and pulse
-    //for ( int i = 0; i < (int)chirp_t.size(); i++ ) {
+    // for ( int i = 0; i < (int)chirp_t.size(); i++ ) {
     //    chirp_t.at( i ).setScale( scaling, Parameter::SCALE_TIME );
     //    chirp_y.at( i ).setScale( scaling, Parameter::SCALE_ENERGY );
     //    chirp_ddt.at( i ).setScale( scaling, Parameter::SCALE_ENERGY );
     //}
-    //for ( int i = 0; i < (int)pulse_center.size(); i++ ) {
+    // for ( int i = 0; i < (int)pulse_center.size(); i++ ) {
     //    pulse_center.at( i ).setScale( scaling, Parameter::SCALE_TIME );
     //    if ( pulse_type.at( i ).compare( "gauss_pi" ) != 0 )
     //        pulse_amp.at( i ) = scaleVariable( pulse_amp.at( i ), 1.0 / scaling );
@@ -183,9 +183,9 @@ bool Parameters::scaleInputs( const double scaling ) {
     //    pulse_omega_chirp.at( i ).setScale( scaling * scaling, Parameter::SCALE_ENERGY );
     //}
     // Adjusting spectrum
-    //TODO: neuen input saclen!
-    //spectrum_frequency_center.setScale( scaling, Parameter::SCALE_ENERGY );
-    //spectrum_frequency_range.setScale( scaling, Parameter::SCALE_ENERGY );
+    // TODO: neuen input saclen!
+    // spectrum_frequency_center.setScale( scaling, Parameter::SCALE_ENERGY );
+    // spectrum_frequency_range.setScale( scaling, Parameter::SCALE_ENERGY );
     // Phonons
     p_phonon_wcutoff.setScale( scaling, Parameter::SCALE_ENERGY );
     p_phonon_tcutoff.setScale( scaling, Parameter::SCALE_TIME );
@@ -198,7 +198,7 @@ bool Parameters::scaleInputs( const double scaling ) {
 bool Parameters::adjustInput() {
     Log::L2( "[System] Adjusting Inputs...\n" );
 
-    if (output_handlerstrings)
+    if ( output_handlerstrings )
         Timers::toggleHandler();
 
     // For threadsafety
@@ -212,9 +212,9 @@ bool Parameters::adjustInput() {
             auto pos = mat.string_v["Type"][i].find( "_pi" );
             if ( pos != std::string::npos ) {
                 if ( mat.string_v["Type"][i].find( "gauss" ) != std::string::npos )
-                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::PI / ( std::sqrt( 2.0 * QDLC::Math::PI * mat.numerical_v["Width"][i] * std::sqrt( std::pow( mat.numerical_v["Chirp"][i] / mat.numerical_v["Width"][i], 2.0 ) + std::pow( mat.numerical_v["Width"][i], 2.0 ) ) ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::PI / ( std::sqrt( 2.0 * QDLC::Math::PI * mat.numerical_v["Width"][i] * std::sqrt( std::pow( mat.numerical_v["Chirp"][i] / mat.numerical_v["Width"][i], 2.0 ) + std::pow( mat.numerical_v["Width"][i], 2.0 ) ) ) ) / 2.0; // https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
                 else if ( mat.string_v["Type"][i].find( "cutoff" ) != std::string::npos )
-                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::PI / ( std::sqrt( 2.0 * QDLC::Math::PI * mat.numerical_v["Width"][i] * mat.numerical_v["Width"][i] ) ) / 2.0; //https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::PI / ( std::sqrt( 2.0 * QDLC::Math::PI * mat.numerical_v["Width"][i] * mat.numerical_v["Width"][i] ) ) / 2.0; // https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
                 mat.string_v["Type"][i].erase( pos, 3 );
             }
         }
@@ -227,8 +227,8 @@ bool Parameters::adjustInput() {
     }
     // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
     if ( t_step < 0 ) {
-        t_step = 1E-13; //std::min( scaleVariable( 1E-13, scale_value ), getIdealTimestep() );
-        //t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
+        t_step = 1E-13; // std::min( scaleVariable( 1E-13, scale_value ), getIdealTimestep() );
+        // t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
     }
     if ( t_end < 0 ) {
         // If this is given, we calculate the t-direction until 99% ground state poulation is reached after any pulses.
@@ -249,15 +249,15 @@ bool Parameters::adjustInput() {
 
     // Calculate stuff for RK
     iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
-    if (iterations_tau_resolution < 1)
-        iterations_tau_resolution = iterations_t_max+1;
+    if ( iterations_tau_resolution < 1 )
+        iterations_tau_resolution = iterations_t_max + 1;
     iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
 
     // Build dt vector. Use standard if not specified otherwise for all calculations. Path integral cannot use other timestep than the original.
     {
         auto &settings = input_correlation_resolution.count( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
-        double skip = input_correlation_resolution.count( "Modified" ) == 0 ? 1.0*iterations_t_skip : 1.0;
-        Log::L2("[System] Iteration Skip for Grid is {}.\n",iterations_t_skip);
+        double skip = input_correlation_resolution.count( "Modified" ) == 0 ? 1.0 * iterations_t_skip : 1.0;
+        Log::L2( "[System] Iteration Skip for Grid is {}.\n", iterations_t_skip );
         double t_t = 0;
         int current = 0;
         grid_values.emplace_back( t_start );
@@ -265,18 +265,19 @@ bool Parameters::adjustInput() {
         while ( t_t < t_end ) {
             if ( t_t > settings.numerical_v["Time"][current] and current < settings.numerical_v["Time"].size() )
                 current++;
-            grid_steps.emplace_back( settings.numerical_v["Delta"][current]*skip );
+            grid_steps.emplace_back( settings.numerical_v["Delta"][current] * skip );
             t_t += grid_steps.back();
             grid_values.emplace_back( t_t );
-            grid_value_indices[t_t] = grid_values.size()-1;
+            grid_value_indices[t_t] = grid_values.size() - 1;
         }
-        //std::cout << "Values for "<<mode<<": " << t_values[mode] << std::endl;
+        // std::cout << "Values for "<<mode<<": " << t_values[mode] << std::endl;
+        Log::L2( "(Re)Setting time vector to {}\n", grid_values.size() );
     }
 
     // Set interpolation order:
     {
-        auto orders = QDLC::String::splitline( s_numerics_interpolate, ',');
-        std::map<std::string, int> methods = { {"monotone", 3}, {"linear",0} };
+        auto orders = QDLC::String::splitline( s_numerics_interpolate, ',' );
+        std::map<std::string, int> methods = { { "monotone", 3 }, { "linear", 0 } };
         std::string method_time = orders.front();
         std::string method_tau = orders.size() > 1 ? orders.back() : "linear";
         numerics_interpolate_method_time = methods[method_time];
@@ -330,12 +331,15 @@ void Parameters::parse_system() {
         conf_s.numerical["MaxPhotons"] = QDLC::Misc::convertParam<Parameter>( conf[2] );                                        // Maximum Photons
         conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[3], ',' );                                                 // Coupled to Transitions
         conf_s.numerical_v["CouplingScaling"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) ); // Coupling Scaling, per transition INTO cavity
-        //conf_s.numerical_v["BackCouplingScaling"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) ); // BackCoupling Scaling, per transition from cavity back into the electronic system
+        // conf_s.numerical_v["BackCouplingScaling"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) ); // BackCoupling Scaling, per transition from cavity back into the electronic system
         conf_s.numerical["DecayScaling"] = QDLC::Misc::convertParam<Parameter>( conf[5] ); // Decay Scaling, for all transitions
         input_photonic[conf[0]] = conf_s;
     }
 
-    //TODO: erst pulsetype übergeben, dann parameter parsen. verschiedene types können dann auch verschieden viele paramter haben.
+    // TODO: erst pulsetype übergeben, dann parameter parsen. verschiedene types können dann auch verschieden viele paramter haben.
+    // TODO: Implement "SUPER" scheme: Swing-up of quantum emitter population using detuned pulses arXiv:2111.10236v1
+    // BESSER: type infach zuerst auslesen (letzte element zuerst lel dann fallunterscheidung)
+    // p:TYPE:...parameters...
     auto pulses = QDLC::String::splitline( inputstring_pulse, ';' );
     for ( std::string &pulse : pulses ) {
         auto conf = QDLC::String::splitline( pulse, ':' );
@@ -345,11 +349,12 @@ void Parameters::parse_system() {
         conf_s.numerical_v["Frequency"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );                                                                                       // Frequency
         conf_s.numerical_v["Width"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) );                                                                                           // Width
         conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) );                                                                                          // Center
-        conf_s.numerical_v["Chirp"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[6], ',' ) );                                                                                           //TODO: move one down so it becomes optional                                                                                        // Chirp
+        conf_s.numerical_v["Chirp"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[6], ',' ) );                                                                                           // TODO: move one down so it becomes optional                                                                                        // Chirp
         conf_s.string_v["Type"] = QDLC::String::splitline( conf[7], ',' );                                                                                                                                      // Type
         conf_s.numerical_v["SuperAmp"] = conf.size() > 8 ? QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[8], ',' ) ) : std::vector<Parameter>( conf_s.numerical_v["Center"].size(), 2.0 ); // Optional: SuperGaussian Amplitude
         input_pulse[conf[0]] = conf_s;
     }
+    // TODO: hier auch erst Type übergeben, dann kann man verschiedene chirps (z.b. die modulation) besser implementieren.
     auto chirps = QDLC::String::splitline( inputstring_chirp, ';' );
     for ( std::string &chirp : chirps ) {
         auto conf = QDLC::String::splitline( chirp, ':' );
@@ -474,7 +479,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             for ( int i = 0; i < mat.numerical_v["Amplitude"].size(); i++ ) {
                 Log::L1( " - Single Pulse:\n" );
                 Log::L1( " - - Amplitude: {} Hz - {:.8} mueV\n", mat.numerical_v["Amplitude"][i], mat.numerical_v["Amplitude"][i].getSI( Parameter::UNIT_ENERGY_MUEV ) );
-                Log::L1( " - - Frequency: {} Hz - {:.8} eV\n", mat.numerical_v["Frequency"][i], mat.numerical_v["Frequency"][i].getSI( Parameter::UNIT_ENERGY_EV ) );
+                Log::L1( " - - Frequency: {} Hz - {:.8} eV - {:.8} nm\n", mat.numerical_v["Frequency"][i], mat.numerical_v["Frequency"][i].getSI( Parameter::UNIT_ENERGY_EV ), mat.numerical_v["Frequency"][i].getSI( Parameter::UNIT_WAVELENGTH_NM ) );
                 Log::L1( " - - Width: {} s - {:.8} ps\n", mat.numerical_v["Width"][i], mat.numerical_v["Width"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 Log::L1( " - - Center: {} s - {:.8} ps\n", mat.numerical_v["Center"][i], mat.numerical_v["Center"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 Log::L1( " - - Chirp: {}\n", mat.numerical_v["Chirp"][i] );

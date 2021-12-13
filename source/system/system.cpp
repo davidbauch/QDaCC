@@ -40,7 +40,7 @@ bool System::init_system() {
         pulseinputs.add( p.numerical_v["Center"], p.numerical_v["Amplitude"], p.numerical_v["Width"], p.numerical_v["Frequency"], p.numerical_v["Chirp"], p.numerical_v["SuperAmp"], p.string_v["Type"], 1.0 );
         pulse.push_back( { pulseinputs } );
     }
-    //pulse_V = Pulse( pulseinputs_V );
+    // pulse_V = Pulse( pulseinputs_V );
     if ( pulse.size() > 0 ) {
         Pulse::fileOutput( parameters.subfolder + "pulse.txt", pulse );
     }
@@ -48,10 +48,10 @@ bool System::init_system() {
         chirp.back().fileOutput( parameters.subfolder + "chirp.txt" );
     }
 
-    //if ( parameters.numerics_use_saved_coefficients )
-    //    savedCoefficients.reserve( parameters.numerics_saved_coefficients_max_size );
+    // if ( parameters.numerics_use_saved_coefficients )
+    //     savedCoefficients.reserve( parameters.numerics_saved_coefficients_max_size );
 
-    // Output Phonon functions if phonons are active //TODO: initialize_polaron_frame_functions
+    // Output Phonon functions if phonons are active
     if ( parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
         initialize_path_integral_functions();
     } else {
@@ -72,7 +72,7 @@ bool System::init_system() {
 Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos ) {
     Sparse ret = -1.0i * dgl_kommutator( H, rho );
     Sparse loss = Sparse( rho.rows(), rho.cols() );
-    //Photon Loss
+    // Photon Loss
     if ( parameters.p_omega_cavity_loss )
         for ( auto &cav : operatorMatrices.ph_transitions ) {
             if ( cav.second.direction == 1 )
@@ -96,7 +96,7 @@ Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const doub
     // Electronic Dephasing
     if ( parameters.p_omega_pure_dephasing > 0 )
         for ( auto &state_a : operatorMatrices.el_states ) {
-            for ( auto &state_b : operatorMatrices.el_states ) { //TODO: dephasing über el transitions machen.
+            for ( auto &state_b : operatorMatrices.el_states ) { // TODO: dephasing über el transitions machen.
                 if ( state_a.first.compare( state_b.first ) == 0 )
                     continue;
                 loss -= 0.5 * parameters.input_electronic[state_b.first].numerical["DephasingScaling"] * parameters.input_electronic[state_a.first].numerical["DephasingScaling"] * parameters.p_omega_pure_dephasing * operatorMatrices.el_states[state_a.first].hilbert * rho * operatorMatrices.el_states[state_b.first].hilbert;
@@ -114,13 +114,13 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
     if ( parameters.numerics_use_interactionpicture ) {
         // TIMETRANSFORMATION_ANALYTICAL
         if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) {
-            //std::vector<Eigen::Triplet<Scalar>> ret_v;
+            // std::vector<Eigen::Triplet<Scalar>> ret_v;
             for ( int k = 0; k < ret.outerSize(); ++k ) {
                 for ( Sparse::InnerIterator it( ret, k ); it; ++it ) {
                     // Convert row/col into respective photon numbers / atomic state
                     int i = it.row();
                     int j = it.col();
-                    ret.coeffRef( i, j ) *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) ); //it.value() = ?
+                    ret.coeffRef( i, j ) *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) ); // it.value() = ?
                 }
             }
         }
@@ -177,7 +177,7 @@ Scalar System::dgl_raman_population_increment( const std::vector<QDLC::SaveState
         double tdd = past_rhos.at( i ).t;
         B = std::exp( -1.0i * ( w2 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma2 ) ) * ( t - tdd ) ) - std::exp( -1.0i * ( w1 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma1 ) ) * ( t - tdd ) );
         R = dgl_expectationvalue<Sparse, Scalar>( past_rhos.at( i ).mat, op, tdd ) * std::conj( pulse.at( pulse_index ).get( tdd ) );
-        //fmt::print("t = {}, tau = {}, A = {}, B = {}, R = {}\n",t,tdd,A,B,R);
+        // fmt::print("t = {}, tau = {}, A = {}, B = {}, R = {}\n",t,tdd,A,B,R);
 #pragma omp critical
         ret += B * R;
     }
@@ -187,12 +187,12 @@ Scalar System::dgl_raman_population_increment( const std::vector<QDLC::SaveState
 void System::expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer ) {
     // Interpolate Rhos to the actual timestep if a grid was passed.
     // Output expectation Values
-    //for ( int i = 0; i < rhos.size(); i++ ) {
+    // for ( int i = 0; i < rhos.size(); i++ ) {
     double t_pre = rhos.front().t;
-    for (auto& tup : rhos) {
+    for ( auto &tup : rhos ) {
         auto &rho = tup.mat;
         double t = tup.t;
-        double dt = t-t_pre;
+        double dt = t - t_pre;
         t_pre = t;
         std::string el_out = fmt::format( "{:.5e}", t );
         std::string ph_out = fmt::format( "{:.5e}", t );
@@ -259,7 +259,7 @@ bool System::exit_system( const int failure ) {
     Log::L2( "[System] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
     Log::L2( "[System] Number of approx+/- adjustments: {}\n", globaltries );
     Log::L1( "[System] Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
-    fileoutput.close(); 
+    fileoutput.close();
     return true;
 }
 
