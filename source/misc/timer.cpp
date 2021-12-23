@@ -23,22 +23,22 @@ void Timer::iterate( int num ) {
 }
 // Start Timer
 void Timer::start() {
-    //Log::L2("Starting timer '{}'... ",name);
+    // Log::L2("Starting timer '{}'... ",name);
     wallTimeStarted = omp_get_wtime();
     cpuTimeStarted = clock();
     running = true;
-    //Log::L2("Done!\n");
+    // Log::L2("Done!\n");
 }
 // End Timer
 void Timer::end() {
-    //Log::L2("Ending timer '{}'... ",name);
+    // Log::L2("Ending timer '{}'... ",name);
     wallTimeEnded = omp_get_wtime();
     cpuTimeEnded = clock();
     running = false;
     totalCPUTime = getCPUTimeOnce();
     totalWallTime = getWallTimeOnce();
     iterate();
-    //Log::L2("Done!\n");
+    // Log::L2("Done!\n");
 }
 // Add time
 void Timer::add( time_t cpu, double wall ) {
@@ -127,7 +127,7 @@ double Timers::Isummary( bool output ) {
                 Log::L1( "\n" );
             }
         }
-        Log::Bar( Log::BAR_SIZE_FULL, Log::LEVEL_1, Log::BAR_1 );
+        Log::Bar( 75, Log::LEVEL_1, Log::BAR_1 );
         Log::L1( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0 ? Timer::format( totalCPUTime ) : "--" ) );
         Log::Bar();
     }
@@ -143,7 +143,7 @@ void Timers::IoutputProgress( Timer &t, ProgressBar &p, const unsigned int curre
 void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
         if ( !final )
-            p.print( currentIt, maxItTotal, fmt::format( "T - {}", Timer::format( (maxItTotal-currentIt) * t.getAverageIterationTime() ) ), suffix );
+            p.print( currentIt, maxItTotal, fmt::format( "T - {}", Timer::format( ( maxItTotal - currentIt ) * t.getAverageIterationTime() ) ), suffix );
         else {
             p.print( maxItTotal, maxItTotal, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
             fmt::print( "\n" );
@@ -153,7 +153,7 @@ void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int cu
 void Timers::IoutputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
         fmt::print( "{0}\t{1:.2f}\n", QDLC::Message::Prefix::PERCENT, ( currentIt / (double)maxItTotal * 100. ) );
-        fmt::print( "{0}\t{1:.0f}\n", QDLC::Message::Prefix::PERCENT_TIME, 1.0*maxItTotal/currentIt * t.getWallTimeOnce() );
+        fmt::print( "{0}\t{1:.0f}\n", QDLC::Message::Prefix::PERCENT_TIME, 1.0 * maxItTotal / currentIt * t.getWallTimeOnce() );
         fmt::print( "{0}\t{1}\n", QDLC::Message::Prefix::SUFFIX, suffix );
     }
 }

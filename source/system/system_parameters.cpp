@@ -86,6 +86,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     inputstring_conc = QDLC::CommandlineArguments::get_parameter( "--G", "GC" );
     inputstring_gfunc = QDLC::CommandlineArguments::get_parameter( "--G", "GF" );
     inputstring_wigner = QDLC::CommandlineArguments::get_parameter( "--G", "GW" );
+    inputstring_raman = QDLC::CommandlineArguments::get_parameter( "--G", "GR" );
     inputstring_correlation_resolution = QDLC::CommandlineArguments::get_parameter( "--G", "grid" );
 
     p_omega_coupling = QDLC::CommandlineArguments::get_parameter<double>( "--system", "coupling" );
@@ -126,6 +127,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_phonon_approximation_markov1 = QDLC::CommandlineArguments::get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
     numerics_phonon_nork45 = QDLC::CommandlineArguments::get_parameter_passed( "-noPhononRK45" );                    // Disables RK45 for phonon backwards integral; use if detunings are high. //TODO: andersrum, RK backwards integral soll rkorder nehmen, dann mit nork45 für backwards integral deaktivieren!
     output_coefficients = QDLC::CommandlineArguments::get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
+    output_path = QDLC::CommandlineArguments::get_parameter_passed( "-oPath" ) ? 1 : 0;
     p_phonon_adjust = !QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
     p_phonon_pure_dephasing = QDLC::Misc::convertParam<double>( "1mueV" );
     // Path Integral Parameters
@@ -341,6 +343,7 @@ void Parameters::parse_system() {
     // BESSER: type infach zuerst auslesen (letzte element zuerst lel dann fallunterscheidung)
     // p:TYPE:...parameters...
     auto pulses = QDLC::String::splitline( inputstring_pulse, ';' );
+    int pindex = 0;
     for ( std::string &pulse : pulses ) {
         auto conf = QDLC::String::splitline( pulse, ':' );
         input_s conf_s;
@@ -352,6 +355,8 @@ void Parameters::parse_system() {
         conf_s.numerical_v["Chirp"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[6], ',' ) );                                                                                           // TODO: move one down so it becomes optional                                                                                        // Chirp
         conf_s.string_v["Type"] = QDLC::String::splitline( conf[7], ',' );                                                                                                                                      // Type
         conf_s.numerical_v["SuperAmp"] = conf.size() > 8 ? QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[8], ',' ) ) : std::vector<Parameter>( conf_s.numerical_v["Center"].size(), 2.0 ); // Optional: SuperGaussian Amplitude
+        conf_s.numerical["PulseIndex"] = pindex;
+        pindex += 2;
         input_pulse[conf[0]] = conf_s;
     }
     // TODO: hier auch erst Type übergeben, dann kann man verschiedene chirps (z.b. die modulation) besser implementieren.
@@ -407,6 +412,16 @@ void Parameters::parse_system() {
         conf_s.numerical_v["Res"] = QDLC::Misc::convertParam<Parameter>( n > 3 ? QDLC::String::splitline( conf[3], ',' ) : std::vector<std::string>( conf_s.numerical_v["X"].size(), "100" ) ); // Resolution
         conf_s.numerical_v["Skip"] = QDLC::Misc::convertParam<Parameter>( n > 4 ? QDLC::String::splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.numerical_v["X"].size(), "1" ) );  // Skips in t-direction
         input_correlation["Wigner"] = conf_s;
+    }
+    for ( std::string &raman : QDLC::String::splitline( inputstring_raman, ';' ) ) {
+        auto conf = QDLC::String::splitline( raman, ':' );
+        auto n = conf.size();
+        input_s conf_s;
+        conf_s.string_v["SourceModes"] = QDLC::String::splitline( conf[0], ',' );
+        conf_s.string_v["RamanMode"] = QDLC::String::splitline( conf[1], ',' );
+        conf_s.string_v["OpMode"] = QDLC::String::splitline( conf[2], ',' );
+        conf_s.string_v["PMode"] = QDLC::String::splitline( conf[3], ',' );
+        input_correlation["Raman"] = conf_s;
     }
     for ( std::string &gconf : QDLC::String::splitline( inputstring_correlation_resolution, ';' ) ) { // Redundant, only the latest will be used.
         auto single = QDLC::String::splitline( gconf, ':' );

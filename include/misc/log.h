@@ -145,6 +145,6 @@ class Log {
     }
 };
 
-//TODO:
-// #define LOG_ERROR logError(__FILE__, __FUNCTION__, __LINE__)
-// inline void logError(const char* file, const char* func, int line) {cout them}
+// TODO:
+//  #define LOG_ERROR logError(__FILE__, __FUNCTION__, __LINE__)
+//  inline void logError(const char* file, const char* func, int line) {cout them}

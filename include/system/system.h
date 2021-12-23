@@ -17,8 +17,8 @@ class System {
 
     // ##### System Components #####
     std::vector<Chirp> chirp;
-    //Pulse pulse_H; //REMOVE
-    //Pulse pulse_V; //REMOVE
+    // Pulse pulse_H; //REMOVE
+    // Pulse pulse_V; //REMOVE
     std::vector<Pulse> pulse;
     FileOutput fileoutput;
     Parameters parameters;
@@ -26,8 +26,8 @@ class System {
 
     // ##### Cache Components #####
     // Runtime efficient caching vector
-    std::map<double, Scalar> phi_vector;                                 // Vector of saved phonon-phi function
-    std::vector<Scalar> phi_vector_int;                                  // Same, but with integers for path integral
+    std::map<double, Scalar> phi_vector;                                      // Vector of saved phonon-phi function
+    std::vector<Scalar> phi_vector_int;                                       // Same, but with integers for path integral
     std::map<double, std::map<double, QDLC::SaveStateTau>> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
 
     // ##### Helper Variables #####
@@ -79,9 +79,6 @@ class System {
 
     // Calculates the pulse Hamilton operator
     Sparse dgl_pulse( const double t );
-
-    // Integrates the Raman photon population. Very runtime costly. TODO: Multithread/Optimize integral.
-    Scalar dgl_raman_population_increment( const std::vector<QDLC::SaveState> &past_rhos, const std::string& electronic_transition1, const std::string& electronic_transition2, const std::string& optical_transition, int pulse_index, const Scalar before, const double t );
 
     // Calculates and outputs expectation values for all available observables
     void expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer );
@@ -161,7 +158,7 @@ class System {
     // @return Matrix trace of type T
     template <typename T>
     inline T getTrace( const Sparse &mat ) const {
-        //return getTrace<T>( Dense( mat ) );
+        // return getTrace<T>( Dense( mat ) );
         T ret = (T)0.0;
         for ( int k = 0; k < mat.outerSize(); ++k ) {
             for ( Sparse::InnerIterator it( mat, k ); it; ++it ) {

@@ -40,12 +40,12 @@ const double b55 = -5103 / 18656.;
 const double b65 = -2187. / 6784.;
 const double b66 = 11. / 84.;
 
-const double e1 = 5179. / 57600.; //71. / 57600.;
+const double e1 = 5179. / 57600.; // 71. / 57600.;
 const double e2 = 0;
 const double e3 = 7571. / 16695.;    //-71. / 16695.;
-const double e4 = 393. / 640.;       //71. / 1920.;
+const double e4 = 393. / 640.;       // 71. / 1920.;
 const double e5 = -92097. / 339200.; //-17253. / 339200.;
-const double e6 = 187. / 2100.;      //22. / 525.;
+const double e6 = 187. / 2100.;      // 22. / 525.;
 const double e7 = 1. / 40.;          //-1. / 40.;
 
 } // namespace RKCoefficients

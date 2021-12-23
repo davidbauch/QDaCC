@@ -114,6 +114,12 @@ CLA_ARGUMENT = {
 		description = 'Wigner Function. Syntax: [Mode:X:Y:Res:Skip(t-direction)]'
 	}
 	CLA_PARAMETER = {
+		subkey = 'GR'
+		value = ''
+		datatype = 'string'
+		description = 'Raman Population. Syntax: [ElectronicMode1:ElectronicMode2:OpticalMode:PulseMode]'
+	}
+	CLA_PARAMETER = {
 		subkey = 'grid'
 		value = ''
 		datatype = 'string'
@@ -311,6 +317,18 @@ CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'noPhononRK45'
 	description = 'Disables using RK45 for the phonon integral, will use constant timestep with passed dt instead.'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'oPath'
+	description = 'Outputs the Path of the Pathintegral Propagator for a single timestep using the .dot format.'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''

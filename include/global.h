@@ -25,8 +25,8 @@
 #include <unordered_map>
 #include <filesystem>
 //#include <experimental/filesystem>
-//namespace std {
-//namespace filesystem = std::experimental::filesystem::v1;
+// namespace std {
+// namespace filesystem = std::experimental::filesystem::v1;
 //}
 
 #include "misc/commandlinearguments.h"
@@ -66,7 +66,7 @@ using namespace QDLC::Type;
 template <class T>
 std::ostream &operator<<( std::ostream &os, const std::vector<T> &v ) {
     os << "[";
-    //std::for_each(v.begin(), v.end(), [os](T& el){os << el;});
+    // std::for_each(v.begin(), v.end(), [os](T& el){os << el;});
     for ( typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii ) {
         os << *ii;
         if ( ii != v.end() )

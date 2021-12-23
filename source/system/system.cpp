@@ -25,7 +25,7 @@ System::System( const std::vector<std::string> &input ) {
     Log::L2( "[System] Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( Timers::MILLISECONDS ) );
     timer_systeminit.end();
 }
-
+ 
 bool System::init_system() {
     // Single chirp for single atomic level
     for ( auto &[mode, p] : parameters.input_chirp ) {
@@ -154,40 +154,8 @@ Sparse System::dgl_pulse( const double t ) {
     return ret;
 }
 
-// electronic_transition1, electronic_transition2, optical_transition
-Scalar System::dgl_raman_population_increment( const std::vector<QDLC::SaveState> &past_rhos, const std::string &electronic_transition1, const std::string &electronic_transition2, const std::string &optical_transition, int pulse_index, const Scalar before, const double t ) {
-    // TODO: das hier in solver funktion umschreiben. dann auf ganzem vektor anwenden
-    Sparse m_electronic_transition3; // G -> B bzw G(HH)B, erste und letzter der beiden transitions. find in transitions or extra_transitions. create if not exist
-    Sparse m_optical_transition;
-    double chirpcorrection = chirp.back().get( t );
-    double electronic_transition_1 = 0;
-    double electronic_transition_2 = 0;
-    double w1 = electronic_transition_1 + chirpcorrection;
-    double w2 = electronic_transition_2 + chirpcorrection;
-    double wc = 0;
-    Scalar ret = 0;
-
-    double sigma1 = parameters.p_omega_pure_dephasing + parameters.p_omega_decay;
-    double sigma2 = parameters.p_omega_pure_dephasing + 3. * parameters.p_omega_decay;
-    Sparse op = m_electronic_transition3 * m_optical_transition;
-    double A = std::exp( -parameters.p_omega_cavity_loss * parameters.t_step );
-    Scalar B, R;
-#pragma omp parallel for ordered schedule( dynamic ) shared( past_rhos ) num_threads( parameters.numerics_maximum_threads )
-    for ( long unsigned int i = 0; i < past_rhos.size(); i++ ) {
-        double tdd = past_rhos.at( i ).t;
-        B = std::exp( -1.0i * ( w2 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma2 ) ) * ( t - tdd ) ) - std::exp( -1.0i * ( w1 - wc - 0.5i * ( parameters.p_omega_cavity_loss + sigma1 ) ) * ( t - tdd ) );
-        R = dgl_expectationvalue<Sparse, Scalar>( past_rhos.at( i ).mat, op, tdd ) * std::conj( pulse.at( pulse_index ).get( tdd ) );
-        // fmt::print("t = {}, tau = {}, A = {}, B = {}, R = {}\n",t,tdd,A,B,R);
-#pragma omp critical
-        ret += B * R;
-    }
-    return A * before + parameters.t_step * parameters.t_step * ret;
-}
-
 void System::expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer ) {
-    // Interpolate Rhos to the actual timestep if a grid was passed.
     // Output expectation Values
-    // for ( int i = 0; i < rhos.size(); i++ ) {
     double t_pre = rhos.front().t;
     for ( auto &tup : rhos ) {
         auto &rho = tup.mat;
@@ -203,16 +171,16 @@ void System::expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer 
             double expval = std::real( dgl_expectationvalue<Sparse, Scalar>( rho, state.hilbert, t ) );
             ph_out = fmt::format( "{:}\t{:.6e}", ph_out, expval );
             if ( parameters.p_omega_cavity_loss > 0.0 ) {
-                emission_probabilities[mode] += expval;
-                ph_em = fmt::format( "{:}\t{:.6e}", ph_em, parameters.p_omega_cavity_loss * dt * parameters.input_photonic[mode].numerical["DecayScaling"] * emission_probabilities[mode] );
+                emission_probabilities[mode] += expval * dt;
+                ph_em = fmt::format( "{:}\t{:.6e}", ph_em, parameters.p_omega_cavity_loss * parameters.input_photonic[mode].numerical["DecayScaling"] * emission_probabilities[mode] );
             }
         }
         for ( auto &[mode, state] : operatorMatrices.el_states ) {
             double expval = std::real( dgl_expectationvalue<Sparse, Scalar>( rho, state.hilbert, t ) );
             el_out = fmt::format( "{:}\t{:.6e}", el_out, expval );
             if ( parameters.p_omega_decay > 0.0 and parameters.input_electronic[mode].numerical["DecayScaling"] != 0.0 ) {
-                emission_probabilities[mode] += expval;
-                el_em = fmt::format( "{:}\t{:.6e}", el_em, parameters.p_omega_decay * dt * parameters.input_electronic[mode].numerical["DecayScaling"] * emission_probabilities[mode] );
+                emission_probabilities[mode] += expval * dt;
+                el_em = fmt::format( "{:}\t{:.6e}", el_em, parameters.p_omega_decay * parameters.input_electronic[mode].numerical["DecayScaling"] * emission_probabilities[mode] );
             }
         }
         // Output

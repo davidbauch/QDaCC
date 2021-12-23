@@ -13,7 +13,7 @@ namespace Numerics {
 class ODESolver {
    private:
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
-    int dim; //TODO: //Remove
+    int dim; // TODO: //Remove
     // Cache Matrices that allow for variable time steps.
     std::map<std::string, Dense> cache;
     std::map<std::string, std::map<std::string, std::vector<Scalar>>> to_output;
@@ -23,7 +23,7 @@ class ODESolver {
     std::vector<QDLC::SaveState> savedStates;                              // Vector for saved matrix-time tuples for densitymatrix
     std::map<double, Sparse> savedHamiltons;                               // Vector for saved matrix-time tuples for hamilton operators
     std::map<double, std::vector<std::vector<Sparse>>> pathint_propagator; // Propagators for the path integral. Used for their corresponding correlation functions.
-    std::map<double, size_t> rho_index_map;                                    // Maps t_t onto i for accessing the savedSate Vector via doubles.
+    std::map<double, size_t> rho_index_map;                                // Maps t_t onto i for accessing the savedSate Vector via doubles.
 
     // Path Integral Helper Variables
     std::vector<int> pathint_tensor_dimensions;
@@ -85,7 +85,7 @@ class ODESolver {
     int reset( System &s );
 
     // @return: [tuple] Used Operator Matrices in order of input parameters
-    std::tuple<Sparse, Sparse> calculate_g1( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, std::string purpose = "unknown" ); //std::vector<std::vector<QDLC::SaveScalar>>
+    std::tuple<Sparse, Sparse> calculate_g1( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, std::string purpose = "unknown" ); // std::vector<std::vector<QDLC::SaveScalar>>
     std::tuple<Sparse, Sparse, Sparse, Sparse> calculate_g2( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, std::string purpose = "unknown" );
 
     // Description: Stretches Data evaluated at various timesteps onto an equidistant grid, such that g1 and g2 can work with said grid.
@@ -110,7 +110,7 @@ class ODESolver {
     // @return: [bool] True if calculations are sucessfull, else false
     bool calculate_t_direction( System &s );
 
-    //bool calculate_g2_0( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string fileOutputName ); //moved to advancedPhotonStatistics
+    // bool calculate_g2_0( System &s, const Sparse &op_creator, const Sparse &op_annihilator, std::string fileOutputName ); //moved to advancedPhotonStatistics
     std::tuple<std::string, std::string> get_operator_strings( const std::string &operators );
     std::string get_operators_purpose( const std::vector<std::string> &operators, int order );
     std::tuple<Sparse, Sparse> get_operators_matrices( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator );
@@ -127,6 +127,11 @@ class ODESolver {
     bool calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output = true, double tolerance = 1E-4 );
     bool calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output = true );
     bool calculate_path_integral_correlation( Tensor adms, Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, size_t total_progressbar_iterations, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output, const std::vector<Sparse> &matrices, const std::vector<std::vector<int>> &adm_multithreaded_indices, int adm_multithreading_cores );
+
+    bool visualize_path( Sparse &rho0, System &s );
+
+    // Integrates the Raman photon population. Very runtime costly. TODO: Multithread/Optimize integral.
+    bool calculate_raman_population( System &s, const std::string &electronic_transition1, const std::string &electronic_transition2, const std::string &optical_transition, const std::string &pulse_mode );
 };
 
 } // namespace Numerics

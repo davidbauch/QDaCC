@@ -44,8 +44,9 @@ class Parameters {
     bool numerics_pathint_partially_summed;
     bool numerics_phonon_nork45;
     bool numerics_use_function_caching;
+    bool output_path;
     size_t numerics_groundstate;
-    
+
     // Path Integral Numerics
     double numerics_pathintegral_stepsize_iterator;      // = 1E-12;
     double numerics_pathintegral_squared_threshold;      // = 1E-32;
@@ -60,7 +61,7 @@ class Parameters {
     // Time variables
     Parameter t_start, t_end, t_step, t_step_pathint;
     std::vector<double> grid_steps, grid_values; // Calculate T and Correlation Grid for these timesteps. maps Index -> t_t, t_step
-    std::map<double,size_t> grid_value_indices; // maps t_t -> Index
+    std::map<double, size_t> grid_value_indices; // maps t_t -> Index
     // System Dimensions
     int maxStates;
     // Starting state:
@@ -116,16 +117,16 @@ class Parameters {
         };
     };
     std::string inputstring_electronic;
-    std::string inputstring_photonic;  
-    std::string inputstring_pulse;     
-    std::string inputstring_chirp;     
-    std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_correlation_resolution;
+    std::string inputstring_photonic;
+    std::string inputstring_pulse;
+    std::string inputstring_chirp;
+    std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_raman, inputstring_correlation_resolution;
     std::map<std::string, input_s> input_electronic;
     std::map<std::string, input_s> input_photonic;
     std::map<std::string, input_s> input_pulse;
     std::map<std::string, input_s> input_chirp;
-    std::map<std::string, input_s> input_correlation; //spectrum, indist, conc
-    std::map<std::string, input_s> input_correlation_resolution; //g1/g2 correlation timesteps. length of g will be determined by gridres
+    std::map<std::string, input_s> input_correlation;            // spectrum, indist, conc
+    std::map<std::string, input_s> input_correlation_resolution; // g1/g2 correlation timesteps. length of g will be determined by gridres
     // Converts the input strings into input vectors.
     // These Vectors will then be used to generate the operators and to output the inputsystem
     void parse_system();

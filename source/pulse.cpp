@@ -28,7 +28,7 @@ Scalar Pulse::evaluate( double t ) {
         } else if ( inputs.type.at( i ).compare( "cutoff" ) == 0 ) {
             ret += inputs.amp.at( i ) * std::exp( -0.5 * std::pow( ( t - inputs.center.at( i ) ) / inputs.sigma.at( i ), 2. ) ) * ( std::exp( -1.0i * ( ( inputs.omega.at( i ) - inputs.omega_chirp.at( i ) ) * ( t - inputs.center.at( i ) ) ) ) + std::exp( -1.0i * ( ( inputs.omega.at( i ) + inputs.omega_chirp.at( i ) ) * ( t - inputs.center.at( i ) ) ) ) );
         }
-    }
+    } 
     return ret;
 }
 
@@ -44,7 +44,7 @@ Scalar Pulse::evaluate_integral( double t ) {
 
 // Generate array of energy-values corresponding to the Pulse
 void Pulse::generate() {
-    //Log::L3( "generating type " + inputs.pulse_type + "... " );
+    // Log::L3( "generating type " + inputs.pulse_type + "... " );
     double t;
     for ( double t1 = inputs.t_start; t1 < inputs.t_end + inputs.t_step * steps.size(); t1 += inputs.t_step ) {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
@@ -55,7 +55,7 @@ void Pulse::generate() {
                 maximum = std::abs( val );
         }
         pulsearray_derivative[t1] = derivative( t1 );
-        pulsearray_integral[t1] = 0.0; //integral( t1 ); // FIXME: segmentation fault, just integrade properly.
+        pulsearray_integral[t1] = 0.0; // integral( t1 ); // FIXME: segmentation fault, just integrade properly.
     }
 
     size = pulsearray.size();
@@ -122,7 +122,7 @@ void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter>
     }
     for ( int i = 0; i < (int)_amp.size(); i++ ) {
         center.emplace_back( _center.at( i ) );
-        amp.emplace_back( _amp.at( i ) );
+        amp.emplace_back( _amp.at( i ).get() );
         sigma.emplace_back( _sigma.at( i ) );
         omega.emplace_back( _omega.at( i ) );
         omega_chirp.emplace_back( _omega_chirp.at( i ) );
@@ -147,7 +147,7 @@ void Pulse::Inputs::add( std::vector<Parameter> &_center, std::vector<Parameter>
             type.emplace_back( _type.at( i ) );
             Log::L2( "Added Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, chirp = {}, type = {}. Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _omega_chirp.at( i ), _type.at( i ), to_match );
         } else {
-            //Log::L3( "Failed to add Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, type = {}. Mismatched Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _type.at( i ), to_match );
+            // Log::L3( "Failed to add Pulse with parameters: center = {}, amp = {}, sigma = {}, omega = {}, type = {}. Mismatched Filter {} was used.\n", _center.at( i ), _amp.at( i ), _sigma.at( i ), _omega.at( i ), _type.at( i ), to_match );
         }
     }
 }
