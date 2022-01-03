@@ -28,7 +28,7 @@ class Parameters {
     int numerics_maximum_threads, numerics_phonon_approximation_markov1, numerics_phonon_approximation_order;
     double akf_deltaWmax;
     Parameter spectrum_frequency_center, spectrum_frequency_range;
-    bool numerics_use_saved_coefficients;
+    bool numerics_use_saved_coefficients, numerics_force_caching;
     bool numerics_output_raman_population;
     bool numerics_calculate_timeresolution_indistinguishability;
     int numerics_phonons_maximum_threads;

@@ -279,6 +279,18 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '1hyphen'
+	key = 'disablePSPath'
+	description = 'Disables the partially summing part of the Path Integral Algorithm. This greatly increases the numerical effort and should not be used.'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
 	key = 'noMarkov'
 	description = 'Disable first Markov Approximation. Note: This slows down g1 and g2 calculation.'
 	group = 'PhononParams'
@@ -315,8 +327,8 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '1hyphen'
-	key = 'noPhononRK45'
-	description = 'Disables using RK45 for the phonon integral, will use constant timestep with passed dt instead.'
+	key = 'usePhononRK45'
+	description = 'Enables using RK45 for the phonon integral, will use constant timestep with passed dt instead.'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''

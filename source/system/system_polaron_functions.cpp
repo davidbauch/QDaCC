@@ -20,6 +20,7 @@ Scalar System::dgl_phonons_phi( const double t ) {
 
 void System::initialize_polaron_frame_functions() {
     if ( parameters.p_phonon_T >= 0 ) {
+        Log::L2( "[System Polaron Frame] Initializing Polaron Frame Functions.\n" );
         // Initialize Phi(tau)
         phi_vector[0.0] = dgl_phonons_phi( parameters.t_step * 0.001 );
         for ( double tau = parameters.t_step; tau < parameters.p_phonon_tcutoff * 3.1; tau += parameters.t_step ) {
@@ -43,6 +44,7 @@ void System::initialize_polaron_frame_functions() {
             // }
             // std::fclose( fp_phonons );
         }
+        Log::L2( "[System Polaron Frame] Done.\n" );
     }
 }
 
@@ -240,7 +242,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 chi_tau_back_u = std::accumulate( threadmap_1.begin(), threadmap_1.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
                 chi_tau_back_g = std::accumulate( threadmap_2.begin(), threadmap_2.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
                 // Save coefficients
-                if ( parameters.numerics_use_saved_coefficients ) {
+                if ( parameters.numerics_use_saved_coefficients or parameters.numerics_force_caching ) {
 #pragma omp master
                     savedCoefficients[t][0.0] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, 0 );
                 }
@@ -281,7 +283,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                         chi_tau_back_g = dgl_phonons_chiToX( chi_tau_back, 'g' );
                         // If saving is used, save current chi(t-tau). If markov approximation is used, only save final contributions
                         // dgl_save_coefficient( chi_tau_back_u, chi_tau_back_g, t, tau );
-                        if ( parameters.numerics_use_saved_coefficients ) {
+                        if ( parameters.numerics_use_saved_coefficients or parameters.numerics_force_caching ) {
 #pragma omp critical
                             savedCoefficients[t][tau] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
                         }

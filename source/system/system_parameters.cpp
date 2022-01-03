@@ -111,6 +111,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_use_saved_coefficients = !QDLC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
     numerics_use_saved_hamiltons = !QDLC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
     numerics_use_function_caching = !QDLC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
+    numerics_force_caching = false; // If true, even if any saving was disabled internally (not by the user), the matrices will still be cached.
     numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
     numerics_output_raman_population = QDLC::CommandlineArguments::get_parameter_passed( "-raman" ); // DEPRECATED
     logfilecounter = QDLC::Misc::convertParam<int>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
@@ -125,7 +126,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     p_phonon_T = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "temperature" );
     numerics_phonon_approximation_order = QDLC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
     numerics_phonon_approximation_markov1 = QDLC::CommandlineArguments::get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
-    numerics_phonon_nork45 = QDLC::CommandlineArguments::get_parameter_passed( "-noPhononRK45" );                    // Disables RK45 for phonon backwards integral; use if detunings are high. //TODO: andersrum, RK backwards integral soll rkorder nehmen, dann mit nork45 für backwards integral deaktivieren!
+    numerics_phonon_nork45 = QDLC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );                   // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
     output_coefficients = QDLC::CommandlineArguments::get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
     output_path = QDLC::CommandlineArguments::get_parameter_passed( "-oPath" ) ? 1 : 0;
     p_phonon_adjust = !QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
@@ -137,7 +138,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_pathintegral_sparse_prune_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "sparsePruneThreshold" );
     numerics_pathintegral_dynamiccutoff_iterations_max = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
     numerics_pathintegral_docutoff_propagator = QDLC::CommandlineArguments::get_parameter_passed( "-cutoffPropagator" );
-    numerics_pathint_partially_summed = true;
+    numerics_pathint_partially_summed = !QDLC::CommandlineArguments::get_parameter_passed( "-disablePSPath" );
     t_step_pathint = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "tstepPath" );
 
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
@@ -303,6 +304,8 @@ bool Parameters::adjustInput() {
             p_omega_pure_dephasing = p_phonon_pure_dephasing * p_phonon_T;
             p_omega_decay = p_omega_decay * p_phonon_b * p_phonon_b;
         }
+        if ( numerics_rk_order >= 45 and numerics_use_saved_coefficients )
+            numerics_force_caching = true;
     }
     numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 * ( p_phonon_tcutoff / t_step ) ) + 10;
     trace.reserve( iterations_t_max + 5 );

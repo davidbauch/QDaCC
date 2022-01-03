@@ -18,13 +18,13 @@
 
 All numerical parameters support the following units:
 Units of Energy:
-- `Hz` - Hertz, can also be omitted, meaning any energy related value without a unit is treated as `Hz`
+- `Hz` - Hertz, can also be omitted, meaning the default unit for energy is `Hz`
 - `eV` - Electron Volt
 - `meV` - Milli Electron Volt `= 1E-3eV`
 - `mueV` - Micro Electron Volt `= 1E-6eV`
 
 Units of Time:
-- `s` - Seconds, can also be omitted, meaning any time related value without a unit is treated as `s`
+- `s` - Seconds, can also be omitted, meaning the default value for time is `s`
 - `ns` - Nanoseconds `= 1E-9s`
 - `ps` - Picoseconds `= 1E-12s`
 - `fs` - Femtoseconds `= 1E-15s`
@@ -54,7 +54,7 @@ The general syntax for a system with a single electronic state reads:
     --SE [...;Name:Energy:CoupledTo:DecayScaling:DephasingScaling:PhononCoupling;...]
 Multiple electronic states can be chained by using the chain operator `;`. The parameters for a state read as follows:
 
-- `Name` : **Single Uppercase** Character Identifier. **Must** be unique.
+- `Name` : **Single Uppercase** Character Identifier. **Must** be unique amoung all electronic states.
 - `Energy` : Energy of the state. Supports the Units of Energy.
 - `CoupledTo` : Comma seperated Single Character Indentifier of any other state that this state is coupled to. Using `-` indicates the state is not coupled to anything.
 - `DecayScaling` : Scaling factor (float) for the radiative decay rate for this state
@@ -73,7 +73,7 @@ The general syntax for a system with a single optical resonator reads:
     --SO [...;Name:Energy:MaxPhotons:CoupledToTransition:CouplingScaling:DecayScaling;...]
 Multiple photonic states can be chained by using the chain operator `;`. The parameters for a state read as follows:
 
-- `Name` : **Single Lowercase** Character Identifier. **Must** be unique.
+- `Name` : **Single Lowercase** Character Identifier. **Must** be unique amoung all resonators.
 - `Energy` : Energy of the resonator. Supports the Units of Energy.
 - `MaxPhotons` : Maximum Photon Number for this resonator. 
 - `CoupledToTransition` : Comma seperated Electronic Transitions this resonator is coupled to. Uses the *upwards* transition of two states. The transition has to exist in the electronic system.
@@ -107,7 +107,7 @@ The electronic states as well as the resonator modes can be driven by an optical
     --SP '[...;Name:CoupledToTransition:Amp:Freq:Width:Center:Chirp:Type(:GaussAmp);...]'
 Multiple transitions can be driven by multiple pulses, and multiple pulses can be chained by using the chain operator `;`. The parameters read as follows:
 
-- `Name` : **Single Lowercase** Character Identifier. **Must** be unique.
+- `Name` : **Single Lowercase** Character Identifier. **Must** be unique amoung all pulses.
 - `CoupledToTransition` : Comma seperated list of electronic transitions or optical resonators this set of pulses is coupled to.
 - `Amp` : Amplitude of the pulse. When defined as a Gaussian pulse (see `Type`), this amplitude is assumed to be the pulse area in units of PI. In any other case, this value supports the Units of Energy.
 - `Freq` : Frequency of the pulse using `e^(-i*omega)` where omega is the pulse frequency. This parameter supports the Units of Energy.
@@ -142,7 +142,7 @@ The energy of the electronic states can be shifted over time by the electronic c
     --SC [...;Name:CoupledTo:AmpFactors:Amps:Times:DDTs:Type;...]
 Multiple levels can be changed by the same chirp, and multiple chirps can be chained using the chain operator `;`. The parameters read as follows:
 
-- `Name` : **Single Lowercase** Character indentifier. **Must** be unique.
+- `Name` : **Single Lowercase** Character indentifier. **Must** be unique amoung all chirps.
 - `CoupledTo` : Comma seperated list of uppercase electronic state identifiers this chirp should influence.
 - `AmpFactors` : Comma seperated list of scaling factors for the identifiers listet prior.
 - `Amps` : Comma seperated list of amplitudes.
@@ -187,10 +187,25 @@ Use a timestep of `200fs`. If no `--tend [END]` is provided, the calculation wil
 ---
 
 ## Electron-Phonon Coupling
-...
+The electron-phonon coupling can be calculated using two different approaches; The [Polaron approach](https://journals.aps.org/prb/supplemental/10.1103/PhysRevB.96.201201) utilizing at least one Markov approximation, where preferably two are used to significantly reduce calculation times; And the more suffisticated [Path-Integral Formalism](https://journals.aps.org/prb/supplemental/10.1103/PhysRevB.96.201201), where no such approximations need to be done.
 
----
----
+### General Syntax for Phonons
+In general, phonon contributions are not included unless a temperature is provided:
+
+    --temperature [TEMP]
+Where `TEMP` is any value greater than zero. For values smaller than zero, the electron-phonon coupling will be disabled.
+
+The spectral properties of the phonons are defined by
+
+![](https://latex.codecogs.com/svg.image?%5Cleft.J_%7Bij%7D%5Comega=%5Csum_%7Bk%7D%5Cgamma_k%5Ei%5Cgamma_k%5Ej%5Cdelta(%5Comega-%5Comega_j)=%5Cfrac%7B%5Comega%5E3%7D%7B4%5Cpi%5E2%5Crho%5Chbar%20c_s%5E5%7D%5Cleft(D_ee%5E%7B-%5Comega%5E2a_e%5E2/(4c_s%5E2)%7D-D_he%5E%7B-%5Comega%5E2a_h%5E2/(4c_s%5E2)%7D%5Cright)%5E2=%5Calpha_p%5Comega%5E3e%5E%7B-%5Cfrac%7B%5Comega%5E2%7D%7B2%5Comega_b%7D%7D%5Cright.).
+
+While the specific spectral shape varies slightly for electrons (`e`) and holes (`h`), the algorythm used in this program assumes a unified distribution combinding both electron and hole parameters into two parameters:
+
+    --phononalpha [COUPLING]
+The effective phononcoupling. The standard value for GaAs QDs lies around `COUPLING = 0.03ps^-1`.
+
+    --phononwcutoff [CUTOFF]
+The energy for which maximum coupling occurs. The standard value for GaAs QDs lies around `CUTOFF = 1meV`
 
 ## Correlation functions
 Two different types of correlation functions can be evaluated: `G1(t,tau)` and `G2(t,tau)`. From these two, quantum properties such as the `indistinguishability` or the `two-photon concurrence` can be evaluated. If the evaluation of any property that needs either G1 or G2 is provided, the correlation functions are calculated automatically. In this case, explicitely specifying to calculate the corresponding G1 or G2 functions is not neccessary. If the output of the corresponding function is needed, specification becomes neccessary again.

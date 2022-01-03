@@ -13,7 +13,17 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     if ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
         calculate_path_integral( rho, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
     } else {
+        // If using RK45 and calculating correlation functions, disable USING cached functions while enabling caching them, then reenable using the cached matrices for Tau direction
+        if ( s.parameters.numerics_rk_order >= 45 and s.parameters.input_correlation.size() > 0 and s.parameters.numerics_use_saved_coefficients ) {
+            s.parameters.numerics_force_caching = true;
+            s.parameters.numerics_use_saved_coefficients = false;
+        }
         calculate_runge_kutta( rho, s.parameters.t_start, s.parameters.t_end, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
+        // Reenabling if caching was disabled.
+        if ( s.parameters.numerics_force_caching ) {
+            s.parameters.numerics_force_caching = false;
+            s.parameters.numerics_use_saved_coefficients = true;
+        }
     }
     // Finalize
     rkTimer.end();
@@ -24,11 +34,11 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     std::for_each( s.savedCoefficients.begin(), s.savedCoefficients.end(), [&]( const std::pair<double, std::map<double, QDLC::SaveStateTau>> &m ) { sum += m.second.size(); } );
     Log::L2( "[Solver] Cached {} phonon matrices.\n", sum );
 
-    //Interpolate Outputstates with spline interpolation
+    // Interpolate Outputstates with spline interpolation
     auto output_states = s.parameters.numerics_interpolate_outputs ? Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, s.parameters.numerics_interpolate_method_time ) : savedStates;
     // Interpolate savedStates if RK45 was used or grid was modified
     if ( s.parameters.numerics_rk_order > 5 )
-        savedStates = Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau ); //Numerics::interpolate_curve(savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, 0);
+        savedStates = Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau ); // Numerics::interpolate_curve(savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, 0);
 
     // Index Map:
     for ( int i = 0; i < savedStates.size(); i++ ) {
