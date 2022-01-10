@@ -1,17 +1,37 @@
 # Kwandebungdprogramm
 
-# Features
+# Whats it doos?
+This program solves the von-Neumann Equation
 
-- RK4/5/45  
-- Polaron Frame Phonons
-    - Double Markov
-    - Single Markov, approximations
-    - Backwards integral
-- Path Integral Phonons  
-- G1/2, single and double integrated
+![](https://latex.codecogs.com/svg.image?%5Cfrac%7B%5Ctext%7Bd%7D%5Crho%7D%7B%5Ctext%7Bd%7Dt%7D%20=%20%5Cfrac%7B%5Ci%7D%7B%5Chbar%7D%5Cleft%5B%5Cmathcal%7BH%7D,%5Crho%5Cright%5D%20&plus;%20%5Csum%20%5Cmathcal%7BL%7D_%7B%5Chat%7BO%7D%7D(%5Crho))
+
+for a given fermionic (electronic) system coupled to a (or multiple) bosonic optical resonator including multiple sources of Loss and Electron-Phonon coupling.
+
+The Hamilton Operator for the electronic and optical states reads
+
+![](https://latex.codecogs.com/svg.image?H_0%20=%5Csum_%7Bi%7DE_i%7C%7Bi%7D%5Crangle%5Clangle%7Bi%7D%7C%20&plus;%20%5Csum_%7Bc%7D%20E_c%5Chat%7Bb%7D_c%5E%5Cdagger%5Chat%7Bb%7D_c%20)
+
+and is treated by an Interaction picture Transformation.
+The Interaction Hamilton is given by
+
+![](https://latex.codecogs.com/svg.image?H_%5Ctext%7BQD-Cavity%7D%20=%20%5Csum_%7Bij,c%7Dg%7C%7Bi%7D%5Crangle%5Clangle%7Bj%7D%7C%5Chat%7Bb%7D_c%5E%5Cdagger%20&plus;%20%5Csum_%7Bij,p%7D%7C%7Bi%7D%5Crangle%5Clangle%7Bj%7D%7C%5COmega_p(t)%20&plus;%20%5Ctext%7BH.c.%7D)
+
+where `ij,c` describes transitions `|i><j|` which are coupled to the optical resonator `c` and `ij,p` describes transitions `|i><j|` which are coupled to and external driving field `p`.
+
+# Features
+The general features of this program include:
+
+- Time integration using either the Runge-Kutta method of order 4 or 5, or an adaptive stepsize Runge-Kutta Dormand–Prince method
+- Electron-Phonon coupling using the Polaron Frame approximation
+    - Double Markov for lower numerical effort
+    - Single Markov for greater numerical completness
+    - Numerically exact calculating of the Polaron Transformation using a Time-Retarded Integral
+- Electron-Phonon coupling using the Path Integral approach
+    - Numerically exact
+- Correlation functions G1 and G2, Single and Double time integrated
 - Emission Spectra of any electronic or optical transition (mutliple transitions with "+")
 - Indistinguishability of any electronic or optical transition  
-- Concurrence of any two electronic or optical transition
+- Concurrence of any two electronic or optical transitions
 - Wigner function of any single electronic or optical transition   
 
 # Usage
@@ -193,19 +213,62 @@ The electron-phonon coupling can be calculated using two different approaches; T
 In general, phonon contributions are not included unless a temperature is provided:
 
     --temperature [TEMP]
-Where `TEMP` is any value greater than zero. For values smaller than zero, the electron-phonon coupling will be disabled.
+Where `TEMP` is any value greater than or equal to zero. For values smaller than zero, the electron-phonon coupling will be disabled.
 
 The spectral properties of the phonons are defined by
 
-![](https://latex.codecogs.com/svg.image?%5Cleft.J_%7Bij%7D%5Comega=%5Csum_%7Bk%7D%5Cgamma_k%5Ei%5Cgamma_k%5Ej%5Cdelta(%5Comega-%5Comega_j)=%5Cfrac%7B%5Comega%5E3%7D%7B4%5Cpi%5E2%5Crho%5Chbar%20c_s%5E5%7D%5Cleft(D_ee%5E%7B-%5Comega%5E2a_e%5E2/(4c_s%5E2)%7D-D_he%5E%7B-%5Comega%5E2a_h%5E2/(4c_s%5E2)%7D%5Cright)%5E2=%5Calpha_p%5Comega%5E3e%5E%7B-%5Cfrac%7B%5Comega%5E2%7D%7B2%5Comega_b%7D%7D%5Cright.).
+![](https://latex.codecogs.com/svg.image?%5Cleft.J_%7Bij%7D%5Comega=%5Csum_%7Bk%7D%5Cgamma_k%5Ei%5Cgamma_k%5Ej%5Cdelta(%5Comega-%5Comega_k)=%5Cfrac%7B%5Comega%5E3%7D%7B4%5Cpi%5E2%5Crho%5Chbar%20c_s%5E5%7D%5Cleft(D_ee%5E%7B-%5Comega%5E2a_e%5E2/(4c_s%5E2)%7D-D_he%5E%7B-%5Comega%5E2a_h%5E2/(4c_s%5E2)%7D%5Cright)%5E2=%5Calpha_p%5Comega%5E3e%5E%7B-%5Cfrac%7B%5Comega%5E2%7D%7B2%5Comega_b%7D%7D%5Cright.).
 
-While the specific spectral shape varies slightly for electrons (`e`) and holes (`h`), the algorythm used in this program assumes a unified distribution combinding both electron and hole parameters into two parameters:
+While the specific spectral shape varies slightly for electrons (`e`) and holes (`h`), the algorithm used in this program assumes a unified distribution combining both electron and hole parameters into two settings:
 
     --phononalpha [COUPLING]
-The effective phononcoupling. The standard value for GaAs QDs lies around `COUPLING = 0.03ps^-1`.
+The effective phononcoupling. The default value for GaAs QDs lies around `COUPLING = 0.03ps^-2`.
 
     --phononwcutoff [CUTOFF]
-The energy for which maximum coupling occurs. The standard value for GaAs QDs lies around `CUTOFF = 1meV`
+The energy for which maximum coupling occurs. The default value for GaAs QDs lies around `CUTOFF = 1meV`
+
+This correlation function tends to zero after only a few picoseconds. Hence, the integration will stop after a specified cutoff time:
+
+    --phonontcutoff [TIMECUTOFF]
+The default value for the default parameters specified above is set to `TIMECUTOFF = 4ps`.
+
+The Markov Approximation (`rho(t)=rho(t+tau)`) used by the Polaron Approach can be disabled by providing the flag
+
+    -noMarkov
+
+When a temperature greater or qual than zero is provided, the Radiative Decay and Pure Dephasing are scaled by the temperature to ![](https://latex.codecogs.com/svg.image?%5Cgamma_%5Ctext%7BPure%7D(T)%20=%20%5Clangle%20B%5Crangle(T)%20%5Cgamma_%5Ctext%7BPure%7D) and
+![](https://latex.codecogs.com/svg.image?%5Cgamma_%5Ctext%7BRad%7D(T)%20=%20T%5Ccdot%5Cgamma_%5Ctext%7BPure%7D).
+Note that while the Pure Dephasing only gets scaled by the averaged Phonon Contributions `<B>`, the Radiative Decay Rate becomes a per-Kelvin unit. This scaling can be disabled entirely by providing the flag
+
+    -noPhononAdjust
+
+### Phonon Order
+Specifying the phonon order determins the method of evaluation for the time dependent Polaron Transformation or switches the method alltogether to use the Path Integral instead. The order of evaluation is set by
+
+    --phononorder [ORDER]
+where `ORDER` is an integer value between `0` and `5`. The order defines:
+
+- `0`: Calculates the Time Transformation by integrating backwards in time. Numerically most complete, but also most expensive method.
+- `1`: Calculates the Time Transformation by using a numerical matrix exponential. Decent approximation for small detunings.
+- `2`: Neglects the Time Transformation. Numerically most incomplete and hence fastest approach. Becomes exact when the photon number is small and the pulse amplitude is near zero.
+- `3`: Calculates the Phonon Contribution as and additional Lindblad term using an additional Markov Approximation ([compare](https://journals.aps.org/prx/abstract/10.1103/PhysRevX.1.021009)).
+- `4`: Hybrid method between `0` and `2`, where for times with no pulse and small photon numbers, the fast method is used while the backwards integral is only utilized otherwise. Decent approach for reducing calculation times while remaining numerically more precise.
+- `5`: Switch numerical evaluation method to the Path Integral Approach.
+
+### Path Integral
+The Path Integral approach accumulates all possible trajectories provided by the right side of the von-Neumann equation weighted accordingly by the electron-phonon coupling through a fixed number of iteration steps.
+The path integral specific settings read:
+
+    --NC [STEPS]
+The number of steps for the Path Integral to accumulate from. Larger values will significantly increase the numerical effort. The default value is `STEPS = 4` which corresponds to a Timestep of `1ps`.
+
+    --tstepPath [STEP]
+The stepsize for the Path Integral. The default value is `STEP = 1ps`. Note that `STEPS*STEP` should be roughtly equal to the Polaron Frame's `TIMECUTOFF = 4ps`.
+
+    --iteratorStepsize [STEP]
+The stepsize of the iterator, which is equivalent to the usual timestep for a RK4 calculation. The default value is `STEP = 100fs`.
+
+There are additional numerical parameters that should not be changed and thus are not listed here. See [the settings file](.settings.cla) for details.
 
 ## Correlation functions
 Two different types of correlation functions can be evaluated: `G1(t,tau)` and `G2(t,tau)`. From these two, quantum properties such as the `indistinguishability` or the `two-photon concurrence` can be evaluated. If the evaluation of any property that needs either G1 or G2 is provided, the correlation functions are calculated automatically. In this case, explicitely specifying to calculate the corresponding G1 or G2 functions is not neccessary. If the output of the corresponding function is needed, specification becomes neccessary again.
@@ -358,6 +421,20 @@ Calculating the Wigner function using `-X:X = -4:4`, `-Y:Y = -6:6` with `200` Po
 ## Numerical Parameters
 
 Different numerical Parameters
+
+---
+### Interaction Picture Transformation
+To reduce calculation times, a transformation into the interaction picture and the corresponding Rotating Wave Approximation (RWA) is utilized.
+
+Both can be disabled by providing the flag
+
+    -noInteractionpic
+to disable the interaction picture transformation and
+
+    -noRWA
+to disable the Rotating Wave Approximation.
+
+The interaction picture transformation is carried out analytically within the program and is hence exact. Disabling it only increases to numerical effort.
 
 ---
 ### Grid Resolution
