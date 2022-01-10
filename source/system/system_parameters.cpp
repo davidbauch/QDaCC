@@ -134,8 +134,8 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     // Path Integral Parameters
     p_phonon_nc = QDLC::CommandlineArguments::get_parameter<int>( "--pathintegral", "NC" );
     numerics_pathintegral_stepsize_iterator = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
-    numerics_pathintegral_squared_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "squaredThreshold" );
-    numerics_pathintegral_sparse_prune_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "sparsePruneThreshold" );
+    numerics_pathintegral_squared_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "squaredThreshold" );
+    numerics_pathintegral_sparse_prune_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "sparsePruneThreshold" );
     numerics_pathintegral_dynamiccutoff_iterations_max = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
     numerics_pathintegral_docutoff_propagator = QDLC::CommandlineArguments::get_parameter_passed( "-cutoffPropagator" );
     numerics_pathint_partially_summed = !QDLC::CommandlineArguments::get_parameter_passed( "-disablePSPath" );

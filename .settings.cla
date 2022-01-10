@@ -233,6 +233,12 @@ CLA_ARGUMENT = {
 		datatype = 'string'
 		description = 'Iterator stepsize for the intermediate Path Integral propagators'
 	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'numericalpathintegral'
+	description = 'Pathintegral properties.'
+	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = 'squaredThreshold'
 		value = '1E-36'
@@ -398,6 +404,7 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
+# DEPRECATED
 CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'RK5T'
@@ -410,6 +417,7 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
+# DEPRECATED
 CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'RK5Tau'
