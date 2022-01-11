@@ -180,7 +180,6 @@ Sparse System::dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, 
 Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDLC::SaveState> &past_rhos ) {
     Sparse ret = Sparse( parameters.maxStates, parameters.maxStates );
     Sparse chi = dgl_phonons_chi( t );
-    std::vector<Sparse> threadmap_1, threadmap_2;
     Log::L3( "{} Entering for t = {}...\n", omp_get_thread_num(), t );
     // Most precise approximation used. Caclulate polaron fram Chi by integrating backwards from t to t-tau.
     if ( parameters.numerics_phonon_approximation_order != PHONON_APPROXIMATION_LINDBLAD_FULL ) {
@@ -202,7 +201,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 chi_tau_back_u = coeff.mat1;
                 chi_tau_back_g = coeff.mat2;
             } else if ( parameters.numerics_use_saved_coefficients and savedCoefficients.size() > 2 and savedCoefficients.rbegin()->first > t ) {
-                Log::L3( "Element {} should be in here as max is {}, tryint to find it...\n", t, savedCoefficients.rbegin()->first );
+                Log::L3( "Element {} should be in here as max is {}, trying to find it...\n", t, savedCoefficients.rbegin()->first );
                 QDLC::SaveStateTau *min;
                 QDLC::SaveStateTau *max;
                 for ( auto &[nt, other] : savedCoefficients ) {
@@ -219,8 +218,8 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 Log::L3( "{} (Re)Calculating {}\n", omp_get_thread_num(), t );
                 // Index was not found, (re)calculate chi(t-tau) sum
                 // Initialize temporary matrices to zero for threads to write to
-                QDLC::Matrix::init_sparsevector( threadmap_1, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
-                QDLC::Matrix::init_sparsevector( threadmap_2, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
+                std::vector<Sparse> threadmap_1( parameters.numerics_phonons_maximum_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
+                std::vector<Sparse> threadmap_2( parameters.numerics_phonons_maximum_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
                 // Calculate backwards integral and sum it into threadmaps. Threadmaps will later be summed into one coefficient matrix.
 #pragma omp parallel for ordered schedule( dynamic ) shared( savedCoefficients ) num_threads( parameters.numerics_phonons_maximum_threads )
                 for ( int cur_thread = 0; cur_thread < parameters.numerics_phonons_maximum_threads; cur_thread++ ) {
@@ -254,7 +253,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             Log::L3( "{} adding ret value for {}\n", omp_get_thread_num(), t );
             ret -= ( integrant + adjoint ) * parameters.t_step;
         } else {
-            QDLC::Matrix::init_sparsevector( threadmap_1, parameters.maxStates, parameters.numerics_phonons_maximum_threads );
+            std::vector<Sparse> threadmap_1( parameters.numerics_phonons_maximum_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
             // Dont use markov approximation; Full integral
 #pragma omp parallel for ordered schedule( dynamic ) shared( savedCoefficients ) num_threads( parameters.numerics_phonons_maximum_threads )
             for ( int cur_thread = 0; cur_thread < parameters.numerics_phonons_maximum_threads; cur_thread++ ) {
@@ -262,7 +261,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                     int _tau = cur_thread + cur;
                     // for ( int _tau = 0; _tau < _taumax; _tau++ ) {
                     Sparse chi_tau_back_u, chi_tau_back_g, chi_tau, chi_tau_back, integrant;
-                    int rho_index = std::max( 0, (int)past_rhos.size() - 1 - _tau );
+                    int rho_index = std::max( 0, (int)past_rhos.size() - 1 - _tau ); // TODO: Das hier ist mit var timesteps der rhos auch grütze!
                     double tau = ( 1.0 * _tau ) * parameters.t_step;
                     // Check if chi(t-tau) has to be recalculated, or can just be retaken from saved matrices, since chi(t-tau) is only dependant on time
                     // int index = dgl_get_coefficient_index( t, tau );

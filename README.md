@@ -14,9 +14,9 @@ The Hamilton Operator for the electronic and optical states reads
 and is treated by an Interaction picture Transformation.
 The Interaction Hamilton is given by
 
-![](https://latex.codecogs.com/svg.image?H_%5Ctext%7BQD-Cavity%7D%20=%20%5Csum_%7Bij,c%7Dg%7C%7Bi%7D%5Crangle%5Clangle%7Bj%7D%7C%5Chat%7Bb%7D_c%5E%5Cdagger%20&plus;%20%5Csum_%7Bij,p%7D%7C%7Bi%7D%5Crangle%5Clangle%7Bj%7D%7C%5COmega_p(t)%20&plus;%20%5Ctext%7BH.c.%7D)
+![](https://latex.codecogs.com/svg.image?H_%5Ctext%7BInteraction%7D%20=%20%5Csum_%7Bij,c%7Dg%7C%7Bi%7D%5Crangle%5Clangle%7Bj%7D%7C%5Chat%7Bb%7D_c%5E%5Cdagger%20&plus;%20%5Csum_%7Bij,p%7D%7C%7Bi%7D%5Crangle%5Clangle%7Bj%7D%7C%5COmega_p(t)%20&plus;%20%5Ctext%7BH.c.%7D)
 
-where `ij,c` describes transitions `|i><j|` which are coupled to the optical resonator `c` and `ij,p` describes transitions `|i><j|` which are coupled to and external driving field `p`.
+where the transitions `|i><j|` are either coupled to the optical resonator `c` and/or to an external driving field `p`.
 
 # Features
 The general features of this program include:
@@ -236,9 +236,9 @@ The Markov Approximation (`rho(t)=rho(t+tau)`) used by the Polaron Approach can 
 
     -noMarkov
 
-When a temperature greater or qual than zero is provided, the Radiative Decay and Pure Dephasing are scaled by the temperature to ![](https://latex.codecogs.com/svg.image?%5Cgamma_%5Ctext%7BPure%7D(T)%20=%20%5Clangle%20B%5Crangle(T)%20%5Cgamma_%5Ctext%7BPure%7D) and
-![](https://latex.codecogs.com/svg.image?%5Cgamma_%5Ctext%7BRad%7D(T)%20=%20T%5Ccdot%5Cgamma_%5Ctext%7BPure%7D).
-Note that while the Pure Dephasing only gets scaled by the averaged Phonon Contributions `<B>`, the Radiative Decay Rate becomes a per-Kelvin unit. This scaling can be disabled entirely by providing the flag
+When a temperature greater or qual than zero is provided, the Radiative Decay and Pure Dephasing are scaled by the temperature to ![](https://latex.codecogs.com/svg.image?%5Cgamma_%5Ctext%7BRad%7D(T)%20=%20%5Clangle%20B%5Crangle%20%5Ccdot%20%5Cgamma_%5Ctext%7BRad%7D) and
+![](https://latex.codecogs.com/svg.image?%5Cgamma_%5Ctext%7BPure%7D(T)%20=%20T%20%5Ccdot%201%5Cmu%5Ctext%7BeV%7D).
+Note that while the Radiative Decay only gets scaled by the averaged Phonon Contributions `<B>`, the Pure Dephasing becomes a per-Kelvin unit. This scaling can be disabled entirely by providing the flag
 
     -noPhononAdjust
 

@@ -10,8 +10,6 @@ QDLC::Type::Dense dense_projector( const QDLC::Type::Dense &input );
 
 QDLC::Type::Sparse sparse_projector( const QDLC::Type::Sparse &input );
 
-void init_sparsevector( std::vector<QDLC::Type::Sparse> &vec, int dim, int count );
-
 QDLC::Type::Dense tensor( const QDLC::Type::Dense &a, const QDLC::Type::Dense &b );
 
 QDLC::Type::Dense tensor( const std::vector<QDLC::Type::Dense> &m );

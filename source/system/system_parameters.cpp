@@ -126,7 +126,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     p_phonon_T = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "temperature" );
     numerics_phonon_approximation_order = QDLC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
     numerics_phonon_approximation_markov1 = QDLC::CommandlineArguments::get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
-    numerics_phonon_nork45 = QDLC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );                   // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
+    numerics_phonon_nork45 = !QDLC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );                  // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
     output_coefficients = QDLC::CommandlineArguments::get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
     output_path = QDLC::CommandlineArguments::get_parameter_passed( "-oPath" ) ? 1 : 0;
     p_phonon_adjust = !QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
@@ -468,7 +468,8 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         for ( auto &[name, mat] : input_photonic ) {
             Log::L1( "Cavity: {} with energy {:.8e} Hz - {:.8e} eV - {:.8f} nm\n", name, mat.numerical["Energy"], mat.numerical["Energy"].getSI( Parameter::UNIT_ENERGY_EV ), mat.numerical["Energy"].getSI( Parameter::UNIT_WAVELENGTH_NM ) );
             for ( auto i = 0; i < mat.string_v["CoupledTo"].size(); i++ ) {
-                Log::L1( " - Coupled to electronic transition {} \n", mat.string_v["CoupledTo"][i] );
+                double purcell = ( 2.0 * p_omega_coupling * p_omega_coupling * mat.numerical_v["CouplingScaling"][i] * mat.numerical_v["CouplingScaling"][i] / p_omega_cavity_loss / p_omega_decay ) * ( p_omega_cavity_loss * p_omega_cavity_loss / ( std::pow( mat.numerical["Energy"] - ( input_electronic[mat.string_v["CoupledTo"][i].substr( 1, 1 )].numerical["Energy"] - input_electronic[mat.string_v["CoupledTo"][i].substr( 0, 1 )].numerical["Energy"] ), 2 ) + p_omega_cavity_loss * p_omega_cavity_loss ) );
+                Log::L1( " - Coupled to electronic transition {} (Purcell Enhancement: {}) \n", mat.string_v["CoupledTo"][i], purcell );
                 Log::L1( " - - Coupling Scaling: {}\n", mat.numerical_v["CouplingScaling"][i] );
             }
             Log::L1( " - Cavity Q-Factor: {:.0f}\n", mat.numerical["Energy"] / p_omega_cavity_loss );
@@ -537,6 +538,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             Log::L1( " - Backsteps NC: {}\n", p_phonon_nc );
             Log::L1( " - Iterator Stepsize: {}\n", numerics_pathintegral_stepsize_iterator );
             Log::L1( " - Thresholds: Squared({}), SparsePrune({}), CutoffIterations({}), PropagatorMapping({})\n", numerics_pathintegral_squared_threshold, numerics_pathintegral_sparse_prune_threshold, numerics_pathintegral_dynamiccutoff_iterations_max, numerics_pathintegral_docutoff_propagator );
+            Log::L1( " - Used partially summed algorithm?: {}\n", numerics_pathint_partially_summed ? "Yes" : "No" );
         }
         Log::L1( "\n" );
     } else {

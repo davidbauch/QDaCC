@@ -4,7 +4,7 @@ QDLC::Type::Dense QDLC::Matrix::dense_projector( const QDLC::Type::Dense &input 
     QDLC::Type::Dense ret = QDLC::Type::Dense::Zero( input.rows(), input.cols() );
     for ( int i = 0; i < ret.rows(); i++ ) {
         for ( int j = 0; j < ret.cols(); j++ ) {
-            ret(i,j) = 1.0;
+            ret( i, j ) = 1.0;
         }
     }
     // Generate new Matrix from triplet list
@@ -22,13 +22,6 @@ QDLC::Type::Sparse QDLC::Matrix::sparse_projector( const QDLC::Type::Sparse &inp
     // Generate new Matrix from triplet list
     ret.setFromTriplets( ret_v.begin(), ret_v.end() );
     return ret;
-}
-
-void QDLC::Matrix::init_sparsevector( std::vector<QDLC::Type::Sparse> &vec, int dim, int count ) {
-    vec.clear();
-    for ( int i = 0; i < count; i++ ) {
-        vec.push_back( { dim, dim } );
-    }
 }
 
 // Calculates the tensor product of matrices a and b
