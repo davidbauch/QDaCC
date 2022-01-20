@@ -345,36 +345,50 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         H_used = H_I;
     else
         H_used = H;
+    Log::L2( "Hamiltonoperator done!\n" );
 
-    // std::map<std::string, int> temp_base_indices;
-    std::map<double, int> temp_base_indices;
-    int new_index = 0;
-    for ( int i = 0; i < base.size(); i++ ) {
-        // for ( int j = 0; j < base.size(); j++ ) { // base is |el|...>
-        std::string state1 = base.at( i ).substr( 1, 1 );
-        // std::string state2 = base.at( j ).substr( 1, 1 );
-        // if ( i == j ) {
-        // auto factor = (double)std::min( p.input_electronic[state1].numerical["PhononCoupling"].get() * p.input_electronic[state2].numerical["PhononCoupling"].get(), std::max( p.input_electronic[state1].numerical["PhononCoupling"].get(), p.input_electronic[state2].numerical["PhononCoupling"].get() ) );
-        double factor = (double)p.input_electronic[state1].numerical["PhononCoupling"].get();
-        auto index = factor; // state1;
-        if ( !temp_base_indices.count( index ) > 0 ) {
-            temp_base_indices[index] = new_index++;
-            phononCouplingIndexValue.emplace_back( factor );
+    // The Path Integral can be partially summed by either: the electronic state index; or the electronic state coupling factor.
+    // Because multiple states can have the same coupling factor, the latter will usually be faster, but at least as fast as the index summation.
+    // As a default value, "factor" should be used.
+    std::string sorting = "factor"; // "factor"
+    if ( sorting == "index" ) {
+        std::map<std::string, int> temp_base_indices;
+        int new_index = 0;
+        for ( int i = 0; i < base.size(); i++ ) {
+            std::string state1 = base.at( i ).substr( 1, 1 );
+            auto factor = (double)p.input_electronic[state1].numerical["PhononCoupling"].get();
+            auto index = state1;
+            if ( !temp_base_indices.count( index ) > 0 ) {
+                temp_base_indices[index] = new_index++;
+                phononCouplingIndexValue.emplace_back( factor );
+            }
+            phononCouplingIndex.emplace_back( temp_base_indices[index] );
         }
-        phononCouplingIndex.emplace_back( temp_base_indices[index] );
-        //}
-        //}
+    } else if ( sorting == "factor" ) {
+        std::map<double, int> temp_base_indices;
+        int new_index = 0;
+        for ( int i = 0; i < base.size(); i++ ) {
+            std::string state1 = base.at( i ).substr( 1, 1 );
+            double factor = (double)p.input_electronic[state1].numerical["PhononCoupling"].get();
+            auto index = factor; // state1;
+            if ( !temp_base_indices.count( index ) > 0 ) {
+                temp_base_indices[index] = new_index++;
+                phononCouplingIndexValue.emplace_back( factor );
+            }
+            phononCouplingIndex.emplace_back( temp_base_indices[index] );
+        }
+    } else {
+        Log::L2( "Sorting Parameter for Partially Summed ADM mismatch!\n" );
     }
     Log::L2( "Phonon Coupling Index Vector: {}\n", phononCouplingIndex );
     Log::L2( "Phonon Coupling Value Vector: {}\n", phononCouplingIndexValue );
-    Log::L2( "Hamiltonoperator done!\n" );
 
     // Create Initial State
     // Split starting state into superposition. States can be passed as "|...>+|...>" with amplitudes
     initial_state_vector_ket = Dense::Zero( base.size(), 1 );
     for ( auto state : QDLC::String::splitline( p.p_initial_state_s, '+' ) ) {
         // For a coherent and normal input the syntax is |base>. replace number in base with 'alpha#' to indicate a coherent state. replace number in base with 'xiy&' to indicate a squeezed state. no spaces.
-        double amp = state[0] == '|' ? 1.0 : stod( QDLC::String::splitline( state, '|' ).front() );
+        Scalar amp = state[0] == '|' ? 1.0 : ( state.back() == 'i' ? 1.0i * stod( QDLC::String::splitline( state.substr( 0, state.size() - 1 ), '|' ).front() ) : stod( QDLC::String::splitline( state, '|' ).front() ) );
         std::string pure_state = state.substr( state.find( '|' ) );
         if ( state.find( "#" ) != std::string::npos ) {
             auto modev = QDLC::String::splitline( state, '#' );

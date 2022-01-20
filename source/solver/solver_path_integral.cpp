@@ -155,6 +155,10 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
 
     Tensor adm_tensor = Tensor( adm_multithreading_cores );
 
+    // TODO: wenn t < nc, neuen tensor erstellen, sonst alten befüllen? kp. tensor is einfach map(map) und fertig.
+    // 36,36,2,2,2.... dann mit 36*36 multithreaden. die ersten indizes x0 und y0 (x0,y0,x1,y1,...) machen den eintrag unique. wenn eintrag null, skippen. sollte insgesamt alles schneller sein 
+    // als der aktuelle scheis mit den speicherschinanigans, klappt halt nicht mehr wenn man tensor_dim = 100 und dann noch ne melon verschiedene gruppen hat, aber das is egal.
+
     // First step is just rho0
     Sparse rho = rho0;
     saveState( rho0, t_start, output );
@@ -204,8 +208,8 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
                         gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[2] * matrices[1], t_tau );
                     else
                         // gmat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = ( matrices[1].cwiseProduct( temp.at( j ).mat ) ).sum();
+                        // gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[1], t_tau );
                         gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = std::conj( s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[1], t_tau ) ); // conj ammenakoyum?????
-                    // gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[1], t_tau );
                     timemat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = Scalar( t_t, t_tau );
                 }
             }
@@ -250,11 +254,12 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
                                         //     for ( Sparse::InnerIterator M( propagator[sparse_index_x( 0 )][sparse_index_y( 0 )], l ); M; ++M ) {
 
                                         // Log::L3( "[PathIntegral] --- Correlation Indices for tau = 0: i = {}, i' = {}, j = {}, j' = {}\n", gi_n, gi_n, gj_n, gj_n );
+                                        // TODO: das ganze ding hier in map cachen. vil. in map(map) for co-kontra vektor
                                         Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
                                         for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
                                             int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )] : sparse_index_x( 0 ) ) : sparse_index_x( tau ) );
                                             int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] : sparse_index_y( 0 ) ) : sparse_index_y( tau ) );
-                                            phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
+                                            phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd ); // TODO: das hier in map cachen
                                             // Log::L3( "[PathIntegral] --- Correlation Indices for tau = {}: i = {}, i' = {}, j = {}, j' = {}\n", tau + 1, gi_n, gi_nd, gj_n, gj_nd );
                                         }
 
@@ -307,7 +312,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         // rho = newrho.sparseView() / newrho.trace();
         rho = newrho.sparseView(); // / newrho.trace();
         t2 = ( omp_get_wtime() - t2 );
-        Log::L3( "[PathIntegral] Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting (Parallel): {:.4f}s, ADM Reduction: {:.4f}s ], Trace: {}, Elements: {}\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2, s.getTrace<Scalar>( rho ), adm_tensor.nonZeros() );
+        Log::L3( "[PathIntegral] Iteration: {}, time taken: [ Propagator: {:.4f}s, ADM Advancing: {:.4f}s (Partial append time: {:.4f}\%), ADM Setting (Parallel): {:.4f}s, ADM Reduction: {:.4f}s ], Trace: {}, Elements: {} ({} pct Fillrate)\n", t_t, t0, t1, 100.0 * total_append_time / total_time, ts, t2, s.getTrace<Scalar>( rho ), adm_tensor.nonZeros(), 100.0 * adm_tensor.nonZeros() / ( std::pow( tensor_dim, 2 ) * std::pow( different_dimensions.size(), 2 * s.parameters.p_phonon_nc - 2 ) ) );
 
         // Dynamic Cutoff
         if ( s.parameters.numerics_pathintegral_dynamiccutoff_iterations_max > 0 ) {

@@ -102,6 +102,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
             // Save Rho
             saveState( rho, t_t + t_step_initial, output );
             // Adjust t_step according to grid.
+            // FIXME: letzter step wird mit kleinem dt gerechnet!
             t_index = std::min<size_t>( t_index + 1, s.parameters.grid_values.size() - 2 );
             t_step_initial = std::min<double>( s.parameters.grid_steps[t_index], s.parameters.t_step );
         }

@@ -139,25 +139,25 @@ CLA_ARGUMENT = {
 	group = 'Systemparameter'
 	CLA_PARAMETER = {
 		subkey = 'coupling'
-		value = '66mueV'
+		value = '0mueV'
 		datatype = 'string'
 		description = 'Exciton - Cavity coupling g'
 	}
 	CLA_PARAMETER = {
 		subkey = 'kappa'
-		value = '66mueV'
+		value = '0mueV'
 		datatype = 'string'
 		description = 'Photonic loss'
 	}
 	CLA_PARAMETER = {
 		subkey = 'gamma'
-		value = '1mueV'
+		value = '0mueV'
 		datatype = 'string'
 		description = 'Radiative Decay'
 	}
 	CLA_PARAMETER = {
 		subkey = 'gammapure'
-		value = '3mueV'
+		value = '0mueV'
 		datatype = 'string'
 		description = 'Electronic pure dephasing'
 	}

@@ -75,7 +75,7 @@ class Tensor {
             indicesX( 1 ) = gi_n;
             indicesY( 1 ) = gj_n;
         }
-        //TODO: create NxN matrix of omp_lock_t and lock this before every &X=..., then no pragma omp critical is needed. or execute by master only, idk
+        // TODO: create NxN matrix of omp_lock_t and lock this before every &X=..., then no pragma omp critical is needed. or execute by master only, idk
         auto &X = cache[thread][indicesX( 0 )][indicesY( 0 )][indicesX];
         if ( X.count( indicesY ) > 0 ) {
             X[indicesY] += value;
@@ -109,7 +109,7 @@ class Tensor {
                                 { values[current_value_vector][i][j][sparse_index_x][sparse_index_y] += value; }
                             }
                         }
-                        //std::cout << "Manually moved values in cache[" << t << "][" << i << "][" << j << "]: " << cache[t][i][j].size() << " to values\n";
+                        // std::cout << "Manually moved values in cache[" << t << "][" << i << "][" << j << "]: " << cache[t][i][j].size() << " to values\n";
                         cache[t][i][j].clear();
                     }
                 }

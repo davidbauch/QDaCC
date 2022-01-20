@@ -181,6 +181,61 @@ The same chirp but for the biexciton system. The two single excitons are shifted
 
 ---
 
+## Initial State
+An initial state can be constructed by superpositioning different states with real or complex amplitudes. Providing a special instructor for the state, an initially coherent or squeezed state can be constructed too.
+
+The general syntax reads:
+
+    --R [INITIALSTATE]
+where `INITIALSTATE` can be multiple of the following, chained by using the chain oprator `+`:
+
+- `AMP|el|nN|...>`: General state, where `el` is the initially occupied electronic state. The amplitude for this state is `AMP`, where a complex amplitude is indicated by a trailing `i`. The initial resonator states `nN` are given by providing the resonator `N` and the photon number `n`. Note that the states are sorted alphabetically and need to be provided in the correct order for the initial state to function properly.
+    - Replacing the photon number `n` by `alpha#` indicates the resonator `N` should be initialized into a coherent state
+    - Replacing the photon number `n` by `riPhi&` indicates the resonator `N` should be initialized into a squeezed state with squeezing parameters `r` and `Phi`
+
+Examples:
+
+    --R '|B|0h|0v>'
+Initial state is a fully occupied Biexciton with no phonons in either resonator.
+
+    --R '0.5|X>-0.5i|G>'
+Initial state is a superposition of the Exciton and Groundstate. The result will be a pure state.
+
+    --R |G|2.0#h>
+Initial state is the electronic groundstate with a coherent state in resonator h with `alpha = 2`.
+
+    --R |G|0.1i0.5&h>
+Initial state is the electronic groundstate with a squeezed state in resonator h with `r = 0.1` and `Phi = 0.5`.
+
+---
+
+## Environmental Parameters
+The electronic and optical state configurations only include scaling paramters for coupling and decay rates. The actual rates are given by a seperate set of parameters to reduce the overall size of the input. Four different parameters have to be provided:
+
+- `G`: Electron-Resonator Coupling; proportional to the spacial overlap of the electronic dipole and the resonator mode
+- `KAPPA`: Photon Decay Rate; proportional to the degree of loss from any sources for the optical modes
+- `RAD`: Radiative Decay Rate for the electronic states; proportional to the degree of coupling of the electronic states to the environment resulting in the emission of photons into non-Resonator modes
+- `PURE`: Electronic Pure Dephasing; proportional to the degree of phenomenological electron-phonon coupling.
+
+These parameters can be provided by
+
+    --system [G] [KAPPA] [RAD] [PURE]
+where all parameters support the units of energy. The default value for any of these parameters is zero.
+
+If only a single parameters is to be changed, the following paramters can be used:
+
+    --coupling [G]
+    --kappa [KAPPA]
+    --gamma [RAD]
+    --gammapure [PURE]
+
+Example:
+
+    --system 50mueV 100mueV 0 1mueV
+Providing a coupling of `G = 50mueV` with a cavity loss rate of `KAPPA = 100mueV`. The radiative decay `RAD` is zero and the electronic pure dephasing `PURE = 1mueV`.
+
+---
+
 ## Temporal Settings
 The program calculates the temporal dynamics of the provided system in a single given interval using either the fixed-stepsize RK4/RK5 or the variable order RK45 method. The timer interval is given by
 
@@ -471,6 +526,12 @@ Changes the interpolation method for the correlation functions to use the Monoto
 
     --interpolateOrder linear
 Changes the interpolation method for the temporal output data to use the Linear Interpolation.
+
+
+Note that the interpolation is only usefull when using the `RK45` method. If one wants to use `RK4` or `RK5` but still interpolate the output to more or fewer timesteps, the `--grid` parameter can be used to achieve this:
+
+    --rkorder 4 --tstep 10fs --tend 100ps --grid 1ps-100ps 
+Will result in the `RK4` method to use a `10fs` timestep, while the output will be output only for the grid parameters.
 
 ---
 ### Logfile Output
