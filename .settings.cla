@@ -68,7 +68,7 @@ CLA_ARGUMENT = {
 		subkey = 'SP'
 		value = ''
 		datatype = 'string'
-		description = 'Pulse Configuration. Syntax: [N:CoupledToTransition:Amp:Freq:Width:Center:Chirp:Type] ,Example: p:GH,HZ:6:1.3645eV:4ps:30ps:0:gauss_pi'
+		description = 'Pulse Configuration. Syntax: [N:CoupledToTransition:Amp:Freq:Width:Center:Type] ,Example: p:GH,HZ:6pi:1.3645eV:4ps:30ps:0:gauss'
 	}
 	CLA_PARAMETER = {
 		subkey = 'SC'

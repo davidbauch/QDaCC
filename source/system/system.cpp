@@ -25,7 +25,7 @@ System::System( const std::vector<std::string> &input ) {
     Log::L2( "[System] Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( Timers::MILLISECONDS ) );
     timer_systeminit.end();
 }
- 
+
 bool System::init_system() {
     // Single chirp for single atomic level
     for ( auto &[mode, p] : parameters.input_chirp ) {
@@ -35,14 +35,13 @@ bool System::init_system() {
     }
 
     // Arbitrary number of pulses onto single atomic level.
-    for ( auto &[mode, p] : parameters.input_pulse ) {
-        Pulse::Inputs pulseinputs( parameters.t_start, parameters.t_end, parameters.t_step, parameters.numerics_rk_order );
-        pulseinputs.add( p.numerical_v["Center"], p.numerical_v["Amplitude"], p.numerical_v["Width"], p.numerical_v["Frequency"], p.numerical_v["Chirp"], p.numerical_v["SuperAmp"], p.string_v["Type"], 1.0 );
-        pulse.push_back( { pulseinputs } );
+    // TODONEXT: pulse (und chirp) einfach input_s als input.
+    for ( auto &[name, pulseinputs] : parameters.input_pulse ) {
+        pulse.push_back( { pulseinputs, parameters } );
     }
     // pulse_V = Pulse( pulseinputs_V );
     if ( pulse.size() > 0 ) {
-        Pulse::fileOutput( parameters.subfolder + "pulse.txt", pulse );
+        Pulse::fileOutput( parameters.subfolder + "pulse.txt", pulse, parameters.t_start, parameters.t_end, parameters.t_step );
     }
     if ( chirp.size() > 0 ) {
         chirp.back().fileOutput( parameters.subfolder + "chirp.txt" );

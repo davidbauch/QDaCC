@@ -31,7 +31,8 @@ class System {
     std::map<double, std::map<double, QDLC::SaveStateTau>> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
 
     // ##### Helper Variables #####
-    std::map<std::string, double> emission_probabilities;
+    std::map<std::string, double>
+        emission_probabilities;
     // Helpervariables for photon emission probability
     double photonemissionprob_integral_H = 0;
     double photonemissionprob_integral_V = 0;

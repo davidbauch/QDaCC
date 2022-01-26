@@ -35,7 +35,7 @@ class Parameters {
     bool numerics_use_saved_hamiltons;
     long unsigned int numerics_saved_coefficients_cutoff; // True: Only save last few coefficients (only viable for T-direction, not for G1/2)
     long unsigned int numerics_saved_coefficients_max_size;
-    std::vector<int> logfilecounter;
+    std::vector<double> logfilecounter;
     bool numerics_interpolate_outputs;
     std::string s_numerics_interpolate;
     int numerics_interpolate_method_time, numerics_interpolate_method_tau;

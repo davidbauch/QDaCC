@@ -47,7 +47,7 @@ T convertParam( const std::string input ) {
             Log::L3( "\tfrom meV to Hz...\n" );
             value = QDLC::Math::eV_to_Hz( std::stod( input.substr( 0, index - 1 ) ) );
             conversion = 1E-3;
-        } else if ( input.at( index - 2 ) == 'm' and input.at( index - 1 ) == 'u' ) {
+        } else if ( int( index ) > 1 and input.at( index - 2 ) == 'm' and input.at( index - 1 ) == 'u' ) {
             // mueV
             Log::L3( "\tfrom mueV to Hz...\n" );
             value = QDLC::Math::eV_to_Hz( std::stod( input.substr( 0, index - 2 ) ) );
@@ -65,7 +65,7 @@ T convertParam( const std::string input ) {
     // Second Scale
     else if ( -1 != ( index = QDLC::String::instr( input, "s" ) ) ) {
         // Found 's' as unit (time)
-        //fmt::print("\n {} {} {} {}\n",index, input.at(index-1)=='n',input.compare(index-1,1,"n") ,input.at(index-1));
+        // fmt::print("\n {} {} {} {}\n",index, input.at(index-1)=='n',input.compare(index-1,1,"n") ,input.at(index-1));
         if ( input.at( index - 1 ) == 'n' ) {
             // ns
             Log::L3( "\tfrom ns to s...\n" );
@@ -75,12 +75,12 @@ T convertParam( const std::string input ) {
             // ps
             Log::L3( "\tfrom ps to s...\n" );
             value = std::stod( input.substr( 0, index - 1 ) );
-            conversion = 1E-12; //fmt::print("{} {} ... ", value, conversion);
+            conversion = 1E-12; // fmt::print("{} {} ... ", value, conversion);
         } else if ( input.at( index - 1 ) == 'f' ) {
             // fs
             Log::L3( "\tfrom fs to s...\n" );
             value = std::stod( input.substr( 0, index - 1 ) );
-            conversion = 1E-15; //fmt::print("{} {} ... ", value, conversion);
+            conversion = 1E-15; // fmt::print("{} {} ... ", value, conversion);
         } else if ( QDLC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
             // s
             Log::L3( "\tfrom s to s...\n" );
@@ -104,7 +104,7 @@ T convertParam( const std::string input ) {
         // Found 'Hz' as unit (Frequency)
         Log::L3( "\tfrom Xpi to rad...\n" );
         if ( QDLC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
-            value = std::stod( input.substr( 0, index - 1 ) );
+            value = std::stod( input.substr( 0, index ) );
             conversion = 1.0;
         } else {
             Log::L3( "Conversion from input '{}' from frequency failed!\n", input );

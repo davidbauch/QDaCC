@@ -49,6 +49,9 @@ Units of Time:
 - `ps` - Picoseconds `= 1E-12s`
 - `fs` - Femtoseconds `= 1E-15s`
 
+Misc Units:
+- `pi` - Used to calculate the area of pulses.
+
 ---
 ## Inputting Parameters
 
@@ -124,7 +127,7 @@ Example:
 ### Optical Pulse - Optical Driving of the electronic or optical transitions
 The electronic states as well as the resonator modes can be driven by an optical pulse. The general syntax reads:
 
-    --SP '[...;Name:CoupledToTransition:Amp:Freq:Width:Center:Chirp:Type(:GaussAmp);...]'
+    --SP '[...;Name:CoupledToTransition:Amp:Freq:Width:Center:Type(s);...]'
 Multiple transitions can be driven by multiple pulses, and multiple pulses can be chained by using the chain operator `;`. The parameters read as follows:
 
 - `Name` : **Single Lowercase** Character Identifier. **Must** be unique amoung all pulses.
@@ -133,27 +136,32 @@ Multiple transitions can be driven by multiple pulses, and multiple pulses can b
 - `Freq` : Frequency of the pulse using `e^(-i*omega)` where omega is the pulse frequency. This parameter supports the Units of Energy.
 - `Width` : Temporal pulse width. This parameter supports the Units of Time.
 - `Center` : Temporal center of the pulse. This parameter supports the Units of Time.
-- `Chirp` : [Pulse Chirp](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.106.166801) rate. This parameter supports the Units of Energy.
-- `Type` : Type of the pulse, can either be `gauss`, `gauss_pi` or `cw` (continuous wave)
-- `GaussAmp` : **Optional Parameter**. Amplitude of the gaussian function `e^[(t-t0)^A]`, where `A = GaussAmp`. The default value is `GaussAmp = 2`.
+- `Type` : Type of the pulse, can either be a superposition of either `gauss` or `cw` (continuous wave) and `chirped(rate)`,`super(amp_freq)`,`exponent(exp)` and `cutoff(delta)`. The latter can be combined using the `+` operator.
 
-Multiple pulses can be applied onto the same transitions by using comma sperated values for `Amp`,`Freq`,`Width`,`Center`,`Chirp`,`Type` (and optionally `GaussAmp`). In the case of `Type = cw`, the parameter `Width` does nothing.
+Multiple pulses can be applied onto the same transitions by using comma sperated values for `Amp`,`Freq`,`Width`,`Center` and `Type`. In the case of `Type = cw`, the parameter `Width` does nothing.
+
+There are additional type parameters that can be added onto either `cw` or `gauss` using the `+` operator. The additional settings include:
+
+- `chirped(rate)` : [Pulse Chirp](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.106.166801) rate provided in brackets. This parameter supports the Units of Energy. The default value is zero. This parameter is not of any unit.
+- `exponent(exp)` : Amplitude of the gaussian function `e^[(t-t0)^A]` provided in brackets, where `A = exp`. The default value is `exp = 2`. The parameter is not of any unit.
+- `super(amp_freq)` : Parameters for the [FM-SUPER](https://journals.aps.org/prxquantum/abstract/10.1103/PRXQuantum.2.040354) excitation scheme provided in brackets. This settings requires two parameters seperated by `_`. The default value for both parameters is zero. The unit of both parameters is energy.
+- `cutoff(delta)` : The pulse may be split into a [dichromatic pulse](https://www.nature.com/articles/s41567-019-0585-6.pdf) using `delta` as a seperator. The unit of this parameter is energy.
 
 Examples:
 
-    --SP 'p:GX:1:1.5eV:2ps:20ps:0:gauss_pi'
+    --SP 'p:GX:1pi:1.5eV:2ps:20ps:gauss'
 Pulse for a single exciton with `Amp = PulseArea = 1*PI`, `Energy = 1.5eV`, centered at `Center = 20ps` with width `Width = 2ps`. The pulse is not chirped such that `Chirp = 0`. A Gaussian shape is used. Not that with `Type = gauss`, this pulse would have an energy equivalent of `Energy = 1Hz` due to the missing specification for the type. Since no `GaussAmp` was provided, the default value of `2` is used.
 
-    --SP 'p:GH,HZ:5.4:1.48eV:5ps:30ps:0:gauss_pi:12'
+    --SP 'p:GH,HZ:5.4pi:1.48eV:5ps:30ps:gauss+exponent(12)'
 Pulse for the horizontally polarized biexciton transition. A `GaussAmp = 12` is used to approximate a flat-top Gaussian shape.
 
-    --SP 'p:GH,HZ:5.4,1,1:1.48eV,1.5eV,1.5eV:5ps,1ps,1ps:30ps,50ps,60ps:0,0,0:gauss_pi,gauss_pi,gauss_pi'
+    --SP 'p:GH,HZ:5.4pi,1pi,1:1.48eV,1.5eV,1.5eV:5ps,1ps,1ps:30ps,50ps,60ps:gauss,gauss,gauss'
 The same pulse as before, followed by two short PI-pulses at later times.
 
-    --SP 'p:GL:1:1.5eV:2ps:20ps:0:gauss_pi;q:LU:1:1.4eV:2ps:24ps:0:gauss_pi'
+    --SP 'p:GL:1pi:1.5eV:2ps:20ps:0:gauss_pi;q:LU:1:1.4eV:2ps:24ps:gauss'
 Two pulses for different electronic transitions for the three level system.
 
-    --SP 'p:h:0.15meV:1.5eV:0:69fs:0:cw'
+    --SP 'p:h:0.15meV:1.5eV:0:69fs:cw'
 A continuous wave pulse with an amplitude of `Amp = 0.15meV`, frequency `Freq = 1.5eV` driving the resonator `h`. Make sure `h` actually exists as a resonator, or the program will crash. The `Center = 69fs` equals a phase shift relative to zero.
 
 ### Electronic Chirp - Temporal Detuning of the electronic states

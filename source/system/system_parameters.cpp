@@ -114,7 +114,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_force_caching = false; // If true, even if any saving was disabled internally (not by the user), the matrices will still be cached.
     numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
     numerics_output_raman_population = QDLC::CommandlineArguments::get_parameter_passed( "-raman" ); // DEPRECATED
-    logfilecounter = QDLC::Misc::convertParam<int>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
+    logfilecounter = QDLC::Misc::convertParam<double>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
     numerics_calculate_timeresolution_indistinguishability = QDLC::CommandlineArguments::get_parameter_passed( "-timedepInd" ); // DEPRECATED                                                                             //FIXME: Doesnt work right now //DEPRECATED
     numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
     s_numerics_interpolate = QDLC::CommandlineArguments::get_parameter( "--interpolateOrder" );
@@ -209,19 +209,46 @@ bool Parameters::adjustInput() {
         numerics_use_saved_hamiltons = false;
 
     // Calculate/Recalculate some parameters:
-    // Adjust pulse area if pulse_type is "gauss_pi"
+    // Adjust pulse data
     for ( auto &[name, mat] : input_pulse ) {
-        for ( int i = 0; i < mat.string_v["Type"].size(); i++ ) {
-            auto pos = mat.string_v["Type"][i].find( "_pi" );
-            if ( pos != std::string::npos ) {
-                if ( mat.string_v["Type"][i].find( "gauss" ) != std::string::npos )
-                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::PI / ( std::sqrt( 2.0 * QDLC::Math::PI * mat.numerical_v["Width"][i] * std::sqrt( std::pow( mat.numerical_v["Chirp"][i] / mat.numerical_v["Width"][i], 2.0 ) + std::pow( mat.numerical_v["Width"][i], 2.0 ) ) ) ) / 2.0; // https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
-                else if ( mat.string_v["Type"][i].find( "cutoff" ) != std::string::npos )
-                    mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::PI / ( std::sqrt( 2.0 * QDLC::Math::PI * mat.numerical_v["Width"][i] * mat.numerical_v["Width"][i] ) ) / 2.0; // https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
-                mat.string_v["Type"][i].erase( pos, 3 );
+        mat.numerical_v["Amplitude"] = QDLC::Misc::convertParam<Parameter>( mat.string_v["Amplitude"] );
+        // Set all optional parameters to default
+        mat.numerical_v["ChirpRate"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
+        mat.numerical_v["GaussAmp"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 2.0 );
+        mat.numerical_v["SUPERDelta"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
+        mat.numerical_v["SUPERFreq"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
+        mat.numerical_v["CutoffDelta"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
+
+        for ( int i = 0; i < mat.string_v["Amplitude"].size(); i++ ) {
+            auto type_params = QDLC::String::splitline( mat.string_v["Type"][i], '+' );
+            // Extract optional Parameters
+            for ( auto &type : type_params ) {
+                if ( type.find( "cw" ) != std::string::npos )
+                    mat.string_v["Type"][i] = "cw";
+                else if ( type.find( "gauss" ) != std::string::npos )
+                    mat.string_v["Type"][i] = "gauss";
+                else {
+                    std::string param = QDLC::String::splitline( type, '(' ).back();
+                    param.pop_back();
+                    if ( type.find( "chirped" ) != std::string::npos ) {
+                        mat.numerical_v["ChirpRate"][i] = QDLC::Misc::convertParam<Parameter>( param );
+                    } else if ( type.find( "cutoff" ) != std::string::npos ) {
+                        mat.numerical_v["CutoffDelta"][i] = QDLC::Misc::convertParam<Parameter>( param );
+                    } else if ( type.find( "super" ) != std::string::npos ) {
+                        auto splitparam = QDLC::String::splitline( param, '_' );
+                        mat.numerical_v["SUPERDelta"][i] = QDLC::Misc::convertParam<Parameter>( splitparam[0] );
+                        mat.numerical_v["SUPERFreq"][i] = QDLC::Misc::convertParam<Parameter>( splitparam[1] );
+                    } else if ( type.find( "exponent" ) != std::string::npos ) {
+                        mat.numerical_v["GaussAmp"][i] = QDLC::Misc::convertParam<Parameter>( param );
+                    }
+                }
+            }
+            if ( mat.string_v["Amplitude"][i].find( "pi" ) != std::string::npos ) {
+                mat.numerical_v["Amplitude"][i] = mat.numerical_v["Amplitude"][i] * QDLC::Math::PI / ( std::sqrt( 2.0 * QDLC::Math::PI * mat.numerical_v["Width"][i] * std::sqrt( std::pow( mat.numerical_v["ChirpRate"][i] / mat.numerical_v["Width"][i], 2.0 ) + std::pow( mat.numerical_v["Width"][i], 2.0 ) ) ) ) / 2.0; // https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
             }
         }
     }
+
     for ( auto &[name, mat] : input_chirp ) {
         if ( mat.string["Type"].compare( "sine" ) != 0 ) {
             for ( long unsigned i = 0; i < mat.numerical_v["ddt"].size(); i++ )
@@ -243,7 +270,7 @@ bool Parameters::adjustInput() {
         }
         if ( t_end < 0 )
             t_end = 10E-12;
-        Log::L2( "[System] Calculate till at least {} and adjust accordingly to guarantee convergence.\n", t_end );
+        Log::L2( "[System] Calculate till at least {} and adjust accordingly to guarantee convergence. The matrix index used is {}\n", t_end, numerics_groundstate );
     }
 
     if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
@@ -341,23 +368,25 @@ void Parameters::parse_system() {
         input_photonic[conf[0]] = conf_s;
     }
 
-    // TODO: erst pulsetype übergeben, dann parameter parsen. verschiedene types können dann auch verschieden viele paramter haben.
-    // TODO: Implement "SUPER" scheme: Swing-up of quantum emitter population using detuned pulses arXiv:2111.10236v1
-    // BESSER: type infach zuerst auslesen (letzte element zuerst lel dann fallunterscheidung)
+    // --SP 'p:GX:1pi,5pi:1.5eV,1eV:4ps,2ps:20ps,35ps:gauss:'
+    // Type is cw or superposition (chained with '+', e.g. 'gauss+chirped(1E-24)' ) of gauss,cutoff,chirped(rate),super(delta),exponent(exponent)
+    // TODO ...
     // p:TYPE:...parameters...
     auto pulses = QDLC::String::splitline( inputstring_pulse, ';' );
     int pindex = 0;
     for ( std::string &pulse : pulses ) {
         auto conf = QDLC::String::splitline( pulse, ':' );
         input_s conf_s;
-        conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[1], ',' );                                                                                                                                 // Coupled to Transitions
-        conf_s.numerical_v["Amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );                                                                                       // Pulse Amp
-        conf_s.numerical_v["Frequency"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );                                                                                       // Frequency
-        conf_s.numerical_v["Width"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) );                                                                                           // Width
-        conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) );                                                                                          // Center
-        conf_s.numerical_v["Chirp"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[6], ',' ) );                                                                                           // TODO: move one down so it becomes optional                                                                                        // Chirp
-        conf_s.string_v["Type"] = QDLC::String::splitline( conf[7], ',' );                                                                                                                                      // Type
-        conf_s.numerical_v["SuperAmp"] = conf.size() > 8 ? QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[8], ',' ) ) : std::vector<Parameter>( conf_s.numerical_v["Center"].size(), 2.0 ); // Optional: SuperGaussian Amplitude
+        conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[1], ',' );                                           // Coupled to Transitions
+        conf_s.string_v["Amplitude"] = QDLC::String::splitline( conf[2], ',' );                                           // Pulse Amp
+        conf_s.numerical_v["Frequency"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) ); // Frequency
+        conf_s.numerical_v["Width"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) );     // Width
+        conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) );    // Center
+        conf_s.string_v["Type"] = QDLC::String::splitline( conf[6], ',' );                                                // Type
+        // Non-Mandatory values
+        // conf_s.numerical_v["Chirp"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[7], ',' ) );                                                                                           // TODO: move one down so it becomes optional                                                                                        // Chirp
+        // conf_s.numerical_v["SuperAmp"] = conf.size() > 8 ? QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[8], ',' ) ) : std::vector<Parameter>( conf_s.numerical_v["Center"].size(), 2.0 ); // Optional: SuperGaussian Amplitude
+        // For counting purposes:
         conf_s.numerical["PulseIndex"] = pindex;
         pindex += 2;
         input_pulse[conf[0]] = conf_s;
@@ -501,8 +530,13 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                 Log::L1( " - - Frequency: {} Hz - {:.8} eV - {:.8} nm\n", mat.numerical_v["Frequency"][i], mat.numerical_v["Frequency"][i].getSI( Parameter::UNIT_ENERGY_EV ), mat.numerical_v["Frequency"][i].getSI( Parameter::UNIT_WAVELENGTH_NM ) );
                 Log::L1( " - - Width: {} s - {:.8} ps\n", mat.numerical_v["Width"][i], mat.numerical_v["Width"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 Log::L1( " - - Center: {} s - {:.8} ps\n", mat.numerical_v["Center"][i], mat.numerical_v["Center"][i].getSI( Parameter::UNIT_TIME_PS ) );
-                Log::L1( " - - Chirp: {}\n", mat.numerical_v["Chirp"][i] );
-                Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i], mat.string_v["Type"][i] == "gauss" ? fmt::format( " (Gaussian Amplitude: {})", mat.numerical_v["SuperAmp"][i] ) : "" );
+                if ( QDLC::Math::abs2( mat.numerical_v["ChirpRate"][i] != 0.0 ) )
+                    Log::L1( " - - Chirp: {}\n", mat.numerical_v["ChirpRate"][i] );
+                if ( QDLC::Math::abs2( mat.numerical_v["SUPERDelta"][i] != 0.0 ) ) {
+                    Log::L1( " - - SUPER Amplitude: {}\n", mat.numerical_v["SUPERDelta"][i] );
+                    Log::L1( " - - SUPER Frequency: {}\n", mat.numerical_v["SUPERFreq"][i] );
+                }
+                Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i], mat.string_v["Type"][i] == "gauss" ? fmt::format( " (Gaussian Amplitude: {})", mat.numerical_v["GaussAmp"][i] ) : "" );
             }
         }
         Log::L1( "\n" );
@@ -591,8 +625,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         Log::L1( "NOT using Hamilton caching.\n" );
     Log::L1( "\n" );
     for ( int i = 0; i < logfilecounter.size(); i++ ) {
-        if ( logfilecounter[i] >= 0 )
-            Log::L1( "Logfile ident number {}: {}\n", i, logfilecounter[i] );
+        Log::L1( "Logfile ident number {}: {}\n", i, logfilecounter[i] );
     }
     Log::L1( "\n" );
 
