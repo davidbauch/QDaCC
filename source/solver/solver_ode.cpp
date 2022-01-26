@@ -12,6 +12,7 @@ QDLC::Numerics::ODESolver::ODESolver( System &s ) {
     Log::L2( "Done!\n" );
 }
 
+// TODO: interpolation für tau direction, dann wieder cachen in t wie mit phononen
 Sparse QDLC::Numerics::ODESolver::getHamilton( System &s, const double t, bool use_saved_hamiltons ) {
     if ( s.parameters.numerics_use_saved_hamiltons ) {
         if ( savedHamiltons.count( t ) == 0 ) {
@@ -36,7 +37,7 @@ void QDLC::Numerics::ODESolver::saveHamilton( const Sparse &mat, const double t 
 }
 
 int QDLC::Numerics::ODESolver::reset( System &s ) {
-    //TODO: remove dim
+    // TODO: remove dim, DEPRECATED
     dim = (int)std::ceil( ( s.parameters.t_end - s.parameters.t_start ) / ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step ) ) + 10; //(int)( s.parameters.iterations_t_max / s.parameters.iterations_t_skip ) + 10;
     return dim;
 }
@@ -72,7 +73,7 @@ int QDLC::Numerics::ODESolver::getIterationNumberSpectrum( System &s ) {
 // @param i: [int] Iteration number
 // @return: [double] Time corresponding to iteration number i
 
-double& QDLC::Numerics::ODESolver::getTimeAt( int i ) {
+double &QDLC::Numerics::ODESolver::getTimeAt( int i ) {
     return savedStates.at( i ).t;
 }
 
@@ -81,7 +82,7 @@ double& QDLC::Numerics::ODESolver::getTimeAt( int i ) {
 // @param i: [int] Iteration number
 // @return: [Sparse] (Density-) Matrix corresponding to iteration number i
 
-Sparse& QDLC::Numerics::ODESolver::getRhoAt( int i ) {
+Sparse &QDLC::Numerics::ODESolver::getRhoAt( int i ) {
     return savedStates.at( i ).mat;
 }
 
@@ -121,5 +122,5 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::get_operators_matrices( Sy
     for ( auto &split_s_op_annihilator : QDLC::String::splitline( s_op_annihilator, '+' ) )
         op_annihilator += s.operatorMatrices.el_transitions.count( split_s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator].hilbert;
     return std::make_tuple( op_creator, op_annihilator );
-    //return std::make_tuple( op_creator, op_creator.adjoint() );
+    // return std::make_tuple( op_creator, op_creator.adjoint() );
 }

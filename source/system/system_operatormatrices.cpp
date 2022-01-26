@@ -364,6 +364,10 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             }
             phononCouplingIndex.emplace_back( temp_base_indices[index] );
         }
+        phononGroupToIndices = std::vector<std::vector<int>>( temp_base_indices.size() );
+        for ( int i = 0; i < base.size(); i++ ) {
+            phononGroupToIndices[phononCouplingIndex[i]].emplace_back( i );
+        }
     } else if ( sorting == "factor" ) {
         std::map<double, int> temp_base_indices;
         int new_index = 0;
@@ -377,11 +381,17 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             }
             phononCouplingIndex.emplace_back( temp_base_indices[index] );
         }
+        phononGroupToIndices = std::vector<std::vector<int>>( temp_base_indices.size() );
+        for ( int i = 0; i < base.size(); i++ ) {
+            phononGroupToIndices[phononCouplingIndex[i]].emplace_back( i );
+        }
     } else {
         Log::L2( "Sorting Parameter for Partially Summed ADM mismatch!\n" );
     }
     Log::L2( "Phonon Coupling Index Vector: {}\n", phononCouplingIndex );
     Log::L2( "Phonon Coupling Value Vector: {}\n", phononCouplingIndexValue );
+    for ( auto &a : phononGroupToIndices )
+        Log::L2( "Phonon Group Index Vector: {}\n", a );
 
     // Create Initial State
     // Split starting state into superposition. States can be passed as "|...>+|...>" with amplitudes

@@ -68,7 +68,7 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
     for ( auto &[mode, param] : parameters.input_pulse ) {
         for ( auto transition : param.string_v["CoupledTo"] ) {
             std::reverse( transition.begin(), transition.end() );
-            explicit_time += 1.0i * ( pulse[p].get( t ) + 1.0i * parameters.scaleVariable( pulse[p].derivative( t ), parameters.scale_value ) ) * operatorMatrices.polaron_pulse_factors_explicit_time[pp++];
+            explicit_time += 1.0i * ( pulse[p].get( t ) + 1.0i * parameters.scaleVariable( pulse[p].derivative( t, parameters.t_step ), parameters.scale_value ) ) * operatorMatrices.polaron_pulse_factors_explicit_time[pp++];
         }
         p++;
     }
