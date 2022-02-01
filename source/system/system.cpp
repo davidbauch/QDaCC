@@ -195,6 +195,10 @@ void System::expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer 
                     for ( int j = 0; j < parameters.maxStates; j++ ) {
                         fmt::print( fileoutput.fp_densitymatrix, "{:.10e}\t", std::real( rho.coeff( i, j ) ) );
                     }
+                for ( int i = 0; i < parameters.maxStates; i++ )
+                    for ( int j = 0; j < parameters.maxStates; j++ ) {
+                        fmt::print( fileoutput.fp_densitymatrix, "{:.10e}\t", std::imag( rho.coeff( i, j ) ) );
+                    }
             } else
                 for ( int j = 0; j < parameters.maxStates; j++ )
                     fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", std::real( rho.coeff( j, j ) ) );

@@ -12,11 +12,15 @@ FileOutput::FileOutput( Parameters &p, OperatorMatrices &op ) {
             if ( p.output_full_dm ) {
                 for ( int i = 0; i < op.base.size(); i++ )
                     for ( int j = 0; j < op.base.size(); j++ ) {
-                        fmt::print( fp_densitymatrix, "|{}><{}|\t", op.base.at( i ).substr(1,op.base.at( i ).size()-2 ), op.base.at( j ).substr(1,op.base.at( j ).size()-2 ) );
+                        fmt::print( fp_densitymatrix, "Re(|{}><{}|)\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
+                    }
+                for ( int i = 0; i < op.base.size(); i++ )
+                    for ( int j = 0; j < op.base.size(); j++ ) {
+                        fmt::print( fp_densitymatrix, "Im(|{}><{}|)\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
                     }
             } else
                 for ( int i = 0; i < op.base.size(); i++ )
-                    fmt::print( fp_densitymatrix, "|{0}><{0}|\t", op.base.at( i ).substr(1,op.base.at( i ).size()-2 ) );
+                    fmt::print( fp_densitymatrix, "|{0}><{0}|\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ) );
             fmt::print( fp_densitymatrix, "\n" );
         }
     }
@@ -44,7 +48,7 @@ FileOutput::FileOutput( Parameters &p, OperatorMatrices &op ) {
             for ( auto &[name, rem] : p.input_photonic )
                 fmt::print( fp_photonpopulation, "EM(|{}><{}|)\t", name, name );
         fmt::print( fp_photonpopulation, "\n" );
-        //fmt::print( fp_photonpopulation, "t\tHorizontal\tVertical\tEmission-Probability-H\tEmission-Probability-V{}{}\n", ( p.numerics_output_raman_population ? "\tRaman-Population-H\tRaman-Poppulation-V\tRaman-Emission-Probability-H\tRaman-Emission-Probability-V" : "" ), ( p.numerics_output_electronic_emission ? "\tElectronic-H\tElectronic-V" : "" ) );
+        // fmt::print( fp_photonpopulation, "t\tHorizontal\tVertical\tEmission-Probability-H\tEmission-Probability-V{}{}\n", ( p.numerics_output_raman_population ? "\tRaman-Population-H\tRaman-Poppulation-V\tRaman-Emission-Probability-H\tRaman-Emission-Probability-V" : "" ), ( p.numerics_output_electronic_emission ? "\tElectronic-H\tElectronic-V" : "" ) );
     }
     Log::L2( "done!\n" );
 }

@@ -24,14 +24,17 @@ Scalar Pulse::evaluate( double t ) {
         } else if ( inputs.string_v["Type"][i].compare( "gauss" ) == 0 ) {
             double amp = std::sqrt( std::pow( inputs.numerical_v["ChirpRate"][i] / inputs.numerical_v["Width"][i], 2.0 ) + std::pow( inputs.numerical_v["Width"][i], 2.0 ) );
             // Chirped frequency
+            // FIXME: ?? chirp is doch so falsch??
             double freq = inputs.numerical_v["ChirpRate"][i] / ( std::pow( inputs.numerical_v["ChirpRate"][i], 2.0 ) + std::pow( inputs.numerical_v["Width"][i], 4.0 ) );
             // SUPER modulation
-            double main_freq = inputs.numerical_v["Frequency"][i] + inputs.numerical_v["SUPERDelta"][i] * std::sin( inputs.numerical_v["SUPERFreq"][i] * t );
-            if ( inputs.string_v["Type"][i].compare( "cutoff" ) == 0 ) {
-                ret += inputs.numerical_v["Amplitude"][i] * std::exp( -0.5 * std::pow( ( t - inputs.numerical_v["Center"][i] ) / amp, inputs.numerical_v["GaussAmp"][i] ) - 1.0i * ( ( main_freq - inputs.numerical_v["CutoffDelta"][i] ) * ( t - inputs.numerical_v["Center"][i] ) + 0.5 * freq * std::pow( ( t - inputs.numerical_v["Center"][i] ), 2.0 ) ) );
-                ret += inputs.numerical_v["Amplitude"][i] * std::exp( -0.5 * std::pow( ( t - inputs.numerical_v["Center"][i] ) / amp, inputs.numerical_v["GaussAmp"][i] ) - 1.0i * ( ( main_freq + inputs.numerical_v["CutoffDelta"][i] ) * ( t - inputs.numerical_v["Center"][i] ) + 0.5 * freq * std::pow( ( t - inputs.numerical_v["Center"][i] ), 2.0 ) ) );
+            double main_freq = inputs.numerical_v["Frequency"][i] * ( t - inputs.numerical_v["Center"][i] );
+            if ( inputs.numerical_v["SUPERFreq"][i] != 0.0 )
+                inputs.numerical_v["SUPERDelta"][i] / inputs.numerical_v["SUPERFreq"][i] * std::cos( inputs.numerical_v["SUPERFreq"][i] * ( t - inputs.numerical_v["Center"][i] ) );
+            if ( inputs.numerical_v["CutoffDelta"][i] != 0 ) {
+                ret += inputs.numerical_v["Amplitude"][i] * std::exp( -0.5 * std::pow( ( t - inputs.numerical_v["Center"][i] ) / amp, inputs.numerical_v["GaussAmp"][i] ) - 1.0i * ( main_freq - inputs.numerical_v["CutoffDelta"][i] * ( t - inputs.numerical_v["Center"][i] ) + 0.5 * freq * std::pow( ( t - inputs.numerical_v["Center"][i] ), 2.0 ) ) );
+                ret += inputs.numerical_v["Amplitude"][i] * std::exp( -0.5 * std::pow( ( t - inputs.numerical_v["Center"][i] ) / amp, inputs.numerical_v["GaussAmp"][i] ) - 1.0i * ( main_freq + inputs.numerical_v["CutoffDelta"][i] * ( t - inputs.numerical_v["Center"][i] ) + 0.5 * freq * std::pow( ( t - inputs.numerical_v["Center"][i] ), 2.0 ) ) );
             } else {
-                ret += inputs.numerical_v["Amplitude"][i] * std::exp( -0.5 * std::pow( ( t - inputs.numerical_v["Center"][i] ) / amp, inputs.numerical_v["GaussAmp"][i] ) - 1.0i * ( main_freq * ( t - inputs.numerical_v["Center"][i] ) + 0.5 * freq * std::pow( ( t - inputs.numerical_v["Center"][i] ), 2.0 ) ) );
+                ret += inputs.numerical_v["Amplitude"][i] * std::exp( -0.5 * std::pow( ( t - inputs.numerical_v["Center"][i] ) / amp, inputs.numerical_v["GaussAmp"][i] ) - 1.0i * ( main_freq + 0.5 * freq * std::pow( ( t - inputs.numerical_v["Center"][i] ), 2.0 ) ) );
             }
         }
     }
@@ -57,7 +60,7 @@ void Pulse::generate( double t_start, double t_end, double t_step ) {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
             t = t1 + steps[i];
             Scalar val = get( t );
-            pulsearray[t] = val;
+            // pulsearray[t] = val;
             if ( std::abs( val ) > maximum )
                 maximum = std::abs( val );
         }
@@ -66,7 +69,7 @@ void Pulse::generate( double t_start, double t_end, double t_step ) {
     }
 
     size = pulsearray.size();
-    Log::L2( "Pulsearray.size() = {}... \n", size );
+    Log::L2( "[System-Pulse] Pulsearray.size() = {}... \n", size );
     if ( inputs.numerical_v["Frequency"].size() > 0 ) {
         Log::L2( "Calculating pulse fourier transformation...\n" );
         double omega_center = 0;
@@ -83,15 +86,16 @@ void Pulse::generate( double t_start, double t_end, double t_step ) {
         omega_center /= (double)( inputs.numerical_v["Frequency"].size() );
         omega_range /= (double)( inputs.numerical_v["Frequency"].size() );
         double dw = omega_range / 500.0;
+        Log::L2( "[System-Pulse] Using w_center = {}, w_range = {}, dw = {} (dt = {})\n", omega_center, omega_range, dw, t_step );
         for ( double w = omega_center - omega_range; w < omega_center + omega_range; w += dw ) {
             fourier.emplace_back( w );
             Scalar spectral_amp = 0;
-            for ( double t = t_start; t < t_end + t_step * steps.size(); t += t_step ) { // bad for bigger timesteps
+            for ( double t = t_start; t < t_end + t_step; t += t_step ) { // bad for bigger timesteps
                 spectral_amp += get( t ) * std::exp( 1.i * w * t ) * t_step;
             }
             pulsearray_fourier.emplace_back( spectral_amp );
         }
-        Log::L2( "Fourier pulsearray.size() = {}...\n", pulsearray_fourier.size() );
+        Log::L2( "[System-Pulse] Fourier pulsearray.size() = {}...\n", pulsearray_fourier.size() );
     }
 }
 
@@ -102,11 +106,11 @@ void Pulse::fileOutput( std::string filepath, double t_start, double t_end, doub
         Log::L2( "Failed to open outputfile for Pulse!\n" );
         return;
     }
-    fmt::print( pulsefile, "t\tabs(Omega(t))\treal(Omega(t)))\tw\tabs(FT(Omega(t)))\n" );
+    fmt::print( pulsefile, "t\tabs(Omega(t))\treal(Omega(t)))\tw\treal(FT(Omega(t)))\tabs(FT(Omega(t)))\n" );
     int i = 0;
     for ( double t = t_start; t < t_end + t_step; t += t_step ) {
         if ( i < pulsearray_fourier.size() )
-            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\t{:.1e}\t{:.10e}\n", t, std::abs( pulsearray[t] ), std::real( pulsearray[t] ), fourier[i], std::abs( pulsearray_fourier[i] ) );
+            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\t{:.10e}\t{:.10e}\t{:.10e}\n", t, std::abs( pulsearray[t] ), std::real( pulsearray[t] ), fourier[i], std::abs( pulsearray_fourier[i] ), std::real( pulsearray_fourier[i] ) );
         else
             fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\n", t, std::abs( pulsearray[t] ), std::real( pulsearray[t] ) );
         i++;
@@ -191,7 +195,7 @@ void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses, double 
         }
         for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
             if ( i < pulses.at( p ).pulsearray_fourier.size() )
-                fmt::print( pulsefile, "{:.10e}\t{:.10e}\t", pulses.at( p ).fourier[i], std::abs( pulses.at( p ).pulsearray_fourier[i] ) );
+                fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\t", pulses.at( p ).fourier[i], std::abs( pulses.at( p ).pulsearray_fourier[i] ), std::real( pulses.at( p ).pulsearray_fourier[i] ) );
             else
                 fmt::print( pulsefile, "\t\t" );
         }

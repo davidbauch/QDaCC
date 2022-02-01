@@ -533,8 +533,8 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                 if ( QDLC::Math::abs2( mat.numerical_v["ChirpRate"][i] != 0.0 ) )
                     Log::L1( " - - Chirp: {}\n", mat.numerical_v["ChirpRate"][i] );
                 if ( QDLC::Math::abs2( mat.numerical_v["SUPERDelta"][i] != 0.0 ) ) {
-                    Log::L1( " - - SUPER Amplitude: {}\n", mat.numerical_v["SUPERDelta"][i] );
-                    Log::L1( " - - SUPER Frequency: {}\n", mat.numerical_v["SUPERFreq"][i] );
+                    Log::L1( " - - SUPER Amplitude: {} - {} meV\n", mat.numerical_v["SUPERDelta"][i], mat.numerical_v["SUPERDelta"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
+                    Log::L1( " - - SUPER Frequency: {} - {} meV\n", mat.numerical_v["SUPERFreq"][i], mat.numerical_v["SUPERFreq"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
                 }
                 Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i], mat.string_v["Type"][i] == "gauss" ? fmt::format( " (Gaussian Amplitude: {})", mat.numerical_v["GaussAmp"][i] ) : "" );
             }
