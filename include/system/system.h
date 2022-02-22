@@ -104,6 +104,9 @@ class System {
     // Either calculates or returns the polaron green function from cache
     Scalar dgl_phonons_greenf( double t, const char mode = 'u' );
 
+    // Same but with phonon coupling scaling, returning a Sparse Matrix to do cwiseMultiplication with
+    Sparse &dgl_phonons_greenf_matrix( double t, const char mode = 'u' );
+
     // Claculates the Phi function for the polaron green function. This function will be cached
     Scalar dgl_phonons_phi( const double t );
 

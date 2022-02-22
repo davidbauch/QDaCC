@@ -56,6 +56,8 @@ class Parameters {
     bool numerics_pathintegral_docutoff_propagator;
     // Dynamic Cutoff; While true, the squared threshold will be increased or decreased until the number of ADM elements is approximately equal to the cutoff iterations set.
     long long numerics_pathintegral_dynamiccutoff_iterations_max; //=0
+    // Sparse or Dense Tensor
+    bool numerics_pathintegral_use_dense_tensor = false;
 
     // System Parameters
     // Time variables
@@ -120,13 +122,14 @@ class Parameters {
     std::string inputstring_photonic;
     std::string inputstring_pulse;
     std::string inputstring_chirp;
-    std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_raman, inputstring_correlation_resolution;
+    std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_raman, inputstring_correlation_resolution, inputstring_SPconf;
     std::map<std::string, input_s> input_electronic;
     std::map<std::string, input_s> input_photonic;
     std::map<std::string, input_s> input_pulse;
     std::map<std::string, input_s> input_chirp;
     std::map<std::string, input_s> input_correlation;            // spectrum, indist, conc
     std::map<std::string, input_s> input_correlation_resolution; // g1/g2 correlation timesteps. length of g will be determined by gridres
+    std::map<std::string, input_s> input_conf;                   // Everything else
     // Converts the input strings into input vectors.
     // These Vectors will then be used to generate the operators and to output the inputsystem
     void parse_system();

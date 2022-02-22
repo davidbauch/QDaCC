@@ -46,6 +46,9 @@ std::vector<std::vector<Sparse>> &QDLC::Numerics::ODESolver::calculate_propagato
     return pathint_propagator[-1];
 }
 
+// TODO: statt sparse -> dense am besten dense -> nonzeros zu indices appenden, ab punkt dann einfach nur noch über nonzero indices iterieren. dann kann man von anfang an multithreaded machen, irgendwann gucken was is ungleich null,
+// dann nur noch über diese indices summieren.
+
 bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output ) {
     // Generate list of needed G1 and G2 functions. To save on the excessive RAM usage by caching the ADM for every timestep, we calculate the tau-direction for every t step here.
     std::map<std::string, std::vector<Sparse>> g12_settings;
@@ -59,7 +62,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
             std::string g1 = get_operators_purpose( { s_creator, s_annihilator }, 1 );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
             if ( g12_settings.count( g1 ) == 0 )
-                g12_settings[g1] = { creator, annihilator };
+                g12_settings[g1] = { ident, ident, creator, annihilator };
         }
         // Calculate Indist
         auto &indist_s = s.parameters.input_correlation["Indist"];
@@ -69,7 +72,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
             std::string g2 = get_operators_purpose( { s_creator, s_annihilator, s_creator, s_annihilator }, 2 );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
             if ( g12_settings.count( g1 ) == 0 )
-                g12_settings[g1] = { creator, annihilator };
+                g12_settings[g1] = { ident, ident, creator, annihilator };
             if ( g12_settings.count( g2 ) == 0 )
                 g12_settings[g2] = { creator, annihilator, creator, annihilator };
         }
@@ -111,11 +114,12 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
             if ( g12_settings.count( g ) == 0 )
                 if ( order == 1 )
-                    g12_settings[g] = { creator, annihilator };
+                    g12_settings[g] = { ident, ident, creator, annihilator };
                 else
                     g12_settings[g] = { creator, annihilator, creator, annihilator };
         }
         int matdim = std::min( int( std::floor( ( t_end - t_start ) / s.parameters.t_step_pathint ) / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1;
+        // int matdim = std::min( int( std::floor( ( t_end - t_start ) / s.parameters.t_step ) / s.parameters.iterations_t_skip ) + 1, s.parameters.iterations_tau_resolution ) + 1;
         for ( auto &[purpose, matrices] : g12_settings ) {
             Log::L2( "[PathIntegral] Calculating G-Function with purpose {} in place with path integral.\n", purpose );
             cache[purpose] = Dense::Zero( matdim, matdim );
@@ -141,32 +145,33 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     std::copy( std::begin( pathint_tensor_dimensions ), std::end( pathint_tensor_dimensions ), std::ostream_iterator<int>( adm_tensor_dimensions, ", " ) );
     Log::L2( "[PathIntegral] ADM Tensor dimensions will reach: [{}]\n", adm_tensor_dimensions.str() );
 
-    int adm_multithreading_cores = s.parameters.numerics_phonons_maximum_threads; // std::min<int>( s.parameters.numerics_phonons_maximum_threads, different_dimensions.size() );
-    Log::L2( "[PathIntegral] Using #{} cpu cores for the ADM propagation.\n", adm_multithreading_cores );
+    s.parameters.numerics_pathintegral_use_dense_tensor = false;
+    Log::L2( "[PathIntegral] Tensor Type is {}\n", s.parameters.numerics_pathintegral_use_dense_tensor ? "Dense" : "Sparse" );
+    int adm_multithreading_cores = s.parameters.numerics_pathintegral_use_dense_tensor ? s.parameters.numerics_phonons_maximum_threads : 1;
+    Log::L2( "[PathIntegral] Using a maximum of #{} cpu cores for the ADM propagation.\n", s.parameters.numerics_phonons_maximum_threads );
     Log::L2( "[PathIntegral] Anticipated Tensor size will be {} MB (elements) and {} MB (indices).\n", std::pow( tensor_dim, 2.0 ) * std::pow( different_dimensions.size(), 2 * s.parameters.p_phonon_nc - 2 ) * 16 / 1024. / 1024., std::pow( tensor_dim, 2.0 ) * std::pow( different_dimensions.size(), 2 * s.parameters.p_phonon_nc - 2 ) * 4 * pathint_tensor_dimensions.size() / 1024. / 1024. );
 
-    Tensor<Scalar> adm_tensor( pathint_tensor_dimensions );
-    Tensor<int> adm_skip( pathint_tensor_dimensions, 0 );
-    // for ( auto &[sparse_index_x, map] : adm_skip.getNextValues() )
-    //     for ( auto &[sparse_index_y, val] : map )
-    //         Log::L3( "{} {} -> {}\n", sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), val );
-
-    std::vector<std::tuple<iVector, iVector>> total_indices;
-    for ( auto sparse_index_x : adm_tensor.getIndices() )
-        for ( auto sparse_index_y : adm_tensor.getIndices() ) {
-            total_indices.emplace_back( std::make_tuple( sparse_index_x, sparse_index_y ) );
-        }
+    // Tensor Class
+    Tensor<Scalar> adm_tensor( pathint_tensor_dimensions, s.parameters.numerics_pathintegral_use_dense_tensor ? Tensor<Scalar>::TYPE_DENSE : Tensor<Scalar>::TYPE_SPARSE );
 
     // First step is just rho0
     Sparse rho = rho0;
     saveState( rho0, t_start, output );
 
+    // Fill initial Tensor
     for ( int i = 0; i < tensor_dim; i++ ) {
         for ( int j = 0; j < tensor_dim; j++ ) {
             if ( QDLC::Math::abs2( rho.coeff( i, j ) ) == 0 )
                 continue;
-            iVector ii = iVector::Zero( pathint_tensor_dimensions.size() );
-            iVector jj = iVector::Zero( pathint_tensor_dimensions.size() );
+            iVector ii;
+            iVector jj;
+            if ( s.parameters.numerics_pathintegral_use_dense_tensor ) {
+                ii = iVector::Zero( pathint_tensor_dimensions.size() );
+                jj = iVector::Zero( pathint_tensor_dimensions.size() );
+            } else {
+                ii = iVector::Zero( 1 );
+                jj = iVector::Zero( 1 );
+            }
             ii( 0 ) = i;
             jj( 0 ) = j;
             adm_tensor.setTriplet( ii, jj, rho.coeff( i, j ) );
@@ -182,16 +187,13 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
 
     Log::L2( "] ({} total elements)\n", adm_tensor.nonZeros() );
 
-    // Smart Tensor cutoff index. Either directly after nc steps. if the Tensor fillrate stays the same for this amount of iterations, assume zero elements will stay zero
-    int tensor_smart_cutoff_index = s.parameters.p_phonon_nc + 1;
-    double tensor_smart_cutoff_significant = 0.0; // number of significant digits.
-    double tensor_smart_cutoff_last_fillrate = 0.0;
-    int tensor_smart_cutoff_current = 0;
-    Log::L2( "[PathIntegral] Smart Tensor Cutoff Index is {}.\n", tensor_smart_cutoff_index );
+    bool filled_time = false;
+    int nonzero = 0;
+    int numerics_dynamic_densitychange_counter = 0;
+    int numerics_dynamic_densitychange_limit = 3; // If fillrate doesnt change for this number of iterations, switch tensor to dense
 
     // Iterate Path integral for further time steps
-    double t_start_new = t_start; // + s.parameters.t_step_pathint * ( s.parameters.p_phonon_nc - 1 );
-    for ( double t_t = t_start_new; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
+    for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
         // Calculate Correlation functions:
         if ( g12_settings.size() > 0 and g12_counter % s.parameters.iterations_t_skip == 0 ) {
             // auto cached_adms_dimensions = adm_tensor.dimensions;
@@ -199,28 +201,39 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
                 Log::L3( "[PathIntegral] Calculating sub-rk for {}\n", purpose );
                 // adm_tensor.dimensions = cached_adms_dimensions;
                 // adm_tensor.rescale_dimensions();
-                int order = matrices.size() == 4 ? 2 : 1;
                 std::vector<QDLC::SaveState> temp;
                 auto &gmat = cache[purpose];
                 auto &timemat = cache[purpose + "_time"];
                 calculate_path_integral_correlation( adm_tensor, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, total_progressbar_iterations, purpose, s, temp, do_output, matrices, adm_multithreading_cores );
+                // Log::L3( "[PathIntegral] Interpolating Results...\n" );
+                // if ( temp.size() > 1 )
+                //     temp = Numerics::interpolate_curve( temp, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
+                Log::L3( "[PathIntegral] Writing to G matrix...\n" );
                 for ( int32_t j = 0; j < std::min<int32_t>( temp.size(), gmat.rows() * s.parameters.iterations_t_skip ); j += s.parameters.iterations_t_skip ) {
                     double t_tau = temp.at( j ).t;
                     // Log::L3( "Filling gmat for t = {}, tau = {}\n", t_t, t_tau );
-                    if ( order == 2 )
+                    if ( matrices.size() == 4 ) {
                         // gmat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = ( ( matrices[OP2] * matrices[OP3] ).cwiseProduct( temp.at( j ).mat ) ).sum();
                         gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[2] * matrices[1], t_tau );
-                    else
+                    } else {
                         // gmat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = ( matrices[1].cwiseProduct( temp.at( j ).mat ) ).sum();
-                        // gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[1], t_tau );
-                        gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = std::conj( s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[1], t_tau ) ); // conj ammenakoyum?????
-                    timemat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = Scalar( t_t, t_tau );
+                        gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[1], t_tau );
+                        // gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = std::conj( s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[1], t_tau ) ); // conj ammenakoyum?????
+                    }
                 }
+                if ( not filled_time )
+                    for ( int32_t i = 0; i < gmat.rows() * s.parameters.iterations_t_skip; i += s.parameters.iterations_t_skip ) {
+                        double t1 = i < temp.size() ? temp[i].t : temp.back().t + ( 1. + i - temp.size() ) * s.parameters.t_step_pathint;
+                        for ( int32_t j = 0; j < gmat.rows() * s.parameters.iterations_t_skip; j += s.parameters.iterations_t_skip ) {
+                            double t2 = j < temp.size() ? temp[j].t : temp.back().t + ( 1. + j - temp.size() ) * s.parameters.t_step_pathint;
+                            timemat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = Scalar( t1, t1 + t2 );
+                        }
+                    }
             }
-            // adm_tensor.dimensions = cached_adms_dimensions;
-            // adm_tensor.rescale_dimensions();
+            filled_time = true;
         }
-        // Path-Integral iteration
+
+        // Actual Path-Integral iteration
 
         // Calculate Propagators for current time
         auto t0 = omp_get_wtime();
@@ -237,90 +250,143 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         double total_time = 0;
 
         int max_index = 2 + std::min<int>( s.parameters.p_phonon_nc - 2, std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) );
-        int nonzero = 0;
-        // for ( auto sparse_index_x : adm_tensor.getIndices() )collapse( 2 )
-        std::set<int> indices_to_delete;
+        // Iterate the tensor
+        if ( s.parameters.numerics_pathintegral_use_dense_tensor ) {
+            nonzero = 0;
 #pragma omp parallel for num_threads( adm_multithreading_cores ) schedule( guided ) shared( nonzero )
-        for ( int _i = 0; _i < total_indices.size(); _i++ ) {
-            auto [sparse_index_x, sparse_index_y] = total_indices[_i];
-            // if ( max_index >= sparse_index_x.size() and adm_skip.getNextTriplet( sparse_index_x, sparse_index_y ) > s.parameters.p_phonon_nc ) {
-            //     // Log::L3( "Skipping element {} - {}, counter is {}\n", sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), adm_skip.getNextTriplet( sparse_index_x, sparse_index_y ) );
-            //     continue;
-            // }
-            Scalar new_value = 0.0;
-            // Set all indices to zero that are for timevalues larger than max_index
-            for ( int i = max_index; i < sparse_index_x.size(); i++ ) {
-                sparse_index_x( i ) = 0;
-                sparse_index_y( i ) = 0;
-            }
+            for ( auto &index : adm_tensor.getIndices() ) {
+                auto [sparse_index_x, sparse_index_y] = index;
+                Scalar new_value = 0.0;
+                // Set all indices to zero that are for timevalues larger than max_index
+                for ( int i = max_index; i < sparse_index_x.size(); i++ ) {
+                    sparse_index_x( i ) = 0;
+                    sparse_index_y( i ) = 0;
+                }
 
-            // Indices
-            int i_n = sparse_index_x( 0 );
-            int j_n = sparse_index_y( 0 );
+                // Indices
+                int i_n = sparse_index_x( 0 );
+                int j_n = sparse_index_y( 0 );
 
-            // Groups:
-            int gi_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i_n] : i_n;
-            int gj_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[j_n] : j_n;
-            int gi_n_m1 = sparse_index_x( 1 );
-            int gj_n_m1 = sparse_index_y( 1 );
-            auto temp = adm_tensor.getTriplet( sparse_index_x, sparse_index_y );
+                // Groups:
+                int gi_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i_n] : i_n;
+                int gj_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[j_n] : j_n;
+                int gi_n_m1 = sparse_index_x( 1 );
+                int gj_n_m1 = sparse_index_y( 1 );
 
-            // Log::L3( "[PathIntegral] (T{}) calculating new [{}] - [{}] --> old value is {}\n", omp_get_thread_num(), sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), temp );
-
-            //  Create "Old" sparse indices (vector shifted, last value will be replaced by summation) (n,n-1,n-2,...,n-m) -> (n-1,n-2,n-3,...,n-m,placeholder)
-            auto sparse_index_x_old = sparse_index_x;
-            auto sparse_index_y_old = sparse_index_y;
-            for ( int i = 0; i < sparse_index_x_old.size() - 1; i++ ) {
-                sparse_index_x_old( i ) = sparse_index_x_old( i + 1 );
-                sparse_index_y_old( i ) = sparse_index_y_old( i + 1 );
-            }
-            // Sum over all States in group (sum_(k_n-1,kd_n-1))
-            for ( int i_n_m1 : s.operatorMatrices.phononGroupToIndices[gi_n_m1] ) {
-                for ( int j_n_m1 : s.operatorMatrices.phononGroupToIndices[gj_n_m1] ) {
-                    // Switch first entry of "old" sparse index back to the actual state index
-                    sparse_index_x_old( 0 ) = i_n_m1;
-                    sparse_index_y_old( 0 ) = j_n_m1;
-                    // Propagator value
-                    Scalar propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
-                    // If this propagation is not allowed, continue
-                    if ( QDLC::Math::abs2( propagator_value ) == 0.0 )
-                        continue;
-                    // Sum over Groups lambda_n-n_m:
-                    for ( int lambda_i = 0; lambda_i < different_dimensions.size(); lambda_i++ ) {
-                        for ( int lambda_j = 0; lambda_j < different_dimensions.size(); lambda_j++ ) {
-                            // Old index vector:
-                            sparse_index_x_old( max_index - 1 ) = lambda_i;
-                            sparse_index_y_old( max_index - 1 ) = lambda_j;
-                            // Calculate S:
-                            Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
-                            for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
-                                int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x_old( 0 )] : sparse_index_x_old( 0 ) ) : sparse_index_x_old( tau ) );
-                                int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y_old( 0 )] : sparse_index_y_old( 0 ) ) : sparse_index_y_old( tau ) );
-                                phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
+                //  Create "Old" sparse indices (vector shifted, last value will be replaced by summation) (n,n-1,n-2,...,n-m) -> (n-1,n-2,n-3,...,n-m,placeholder)
+                auto sparse_index_x_old = sparse_index_x;
+                auto sparse_index_y_old = sparse_index_y;
+                for ( int i = 0; i < sparse_index_x_old.size() - 1; i++ ) {
+                    sparse_index_x_old( i ) = sparse_index_x_old( i + 1 );
+                    sparse_index_y_old( i ) = sparse_index_y_old( i + 1 );
+                }
+                // Sum over all States in group (sum_(k_n-1,kd_n-1))
+                for ( int i_n_m1 : s.operatorMatrices.phononGroupToIndices[gi_n_m1] ) {
+                    for ( int j_n_m1 : s.operatorMatrices.phononGroupToIndices[gj_n_m1] ) {
+                        // Switch first entry of "old" sparse index back to the actual state index
+                        sparse_index_x_old( 0 ) = i_n_m1;
+                        sparse_index_y_old( 0 ) = j_n_m1;
+                        // Propagator value
+                        Scalar propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
+                        // If this propagation is not allowed, continue
+                        if ( QDLC::Math::abs2( propagator_value ) == 0.0 )
+                            continue;
+                        // Sum over Groups lambda_n-n_m:
+                        for ( int lambda_i = 0; lambda_i < different_dimensions.size(); lambda_i++ ) {
+                            for ( int lambda_j = 0; lambda_j < different_dimensions.size(); lambda_j++ ) {
+                                // Old index vector:
+                                sparse_index_x_old( max_index - 1 ) = lambda_i;
+                                sparse_index_y_old( max_index - 1 ) = lambda_j;
+                                // Calculate S:
+                                Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
+                                for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
+                                    int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x_old( 0 )] : sparse_index_x_old( 0 ) ) : sparse_index_x_old( tau ) );
+                                    int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y_old( 0 )] : sparse_index_y_old( 0 ) ) : sparse_index_y_old( tau ) );
+                                    phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
+                                }
+                                new_value += propagator_value * adm_tensor.getTriplet( sparse_index_x_old, sparse_index_y_old ) * std::exp( phonon_s );
                             }
-                            new_value += propagator_value * adm_tensor.getTriplet( sparse_index_x_old, sparse_index_y_old ) * std::exp( phonon_s );
                         }
                     }
                 }
+                if ( QDLC::Math::abs2( new_value ) != 0.0 ) {
+                    nonzero++;
+                }
+                // Log::L3( "[PathIntegral] (T{}) final value for new [{}] - [{}] {}\n", omp_get_thread_num(), sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), new_value );
+                adm_tensor.setTriplet( sparse_index_x, sparse_index_y, new_value );
             }
-            if ( QDLC::Math::abs2( new_value ) != 0.0 ) {
-                nonzero++;
-            } else {
-                if ( max_index >= sparse_index_x.size() ) {
-                    adm_skip.addToTriplet( sparse_index_x, sparse_index_y, 1 );
-                    int next = adm_skip.getNextTriplet( sparse_index_x, sparse_index_y );
-                    if ( next > tensor_smart_cutoff_index - sparse_index_x.size() ) {
-#pragma omp critical
-                        indices_to_delete.emplace( _i );
-                    }
+        } else {
+            bool addeddimension = std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) < ( s.parameters.p_phonon_nc - 1 );
+            for ( auto &[sparse_index_x, map] : adm_tensor.getCurrentValues() )
+                for ( auto &[sparse_index_y, value] : map ) {
+                    int i_n_m1 = sparse_index_x( 0 );
+                    int j_n_m1 = sparse_index_y( 0 );
+                    for ( int l = 0; l < propagator[i_n_m1][j_n_m1].outerSize(); ++l )
+                        for ( Sparse::InnerIterator M( propagator[i_n_m1][j_n_m1], l ); M; ++M ) {
+                            int i_n = M.row();
+                            int j_n = M.col();
+                            int gi_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i_n] : i_n;
+                            int gj_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[j_n] : j_n;
+                            if ( QDLC::Math::abs2( value ) == 0 ) continue;
+                            auto tt = omp_get_wtime();
+                            // Log::L3( "[PathIntegral] (T{}) handling ({} > {}),({} > {}) --> {}\n", omp_get_thread_num(), gi_n, sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), gj_n, sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), value );
+                            // for ( int l = 0; l < propagator[sparse_index_x( 0 )][sparse_index_y( 0 )].outerSize(); ++l )
+                            //     for ( Sparse::InnerIterator M( propagator[sparse_index_x( 0 )][sparse_index_y( 0 )], l ); M; ++M ) {
+
+                            // Log::L3( "[PathIntegral] --- Correlation Indices for tau = 0: i = {}, i' = {}, j = {}, j' = {}\n", gi_n, gi_n, gj_n, gj_n );
+                            Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
+                            for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
+                                int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )] : sparse_index_x( 0 ) ) : sparse_index_x( tau ) );
+                                int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] : sparse_index_y( 0 ) ) : sparse_index_y( tau ) );
+                                phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd ); // TODO: das hier in map cachen
+                                // Log::L3( "[PathIntegral] --- Correlation Indices for tau = {}: i = {}, i' = {}, j = {}, j' = {}\n", tau + 1, gi_n, gi_nd, gj_n, gj_nd );
+                            }
+
+                            Scalar val = M.value() * value * std::exp( phonon_s );
+                            double abs = QDLC::Math::abs2( val );
+                            auto appendtime = omp_get_wtime();
+                            // Add Element to Triplet list if they are diagonal elements or if they surpass the given threshold.
+                            if ( i_n == j_n || abs >= s.parameters.numerics_pathintegral_squared_threshold ) {
+                                // Add new indices to vectors:
+                                if ( addeddimension ) {
+                                    iVector new_sparse_index_x = iVector::Zero( sparse_index_x.size() + 1 );
+                                    iVector new_sparse_index_y = iVector::Zero( sparse_index_y.size() + 1 );
+                                    for ( int i = 0; i < sparse_index_x.size(); i++ ) {
+                                        new_sparse_index_x( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( i )] : sparse_index_x( i ) );
+                                        new_sparse_index_y( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( i )] : sparse_index_y( i ) );
+                                    }
+                                    new_sparse_index_x( 0 ) = i_n;
+                                    new_sparse_index_y( 0 ) = j_n;
+                                    adm_tensor.addToTriplet( new_sparse_index_x, new_sparse_index_y, val );
+                                } else {
+                                    cur_min = cur_min != 0.0 && cur_min < abs ? cur_min : abs;
+                                    if ( s.parameters.numerics_pathint_partially_summed )
+                                        adm_tensor.addToTriplet( sparse_index_x, sparse_index_y, val, i_n, j_n, s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )], s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] );
+                                    else
+                                        adm_tensor.addToTriplet( sparse_index_x, sparse_index_y, val, i_n, j_n );
+                                }
+                            }
+                            total_append_time += omp_get_wtime() - appendtime;
+                            total_time += omp_get_wtime() - tt;
+                        }
+                }
+            size_t new_nonzero = adm_tensor.nonZeros();
+            // Dynamically switching Tensor to Dense to enable fast multithreading
+            Log::L3( "[PathIntegral] Current Fillchange Factor is {}\n", std::abs<double>( 1. - 1.0 * new_nonzero / nonzero ) );
+            if ( not s.parameters.numerics_pathintegral_use_dense_tensor and std::abs<double>( 1. - 1.0 * new_nonzero / nonzero ) <= 0.01 ) {
+                numerics_dynamic_densitychange_counter++;
+                if ( numerics_dynamic_densitychange_counter >= numerics_dynamic_densitychange_limit and t_t / s.parameters.t_step_pathint > s.parameters.p_phonon_nc ) {
+                    Log::L2( "[PathIntegral] Switching to Dense Tensor with {} elements\n", adm_tensor.nonZeros() );
+                    s.parameters.numerics_pathintegral_use_dense_tensor = true;
+                    adm_tensor.convertToDense();
+                    adm_multithreading_cores = s.parameters.numerics_phonons_maximum_threads;
                 }
             }
-            // Log::L3( "[PathIntegral] (T{}) final value for new [{}] - [{}] {}\n", omp_get_thread_num(), sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), new_value );
-
-            adm_tensor.setTriplet( sparse_index_x, sparse_index_y, new_value );
+            nonzero = new_nonzero;
         }
 
         t1 = ( omp_get_wtime() - t1 );
+
         adm_tensor.swap();
 
         Log::L3( "[PathIntegral] Reducing ADM\n" );
@@ -351,29 +417,8 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
             Log::L3( "[PathIntegral] Adjusted Cutoff Threshold to {} (x{})\n", std::sqrt( s.parameters.numerics_pathintegral_squared_threshold ), ratio );
         }
 
-        // Smart Cutoff
-        if ( indices_to_delete.size() > 0 ) {
-            current_tensor_fillrate = std::floor( current_tensor_fillrate * std::pow( 10, tensor_smart_cutoff_significant ) ) / tensor_smart_cutoff_significant;
-            if ( current_tensor_fillrate == tensor_smart_cutoff_last_fillrate )
-                tensor_smart_cutoff_current++;
-            else
-                tensor_smart_cutoff_current = 0;
-            if ( tensor_smart_cutoff_current >= tensor_smart_cutoff_index ) {
-                if ( indices_to_delete.size() > 0 ) {
-                    Log::L3( "Deleting {} indices\n", indices_to_delete.size() );
-                    std::vector<std::tuple<iVector, iVector>> total_indices_new;
-                    for ( int _i = 0; _i < total_indices.size(); _i++ ) {
-                        if ( !indices_to_delete.contains( _i ) )
-                            total_indices_new.emplace_back( total_indices[_i] );
-                    }
-                    total_indices = total_indices_new;
-                    tensor_smart_cutoff_current = 0;
-                }
-            }
-            tensor_smart_cutoff_last_fillrate = current_tensor_fillrate;
-        }
-
         // Save Rho
+        // saveState( s.dgl_timetrafo( rho, t_t + s.parameters.t_step_pathint ), t_t + s.parameters.t_step_pathint, output );
         saveState( rho, t_t + s.parameters.t_step_pathint, output );
         // Progress and time output
         rkTimer.iterate();
@@ -382,12 +427,12 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
             Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );
         }
     }
+
     Log::L3( "Done!\n" );
     return true;
 }
 
 bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor<Scalar> adm_correlation, Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, size_t total_progressbar_iterations, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output, const std::vector<Sparse> &matrices, int adm_multithreading_cores ) {
-    int order = matrices.size() == 4 ? 2 : 1;
     Log::L3( "- [PathIntegralCorrelation] Setting up Path-Integral Solver...\n" );
     int tensor_dim = rho0.rows();
     output.reserve( s.parameters.iterations_t_max + 1 );
@@ -400,19 +445,8 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor<Scal
         different_dimensions.insert( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i] : i );
     }
 
-    Tensor<int> adm_skip( pathint_tensor_dimensions, 0 );
-    std::vector<std::tuple<iVector, iVector>> total_indices;
-    for ( auto sparse_index_x : adm_correlation.getIndices() )
-        for ( auto sparse_index_y : adm_correlation.getIndices() ) {
-            total_indices.emplace_back( std::make_tuple( sparse_index_x, sparse_index_y ) );
-        }
-    // Smart Tensor cutoff index. Either directly after nc steps. if the Tensor fillrate stays the same for this amount of iterations, assume zero elements will stay zero
-    int tensor_smart_cutoff_index = s.parameters.p_phonon_nc + 1;
-    double tensor_smart_cutoff_significant = 0.0; // number of significant digits.
-    double tensor_smart_cutoff_last_fillrate = 0.0;
-    int tensor_smart_cutoff_current = 0;
-
-    for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
+    bool use_dense_tensor = s.parameters.numerics_pathintegral_use_dense_tensor;
+    for ( double t_t = t_start; t_t <= t_end; t_t += s.parameters.t_step_pathint ) {
         // Path-Integral iteration
         // Calculate Propagators for current time
         auto t0 = omp_get_wtime();
@@ -425,12 +459,33 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor<Scal
             modified = true;
             for ( int i = 0; i < propagator.size(); i++ ) {
                 for ( int j = 0; j < propagator[i].size(); j++ ) {
-                    if ( order == 2 )
-                        propagator[i][j] = s.dgl_timetrafo( matrices[3], t_start ) * propagator[i][j] * s.dgl_timetrafo( matrices[0], t_start );
-                    else
-                        propagator[i][j] = propagator[i][j] * s.dgl_timetrafo( matrices[0], t_start );
+                    // if ( order == 2 )
+                    propagator[i][j] = s.dgl_timetrafo( matrices[3], t_start ) * propagator[i][j] * s.dgl_timetrafo( matrices[0], t_start );
+                    // else
+                    //     propagator[i][j] = propagator[i][j] * s.dgl_timetrafo( matrices[0], t_start );
                 }
             }
+            Dense cache = Dense::Zero( tensor_dim, tensor_dim );
+            auto ds1 = Dense( s.dgl_timetrafo( matrices[3], t_start ) );
+            auto ds2 = Dense( s.dgl_timetrafo( matrices[0], t_start ) );
+            for ( auto &[sparse_index_x, map] : adm_correlation.getCurrentValues() )
+                for ( auto &[sparse_index_y, value] : map ) {
+                    int i_n = sparse_index_x( 0 );
+                    int j_n = sparse_index_y( 0 );
+                    Scalar propagator_sum = 0;
+                    for ( int di = 0; di < ds1.rows(); di++ )
+                        for ( int dj = 0; dj < ds1.rows(); dj++ )
+                            propagator_sum += ds1( i_n, di ) * ds2( dj, j_n );
+                    cache( i_n, j_n ) += value * propagator_sum;
+                }
+            auto rho = cache.sparseView();
+            // Save Rho
+            // saveState( rho, t_t, output );
+            // if ( adm_correlation.isSparseTensor() ) {
+            //     use_dense_tensor = true;
+            //     adm_correlation.convertToDense();
+            //     adm_multithreading_cores = s.parameters.numerics_phonons_maximum_threads;
+            // }
         }
 
         bool addeddimension = std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) < ( s.parameters.p_phonon_nc - 2 );
@@ -443,81 +498,136 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor<Scal
 
         int max_index = 2 + std::min<int>( s.parameters.p_phonon_nc - 2, std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) );
         int nonzero = 0;
-        std::set<int> indices_to_delete;
+        // Cache Tensor Method
+        // Iterate the tensor
+        if ( use_dense_tensor ) {
 #pragma omp parallel for num_threads( adm_multithreading_cores ) schedule( guided ) shared( nonzero )
-        for ( int _i = 0; _i < total_indices.size(); _i++ ) {
-            auto [sparse_index_x, sparse_index_y] = total_indices[_i];
-            Scalar new_value = 0.0;
-            // Set all indices to zero that are for timevalues larger than max_index
-            for ( int i = max_index; i < sparse_index_x.size(); i++ ) {
-                sparse_index_x( i ) = 0;
-                sparse_index_y( i ) = 0;
-            }
+            for ( auto &index : adm_correlation.getIndices() ) {
+                auto [sparse_index_x, sparse_index_y] = index;
+                Scalar new_value = 0.0;
+                // Set all indices to zero that are for timevalues larger than max_index
+                for ( int i = max_index; i < sparse_index_x.size(); i++ ) {
+                    sparse_index_x( i ) = 0;
+                    sparse_index_y( i ) = 0;
+                }
 
-            // Indices
-            int i_n = sparse_index_x( 0 );
-            int j_n = sparse_index_y( 0 );
+                // Indices
+                int i_n = sparse_index_x( 0 );
+                int j_n = sparse_index_y( 0 );
 
-            // Groups:
-            int gi_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i_n] : i_n;
-            int gj_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[j_n] : j_n;
-            int gi_n_m1 = sparse_index_x( 1 );
-            int gj_n_m1 = sparse_index_y( 1 );
-            auto temp = adm_correlation.getTriplet( sparse_index_x, sparse_index_y );
+                // Groups:
+                int gi_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i_n] : i_n;
+                int gj_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[j_n] : j_n;
+                int gi_n_m1 = sparse_index_x( 1 );
+                int gj_n_m1 = sparse_index_y( 1 );
+                auto temp = adm_correlation.getTriplet( sparse_index_x, sparse_index_y );
 
-            // Log::L3( "[PathIntegral] (T{}) calculating new [{}] - [{}] --> old value is {}\n", omp_get_thread_num(), sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), temp );
-
-            //  Create "Old" sparse indices (vector shifted, last value will be replaced by summation) (n,n-1,n-2,...,n-m) -> (n-1,n-2,n-3,...,n-m,placeholder)
-            auto sparse_index_x_old = sparse_index_x;
-            auto sparse_index_y_old = sparse_index_y;
-            for ( int i = 0; i < sparse_index_x_old.size() - 1; i++ ) {
-                sparse_index_x_old( i ) = sparse_index_x_old( i + 1 );
-                sparse_index_y_old( i ) = sparse_index_y_old( i + 1 );
-            }
-            // Sum over all States in group (sum_(k_n-1,kd_n-1))
-            for ( int i_n_m1 : s.operatorMatrices.phononGroupToIndices[gi_n_m1] ) {
-                for ( int j_n_m1 : s.operatorMatrices.phononGroupToIndices[gj_n_m1] ) {
-                    // Switch first entry of "old" sparse index back to the actual state index
-                    sparse_index_x_old( 0 ) = i_n_m1;
-                    sparse_index_y_old( 0 ) = j_n_m1;
-                    // Propagator value
-                    Scalar propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
-                    // If this propagation is not allowed, continue
-                    if ( QDLC::Math::abs2( propagator_value ) == 0.0 )
-                        continue;
-                    // Sum over Groups lambda_n-n_m:
-                    for ( int lambda_i = 0; lambda_i < different_dimensions.size(); lambda_i++ ) {
-                        for ( int lambda_j = 0; lambda_j < different_dimensions.size(); lambda_j++ ) {
-                            // Old index vector:
-                            sparse_index_x_old( max_index - 1 ) = lambda_i;
-                            sparse_index_y_old( max_index - 1 ) = lambda_j;
-                            // Calculate S:
-                            Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
-                            for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
-                                int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x_old( 0 )] : sparse_index_x_old( 0 ) ) : sparse_index_x_old( tau ) );
-                                int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y_old( 0 )] : sparse_index_y_old( 0 ) ) : sparse_index_y_old( tau ) );
-                                phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
+                //  Create "Old" sparse indices (vector shifted, last value will be replaced by summation) (n,n-1,n-2,...,n-m) -> (n-1,n-2,n-3,...,n-m,placeholder)
+                auto sparse_index_x_old = sparse_index_x;
+                auto sparse_index_y_old = sparse_index_y;
+                for ( int i = 0; i < sparse_index_x_old.size() - 1; i++ ) {
+                    sparse_index_x_old( i ) = sparse_index_x_old( i + 1 );
+                    sparse_index_y_old( i ) = sparse_index_y_old( i + 1 );
+                }
+                // Sum over all States in group (sum_(k_n-1,kd_n-1))
+                for ( int i_n_m1 : s.operatorMatrices.phononGroupToIndices[gi_n_m1] ) {
+                    for ( int j_n_m1 : s.operatorMatrices.phononGroupToIndices[gj_n_m1] ) {
+                        // Switch first entry of "old" sparse index back to the actual state index
+                        sparse_index_x_old( 0 ) = i_n_m1;
+                        sparse_index_y_old( 0 ) = j_n_m1;
+                        // Propagator value
+                        Scalar propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
+                        // If this propagation is not allowed, continue
+                        if ( QDLC::Math::abs2( propagator_value ) == 0.0 )
+                            continue;
+                        // Sum over Groups lambda_n-n_m:
+                        for ( int lambda_i = 0; lambda_i < different_dimensions.size(); lambda_i++ ) {
+                            for ( int lambda_j = 0; lambda_j < different_dimensions.size(); lambda_j++ ) {
+                                // Old index vector:
+                                sparse_index_x_old( max_index - 1 ) = lambda_i;
+                                sparse_index_y_old( max_index - 1 ) = lambda_j;
+                                // Calculate S:
+                                Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
+                                for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
+                                    int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x_old( 0 )] : sparse_index_x_old( 0 ) ) : sparse_index_x_old( tau ) );
+                                    int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y_old( 0 )] : sparse_index_y_old( 0 ) ) : sparse_index_y_old( tau ) );
+                                    phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
+                                }
+                                new_value += propagator_value * adm_correlation.getTriplet( sparse_index_x_old, sparse_index_y_old ) * std::exp( phonon_s );
                             }
-                            new_value += propagator_value * adm_correlation.getTriplet( sparse_index_x_old, sparse_index_y_old ) * std::exp( phonon_s );
                         }
                     }
                 }
-            }
-            if ( QDLC::Math::abs2( new_value ) != 0.0 ) {
-                nonzero++;
-            } else {
-                if ( max_index >= sparse_index_x.size() ) {
-                    adm_skip.addToTriplet( sparse_index_x, sparse_index_y, 1 );
-                    int next = adm_skip.getNextTriplet( sparse_index_x, sparse_index_y );
-                    if ( next > tensor_smart_cutoff_index - sparse_index_x.size() ) {
-#pragma omp critical
-                        indices_to_delete.emplace( _i );
-                    }
+                if ( QDLC::Math::abs2( new_value ) != 0.0 ) {
+                    nonzero++;
                 }
-            }
-            // Log::L3( "[PathIntegral] (T{}) final value for new [{}] - [{}] {}\n", omp_get_thread_num(), sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), new_value );
+                // Log::L3( "[PathIntegral] (T{}) final value for new [{}] - [{}] {}\n", omp_get_thread_num(), sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), new_value );
 
-            adm_correlation.setTriplet( sparse_index_x, sparse_index_y, new_value );
+                adm_correlation.setTriplet( sparse_index_x, sparse_index_y, new_value );
+            }
+        } else {
+            bool addeddimension = std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) < ( s.parameters.p_phonon_nc - 1 );
+            for ( auto &[sparse_index_x, map] : adm_correlation.getCurrentValues() )
+                for ( auto &[sparse_index_y, value] : map ) {
+                    int i_n_m1 = sparse_index_x( 0 );
+                    int j_n_m1 = sparse_index_y( 0 );
+                    for ( int l = 0; l < propagator[i_n_m1][j_n_m1].outerSize(); ++l )
+                        for ( Sparse::InnerIterator M( propagator[i_n_m1][j_n_m1], l ); M; ++M ) {
+                            int i_n = M.row();
+                            int j_n = M.col();
+                            int gi_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[i_n] : i_n;
+                            int gj_n = s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[j_n] : j_n;
+                            if ( QDLC::Math::abs2( value ) == 0 ) continue;
+                            auto tt = omp_get_wtime();
+                            // Log::L3( "[PathIntegral] (T{}) handling ({} > {}),({} > {}) --> {}\n", omp_get_thread_num(), gi_n, sparse_index_x.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), gj_n, sparse_index_y.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ), value );
+                            // for ( int l = 0; l < propagator[sparse_index_x( 0 )][sparse_index_y( 0 )].outerSize(); ++l )
+                            //     for ( Sparse::InnerIterator M( propagator[sparse_index_x( 0 )][sparse_index_y( 0 )], l ); M; ++M ) {
+
+                            // Log::L3( "[PathIntegral] --- Correlation Indices for tau = 0: i = {}, i' = {}, j = {}, j' = {}\n", gi_n, gi_n, gj_n, gj_n );
+                            Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
+                            for ( int tau = 0; tau < sparse_index_x.size(); tau++ ) {
+                                int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )] : sparse_index_x( 0 ) ) : sparse_index_x( tau ) );
+                                int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] : sparse_index_y( 0 ) ) : sparse_index_y( tau ) );
+                                phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd ); // TODO: das hier in map cachen
+                                // Log::L3( "[PathIntegral] --- Correlation Indices for tau = {}: i = {}, i' = {}, j = {}, j' = {}\n", tau + 1, gi_n, gi_nd, gj_n, gj_nd );
+                            }
+
+                            Scalar val = M.value() * value * std::exp( phonon_s );
+                            double abs = QDLC::Math::abs2( val );
+                            auto appendtime = omp_get_wtime();
+                            // Add Element to Triplet list if they are diagonal elements or if they surpass the given threshold.
+                            if ( i_n == j_n || abs >= s.parameters.numerics_pathintegral_squared_threshold ) {
+                                // Add new indices to vectors:
+                                if ( addeddimension ) {
+                                    iVector new_sparse_index_x = iVector::Zero( sparse_index_x.size() + 1 );
+                                    iVector new_sparse_index_y = iVector::Zero( sparse_index_y.size() + 1 );
+                                    for ( int i = 0; i < sparse_index_x.size(); i++ ) {
+                                        new_sparse_index_x( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_x( i )] : sparse_index_x( i ) );
+                                        new_sparse_index_y( i + 1 ) = ( i == 0 and s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phononCouplingIndex[sparse_index_y( i )] : sparse_index_y( i ) );
+                                    }
+                                    new_sparse_index_x( 0 ) = i_n;
+                                    new_sparse_index_y( 0 ) = j_n;
+                                    adm_correlation.addToTriplet( new_sparse_index_x, new_sparse_index_y, val );
+                                } else {
+                                    cur_min = cur_min != 0.0 && cur_min < abs ? cur_min : abs;
+                                    if ( s.parameters.numerics_pathint_partially_summed )
+                                        adm_correlation.addToTriplet( sparse_index_x, sparse_index_y, val, i_n, j_n, s.operatorMatrices.phononCouplingIndex[sparse_index_x( 0 )], s.operatorMatrices.phononCouplingIndex[sparse_index_y( 0 )] );
+                                    else
+                                        adm_correlation.addToTriplet( sparse_index_x, sparse_index_y, val, i_n, j_n );
+                                }
+                            }
+                            total_append_time += omp_get_wtime() - appendtime;
+                            total_time += omp_get_wtime() - tt;
+                        }
+                }
+            nonzero = adm_correlation.nonZeros();
+            // Dynamically switching Tensor to Dense to enable fast multithreading
+            // if ( not use_dense_tensor and t_t / s.parameters.t_step_pathint > 3 * s.parameters.p_phonon_nc ) {
+            //    // Log::L2( "[PathIntegral] Switching to Dense Tensor with {} elements\n", adm_correlation.nonZeros() );
+            //    use_dense_tensor = true;
+            //    adm_correlation.switchType();
+            //    adm_multithreading_cores = s.parameters.numerics_phonons_maximum_threads;
+            //}
         }
 
         t1 = ( omp_get_wtime() - t1 );
@@ -550,31 +660,8 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor<Scal
             Log::L3( "- [PathIntegralCorrelation] Adjusted Cutoff Threshold to {} (x{})\n", std::sqrt( s.parameters.numerics_pathintegral_squared_threshold ), ratio );
         }
 
-        double current_tensor_fillrate = 100.0 * nonzero / ( std::pow( tensor_dim, 2 ) * std::pow( different_dimensions.size(), 2 * s.parameters.p_phonon_nc - 2 ) );
-        // Smart Cutoff
-        if ( indices_to_delete.size() > 0 ) {
-            current_tensor_fillrate = std::floor( current_tensor_fillrate * std::pow( 10, tensor_smart_cutoff_significant ) ) / tensor_smart_cutoff_significant;
-            if ( current_tensor_fillrate == tensor_smart_cutoff_last_fillrate )
-                tensor_smart_cutoff_current++;
-            else
-                tensor_smart_cutoff_current = 0;
-            if ( tensor_smart_cutoff_current >= tensor_smart_cutoff_index ) {
-                if ( indices_to_delete.size() > 0 ) {
-                    Log::L3( "Deleting {} indices\n", indices_to_delete.size() );
-                    std::vector<std::tuple<iVector, iVector>> total_indices_new;
-                    for ( int _i = 0; _i < total_indices.size(); _i++ ) {
-                        if ( !indices_to_delete.contains( _i ) )
-                            total_indices_new.emplace_back( total_indices[_i] );
-                    }
-                    total_indices = total_indices_new;
-                    tensor_smart_cutoff_current = 0;
-                }
-            }
-            tensor_smart_cutoff_last_fillrate = current_tensor_fillrate;
-        }
-
         // Save Rho
-        saveState( rho, t_t + s.parameters.t_step_pathint, output );
+        saveState( rho, t_t, output );
         rkTimer.iterate();
         if ( do_output ) {
             Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );

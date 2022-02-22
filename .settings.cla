@@ -134,6 +134,18 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '2hyphen'
+	key = 'SPconf'
+	description = 'Configuration for the Pulse spectrum calculation'
+	group = 'Systemparameter'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'inherit'
+		datatype = 'string'
+		description = 'Pulse Spectrum Parameters. Syntax: [center:range:(optional resW)]'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
 	key = 'system'
 	description = 'All system parameters'
 	group = 'Systemparameter'

@@ -6,23 +6,23 @@
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
 
-bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution ) {
+bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution, bool normalize ) {
     // Send system command to change to single core mainprogram, because this memberfunction is already using multithreading
     s.command( QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
     // Calculate G1(t,tau) with given operator matrices
     std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 );
     auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
     auto &akf_mat = cache[s_g1];
-    auto &akf_mat_time = cache[s_g1+"_time"];
+    auto &akf_mat_time = cache[s_g1 + "_time"];
 
     // Create Timer and Progressbar for the spectrum loop
     Timer &timer = Timers::create( "Spectrum (" + s_g1 + ")" );
-    int totalIterations = resolution; //getIterationNumberSpectrum( s );
-    ProgressBar progressbar = ProgressBar( );
+    int totalIterations = resolution; // getIterationNumberSpectrum( s );
+    ProgressBar progressbar = ProgressBar();
     timer.start();
     Log::L2( "Calculating spectrum... Calculating frequencies...\n" );
 
-    //Calculate frequencies:
+    // Calculate frequencies:
     std::vector<Scalar> spectrum_frequency_w;
     std::vector<Scalar> out;
     for ( int w = 0; w < resolution; w++ ) {
@@ -36,21 +36,27 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
         for ( long unsigned int i = 0; i < akf_mat.rows(); i++ ) {
-            double dt = Numerics::get_tdelta(akf_mat_time,0,i);
-            double t_t = std::real(akf_mat_time(i,0));
-            for ( int j = 0; j < akf_mat.cols()-i; j++ ) { // -i because of triangular grid
+            double dt = Numerics::get_tdelta( akf_mat_time, 0, i );
+            double t_t = std::real( akf_mat_time( i, 0 ) );
+            for ( int j = 0; j < akf_mat.cols() - i; j++ ) { // -i because of triangular grid
                 double tau = std::imag( akf_mat_time( i, j ) ) - std::real( akf_mat_time( i, j ) );
-                double dtau = Numerics::get_taudelta(akf_mat_time,i,j);
+                double dtau = Numerics::get_taudelta( akf_mat_time, i, j );
                 out.at( spec_w ) += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * akf_mat( i, j ) * dtau * dt;
             }
         }
-        Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + "): " );
+        Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g1 + "): " );
         out.at( spec_w ) = std::real( out.at( spec_w ) );
         timer.iterate();
     }
+    // Normalize
+    if ( normalize ) {
+        Scalar vec_min = QDLC::Misc::vec_filter( out, []( const Scalar &a, const Scalar &b ) { return std::real( a ) < std::real( b ); } );
+        Scalar vec_max = QDLC::Misc::vec_filter( out, []( const Scalar &a, const Scalar &b ) { return std::real( a ) > std::real( b ); } );
+        std::for_each( out.begin(), out.end(), [&]( Scalar &val ) { val = ( val - vec_min ) / ( vec_max - vec_min ); } );
+    }
     // Final output and timer end
     timer.end();
-    Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(),totalIterations, "Spectrum (" + s_g1 + ")", Timers::PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g1 + ")", Timers::PROGRESS_FORCE_OUTPUT );
     // Save output
     to_output["Spectrum_frequency"][s_g1] = spectrum_frequency_w;
     to_output["Spectrum"][s_g1] = out;

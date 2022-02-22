@@ -89,6 +89,8 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     inputstring_raman = QDLC::CommandlineArguments::get_parameter( "--G", "GR" );
     inputstring_correlation_resolution = QDLC::CommandlineArguments::get_parameter( "--G", "grid" );
 
+    inputstring_SPconf = QDLC::CommandlineArguments::get_parameter( "--SPconf" );
+
     p_omega_coupling = QDLC::CommandlineArguments::get_parameter<double>( "--system", "coupling" );
     p_omega_cavity_loss = QDLC::CommandlineArguments::get_parameter<double>( "--system", "kappa" );
     p_omega_pure_dephasing = QDLC::CommandlineArguments::get_parameter<double>( "--system", "gammapure" );
@@ -210,6 +212,7 @@ bool Parameters::adjustInput() {
 
     // Calculate/Recalculate some parameters:
     // Adjust pulse data
+    // TODO: für complexe ampltiude is_imag in Parameters = true -> dann mit 1i multiplizeiren in get() funktion
     for ( auto &[name, mat] : input_pulse ) {
         mat.numerical_v["Amplitude"] = QDLC::Misc::convertParam<Parameter>( mat.string_v["Amplitude"] );
         // Set all optional parameters to default
@@ -259,7 +262,15 @@ bool Parameters::adjustInput() {
     if ( t_step < 0 ) {
         t_step = 1E-13; // std::min( scaleVariable( 1E-13, scale_value ), getIdealTimestep() );
         // t_step = std::max( std::numeric_limits<double>::epsilon(), t_step );
+        Log::L2( "[System] Delta t was set to {}\n", t_step );
     }
+
+    if ( t_end >= 0 ) {
+        iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
+        if ( iterations_tau_resolution < 1 and t_end >= 0 )
+            iterations_tau_resolution = iterations_t_max + 1;
+    }
+
     if ( t_end < 0 ) {
         // If this is given, we calculate the t-direction until 99% ground state poulation is reached after any pulses.
         numerics_calculate_till_converged = true;
@@ -269,7 +280,7 @@ bool Parameters::adjustInput() {
             }
         }
         if ( t_end < 0 )
-            t_end = 10E-12;
+            t_end = std::max<double>( 1E-12, 10.0 * t_step );
         Log::L2( "[System] Calculate till at least {} and adjust accordingly to guarantee convergence. The matrix index used is {}\n", t_end, numerics_groundstate );
     }
 
@@ -278,18 +289,22 @@ bool Parameters::adjustInput() {
     }
 
     // Calculate stuff for RK
-    iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
-    if ( iterations_tau_resolution < 1 )
-        iterations_tau_resolution = iterations_t_max + 1;
+
+    Log::L2( "[System] Maximum t-value for temporal calculations is {}\n", t_end );
     iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
 
     // Build dt vector. Use standard if not specified otherwise for all calculations. Path integral cannot use other timestep than the original.
     {
+        input_correlation_resolution["Standard"].numerical_v["Time"] = { t_end };
+        input_correlation_resolution["Standard"].numerical_v["Delta"] = { t_step };
         auto &settings = input_correlation_resolution.count( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
         double skip = input_correlation_resolution.count( "Modified" ) == 0 ? 1.0 * iterations_t_skip : 1.0;
         Log::L2( "[System] Iteration Skip for Grid is {}.\n", iterations_t_skip );
         double t_t = 0;
         int current = 0;
+        grid_values.clear();
+        grid_steps.clear();
+        grid_value_indices.clear();
         grid_values.emplace_back( t_start );
         grid_value_indices[t_start] = 0;
         while ( t_t < t_end ) {
@@ -301,7 +316,7 @@ bool Parameters::adjustInput() {
             grid_value_indices[t_t] = grid_values.size() - 1;
         }
         // std::cout << "Values for "<<mode<<": " << t_values[mode] << std::endl;
-        Log::L2( "(Re)Setting time vector to {}\n", grid_values.size() );
+        Log::L2( "[System] (Re)Setting time vector to {}\n", grid_values.size() );
     }
 
     // Set interpolation order:
@@ -400,17 +415,23 @@ void Parameters::parse_system() {
         conf_s.numerical_v["AmpFactor"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) ); // Amplitude Scaling for coupled_to
         conf_s.numerical_v["Amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) ); // Amplitudes
         conf_s.numerical_v["Times"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) );     // "Times"
-        conf_s.numerical_v["ddt"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) );       // "d/dt"
-        conf_s.string["Type"] = conf[6];                                                                                  // Type
+        if ( conf[5].find( "," ) != std::string::npos ) {
+            conf_s.numerical_v["ddt"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) ); // "d/dt"
+            conf_s.string["Type"] = conf[6];                                                                            // Type
+        } else {
+            conf_s.string["Type"] = conf[5];                                                               // Type
+            conf_s.numerical_v["ddt"] = std::vector<Parameter>( conf_s.numerical_v["Times"].size(), 0.0 ); // "d/dt"
+        }
         input_chirp[conf[0]] = conf_s;
     }
     for ( std::string &spectrum : QDLC::String::splitline( inputstring_spectrum, ';' ) ) {
         auto conf = QDLC::String::splitline( spectrum, ':' );
         input_s conf_s;
-        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                            // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
-        conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) ); // Center
-        conf_s.numerical_v["Range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );  // Range
-        conf_s.numerical_v["resW"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );   // Resolution for w
+        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                                                                                 // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
+        conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );                                                      // Center
+        conf_s.numerical_v["Range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );                                                       // Range
+        conf_s.numerical_v["resW"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );                                                        // Resolution for w
+        conf_s.string_v["Normalize"] = conf.size() > 4 ? QDLC::String::splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.numerical_v["Range"].size(), "False" ); // Normalize?
         input_correlation["Spectrum"] = conf_s;
     }
     for ( std::string &indist : QDLC::String::splitline( inputstring_indist, ';' ) ) {
@@ -473,6 +494,22 @@ void Parameters::parse_system() {
         conf_s.numerical_v["Time"] = { t_end };
         conf_s.numerical_v["Delta"] = { t_step };
         input_correlation_resolution["Standard"] = conf_s;
+    }
+    {
+        input_s conf_s;
+        if ( inputstring_SPconf == "inherit" and conf_s.numerical_v["Center"].size() > 0 ) {
+            Log::L2( "[System-Parameters] Inheriting Pulse Fourier Configuration from Spectrum.\n" );
+            conf_s.numerical["Center"] = conf_s.numerical_v["Center"][0];
+            conf_s.numerical["Range"] = conf_s.numerical_v["Range"][0];
+            conf_s.numerical["Res"] = conf_s.numerical_v["resW"][0];
+        } else if ( inputstring_SPconf.size() > 0 ) {
+            Log::L2( "[System-Parameters] Generating Pulse Fourier Configuration from Parameters.\n" );
+            auto conf = QDLC::String::splitline( inputstring_SPconf, ',' );
+            conf_s.numerical["Center"] = conf.size() > 0 ? QDLC::Misc::convertParam<Parameter>( conf[0] ) : Parameter( 0.0 );
+            conf_s.numerical["Range"] = conf.size() > 1 ? QDLC::Misc::convertParam<Parameter>( conf[1] ) : Parameter( 0.0 );
+            conf_s.numerical["Res"] = conf.size() > 2 ? QDLC::Misc::convertParam<Parameter>( conf[2] ) : Parameter( 0.0 );
+            input_conf["PulseConf"] = conf_s;
+        }
     }
 }
 

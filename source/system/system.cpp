@@ -119,7 +119,8 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
                     // Convert row/col into respective photon numbers / atomic state
                     int i = it.row();
                     int j = it.col();
-                    ret.coeffRef( i, j ) *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) ); // it.value() = ?
+                    // ret.coeffRef( i, j ) *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) ); // it.value() = ?
+                    it.valueRef() *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) ); // it.value() = ?
                 }
             }
         }
@@ -209,8 +210,7 @@ void System::expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer 
 }
 
 Sparse System::dgl_getHamilton( const double t ) {
-    double local_b = ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL ? 1.0 * parameters.p_phonon_b : 1.0 );
-    return dgl_timetrafo( local_b * ( operatorMatrices.H_used + dgl_pulse( t ) ) + dgl_chirp( t ), t );
+    return dgl_timetrafo( operatorMatrices.H_used + dgl_pulse( t ) + dgl_chirp( t ), t );
 }
 
 bool System::command( unsigned int index ) {

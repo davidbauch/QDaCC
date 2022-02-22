@@ -147,20 +147,20 @@ inline std::complex<T> operator/( const std::complex<T> &p1, const Parameter &p2
     return p1 / p2.get();
 }
 
-//template <class T>
-//T std::max( const T &p1, const Parameter &p2 ) {
-//    return std::max( p1, p2.get() );
-//}
-//template <class T>
-//T std::max( const Parameter &p1, const T &p2 ) {
-//    return std::max( p2, p1.get() );
-//}
+// template <class T>
+// T std::max( const T &p1, const Parameter &p2 ) {
+//     return std::max( p1, p2.get() );
+// }
+// template <class T>
+// T std::max( const Parameter &p1, const T &p2 ) {
+//     return std::max( p2, p1.get() );
+// }
 //
-//template <class T>
-//T std::min( const T &p1, const Parameter &p2 ) {
-//    return std::min( p1, p2.get() );
-//}
-//template <class T>
-//T std::min( const Parameter &p1, const T &p2 ) {
-//    return std::min( p2, p1.get() );
-//}
+// template <class T>
+// T std::min( const T &p1, const Parameter &p2 ) {
+//     return std::min( p1, p2.get() );
+// }
+// template <class T>
+// T std::min( const Parameter &p1, const T &p2 ) {
+//     return std::min( p2, p1.get() );
+// }

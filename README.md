@@ -158,7 +158,7 @@ Pulse for the horizontally polarized biexciton transition. A `GaussAmp = 12` is 
     --SP 'p:GH,HZ:5.4pi,1pi,1:1.48eV,1.5eV,1.5eV:5ps,1ps,1ps:30ps,50ps,60ps:gauss,gauss,gauss'
 The same pulse as before, followed by two short PI-pulses at later times.
 
-    --SP 'p:GL:1pi:1.5eV:2ps:20ps:0:gauss_pi;q:LU:1:1.4eV:2ps:24ps:gauss'
+    --SP 'p:GL:1pi:1.5eV:2ps:20ps:0:gauss;q:LU:1:1.4eV:2ps:24ps:gauss'
 Two pulses for different electronic transitions for the three level system.
 
     --SP 'p:h:0.15meV:1.5eV:0:69fs:cw'
@@ -175,7 +175,7 @@ Multiple levels can be changed by the same chirp, and multiple chirps can be cha
 - `AmpFactors` : Comma seperated list of scaling factors for the identifiers listet prior.
 - `Amps` : Comma seperated list of amplitudes.
 - `Times` : Comma seperated list of times.
-- `DDTs` : Comma sperated list of derivatives. This list of parameters is only used if `hermite` is chosen as the chirp generation method.
+- `DDTs` : Comma sperated list of derivatives. This list of parameters is only used if `hermite` is chosen as the chirp generation method. If not used, this parameter can be omitted.
 - `Type` : Type of chirp, can be one of the following: `linear`, `spline`, `monotone` and `hermite`, which is the interpolation method the chirp class uses to generate curves from the initial points specified.
 
 
@@ -478,6 +478,8 @@ Calculate the Wigner function using the parameterset `h:5:5:100:1`.
 
     --GW 'h:4:6:200:2'
 Calculating the Wigner function using `-X:X = -4:4`, `-Y:Y = -6:6` with `200` Points for each axis, resulting in `dx = 0.04` and `dy = 0.06`. The Wigner function is only evaluated for every second timestep, even if those timesteps are not equidistant (e.g. for RK45 or a modified grid without interpolation).
+
+Note that the Wigner function can also be used to calculate the reduced density matrices for any mode. Using one of the electronic states as the mode, one obtains the reduced electronic density matrix.
 
 ---
 ---

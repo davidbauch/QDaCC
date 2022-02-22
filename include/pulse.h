@@ -40,7 +40,7 @@ class Pulse {
 
     Pulse(){};
     Pulse( Parameters::input_s& inputs, Parameters& p );
-    void generate( double t_start, double t_end, double t_step );
+    void generate( double t_start, double t_end, double t_step, double omega_center = 0, double omega_range = 0, double dw = 0 );
     void fileOutput( std::string filepath, double t_start, double t_end, double t_step );
     Scalar evaluate( double t );
     Scalar evaluate_derivative( double t, double dt );

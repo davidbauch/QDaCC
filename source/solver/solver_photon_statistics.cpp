@@ -276,6 +276,7 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
     std::vector<Scalar> time;
     int base = s.operatorMatrices.el_states.count( s_mode ) != 0 ? s.operatorMatrices.el_states[s_mode].base : s.operatorMatrices.ph_states[s_mode].base;
     Log::L2( "[Wigner] Calculating Wigner function for mode {}/{}\n", s_mode, base );
+    // The Wigner function uses the interpolated savedStates, not the actually calculated states from the RK45 method.
     for ( int i = 0; i < savedStates.size(); i += skips ) {
         reduced_rho.emplace_back( s.partialTrace( getRhoAt( i ), base ) );
         time.emplace_back( getTimeAt( i ) );
@@ -347,7 +348,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
     for ( int i = 0; i < spectrum_s.string_v["Modes"].size(); i++ ) {
         const auto &[s_creator, s_annihilator] = get_operator_strings( spectrum_s.string_v["Modes"][i] );
-        calculate_spectrum( s, s_creator, s_annihilator, spectrum_s.numerical_v["Center"][i], spectrum_s.numerical_v["Range"][i], spectrum_s.numerical_v["resW"][i] );
+        calculate_spectrum( s, s_creator, s_annihilator, spectrum_s.numerical_v["Center"][i], spectrum_s.numerical_v["Range"][i], spectrum_s.numerical_v["resW"][i], spectrum_s.string_v["Normalize"][i] == "True" );
     }
     // Calculate Indist
     auto &indist_s = s.parameters.input_correlation["Indist"];
@@ -541,17 +542,46 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         Log::L2( "[PhotonStatistics] Done!\n" );
     }
     for ( auto &[mode, data] : to_output_m["Wigner"] ) {
+        auto &wigner_s = s.parameters.input_correlation["Wigner"];
         if ( mode.compare( "Time" ) == 0 )
             continue;
         Log::L2( "[PhotonStatistics] Saving Wigner function to wigner_" + mode + ".txt...\n" );
         FILE *f_wigner = std::fopen( ( s.parameters.subfolder + "wigner_" + mode + ".txt" ).c_str(), "w" );
-        fmt::print( f_wigner, "Time\t{}\n", mode );
+        if ( mode.starts_with( "rho_" ) ) {
+            // Gather base:
+            fmt::print( f_wigner, "Time\t" );
+            std::string smode = mode.substr( 4 );
+            int base = s.operatorMatrices.el_states.count( smode ) != 0 ? s.operatorMatrices.el_states[smode].base : s.operatorMatrices.ph_states[smode].base;
+            if ( base == 0 ) {
+                for ( auto &[name, dat] : s.parameters.input_electronic )
+                    for ( auto &[name2, dat2] : s.parameters.input_electronic )
+                        fmt::print( f_wigner, "Re(|{}><{}|)\t", name, name2 );
+                for ( auto &[name, dat] : s.parameters.input_electronic )
+                    for ( auto &[name2, dat2] : s.parameters.input_electronic )
+                        fmt::print( f_wigner, "Im(|{}><{}|)\t", name, name2 );
+            } else {
+                for ( int i = 0; i < data[0].rows(); i++ )
+                    for ( int j = 0; j < data[0].rows(); j++ )
+                        fmt::print( f_wigner, "Re(|{}_{}><{}_{}|)\t", smode, i, smode, j );
+                for ( int i = 0; i < data[0].rows(); i++ )
+                    for ( int j = 0; j < data[0].rows(); j++ )
+                        fmt::print( f_wigner, "Im(|{}_{}><{}_{}|)\t", smode, i, smode, j );
+            }
+            fmt::print( f_wigner, "\n" );
+        } else {
+            fmt::print( f_wigner, "Time\t{}\n", mode );
+        }
         for ( int i = 0; i < data.size(); i++ ) {
             fmt::print( f_wigner, "{:.8e}\t", std::real( to_output["Wigner"]["Time"][i] ) );
             auto &currentwigner = data[i];
             for ( int k = 0; k < currentwigner.rows(); k++ ) {
                 for ( int l = 0; l < currentwigner.cols(); l++ ) {
                     fmt::print( f_wigner, "{:.8e}\t", std::real( currentwigner( k, l ) ) );
+                }
+            }
+            for ( int k = 0; k < currentwigner.rows(); k++ ) {
+                for ( int l = 0; l < currentwigner.cols(); l++ ) {
+                    fmt::print( f_wigner, "{:.8e}\t", std::imag( currentwigner( k, l ) ) );
                 }
             }
             fmt::print( f_wigner, "\n" );

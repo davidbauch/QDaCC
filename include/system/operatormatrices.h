@@ -27,6 +27,7 @@ class OperatorMatrices {
     Sparse H_I;
     Sparse rho;
     Sparse H_used;
+    Sparse identity;
     // Basis and maps:
     std::vector<std::string> base;             // Contains all the string bases vectors in total Hilbert space
     std::vector<Dense> base_selfhilbert;       // Contains the individual self-Hilbert bases
@@ -35,6 +36,8 @@ class OperatorMatrices {
     std::vector<int> phononCouplingIndex;
     std::vector<std::vector<int>> phononGroupToIndices;
     std::vector<double> phononCouplingIndexValue;
+    Sparse phononCouplingMatrix;
+    std::map<double, Sparse> phi_vector_matrix_cache_u, phi_vector_matrix_cache_g;
 
     // 3.0 New System Matrices
     std::map<std::string, matrix_s> el_states, ph_states, el_transitions, ph_transitions, extra_transitions;

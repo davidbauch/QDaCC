@@ -18,9 +18,14 @@ namespace Misc {
 
 // Valid conversions from ns,ps,Hz,eV,meV,mueV to corresponding SI unit (not scaled)
 template <typename T>
-T convertParam( const std::string input ) {
+T convertParam( std::string input ) {
     T value = (T)0;
     T conversion = (T)1;
+    bool complex = false;
+    if ( input.front() == 'i' and QDLC::Math::is_number( input.substr( 1, 1 ) ) ) {
+        complex = true;
+        input = input.substr( 1 );
+    }
     int index;
     Log::L3( "Attempting to convert '{}'...\n", input );
     // "Meter" Scale
@@ -119,7 +124,9 @@ T convertParam( const std::string input ) {
         Log::L3( "Input Type of input '{}' is unkown!\n", input );
         return (T)0.0;
     }
-    Log::L3( "Done! Final value = {}!\n", value * conversion );
+    Log::L3( "Done! Final value = {}{}\n", value * conversion, complex ? ", is imag!" : "!" );
+    // if ( complex )
+    //     return (T)( 1.i * value * conversion );
     return (T)( value * conversion );
 }
 
@@ -132,23 +139,13 @@ std::vector<T> convertParam( const std::vector<std::string> input ) {
     return ret;
 }
 
-template <typename T>
-T vec_max( std::vector<T> input, bool norm = true ) {
+template <typename T, typename L>
+T vec_filter( const std::vector<T> &input, const L &lambda ) {
     if ( input.size() == 0 )
         return (T)( 0.0 );
     T ret = input.at( 0 );
     for ( T element : input )
-        if ( ( norm and ( std::abs( element ) > std::abs( ret ) ) ) || ( !norm and ( element > ret ) ) )
-            ret = element;
-    return ret;
-}
-template <typename T>
-T vec_min( std::vector<T> input, bool norm = true ) {
-    if ( input.size() == 0 )
-        return (T)( 0.0 );
-    T ret = input.at( 0 );
-    for ( T element : input )
-        if ( ( norm and ( std::abs( element ) < std::abs( ret ) ) ) || ( !norm and ( element < ret ) ) )
+        if ( lambda( element, ret ) )
             ret = element;
     return ret;
 }

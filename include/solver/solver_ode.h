@@ -114,7 +114,7 @@ class ODESolver {
     std::tuple<std::string, std::string> get_operator_strings( const std::string &operators );
     std::string get_operators_purpose( const std::vector<std::string> &operators, int order );
     std::tuple<Sparse, Sparse> get_operators_matrices( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator );
-    bool calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution );
+    bool calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution, bool normalize );
     bool calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator );
     bool calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 );
     bool calculate_wigner( System &s, const std::string &s_mode, const double x, const double y, const int resolution, const int skip );

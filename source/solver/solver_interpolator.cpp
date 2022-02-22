@@ -4,29 +4,97 @@
 
 #include "solver/solver.h"
 
-//TODO: implement monotone interpolation of vector here.
+// TODO: implement monotone interpolation of vector here.
+// FIXME: das hier ist iwie falsch und fuckt dasgitter ab!
 std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double, size_t> &t_index, int order, bool output_handler ) {
-    size_t current_index = std::min<size_t>( size_t( std::lower_bound( t_values.begin(), t_values.end(), t_start ) - t_values.begin() ), t_values.size() - 2 ); //t_index.at(t_start);
+    size_t current_index = std::min<size_t>( size_t( std::lower_bound( t_values.begin(), t_values.end(), t_start ) - t_values.begin() ), t_values.size() - 2 ); // t_index.at(t_start);
     size_t num_of_points = (size_t)( t_values.size() - current_index );
-    size_t max_index = t_values.size() - 2;
     std::vector<QDLC::SaveState> ret;
-    //Log::L2("Interpolating from {} to {} to vector of size {} with timevector of size {}, anticipaed return suize is {}\n",t_start,t_end,input.size(), t_values.size(), t_values.size() - current_index);
-    // Do a very simple linear interpolation. Linear and monotone interpolation should be changed by paramter
-    size_t i = 1;
-    for ( double t_t = t_start; t_t <= t_end; t_t += t_steps[current_index] ) {
-        while ( i < input.size() - 1 and t_t > input[i].t ) {
-            i++;
+    ret.reserve( num_of_points );
+    if ( order == 0 ) {
+        size_t max_index = t_values.size() - 2;
+        // Log::L2("Interpolating from {} to {} to vector of size {} with timevector of size {}, anticipaed return suize is {}\n",t_start,t_end,input.size(), t_values.size(), t_values.size() - current_index);
+        //  Do a very simple linear interpolation. Linear and monotone interpolation should be changed by paramter
+        size_t i = 1;
+        if ( t_values.at( current_index ) != t_start ) {
+            Log::L2( "Error: t_values.at({}) != start = {}\n", t_values.at( current_index ), t_start );
         }
-        double first = i > 0 ? input[i - 1].t : 0.0;
-        double second = input[i].t;
-        double f = ( t_t - first ) / ( second - first );
-        Sparse mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
-        ret.push_back( { mat, t_t } );
-        //current_index = std::min<size_t>( current_index + 1, t_values.size() - 2 );
-        if ( current_index < max_index )
+        // for ( double t_t = t_start; t_t <= t_end; t_t += t_steps[current_index] ) {
+        while ( t_values.at( current_index ) <= t_end ) {
+            double t_t = t_values.at( current_index );
+            while ( i < input.size() - 1 and t_t > input[i].t ) {
+                i++;
+            }
+            double first = input[i - 1].t;
+            double second = input[i].t;
+            double f = ( t_t - first ) / ( second - first );
+            Sparse mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
+            ret.push_back( { mat, t_t } );
+            // current_index = std::min<size_t>( current_index + 1, t_values.size() - 2 );
+            // if ( current_index < max_index )
+            //    current_index++;
             current_index++;
+        }
+    } else {
+        // // Cubic monotone with library
+        // // Generate N^2 vectors from the initial density matrices
+        // size_t matrix_dimension = input.front().mat.rows();
+        // long unsigned int input_length = input.size();
+        // std::vector<std::vector<double>> raw_real( matrix_dimension * matrix_dimension );
+        // std::vector<std::vector<double>> raw_imag( matrix_dimension * matrix_dimension );
+        // std::vector<double> time_raw;
+        // time_raw.reserve( input_length );
+        // for ( int k = 0; k < input_length; k++ ) {
+        //     time_raw.emplace_back( input.at( k ).t );
+        // }
+        // for ( int i = 0; i < matrix_dimension; i++ ) {
+        //     for ( int j = 0; j < matrix_dimension; j++ ) {
+        //         std::vector<double> cur_real;
+        //         std::vector<double> cur_imag;
+        //         cur_real.reserve( input_length );
+        //         cur_imag.reserve( input_length );
+        //         for ( int k = 0; k < input_length; k++ ) {
+        //             Dense mat = Dense( input.at( k ).mat );
+        //             cur_real.emplace_back( std::real( mat( i, j ) ) );
+        //             cur_imag.emplace_back( std::imag( mat( i, j ) ) );
+        //         }
+        //         raw_real[i * matrix_dimension + j] = cur_real;
+        //         raw_imag[i * matrix_dimension + j] = cur_imag;
+        //     }
+        // }
+
+        // // Interpolate each vector on its own
+        // std::vector<std::vector<double>> interpolated_real( matrix_dimension * matrix_dimension );
+        // std::vector<std::vector<double>> interpolated_imag( matrix_dimension * matrix_dimension );
+        // std::vector<double> time_out;
+        // time_out.reserve( input_length );
+        // for ( long unsigned int k = 0; k < num_of_points; k++ ) {
+        //     time_out.emplace_back( t_start + k * t_step );
+        // }
+        // for ( int i = 0; i < matrix_dimension; i++ ) {
+        //     for ( int j = 0; j < matrix_dimension; j++ ) {
+        //         int index = i * matrix_dimension + j;
+        //         Interpolant interpolant_real = Interpolant( time_raw, raw_real.at( index ), "monotone" );
+        //         Interpolant interpolant_imag = Interpolant( time_raw, raw_imag.at( index ), "monotone" );
+        //         interpolated_real[i * matrix_dimension + j] = interpolant_real.evaluate( time_out );
+        //         interpolated_imag[i * matrix_dimension + j] = interpolant_imag.evaluate( time_out );
+        //     }
+        // }
+
+        // // Write new vectors back into matices
+        // for ( int k = 0; k < num_of_points; k++ ) {
+        //     Dense cur( matrix_dimension, matrix_dimension );
+        //     for ( int i = 0; i < matrix_dimension; i++ ) {
+        //         for ( int j = 0; j < matrix_dimension; j++ ) {
+        //             int index = i * matrix_dimension + j;
+        //             cur( i, j ) = Scalar( interpolated_real[index][k], interpolated_imag[index][k] );
+        //         }
+        //     }
+        //     ret.push_back( { cur.sparseView(), time_out[k] } );
+        //     ret.back().mat.makeCompressed();
+        // }
     }
-    //Log::L2("Done interpolating, returnign vector of size {}\n",ret.size());
+    // Log::L2("Done interpolating, returnign vector of size {}\n",ret.size());
     return ret;
 }
 
@@ -44,7 +112,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
             while ( i < input.size() - 1 and t_t > input[i].t ) {
                 i++;
             }
-            double first = i > 0 ? input[i - 1].t : 0.0;
+            double first = i > 0 ? input[i - 1].t : t_start;
             double second = input[i].t;
             double f = ( t_t - first ) / ( second - first );
             Sparse mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
@@ -107,7 +175,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         ProgressBar progressbar = ProgressBar();
         interpolateTimer.start();
 
-        Log::L2("[Interpolator] Copying DM Elements into single Vector\n");
+        Log::L2( "[Interpolator] Copying DM Elements into single Vector\n" );
         size_t matrix_dimension = input.front().mat.rows();
         long unsigned int input_length = input.size();
         std::vector<std::vector<double>> raw_real( matrix_dimension * matrix_dimension );
@@ -137,7 +205,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         }
 
         // Interpolate each vector on its own
-        Log::L2("[Interpolator] Interpolating Vectors\n");
+        Log::L2( "[Interpolator] Interpolating Vectors\n" );
         std::vector<std::vector<double>> interpolated_real( matrix_dimension * matrix_dimension );
         std::vector<std::vector<double>> interpolated_imag( matrix_dimension * matrix_dimension );
         std::vector<double> time_out;
@@ -159,7 +227,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         }
 
         // Write new vectors back into matices
-        Log::L2("[Interpolator] Writing Vectors back into DM\n");
+        Log::L2( "[Interpolator] Writing Vectors back into DM\n" );
         for ( int k = 0; k < num_of_points; k++ ) {
             Dense cur( matrix_dimension, matrix_dimension );
 #pragma omp parallel for num_threads( threads )

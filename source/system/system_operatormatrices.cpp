@@ -5,26 +5,26 @@
 OperatorMatrices::OperatorMatrices( Parameters &p ) {
     Timer &timer_operatormatrices = Timers::create( "Operator Matrices", true, false );
     timer_operatormatrices.start();
-    Log::L2( "Generating operator matrices... " );
+    Log::L2( "[System-OperatorMatrices] Generating operator matrices...\n" );
     if ( !generateOperators( p ) ) {
-        Log::L2( "Generating operator matrices failed! Exitting program...\n" );
+        Log::L2( "[System-OperatorMatrices] Generating operator matrices failed! Exitting program...\n" );
         Log::close();
         exit( EXIT_FAILURE );
     }
     timer_operatormatrices.end();
-    Log::L2( "successful. Elapsed time is {}ms\n", timer_operatormatrices.getWallTime( Timers::MILLISECONDS ) );
+    Log::L2( "[System-OperatorMatrices] Generating operator matrices was successful. Elapsed time is {}ms\n", timer_operatormatrices.getWallTime( Timers::MILLISECONDS ) );
 }
 
 bool OperatorMatrices::generateOperators( Parameters &p ) {
     Eigen::IOFormat CleanFmt( 4, 0, ", ", "\n", "[", "]" );
     // Zeroing Hamiltons (redundant at this point)
-    Log::L2( "Creating operator matrices, dimension = {}\nCreating base matrices...\n", p.maxStates );
+    Log::L2( "[System-OperatorMatrices] Creating operator matrices, dimension = {}\nCreating base matrices...\n", p.maxStates );
 
     // Generate Electronic and Photonic Base States and Self-Hilbert Matrices
     // Electronic
+    Log::L2( "[System-OperatorMatrices] Creating Self-Hilbert Electronic states...\n" );
     std::vector<std::string> base_electronic;
     base_selfhilbert.emplace_back( Dense::Identity( p.input_electronic.size(), p.input_electronic.size() ) );
-
     int index = 0;
     int maximum_electronic_levels = p.input_electronic.size();
     for ( auto &mat : p.input_electronic ) {
@@ -39,6 +39,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     }
 
     // Photonic
+    Log::L2( "[System-OperatorMatrices] Creating Self-Hilbert Photonic states...\n" );
     std::vector<std::vector<std::string>> base_photonic( p.input_photonic.size() );
     int curcav = 0;
     for ( auto &cav : p.input_photonic ) {
@@ -60,6 +61,10 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     subb.insert( subb.begin(), base_electronic );
     base = QDLC::Matrix::tensor( subb );
 
+    // Create Universal Identity Matrix
+    identity = Sparse( base.size(), base.size() );
+
+    Log::L2( "[System-OperatorMatrices] Evaluating Kronecker Delta for the electronic states...\n" );
     // Sparse total Hilbert tensors
     for ( auto &bel : el_states ) {
         auto current = base_selfhilbert;
@@ -69,6 +74,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         // std::cout << "Mat = " << bel.first << "  " << bel.second.hilbert.rows() << "\n"
         //           << Dense( bel.second.hilbert ) << std::endl;
     }
+    Log::L2( "[System-OperatorMatrices] Evaluating Kronecker Delta for the photonic states...\n" );
     for ( auto &phot : ph_states ) {
         auto current = base_selfhilbert;
         current[phot.second.base] = phot.second.self_hilbert;
@@ -77,6 +83,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         // std::cout << "Mat = " << phot.first << "  " << phot.second.hilbert.rows() << "\n"
         //           << Dense( phot.second.hilbert ) << std::endl;
     }
+    Log::L2( "[System-OperatorMatrices] Creating Electronic Transition Matrices...\n" );
     // Generate Transition Matrices
     for ( auto &bel : el_states ) {
         for ( auto &trans_to : p.input_electronic[bel.first].string_v["CoupledTo"] ) {
@@ -91,6 +98,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             el_transitions[transition_transposed].energy = std::abs( p.input_electronic[trans_to].numerical["Energy"] - p.input_electronic[bel.first].numerical["Energy"] );
         }
     }
+    Log::L2( "[System-OperatorMatrices] Creating Photonic Transition Matrices...\n" );
     curcav = 1;
     for ( auto &cav : p.input_photonic ) {
         int max_photons = cav.second.numerical["MaxPhotons"];
@@ -105,6 +113,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         state_bd.direction = 1;
         state_bd.energy = cav.second.numerical["Energy"];
     }
+    Log::L2( "[System-OperatorMatrices] Creating Electronic Projector Matrices...\n" );
     // Tensor remaining transition
     for ( auto &bel : el_transitions ) {
         auto current = base_selfhilbert;
@@ -112,6 +121,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         bel.second.hilbert = QDLC::Matrix::tensor( current ).sparseView();
         bel.second.projector = QDLC::Matrix::sparse_projector( bel.second.hilbert );
     }
+    Log::L2( "[System-OperatorMatrices] Creating Photonic Projector Matrices...\n" );
     for ( auto &phot : ph_transitions ) {
         auto current = base_selfhilbert;
         current[phot.second.base] = phot.second.self_hilbert;
@@ -119,6 +129,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         phot.second.projector = QDLC::Matrix::sparse_projector( phot.second.hilbert );
     }
 
+    Log::L2( "[System-OperatorMatrices] Creating Hilbert Space Index Matrices...\n" );
     // Create total Hilbert space indices. This routine assumes the individual bases are added in ascending order, e.g. 0,1,2,3...:
     for ( int i = 0; i < base_selfhilbert.size(); i++ ) {
         auto current = base_selfhilbert;
@@ -131,6 +142,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         // Log::L2( "Tensor for base i = {}:\nCurrent:\n{}\n\n{}\n\n", i, current[i], base_hilbert_index.back() );
     }
 
+    Log::L2( "[System-OperatorMatrices] Creating Pulse Cache Matrices...\n" );
     // Generate prechaced pulse and chirp matrices. 2 matrices are generated per pulse for Omega and Omega^*
     // Generate transition matrices from the initial state matrices to allow for addidional transitions and the cavity modes to be included.
     for ( auto &pulse : p.input_pulse ) {
@@ -144,7 +156,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 pulsemat += el_transitions[transition].hilbert;
                 pulsemat_star += el_transitions[transition_transposed].hilbert;
             } else if ( std::isupper( transition.front() ) ) {
-                Log::L2( "Electronic Pulse transition {} is not in the list of allowed electronic transitions, recreating transition matrices...\n", transition );
+                Log::L2( "[System-OperatorMatrices] Electronic Pulse transition {} is not in the list of allowed electronic transitions, recreating transition matrices...\n", transition );
                 auto ket1 = el_states[transition.substr( 0, 1 )].ket;
                 auto bra1 = el_states[transition.substr( 0, 1 )].bra;
                 auto ket2 = el_states[transition.substr( 1, 1 )].ket;
@@ -175,7 +187,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 pulsemat += transition_hilbert;
                 pulsemat_star += transition_transposed_hilbert;
             } else {
-                Log::L2( "Pulse transition {} is cavity...\n", transition );
+                Log::L2( "[System-OperatorMatrices] Pulse transition {} is cavity...\n", transition );
                 pulsemat += ph_transitions[transition + "b"].hilbert;
                 pulsemat_star += ph_transitions[transition + "bd"].hilbert;
             }
@@ -183,27 +195,29 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         pulse_mat.emplace_back( pulsemat );
         pulse_mat.emplace_back( pulsemat_star );
     }
+
+    Log::L2( "[System-OperatorMatrices] Creating Chirp Cache Matrices...\n" );
     // 1 matrix is generated per chirp
     for ( auto &chirp : p.input_chirp ) {
         Sparse chirpmat = Sparse( base.size(), base.size() );
         Sparse chirpmat_star = Sparse( base.size(), base.size() );
         for ( int i = 0; i < chirp.second.string_v["CoupledTo"].size(); i++ ) {
             std::string state = chirp.second.string_v["CoupledTo"][i];
-            chirpmat += chirp.second.numerical_v["AmpFactor"][i] * el_states[state].hilbert; // TODO: chirp cavity
+            chirpmat += chirp.second.numerical_v["AmpFactor"][i] * el_states[state].hilbert; // TODO: chirp cavity similar to pulse
         }
         chirp_mat.emplace_back( chirpmat );
     }
 
+    Log::L2( "[System-OperatorMatrices] Creating Base Index Maps...\n" );
     // Create Index Map
     index = 0;
-    Log::L1( "System Base ({}): ", base.size() );
+    std::stringstream ss;
     for ( auto &b : base ) {
         b = "|" + b + ">";
         base_index_map[b] = index++;
-        Log::L1( "{} ", b );
-        // std::cout << b << " ";
+        ss << b << " ";
     }
-    Log::L1( "\n" );
+    Log::L1( "System Base ({}): {}\n", base.size(), ss.str() );
     p.maxStates = base.size();
 
     H = Sparse( p.maxStates, p.maxStates );
@@ -213,6 +227,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     rho = Sparse( p.maxStates, p.maxStates );
 
     // Analytical Time Trafo Matrix
+    Log::L2( "[System-OperatorMatrices] Creating Analytical Time Transformation Cache Matrix...\n" );
     timetrafo_cachematrix = Dense::Zero( base.size(), base.size() );
     for ( auto &iss : base_index_map ) {
         std::string is = iss.first;
@@ -241,7 +256,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             timetrafo_cachematrix( iss.second, jss.second ) = 1.0i * val;
         }
     }
-    // Precalculate Lindbladians
+    // Precalculate Lindbladians. Doesnt Work lul me dumb.
     lindblad_factors = std::vector<Sparse>( 6, Sparse( base.size(), base.size() ) );
     // Cavity Terms //TODO: Testen das die hier richtig sind!
     // for ( auto &cav : ph_transitions ) {
@@ -279,13 +294,15 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     //     }
     // }
 
+    Log::L2( "[System-OperatorMatrices] Creating Polaron Cache Matrices...\n" );
     // Precalculate Polaron Matrices
     polaron_factors.emplace_back( Sparse( base.size(), base.size() ) );
+    // TODO: Das hier ist einfach H_I?
     for ( auto &[mode, param] : p.input_photonic ) {
         int i = 0;
         for ( auto transition : param.string_v["CoupledTo"] ) {
             std::reverse( transition.begin(), transition.end() );
-            polaron_factors.back() += el_transitions[transition].hilbert * p.p_omega_coupling * param.numerical_v["CouplingScaling"][i] * ph_transitions[mode + "b"].hilbert; // TODO: was ist mit back coupling?
+            polaron_factors.back() += el_transitions[transition].hilbert * p.p_omega_coupling * param.numerical_v["CouplingScaling"][i] * ph_transitions[mode + "b"].hilbert;
             i++;
         }
     }
@@ -302,7 +319,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 temp += extra_transitions[transition_transposed].hilbert;
                 polaron_pulse_factors_explicit_time.back() += QDLC::Matrix::sparse_projector( extra_transitions[transition_transposed].hilbert );
             } else {
-                Log::L2( "Pulse transition {} is cavity...\n", transition );
+                Log::L2( "[System-OperatorMatrices] Pulse transition {} is cavity...\n", transition );
                 temp += ph_transitions[transition + "bd"].hilbert;
                 polaron_pulse_factors_explicit_time.back() += ph_transitions[transition + "bd"].projector;
             }
@@ -310,7 +327,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         polaron_factors.emplace_back( temp );
     }
 
-    Log::L2( "Done! Creating Hamiltonoperator...\n" );
+    Log::L2( "[System-OperatorMatrices] Everything Done! Creating Hamiltonoperator...\n" );
     // Generate Self Action Hamilton H_0:
     H_0 = Sparse( base.size(), base.size() );
     for ( auto &state : el_states ) {
@@ -336,21 +353,13 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             H_I_b += cav.second.numerical_v["CouplingScaling"][i] * el_transitions[transition].hilbert * ph_transitions[cav.first + "b"].hilbert;
         }
     }
-    if ( p.numerics_use_rwa )
-        H_I = p.p_omega_coupling * H_I_a;
-    else
-        H_I = p.p_omega_coupling * ( H_I_a + H_I_b );
-    H = H_0 + H_I;
-    if ( p.numerics_use_interactionpicture )
-        H_used = H_I;
-    else
-        H_used = H;
-    Log::L2( "Hamiltonoperator done!\n" );
+    Log::L2( "[System-OperatorMatrices] Hamiltonoperator done!\n" );
 
+    Log::L2( "[System-OperatorMatrices] Creating Path Integral Sorting Vectors...\n" );
     // The Path Integral can be partially summed by either: the electronic state index; or the electronic state coupling factor.
     // Because multiple states can have the same coupling factor, the latter will usually be faster, but at least as fast as the index summation.
     // As a default value, "factor" should be used.
-    std::string sorting = "factor"; // "factor"
+    std::string sorting = "factor";
     if ( sorting == "index" ) {
         std::map<std::string, int> temp_base_indices;
         int new_index = 0;
@@ -386,19 +395,48 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             phononGroupToIndices[phononCouplingIndex[i]].emplace_back( i );
         }
     } else {
-        Log::L2( "Sorting Parameter for Partially Summed ADM mismatch!\n" );
+        Log::L2( "[System-OperatorMatrices] Sorting Parameter for Partially Summed ADM mismatch!\n" );
     }
-    Log::L2( "Phonon Coupling Index Vector: {}\n", phononCouplingIndex );
-    Log::L2( "Phonon Coupling Value Vector: {}\n", phononCouplingIndexValue );
-    for ( auto &a : phononGroupToIndices )
-        Log::L2( "Phonon Group Index Vector: {}\n", a );
+    Log::L2( "[System-OperatorMatrices] Phonon Coupling Index Vector: {}\n", phononCouplingIndex );
+    Log::L2( "[System-OperatorMatrices] Phonon Coupling Value Vector: {}\n", phononCouplingIndexValue );
 
+    // Creating Phonon Coupling Matrix
+    phononCouplingMatrix = Sparse( base.size(), base.size() );
+    for ( auto i = 0; i < phononCouplingMatrix.rows(); i++ )
+        for ( auto j = 0; j < phononCouplingMatrix.cols(); j++ ) {
+            Scalar coupling = phononCouplingIndexValue[phononCouplingIndex[i]] * phononCouplingIndexValue[phononCouplingIndex[j]];
+            if ( QDLC::Math::abs2( coupling ) == 0 )
+                coupling = std::max( phononCouplingIndexValue[phononCouplingIndex[i]], phononCouplingIndexValue[phononCouplingIndex[j]] );
+            if ( QDLC::Math::abs2( coupling ) != 0.0 )
+                phononCouplingMatrix.coeffRef( i, j ) = coupling;
+        }
+    // Map this matrix to every nonzero entries in any of the polaron transition matrices, all other entries can be discarded
+    Sparse projector = QDLC::Matrix::sparse_projector( std::accumulate( polaron_factors.begin(), polaron_factors.end(), Sparse( base.size(), base.size() ) ) );
+    Sparse projector_adjoint = projector.adjoint();
+    // Remove to-be-zero elements from the Coupling Matrix
+    phononCouplingMatrix = phononCouplingMatrix.cwiseProduct( projector + projector_adjoint );
+    std::cout << Dense( phononCouplingMatrix ).format( CleanFmt ) << std::endl;
+    // Scale Interaction Hamilton Operator and Pulse matrices with <B> if PME is used. Note that because K = exp(-0.5*integral J), the scaling has to be exponential in B, e.g. local_b^factor
+    // The Scaling for the Polaron Frame is squared, because the coupling factor n_Level is applied twice in the PI and otherwise only once in the PME.
+    if ( p.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL ) {
+        Log::L2( "[System-OperatorMatrices] Scaling H_I,Cavity and H_I,Pulse with <B> = {}\n", p.p_phonon_b );
+        Sparse b_matrix = phononCouplingMatrix.unaryExpr( [&]( Scalar val ) { return std::pow( p.p_phonon_b.get(), 1.0 * val ); } );
+        H_I_a = H_I_a.cwiseProduct( b_matrix );
+        H_I_b = H_I_b.cwiseProduct( b_matrix );
+        std::for_each( pulse_mat.begin(), pulse_mat.end(), [&]( auto &mat ) { mat = mat.cwiseProduct( b_matrix ); } );
+    }
+
+    for ( auto &a : phononGroupToIndices )
+        Log::L2( "[System-OperatorMatrices] Phonon Group Index Vector: {}\n", a );
+
+    Log::L2( "[System-OperatorMatrices] Creating Initial State Vector...\n" );
     // Create Initial State
     // Split starting state into superposition. States can be passed as "|...>+|...>" with amplitudes
     initial_state_vector_ket = Dense::Zero( base.size(), 1 );
     for ( auto state : QDLC::String::splitline( p.p_initial_state_s, '+' ) ) {
         // For a coherent and normal input the syntax is |base>. replace number in base with 'alpha#' to indicate a coherent state. replace number in base with 'xiy&' to indicate a squeezed state. no spaces.
-        Scalar amp = state[0] == '|' ? 1.0 : ( state.back() == 'i' ? 1.0i * stod( QDLC::String::splitline( state.substr( 0, state.size() - 1 ), '|' ).front() ) : stod( QDLC::String::splitline( state, '|' ).front() ) );
+        // Scalar amp = state[0] == '|' ? 1.0 : ( state.back() == 'i' ? 1.0i * stod( QDLC::String::splitline( state.substr( 0, state.size() - 1 ), '|' ).front() ) : stod( QDLC::String::splitline( state, '|' ).front() ) );
+        Scalar amp = state[0] == '|' ? 1.0 : stod( QDLC::String::splitline( state, '|' ).front() );
         std::string pure_state = state.substr( state.find( '|' ) );
         if ( state.find( "#" ) != std::string::npos ) {
             auto modev = QDLC::String::splitline( state, '#' );
@@ -409,10 +447,10 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             }
             double alpha = std::stod( front.back() );
             std::string mode = modev.back().substr( 0, 1 );
-            Log::L2( "Creating superpositioned coherent state {} for mode {} with alpha = {} and scaled amplitude {}\n", pure_state, mode, alpha, amp );
+            Log::L2( "[System-OperatorMatrices] Creating superpositioned coherent state {} for mode {} with alpha = {} and scaled amplitude {}\n", pure_state, mode, alpha, amp );
             for ( int n = 0; n < p.input_photonic[mode].numerical["MaxPhotons"]; n++ ) {
                 std::string current = front_base + std::to_string( n ) + modev.back();
-                Log::L2( "Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getCoherent( alpha, n ) * amp );
+                Log::L2( "[System-OperatorMatrices] Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getCoherent( alpha, n ) * amp );
                 // Add initial state with amplitudes
                 initial_state_vector_ket( base_index_map[current] ) += amp * QDLC::Math::getCoherent( alpha, n );
             }
@@ -427,26 +465,39 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             double r = std::stod( cmplx.front() );
             double phi = std::stod( cmplx.back() );
             std::string mode = modev.back().substr( 0, 1 );
-            Log::L2( "Creating superpositioned coherent state {} for mode {} with r = {}, phi = {} and scaled amplitude {}\n", pure_state, mode, r, phi, amp );
+            Log::L2( "[System-OperatorMatrices] Creating superpositioned coherent state {} for mode {} with r = {}, phi = {} and scaled amplitude {}\n", pure_state, mode, r, phi, amp );
             for ( int n = 0; n < p.input_photonic[mode].numerical["MaxPhotons"]; n++ ) {
                 if ( n % 2 != 0 )
                     continue;
                 std::string current = front_base + std::to_string( n ) + modev.back();
-                Log::L2( "Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getSqueezed( r, phi, n ) * amp );
+                Log::L2( "[System-OperatorMatrices] Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getSqueezed( r, phi, n ) * amp );
                 // Add initial state with amplitudes
                 initial_state_vector_ket( base_index_map[current] ) += amp * QDLC::Math::getSqueezed( r, phi, n );
             }
         } else {
-            Log::L2( "Creating superpositioned state {} ({}) with amplitude {}\n", pure_state, base_index_map[pure_state], amp );
+            Log::L2( "[System-OperatorMatrices] Creating superpositioned state {} ({}) with amplitude {}\n", pure_state, base_index_map[pure_state], amp );
             // Add initial state with amplitudes
             initial_state_vector_ket( base_index_map[pure_state] ) += amp;
         }
     }
 
     initial_state_vector_ket.normalize();
-    Log::L2( "Initial State Vector: {}\n", initial_state_vector_ket );
+    Log::L2( "[System-OperatorMatrices] Initial State Vector: [{}]\n", initial_state_vector_ket.format( Eigen::IOFormat( 4, 0, ", ", " ", "", "" ) ) );
     rho = ( initial_state_vector_ket * initial_state_vector_ket.transpose() ).sparseView();
-    Log::L2( "Done!\n" );
+
+    // Choose Final Hamilton. The Coupling scalings are incorporateed in H_I_a and H_I_b. The PME scaling <B> is incorporated in H_I_a/b and the Pulse Matrices.
+    Log::L2( "[System-OperatorMatrices] Choosing final Hamilton Operator...\n" );
+    if ( p.numerics_use_rwa )
+        H_I = p.p_omega_coupling * H_I_a;
+    else
+        H_I = p.p_omega_coupling * ( H_I_a + H_I_b );
+    H = H_0 + H_I;
+    if ( p.numerics_use_interactionpicture )
+        H_used = H_I;
+    else
+        H_used = H;
+
+    Log::L2( "[System-OperatorMatrices] Done!\n" );
     return true;
 }
 
@@ -454,7 +505,7 @@ void OperatorMatrices::outputOperators( Parameters &p ) {
     if ( p.output_operators > 0 ) {
         std::ostringstream out;
         Eigen::IOFormat CleanFmt( 4, 0, ", ", "\n", "[", "]" );
-        out << "Hamilton and Rho:\nH=H_0+H_I (no RWA)\n"
+        out << "[System-OperatorMatrices] Hamilton and Rho:\nH=H_0+H_I (no RWA)\n"
             << Dense( H ).format( CleanFmt ) << std::endl;
         out << "H_0\n"
             << Dense( H_0 ).format( CleanFmt ) << std::endl;
@@ -466,9 +517,9 @@ void OperatorMatrices::outputOperators( Parameters &p ) {
             << Dense( rho ).format( CleanFmt ) << std::endl;
         // out << "test1\n" << test1.format(CleanFmt)<< "\ntest2\n" << test2.format(CleanFmt) << std::endl;
         Log::L2( out.str() );
-        Log::L2( "Outputting String Matrices...\n" );
-        // OperatorMatricesText test = OperatorMatricesText();
-        // test.generateOperators( p );
+        // Log::L2( "[System-OperatorMatrices] Outputting String Matrices...\n" );
+        //  OperatorMatricesText test = OperatorMatricesText();
+        //  test.generateOperators( p );
         if ( p.output_operators == 3 )
             exit( 0 );
     }

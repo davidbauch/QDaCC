@@ -52,15 +52,18 @@ void System::initialize_path_integral_functions() {
     // Output Phonon Functions
     FILE *fp_phonons = std::fopen( ( parameters.subfolder + "phonons.txt" ).c_str(), "w" );
     fmt::print( fp_phonons, "t\tabs(K(t))\treal(K(t))\timag(K(t))\tabs(K(t))\treal(K(t))\timag(K(t))\n" );
-    for ( double t = parameters.t_start; t < parameters.t_step_pathint * tau_max; t += parameters.t_step_pathint ) {
-        int i = std::floor( t / ( parameters.t_step_pathint ) );
-        auto ampfactor = parameters.t_step_pathint / parameters.t_step;
-        auto phi = dgl_phonons_kernel( t, parameters.t_step ) * ampfactor;
-        fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::abs( phi ), std::real( phi ), std::imag( phi ), std::abs( phi_vector[t] ), std::real( phi_vector[t] ), std::imag( phi_vector[t] ) );
-        for ( double dt = t + parameters.t_step; dt < t + parameters.t_step_pathint; dt += parameters.t_step ) {
-            auto phi = dgl_phonons_kernel( dt, parameters.t_step ) * ampfactor;
-            fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t \t \t \n", dt, std::abs( phi ), std::real( phi ), std::imag( phi ) );
-        }
+    // for ( double t = 0.0; t < parameters.t_step_pathint * tau_max; t += parameters.t_step_pathint ) {
+    //     int i = std::floor( t / ( parameters.t_step_pathint ) );
+    //     auto ampfactor = parameters.t_step_pathint / parameters.t_step;
+    //     auto phi = dgl_phonons_kernel( t, parameters.t_step ) * ampfactor;
+    //     fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::abs( phi ), std::real( phi ), std::imag( phi ), std::abs( phi_vector[t] ), std::real( phi_vector[t] ), std::imag( phi_vector[t] ) );
+    //     for ( double dt = t + parameters.t_step; dt < t + parameters.t_step_pathint; dt += parameters.t_step ) {
+    //         auto phi = dgl_phonons_kernel( dt, parameters.t_step ) * ampfactor;
+    //         fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t \t \t \n", dt, std::abs( phi ), std::real( phi ), std::imag( phi ) );
+    //     }
+    // }
+    for ( int i = 0; i < phi_vector_int.size(); i++ ) {
+        fmt::print( fp_phonons, "{}\t{}\t{}\t{}\n", parameters.t_step_pathint * i, std::abs( phi_vector_int[i] ), std::real( phi_vector_int[i] ), std::imag( phi_vector_int[i] ) );
     }
     // Lets output more than the 4-8 elements usually used
     // std::vector<Scalar> phi_vector_o;
