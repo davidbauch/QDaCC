@@ -81,7 +81,7 @@ class ProgressBar {
             // num2 = std::max(0,barLength-1-num0); // Redundant
         }
     }
-    std::string print( int currentIterations, int maximumIterations, std::string barSuffix = "", std::string barPrefix = "" ) {
+    std::string print( int currentIterations, int maximumIterations, std::string barSuffix = "", std::string barPrefix = "", bool bold = true ) {
         calculate( currentIterations, maximumIterations );
         std::string ret = "";
         if ( type == 0 )
@@ -96,6 +96,8 @@ class ProgressBar {
         ret = "\033[2K\033[38;2;255;255;255m" + strBarStart + "\033[0m" + ret + "\033[38;2;255;255;255m" + strBarEnd + ( decimalPoints >= 0 ? fmt::format( " {:.{}f}\%", 1.0 * currentIterations / maximumIterations * 100, decimalPoints ) : "" ) + ( ( isSpinning && currentIterations < maximumIterations ) ? fmt::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + ( currentIterations < maximumIterations ? barSuffix : barSuffix + " - " + barEnd ) + " - " + barPrefix + "\033[0m";
         maxSize = ( (int)ret.size() > maxSize ) ? (int)ret.size() : maxSize;
         // fmt::print( "{:<{}}\r", ret, maxSize );
+        if ( bold )
+            ret = "\033[1m" + ret + "\033[0m";
         fmt::print( "{}\r", ret );
         return ret;
     }

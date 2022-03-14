@@ -31,25 +31,24 @@ class System {
     std::map<double, std::map<double, QDLC::SaveStateTau>> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
 
     // ##### Helper Variables #####
-    std::map<std::string, double>
-        emission_probabilities;
+    std::map<std::string, double> emission_probabilities;
     // Helpervariables for photon emission probability
-    double photonemissionprob_integral_H = 0;
-    double photonemissionprob_integral_V = 0;
-    double electronic_emissionprob_integral_H = 0;
-    double electronic_emissionprob_integral_V = 0;
-    // Helpervariables for raman emission process
-    double ramanphotonemissionprob_integral_H = 0;
-    double ramanphotonemissionprob_integral_V = 0;
-    Scalar ramanphotonpopulation_integral_H = 0;
-    Scalar ramanphotonpopulation_integral_V = 0;
+    // double photonemissionprob_integral_H = 0;
+    // double photonemissionprob_integral_V = 0;
+    // double electronic_emissionprob_integral_H = 0;
+    // double electronic_emissionprob_integral_V = 0;
+    //// Helpervariables for raman emission process
+    // double ramanphotonemissionprob_integral_H = 0;
+    // double ramanphotonemissionprob_integral_V = 0;
+    // Scalar ramanphotonpopulation_integral_H = 0;
+    // Scalar ramanphotonpopulation_integral_V = 0;
 
     // Coefficient Tracking variables
-    int track_getcoefficient_read = 0;             // Read coefficient from vector
-    int track_getcoefficient_write = 0;            // Wrote coefficient to vector
-    int track_getcoefficient_calculate = 0;        // Sucessfully calculated coefficient
-    int track_getcoefficient_read_but_unequal = 0; // Tried to read coefficient, but didnt find any. Recalculate
-    int track_getcoefficient_calcattempt = 0;      // Attempt to calculate coefficient
+    int track_getcoefficient_read = 0;              // Read coefficient from vector
+    int track_getcoefficient_read_interpolated = 0; // Read interpolated coefficient from vector
+    int track_getcoefficient_write = 0;             // Wrote coefficient to vector
+    int track_getcoefficient_calculate = 0;         // Sucessfully calculated coefficient
+    int track_getcoefficient_calcattempt = 0;       // Attempt to calculate coefficient
     int globaltries = 0;
 
     // Time Trafo Matrix Caching
@@ -99,7 +98,7 @@ class System {
     Sparse dgl_phonons_rungefunc( const Sparse &chi, const double t );
 
     // Calculates the phonon X Matrix from a given Chi
-    Sparse dgl_phonons_chiToX( const Sparse &chi, const char mode = 'u' );
+    Sparse dgl_phonons_chiToX( const Sparse &chi, const double t = 0.0, const char mode = 'u' );
 
     // Either calculates or returns the polaron green function from cache
     Scalar dgl_phonons_greenf( double t, const char mode = 'u' );
@@ -121,7 +120,7 @@ class System {
 
     // Calculates Chi(t,tau > 0) after Chi(t,0) was calculated with dgl_phonons_chi.
     // Uses different approaches
-    Sparse dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, double tau );
+    std::vector<QDLC::SaveState> dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, double tau );
 
     // Calculates L_phonons(t)
     Sparse dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDLC::SaveState> &past_rhos );
@@ -193,16 +192,16 @@ class System {
     // Calculates the Kommutator of two matrices of identical type
     // @param &A,&B: Input matrices
     // @return Kommutator of A and B where [A,B] = AB-BA
-    template <typename T>
-    inline T dgl_kommutator( const T &A, const T &B ) {
+    template <typename T1, typename T2>
+    inline Eigen::CwiseBinaryOp<Eigen::internal::scalar_difference_op<typename T1::Scalar, typename T1::Scalar>, const Eigen::Product<T1, T2, 2>, const Eigen::Product<T2, T1, 2>> dgl_kommutator( const T1 &A, const T2 &B ) {
         return A * B - B * A;
     }
 
     // Calculates the Anti-Kommutator of two matrices of identical type
     // @param &A,&B: Input matrices
     // @return Anti-Kommutator of A and B where [A,B]^- = BA-AB
-    template <typename T>
-    inline T dgl_antikommutator( const T &A, const T &B ) {
+    template <typename T1, typename T2>
+    inline Eigen::CwiseBinaryOp<Eigen::internal::scalar_sum_op<typename T1::Scalar, typename T1::Scalar>, const Eigen::Product<T1, T2, 2>, const Eigen::Product<T2, T1, 2>> dgl_antikommutator( const T1 &A, const T2 &B ) {
         return A * B + B * A;
     }
 
@@ -211,6 +210,12 @@ class System {
     // @param &op: Input matrix O
     // @param &opd: Input matrix O^dagger
     // @return Returns the Lindbladian of rho, O and O^dagger
+
+    // 2*A
+    // Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, std::__1::complex<double>>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::MatrixXd>, const QDLC::Type::Sparse>
+    // A*B*C
+    // Eigen::Product<Eigen::Product<QDLC::Type::Sparse, QDLC::Type::Sparse, 2>, QDLC::Type::Sparse, 2>
+
     template <typename T, typename T2, typename T3>
     inline T dgl_lindblad( const T &rho, const T2 &op, const T3 &opd ) {
         return 2.0 * op * rho * opd - opd * op * rho - rho * opd * op;

@@ -8,8 +8,6 @@ System::System( const std::vector<std::string> &input ) {
     parameters = Parameters( input );
     operatorMatrices = OperatorMatrices( parameters );
     operatorMatrices.outputOperators( parameters );
-    // Log the operator matrix base
-    parameters.log( operatorMatrices.initial_state_vector_ket );
     // Create all possible file outputs
     fileoutput = FileOutput( parameters, operatorMatrices );
     // Initialize / Adjust the remaining system class
@@ -23,6 +21,8 @@ System::System( const std::vector<std::string> &input ) {
         exit( EXIT_FAILURE );
     }
     Log::L2( "[System] Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( Timers::MILLISECONDS ) );
+    // Log the operator matrix base
+    parameters.log( operatorMatrices.initial_state_vector_ket );
     timer_systeminit.end();
 }
 
@@ -35,7 +35,6 @@ bool System::init_system() {
     }
 
     // Arbitrary number of pulses onto single atomic level.
-    // TODONEXT: pulse (und chirp) einfach input_s als input.
     for ( auto &[name, pulseinputs] : parameters.input_pulse ) {
         pulse.push_back( { pulseinputs, parameters } );
     }
@@ -103,6 +102,8 @@ Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const doub
         }
 
     if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T >= 0.0 ) {
+        // Sparse phonons = dgl_phonons_pmeq( rho, t, past_rhos ).pruned( 1E-10 );
+        //  Log::L2( "Equation:\n{}\nPhonon Part:\n{}\n", Dense( ret ).format( operatorMatrices.output_format ), Dense( phonons ).format( operatorMatrices.output_format ) );
         ret += dgl_phonons_pmeq( rho, t, past_rhos );
     }
 
@@ -147,7 +148,7 @@ Sparse System::dgl_pulse( const double t ) {
     for ( int i = 0; i < pulse.size(); i++ ) {
         auto p = pulse[i].get( t, !parameters.numerics_use_function_caching );
         if ( parameters.numerics_use_rwa )
-            ret += operatorMatrices.pulse_mat[2 * i + 1] * p + operatorMatrices.pulse_mat[2 * i] * std::conj( p );
+            ret += operatorMatrices.pulse_mat[2 * i + 1] * p + operatorMatrices.pulse_mat[2 * i] * std::conj( p ); // Das hier ist jetzt creator*Omega + annihilator*Omega^*. Ist das richtig?
         else
             ret += operatorMatrices.pulse_mat[2 * i + 1] * ( p + std::conj( p ) ) + operatorMatrices.pulse_mat[2 * i] * ( p + std::conj( p ) );
     }
@@ -227,8 +228,8 @@ bool System::exit_system( const int failure ) {
         p.log();
     for ( auto &c : chirp )
         c.log();
-    Log::L2( "[System] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Read-But-Not-Equal: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_but_unequal );
-    Log::L2( "[System] Number of approx+/- adjustments: {}\n", globaltries );
+    Log::L2( "[System-Polaron-Frame] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Interpolate/Read: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_interpolated );
+    Log::L2( "[System] Number of approx +/- adjustments: {}\n", globaltries );
     Log::L1( "[System] Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
     fileoutput.close();
     return true;

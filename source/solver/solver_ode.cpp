@@ -1,7 +1,7 @@
 #include "solver/solver_ode.h"
 
 QDLC::Numerics::ODESolver::ODESolver( System &s ) {
-    Log::L2( "Creating ODESolver Class... " );
+    Log::L2( "Creating ODESolver Class...\n" );
     reset( s );
     track_gethamilton_read = 0;
     track_gethamilton_write = 0;

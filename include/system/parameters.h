@@ -34,7 +34,7 @@ class Parameters {
     int numerics_phonons_maximum_threads;
     bool numerics_use_saved_hamiltons;
     long unsigned int numerics_saved_coefficients_cutoff; // True: Only save last few coefficients (only viable for T-direction, not for G1/2)
-    long unsigned int numerics_saved_coefficients_max_size;
+    // long unsigned int numerics_saved_coefficients_max_size;
     std::vector<double> logfilecounter;
     bool numerics_interpolate_outputs;
     std::string s_numerics_interpolate;
@@ -48,12 +48,15 @@ class Parameters {
     size_t numerics_groundstate;
 
     // Path Integral Numerics
-    double numerics_pathintegral_stepsize_iterator;      // = 1E-12;
-    double numerics_pathintegral_squared_threshold;      // = 1E-32;
-    double numerics_pathintegral_sparse_prune_threshold; // = 1E-1;
+    double numerics_subiterator_stepsize;                   // = 1E-12;
+    double numerics_pathintegral_squared_threshold;         // = 1E-32;
+    double numerics_pathintegral_sparse_prune_threshold;    // = 1E-1;
+    double numerics_pathintegral_sparse_to_dense_threshold; // = 1E-2;
     // Propagator Cutoff; When iterated multiple times, M(t0->t1) may gain additional entries in between the RK iterations from t0 to t1. When set to true, the final non-zero matrix entries will be mapped onto the non-zero entries after
     // the first iteration, meaning any additional non-zero entries besides the ones created within the first iteration are lost.
     bool numerics_pathintegral_docutoff_propagator;
+    // Force the use of a Dense Tensor evaluation
+    bool numerics_pathintegral_force_dense;
     // Dynamic Cutoff; While true, the squared threshold will be increased or decreased until the number of ADM elements is approximately equal to the cutoff iterations set.
     long long numerics_pathintegral_dynamiccutoff_iterations_max; //=0
     // Sparse or Dense Tensor
@@ -74,7 +77,11 @@ class Parameters {
     Parameter p_omega_cavity_loss;
     Parameter p_omega_pure_dephasing;
     Parameter p_omega_decay;
+
+    // Quantum Dot / Phonon Parameters
     Parameter p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_pure_dephasing;
+    Parameter p_phonon_qd_de, p_phonon_qd_dh, p_phonon_qd_rho, p_phonon_qd_cs, p_phonon_qd_ratio, p_phonon_qd_ae;
+
     bool p_phonon_adjust;
     int p_phonon_nc;
 

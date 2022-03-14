@@ -33,10 +33,10 @@ class OperatorMatrices {
     std::vector<Dense> base_selfhilbert;       // Contains the individual self-Hilbert bases
     std::vector<Dense> base_hilbert_index;     // Maps the individual self-Hilbert indices onto the corresponding total Hilbert space indices. Used to calculate partial traces. Key is the systems base integer index
     std::map<std::string, int> base_index_map; // Maps the Key index string |a|b|...> onto an integer index
-    std::vector<int> phononCouplingIndex;
-    std::vector<std::vector<int>> phononGroupToIndices;
-    std::vector<double> phononCouplingIndexValue;
-    Sparse phononCouplingMatrix;
+    std::vector<int> phonon_coupling_index;
+    std::vector<std::vector<int>> phonon_group_to_indices;
+    std::vector<double> phonon_coupling_index_value;
+    Sparse polaron_phonon_coupling_matrix;
     std::map<double, Sparse> phi_vector_matrix_cache_u, phi_vector_matrix_cache_g;
 
     // 3.0 New System Matrices
@@ -46,6 +46,7 @@ class OperatorMatrices {
     Dense timetrafo_cachematrix;
     std::vector<Sparse> pulse_mat, chirp_mat;
     Dense initial_state_vector_ket;
+    Eigen::IOFormat output_format;
 
     // Constructor
     OperatorMatrices(){};

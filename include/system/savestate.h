@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "typedef.h"
 
@@ -9,6 +9,7 @@ class SaveState {
    public:
     QDLC::Type::Sparse mat;
     double t;
+    SaveState(){};
     SaveState( const QDLC::Type::Sparse &mat, const double time ) : mat( mat ), t( time ){};
 };
 class SaveStateTau {
@@ -29,4 +30,4 @@ class SaveScalar {
 bool Save_State_sort_t( const SaveStateTau &ss1, const SaveStateTau &ss2 );
 bool Save_State_sort_tau( const SaveStateTau &ss1, const SaveStateTau &ss2 );
 
-}
+} // namespace QDLC

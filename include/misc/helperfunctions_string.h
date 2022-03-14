@@ -13,14 +13,14 @@ std::string strip( std::string input, char lit = '\'' );
 // Extracts the value between 2 lit in a string in a vector of strings
 std::vector<std::string> strip( std::vector<std::string> input, char lit = '\'' );
 
-// Length norm an input string to a totallength. 
+// Length norm an input string to a totallength.
 std::string trail( std::string input, int totallength, std::string pre = " ", int dir = 0 );
 std::string tail( std::string input, int totallength, std::string pre = " " );
 
 // Returns true if input starts with find
 bool startswith( std::string input, std::string find );
 
-// Splits std::string at every "lit" and returns std::vector of std::string 
+// Splits std::string at every "lit" and returns std::vector of std::string
 std::vector<std::string> split( std::string input, std::string lit = " " );
 
 // Finds tofind in arr. Returns position if found, -1 if not.
@@ -36,6 +36,15 @@ int vec_find_str( std::string toFind, const std::vector<std::string> &input );
 std::vector<std::string> splitline( const std::string &input = "", const char splitter = ' ' );
 
 std::vector<std::string> argv_to_vec( int argc, char **argv );
+
+// Replaces part of string. Generates a new string
+std::string replace( std::string input, const std::string &toreplace, const std::string &replaceto, bool ignore_capitals = false );
+
+// Converts a String to lower case. Generates a new string
+std::string to_lower( std::string str );
+
+// Adds a prefix and a suffix around a word. Generates a new string
+std::string add_prefix_and_suffix( std::string input, const std::string &tochange, const std::string &prefix = "", const std::string &suffix = "", bool ignore_capitals = false );
 
 } // namespace String
 

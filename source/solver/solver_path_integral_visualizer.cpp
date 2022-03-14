@@ -125,12 +125,12 @@ bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
                     Scalar val = 0;
                     for ( int tau = 0; tau < s.parameters.p_phonon_nc; tau++ )
                         if ( s.parameters.numerics_pathint_partially_summed )
-                            val += s.dgl_phonon_S_function( tau, s.operatorMatrices.phononCouplingIndex[i], s.operatorMatrices.phononCouplingIndex[j], s.operatorMatrices.phononCouplingIndex[i_n], s.operatorMatrices.phononCouplingIndex[j_n] );
+                            val += s.dgl_phonon_S_function( tau, s.operatorMatrices.phonon_coupling_index[i], s.operatorMatrices.phonon_coupling_index[j], s.operatorMatrices.phonon_coupling_index[i_n], s.operatorMatrices.phonon_coupling_index[j_n] );
                         else
                             val += s.dgl_phonon_S_function( tau, i, j, i_n, j_n );
                     if ( std::abs( val ) > 1E-15 )
                         fmt::print( fp_dot, "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( val ), std::imag( val ), "dodgerblue2", 1.0, 0.1, "Phonon Kernel" );
-                    // fmt::print( "i = {}, j = {}, id = {}, jd = {} --> converted i = {}, j = {}, id = {}, jd = {} --> {}\n", i, j, i_n, j_n, s.operatorMatrices.phononCouplingIndex[i], s.operatorMatrices.phononCouplingIndex[j], s.operatorMatrices.phononCouplingIndex[i_n], s.operatorMatrices.phononCouplingIndex[j_n], val );
+                    // fmt::print( "i = {}, j = {}, id = {}, jd = {} --> converted i = {}, j = {}, id = {}, jd = {} --> {}\n", i, j, i_n, j_n, s.operatorMatrices.phonon_coupling_index[i], s.operatorMatrices.phonon_coupling_index[j], s.operatorMatrices.phonon_coupling_index[i_n], s.operatorMatrices.phonon_coupling_index[j_n], val );
                 }
 
     // Polaron Frame Mapping

@@ -1,19 +1,19 @@
 #include "misc/helperfunctions_string.h"
 
-std::string QDLC::String::strip( std::string input, char lit ){
+std::string QDLC::String::strip( std::string input, char lit ) {
     int a = input.find_first_of( lit ) + 1;
     int e = input.find_last_of( lit );
     // maybe: return "" if length is 0
     return input.substr( a, e - a );
 }
 
-std::vector<std::string> QDLC::String::strip( std::vector<std::string> input, char lit ){
+std::vector<std::string> QDLC::String::strip( std::vector<std::string> input, char lit ) {
     std::vector<std::string> ret;
-    for ( const auto& str : input ) ret.emplace_back( strip( str ) );
+    for ( const auto &str : input ) ret.emplace_back( strip( str ) );
     return ret;
 }
 
-std::string QDLC::String::trail( std::string input, int totallength, std::string pre, int dir ){
+std::string QDLC::String::trail( std::string input, int totallength, std::string pre, int dir ) {
     if ( pre.size() == 0 )
         return input;
     int remaining = ( totallength - input.size() ) / pre.size();
@@ -30,15 +30,15 @@ std::string QDLC::String::trail( std::string input, int totallength, std::string
     return input;
 }
 
-std::string QDLC::String::tail( std::string input, int totallength, std::string pre ){
+std::string QDLC::String::tail( std::string input, int totallength, std::string pre ) {
     return trail( input, totallength, pre, 1 );
 }
 
-bool QDLC::String::startswith( std::string input, std::string find ){
+bool QDLC::String::startswith( std::string input, std::string find ) {
     return input.substr( 0, find.size() ).compare( find ) == 0;
 }
 
-std::vector<std::string> QDLC::String::split( std::string input, std::string lit ){
+std::vector<std::string> QDLC::String::split( std::string input, std::string lit ) {
     std::vector<std::string> ret;
     long unsigned int i = 0;
     long unsigned int start = 0;
@@ -63,14 +63,14 @@ int QDLC::String::instr( const std::string &arr, const std::string tofind, int s
     for ( int i = start; i < (int)arr.size() + 1 - (int)tofind.size(); i++ ) {
         found = true;
         for ( int j = 0; j < (int)tofind.size(); j++ ) {
-            //fmt::print("comparing {} and {}... ",arr.at(i+j),tofind.at(j));
+            // fmt::print("comparing {} and {}... ",arr.at(i+j),tofind.at(j));
             if ( tofind.at( j ) != arr.at( i + j ) ) {
                 found = false;
                 j = (int)tofind.size();
             }
         }
         if ( found ) {
-            //fmt::print("found at index {}\n",i);
+            // fmt::print("found at index {}\n",i);
             return i;
         }
     }
@@ -90,8 +90,8 @@ std::vector<std::string> QDLC::String::str_to_vec( std::string input ) {
         s = e + 1;
     }
     ret.emplace_back( input.substr( s, input.size() - s - 1 ) );
-    //for (std::string el : ret)
-    //    std::cout << el << "\n";
+    // for (std::string el : ret)
+    //     std::cout << el << "\n";
     return ret;
 }
 
@@ -123,4 +123,25 @@ std::vector<std::string> QDLC::String::argv_to_vec( int argc, char **argv ) {
     for ( int i = 0; i < argc; i++ )
         ret.push_back( std::string( argv[i] ) );
     return ret;
+}
+
+std::string QDLC::String::replace( std::string input, const std::string &toreplace, const std::string &replaceto, bool ignore_capitals ) {
+    auto pos = input.find( toreplace );
+    if ( ignore_capitals and pos == std::string::npos )
+        pos = QDLC::String::to_lower( input ).find( QDLC::String::to_lower( toreplace ) );
+    if ( pos == std::string::npos ) return input;
+    return input.substr( 0, pos ) + replaceto + input.substr( pos + toreplace.size(), input.size() );
+}
+
+std::string QDLC::String::add_prefix_and_suffix( std::string input, const std::string &tochange, const std::string &prefix, const std::string &suffix, bool ignore_capitals ) {
+    auto pos = input.find( tochange );
+    if ( ignore_capitals and pos == std::string::npos )
+        pos = QDLC::String::to_lower( input ).find( QDLC::String::to_lower( tochange ) );
+    if ( pos == std::string::npos ) return input;
+    return input.substr( 0, pos ) + prefix + input.substr( pos, tochange.size() ) + suffix + input.substr( pos + tochange.size(), input.size() );
+}
+
+std::string QDLC::String::to_lower( std::string str ) {
+    std::transform( str.begin(), str.end(), str.begin(), []( unsigned char c ) { return std::tolower( c ); } );
+    return str;
 }

@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string>
 #include <iostream>
+#include <unordered_map>
 #include <fmt/core.h> // -DFMT_HEADER_ONLY
 #include <fmt/format.h>
 #include <fmt/ostream.h>
@@ -63,6 +64,7 @@ class Log {
    private:
     int max_loglevel;
     int debug_counter;
+    std::unordered_map<std::string, std::string> colormap;
     FILE *file;
     std::vector<std::string> bars;
     Log(){};
@@ -96,16 +98,44 @@ class Log {
         fmt::vprint( file, msg, args );
     }
     template <class Args>
-    void Ilevel2_log( const std::string &msg, const Args &args ) {
+    void Ilevel2_log( const std::string &msg, const Args &args, bool use_colormap = true ) {
         if ( max_loglevel > LEVEL_1 ) {
-            fmt::vprint( "| \033[38;2;100;100;100m " + msg + "\033[0m", args );
+            if ( use_colormap ) {
+                auto p1 = msg.find_first_of( "[" ) + 1;
+                auto p2 = msg.find_first_of( "]" );
+                if ( p1 == std::string::npos or p2 == std::string::npos )
+                    use_colormap = false;
+                else {
+                    std::string mid = msg.substr( p1, p2 - p1 );
+                    if ( not colormap.contains( mid ) )
+                        colormap[mid] = "\033[38;5;" + std::to_string( colormap.size() + 2 ) + "m";
+                    auto color = colormap[mid];
+                    fmt::vprint( "| \033[38;2;100;100;100m" + msg.substr( 0, p1 ) + color + mid + "\033[38;2;100;100;100m" + msg.substr( p2 ) + "\033[0m", args );
+                }
+            }
+            if ( not use_colormap )
+                fmt::vprint( "| \033[38;2;100;100;100m" + msg + "\033[0m", args );
             fmt::vprint( file, " | " + msg, args );
         }
     }
     template <class Args>
-    void Ilevel3_log( const std::string &msg, const Args &args ) {
+    void Ilevel3_log( const std::string &msg, const Args &args, bool use_colormap = true ) {
         if ( max_loglevel > LEVEL_2 ) {
-            fmt::vprint( " | \033[31m- \033[93m" + msg + "\033[0m", args );
+            if ( use_colormap ) {
+                auto p1 = msg.find_first_of( "[" ) + 1;
+                auto p2 = msg.find_first_of( "]" );
+                if ( p1 == std::string::npos or p2 == std::string::npos )
+                    use_colormap = false;
+                else {
+                    std::string mid = msg.substr( p1, p2 - p1 );
+                    if ( not colormap.contains( mid ) )
+                        colormap[mid] = "\033[38;5;" + std::to_string( colormap.size() + 2 ) + "m";
+                    auto color = colormap[mid];
+                    fmt::vprint( " | \033[31m- \033[93m" + msg.substr( 0, p1 ) + color + mid + "\033[38;2;100;100;100m" + msg.substr( p2 ) + "\033[0m", args );
+                }
+            }
+            if ( not use_colormap )
+                fmt::vprint( " | \033[31m- \033[93m" + msg + "\033[0m", args );
             fmt::vprint( file, " | - " + msg, args );
         }
     }

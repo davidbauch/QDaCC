@@ -217,9 +217,51 @@ CLA_ARGUMENT = {
 	}
 	CLA_PARAMETER = {
 		subkey = 'phonontcutoff'
-		value = '4ps'
+		value = '-1'
 		datatype = 'string'
-		description = 'Phonon Cutoff time'
+		description = 'Phonon Cutoff time. -1 for automatic determination.'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'quantumdot'
+	description = 'Quantum Dot properties. Optional argument that replaces the phononalpha and phononwcutoff parameters. These parameters will only be used if QDae is provided'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = 'QDDe'
+		value = '7eV'
+		datatype = 'string'
+		description = 'Electron Energy.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'QDDh'
+		value = '-3.5eV'
+		datatype = 'string'
+		description = 'Hole Energy.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'QDrho'
+		value = '5370'
+		datatype = 'string'
+		description = 'Material Density in kg/m**3.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'QDcs'
+		value = '5110'
+		datatype = 'string'
+		description = 'Material Speed of Sound in m/s.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'QDratio'
+		value = '1.15'
+		datatype = 'string'
+		description = 'a_e / a_h Ratio'
+	}
+	CLA_PARAMETER = {
+		subkey = 'QDae'
+		value = '0'
+		datatype = 'string'
+		description = 'Size of the QD in nm. Common values range between 3nm and 6nm. If this value is zero, the phononalpha and phononwcutoff values are used instead. Ensure that the phonontcutoff is chosen accordingly. Note that this parameter does not support the nm unit!'
 	}
 }
 CLA_ARGUMENT = {
@@ -268,6 +310,24 @@ CLA_ARGUMENT = {
 		value = '0'
 		datatype = 'double'
 		description = 'When greater than zero, the ADM size will be pruned accordingly.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'denseTensorThreshold'
+		value = '0.01'
+		datatype = 'double'
+		description = 'Tensor Fillrate Threshold to switch to a Dense Tensor evaluation.'
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'pathIntForceDense'
+	description = 'Forces the use of a Dense Tensor for the PI evaluation'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
 	}
 }
 # Deprecated
@@ -322,7 +382,7 @@ CLA_ARGUMENT = {
 CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'phononcoeffs'
-	description = 'Enable phonon coefficient output.'
+	description = 'NOTIMPLEMENTED Enable phonon Lindblad coefficient output.'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''

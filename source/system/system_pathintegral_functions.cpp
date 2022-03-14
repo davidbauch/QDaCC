@@ -3,14 +3,12 @@
 Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
     Scalar integral = 0;
     double stepsize = 1.0E-4 * parameters.p_phonon_wcutoff;
-    // double eV7 = QDLC::Misc::convertParam<double>( "7.0eV" );
-    // double eV35 = -QDLC::Misc::convertParam<double>( "3.5eV" );
-    double v_c = 5110.0;
-    double a_e = 5E-9;       // 3E-9;
-    double a_h = 0.87 * a_e; // a_e / 1.15;
-    double rho = 5370.0;
     for ( double w = 1E-10; w < 10.0 * parameters.p_phonon_wcutoff; w += stepsize ) {
-        double J = w * parameters.p_phonon_alpha * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff );
+        double J;
+        if ( parameters.p_phonon_qd_ae == 0.0 )
+            J = parameters.p_phonon_alpha * w * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff );
+        else
+            J = w * parameters.hbar * std::pow( parameters.p_phonon_qd_de * std::exp( -w * w * parameters.p_phonon_qd_ae * parameters.p_phonon_qd_ae / ( 4. * parameters.p_phonon_qd_cs * parameters.p_phonon_qd_cs ) ) - parameters.p_phonon_qd_dh * std::exp( -w * w * parameters.p_phonon_qd_ae / parameters.p_phonon_qd_ratio * parameters.p_phonon_qd_ae / parameters.p_phonon_qd_ratio / ( 4. * parameters.p_phonon_qd_cs * parameters.p_phonon_qd_cs ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * parameters.p_phonon_qd_rho * std::pow( parameters.p_phonon_qd_cs, 5. ) );
         // double J = w * parameters.hbar * std::pow( eV7 * std::exp( -w * w * a_e * a_e / ( 4. * v_c * v_c ) ) - eV35 * std::exp( -w * w * a_h * a_h / ( 4. * v_c * v_c ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * rho * std::pow( v_c, 5. ) );
         if ( t < t_step / 2.0 ) {
             integral += stepsize * J * ( ( 1.0 - std::cos( w * t_step ) ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) + 1.0i * std::sin( w * t_step ) ); // - 1.i * w * t_step );
@@ -26,22 +24,42 @@ Scalar System::dgl_phonon_S_function( const int t_delta, const int i_n, const in
     // if ( i_nd == j_nd )
     //     return result;
     if ( i_n == i_nd )
-        result -= phi_vector_int[t_delta] * operatorMatrices.phononCouplingIndexValue[i_n];
+        result -= phi_vector_int[t_delta] * operatorMatrices.phonon_coupling_index_value[i_n];
     if ( j_n == j_nd )
-        result -= std::conj( phi_vector_int[t_delta] ) * operatorMatrices.phononCouplingIndexValue[j_n];
+        result -= std::conj( phi_vector_int[t_delta] ) * operatorMatrices.phonon_coupling_index_value[j_n];
     if ( i_n == j_nd )
-        result += std::conj( phi_vector_int[t_delta] ) * operatorMatrices.phononCouplingIndexValue[i_n];
+        result += std::conj( phi_vector_int[t_delta] ) * operatorMatrices.phonon_coupling_index_value[i_n];
     if ( j_n == i_nd )
-        result += phi_vector_int[t_delta] * operatorMatrices.phononCouplingIndexValue[j_n];
+        result += phi_vector_int[t_delta] * operatorMatrices.phonon_coupling_index_value[j_n];
     return result;
 }
 
 void System::initialize_path_integral_functions() {
-    Log::L2( "[PathIntegral] Initializing Path-Integral functions...\n" );
+    Log::L2( "[System-Path-Integral] Initializing Path-Integral functions...\n" );
     // kernel in phi-vector schreiben
     int tau_max = parameters.p_phonon_nc + 1;
-    Log::L2( "[PathIntegral] Initializing Kernel Memory functions...\n" );
+    Log::L2( "[System-Path-Integral] Initializing Kernel Memory functions...\n" );
     phi_vector_int.clear();
+
+    // If required, determine tau_max and t_step_pathint automatically
+    if ( parameters.t_step_pathint < 0 ) {
+        double tau = 0.0;
+        double last = 1.0;
+        double first = std::abs( dgl_phonons_kernel( 0.0, parameters.numerics_subiterator_stepsize ) );
+        while ( true ) {
+            double current = std::abs( dgl_phonons_kernel( tau, parameters.numerics_subiterator_stepsize ) );
+            if ( std::abs( 1.0 - current / last ) < 1E-2 or ( last != 1.0 and std::abs( current / first ) < 1E-3 ) ) {
+                parameters.t_step_pathint = tau / ( 1.0 * parameters.p_phonon_nc );
+                Log::L2( "[System-Path-Integral] Path Integral t-cutoff was automatically determined to t_cutoff = {}, resulting in a pathintegral timestep of {}\n", tau, parameters.t_step_pathint );
+                break;
+            }
+            last = current;
+            tau += parameters.numerics_subiterator_stepsize;
+        }
+        parameters.adjustInput();
+    }
+
+    // Precalculate Phi
     for ( double tau = 0.0; tau < parameters.t_step_pathint * tau_max; tau += parameters.t_step_pathint ) {
         Scalar kernel = dgl_phonons_kernel( tau, parameters.t_step_pathint );
         phi_vector[tau] = kernel;

@@ -190,7 +190,7 @@ The same chirp but for the biexciton system. The two single excitons are shifted
 ---
 
 ## Initial State
-An initial state can be constructed by superpositioning different states with real or complex amplitudes. Providing a special instructor for the state, an initially coherent or squeezed state can be constructed too.
+An initial state can be constructed by superpositioning different states with real or complex amplitudes. Providing a special instructor for the state, an initially coherent, thermal or squeezed state can be constructed too.
 
 The general syntax reads:
 
@@ -198,8 +198,9 @@ The general syntax reads:
 where `INITIALSTATE` can be multiple of the following, chained by using the chain oprator `+`:
 
 - `AMP|el|nN|...>`: General state, where `el` is the initially occupied electronic state. The amplitude for this state is `AMP`, where a complex amplitude is indicated by a trailing `i`. The initial resonator states `nN` are given by providing the resonator `N` and the photon number `n`. Note that the states are sorted alphabetically and need to be provided in the correct order for the initial state to function properly.
-    - Replacing the photon number `n` by `alpha#` indicates the resonator `N` should be initialized into a coherent state
-    - Replacing the photon number `n` by `riPhi&` indicates the resonator `N` should be initialized into a squeezed state with squeezing parameters `r` and `Phi`
+    - Replacing the photon number `n` by `alpha#` indicates the resonator `N` should be initialized into a coherent state with `<n>=alpha`
+    - Replacing the photon number `n` by `alpha#` indicates the resonator `N` should be initialized into a thermal state with `<n>=alpha`
+    - Replacing the photon number `n` by `r_Phi&` indicates the resonator `N` should be initialized into a squeezed state with squeezing parameters `r` and `Phi`
 
 Examples:
 
@@ -212,7 +213,7 @@ Initial state is a superposition of the Exciton and Groundstate. The result will
     --R |G|2.0#h>
 Initial state is the electronic groundstate with a coherent state in resonator h with `alpha = 2`.
 
-    --R |G|0.1i0.5&h>
+    --R |G|0.1_0.5&h>
 Initial state is the electronic groundstate with a squeezed state in resonator h with `r = 0.1` and `Phi = 0.5`.
 
 ---
@@ -293,7 +294,7 @@ The energy for which maximum coupling occurs. The default value for GaAs QDs lie
 This correlation function tends to zero after only a few picoseconds. Hence, the integration will stop after a specified cutoff time:
 
     --phonontcutoff [TIMECUTOFF]
-The default value for the default parameters specified above is set to `TIMECUTOFF = 4ps`.
+The default value for the default parameters specified above is set to `TIMECUTOFF = -1`, resulting in the cutoff time being automatically determined.
 
 The Markov Approximation (`rho(t)=rho(t+tau)`) used by the Polaron Approach can be disabled by providing the flag
 
@@ -326,7 +327,7 @@ The path integral specific settings read:
 The number of steps for the Path Integral to accumulate from. Larger values will significantly increase the numerical effort. The default value is `STEPS = 4` which corresponds to a Timestep of `1ps`.
 
     --tstepPath [STEP]
-The stepsize for the Path Integral. The default value is `STEP = 1ps`. Note that `STEPS*STEP` should be roughtly equal to the Polaron Frame's `TIMECUTOFF = 4ps`.
+The stepsize for the Path Integral. The default value is `STEP = -1`, resulting in automatic determination of the timestep and using the iteratorStepsize.
 
     --iteratorStepsize [STEP]
 The stepsize of the iterator, which is equivalent to the usual timestep for a RK4 calculation. The default value is `STEP = 100fs`.

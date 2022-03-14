@@ -133,12 +133,23 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     output_path = QDLC::CommandlineArguments::get_parameter_passed( "-oPath" ) ? 1 : 0;
     p_phonon_adjust = !QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
     p_phonon_pure_dephasing = QDLC::Misc::convertParam<double>( "1mueV" );
+
+    // Phonon Quantum Dot Paramters. These are used to overwrite the wcutoff and alpha values if needed.
+    p_phonon_qd_de = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDDe" );
+    p_phonon_qd_dh = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDDh" );
+    p_phonon_qd_rho = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDrho" );
+    p_phonon_qd_cs = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDcs" );
+    p_phonon_qd_ratio = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDratio" );
+    p_phonon_qd_ae = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDae" );
+
     // Path Integral Parameters
     p_phonon_nc = QDLC::CommandlineArguments::get_parameter<int>( "--pathintegral", "NC" );
-    numerics_pathintegral_stepsize_iterator = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
+    numerics_subiterator_stepsize = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
     numerics_pathintegral_squared_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "squaredThreshold" );
     numerics_pathintegral_sparse_prune_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "sparsePruneThreshold" );
-    numerics_pathintegral_dynamiccutoff_iterations_max = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
+    numerics_pathintegral_dynamiccutoff_iterations_max = QDLC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "cutoffADM" ); // FIXME ????
+    numerics_pathintegral_sparse_to_dense_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "denseTensorThreshold" );
+    numerics_pathintegral_force_dense = QDLC::CommandlineArguments::get_parameter_passed( "-pathIntForceDense" );
     numerics_pathintegral_docutoff_propagator = QDLC::CommandlineArguments::get_parameter_passed( "-cutoffPropagator" );
     numerics_pathint_partially_summed = !QDLC::CommandlineArguments::get_parameter_passed( "-disablePSPath" );
     t_step_pathint = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "tstepPath" );
@@ -339,7 +350,13 @@ bool Parameters::adjustInput() {
         double integral = 0;
         double stepsize = 0.01 * p_phonon_wcutoff;
         for ( double w = stepsize; w < 10 * p_phonon_wcutoff; w += stepsize ) {
-            integral += stepsize * ( p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wcutoff / p_phonon_wcutoff ) / std::tanh( hbar * w / 2.0 / kb / p_phonon_T ) );
+            double J;
+            if ( p_phonon_qd_ae == 0.0 )
+                J = p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wcutoff / p_phonon_wcutoff );
+            else
+                J = w * hbar * std::pow( p_phonon_qd_de * std::exp( -w * w * p_phonon_qd_ae * p_phonon_qd_ae / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ) - p_phonon_qd_dh * std::exp( -w * w * p_phonon_qd_ae / p_phonon_qd_ratio * p_phonon_qd_ae / p_phonon_qd_ratio / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * p_phonon_qd_rho * std::pow( p_phonon_qd_cs, 5. ) );
+
+            integral += stepsize * ( J / std::tanh( hbar * w / 2.0 / kb / p_phonon_T ) );
         }
         p_phonon_b = std::exp( -0.5 * integral );
         if ( p_phonon_adjust ) {
@@ -349,7 +366,7 @@ bool Parameters::adjustInput() {
         if ( numerics_rk_order >= 45 and numerics_use_saved_coefficients )
             numerics_force_caching = true;
     }
-    numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 * ( p_phonon_tcutoff / t_step ) ) + 10;
+    // numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 * ( p_phonon_tcutoff / t_step ) ) + 10;
     trace.reserve( iterations_t_max + 5 );
 
     numerics_saved_coefficients_cutoff = 0; //( numerics_calculate_spectrum || numerics_calculate_g2 ) ? 0 : ( p_phonon_tcutoff / t_step ) * 5;
@@ -589,8 +606,8 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                 Log::L1( " - - {} with scaling {}\n", mat.string_v["CoupledTo"][i], mat.numerical_v["AmpFactor"][i] );
             for ( int i = 0; i < mat.numerical_v["Amplitude"].size(); i++ ) {
                 Log::L1( " - Chirp Point {}:\n", i );
-                Log::L1( " - - Amplitude: {} Hz - {} meV:\n", mat.numerical_v["Amplitude"][i], mat.numerical_v["Amplitude"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
-                Log::L1( " - - Time: {} s - {} ps:\n", mat.numerical_v["Times"][i], mat.numerical_v["Times"][i].getSI( Parameter::UNIT_TIME_PS ) );
+                Log::L1( " - - Amplitude: {} Hz - {} meV\n", mat.numerical_v["Amplitude"][i], mat.numerical_v["Amplitude"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
+                Log::L1( " - - Time: {} s - {} ps\n", mat.numerical_v["Times"][i], mat.numerical_v["Times"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 Log::L1( " - - Derivative DDT: {}\n", mat.numerical_v["ddt"][i] );
             }
         }
@@ -602,12 +619,28 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::wrapInBar( "Phonons", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( p_phonon_T >= 0 ) {
         std::vector<std::string> approximations = { "Transformation integral via d/dt chi = -i/hbar*[H,chi] + d*chi/dt onto interaction picture chi(t-tau)", "Transformation Matrix U(t,tau)=exp(-i/hbar*H_DQ_L(t)*tau) onto interaction picture chi(t-tau)", "No Transformation, only interaction picture chi(t-tau)", "Analytical Lindblad formalism", "Mixed", "Path Integral" };
-        Log::L1( "Temperature = {} k\nCutoff energy = {} meV\nCutoff Time = {} ps\nAlpha = {}\n<B> = {}\nFirst Markov approximation used? (rho(t) = rho(t-tau)) - {}\nTransformation approximation used: {} - {}\n", p_phonon_T, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ), p_phonon_tcutoff * 1E12, p_phonon_alpha, p_phonon_b, ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ), numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
+        Log::L1( "Temperature = {} k\n", p_phonon_T );
+        Log::L1( "Cutoff energy = {} Hz - {} meV\n", p_phonon_wcutoff, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ) );
+        Log::L1( "Cutoff Time = {} ps\n", p_phonon_tcutoff * 1E12 );
+        if ( p_phonon_qd_ae == 0.0 ) {
+            Log::L1( "Alpha = {}\n", p_phonon_alpha );
+        } else {
+            Log::L1( "Quantum Dot Parameters:\n" );
+            Log::L1( " - Electron Energy D_e = {} Hz - {} eV\n", p_phonon_qd_de, p_phonon_qd_de.getSI( Parameter::UNIT_ENERGY_EV ) );
+            Log::L1( " - Hole Energy D_h = {} Hz - {} eV\n", p_phonon_qd_dh, p_phonon_qd_dh.getSI( Parameter::UNIT_ENERGY_EV ) );
+            Log::L1( " - Material Density rho = {} kg/m^3\n", p_phonon_qd_rho );
+            Log::L1( " - Material Speed of Sound c_s = {} m/s\n", p_phonon_qd_cs );
+            Log::L1( " - Electron Radius = {} nm\n", 1E9 * p_phonon_qd_ae );
+            Log::L1( " - Hole Radius = {} nm\n", 1E9 * p_phonon_qd_ae / p_phonon_qd_ratio );
+        }
+        Log::L1( "<B> = {}\n", p_phonon_b );
+        Log::L1( "First Markov approximation used? (rho(t) = rho(t-tau)) - {}\n", ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ) );
+        Log::L1( "Transformation approximation used: {} - {}\n", numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
         // Pathintegral
         if ( numerics_phonon_approximation_order == 5 ) {
             Log::L1( " - Path Integral Settings:\n" );
             Log::L1( " - Backsteps NC: {}\n", p_phonon_nc );
-            Log::L1( " - Iterator Stepsize: {}\n", numerics_pathintegral_stepsize_iterator );
+            Log::L1( " - Iterator Stepsize: {}\n", numerics_subiterator_stepsize );
             Log::L1( " - Thresholds: Squared({}), SparsePrune({}), CutoffIterations({}), PropagatorMapping({})\n", numerics_pathintegral_squared_threshold, numerics_pathintegral_sparse_prune_threshold, numerics_pathintegral_dynamiccutoff_iterations_max, numerics_pathintegral_docutoff_propagator );
             Log::L1( " - Used partially summed algorithm?: {}\n", numerics_pathint_partially_summed ? "Yes" : "No" );
         }
@@ -622,6 +655,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "Timeborder start: {:.8e} s - {:.2f} ps\n", t_start, t_start * 1E12 );
     Log::L1( "Timeborder end: {:.8e} s - {:.2f} ps{}\n", t_end, t_end * 1E12, numerics_calculate_till_converged ? " (variable time end at 99.9\% convergence)" : "" );
     Log::L1( "Timeborder delta: {:.8e} s - {:.2f} fs \n", t_step, t_step * 1E15 );
+    Log::L1( "Subiterator delta: {:.8e} s - {:.2f} fs \n", numerics_subiterator_stepsize, numerics_subiterator_stepsize * 1E15 );
     if ( numerics_phonon_approximation_order == 5 ) {
         Log::L1( "Timeborder delta path integral: {:.8e} s - {:.2f} ps\n", t_step_pathint, t_step_pathint * 1E12 );
     }
@@ -653,7 +687,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\nThreads used by Eigen: {}\n", numerics_phonons_maximum_threads, numerics_maximum_threads, Eigen::nbThreads() );
     Log::L1( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );
     if ( p_phonon_T )
-        Log::L1( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? fmt::format( "Yes (maximum {} matrices saved)", ( numerics_saved_coefficients_cutoff > 0 ) ? numerics_saved_coefficients_cutoff : numerics_saved_coefficients_max_size ) : "No" ) );
+        Log::L1( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? "Yes" : "No" ) );
     if ( numerics_interpolate_outputs )
         Log::L1( "WARNING: Temporal outputs are interpolated!\n" );
     if ( !numerics_use_function_caching )

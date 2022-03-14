@@ -35,6 +35,9 @@ double QDLC::Math::factorial_range( double upper, double lower ) {
 double QDLC::Math::getCoherent( double alpha, double N ) {
     return std::exp( -std::pow( alpha, 2.0 ) ) * std::pow( std::pow( alpha, 2.0 ), N ) / QDLC::Math::factorial( N );
 }
+double QDLC::Math::getThermal( double alpha, double N ) {
+    return std::pow( alpha, N ) / std::pow( 1.0 + alpha, N + 1 );
+}
 QDLC::Type::Scalar QDLC::Math::getSqueezed( double r, double phi, double N ) {
     return 1.0 / std::sqrt( std::cosh( r ) ) * std::pow( -std::exp( 1.0i * phi ) * std::tanh( r ), N ) * std::sqrt( factorial_range( 2 * N, N ) * factorial( N ) ) / factorial( N ) / std::pow( 2.0, N );
 }

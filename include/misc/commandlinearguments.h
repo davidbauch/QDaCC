@@ -16,6 +16,7 @@
 // V 1.2.1 - Now initialized with global init function. The global object 'cla' is now the standard CommandlineArguments class and can be accessed via the CommandlineArgument namespace.
 // V 1.2.2 - Constructor now also accepts argv in vecor format, and commandlinearguments vector get function
 // V 1.3 - Singleton class
+// V 1.4 Markup for filter, Markup for "DEPRECATED" and "NOTIMPLEMENTED"
 
 namespace QDLC {
 
@@ -26,8 +27,8 @@ class CommandlineArguments {
     char cla_splitter = '=';
     int cla_width = 50;
     std::string cla_add_param = "add";
-    std::string cla_remove_param = "rem"; //TODO
-    std::string cla_edit_param = "mod";   //TODO
+    std::string cla_remove_param = "rem"; // TODO
+    std::string cla_edit_param = "mod";   // TODO
     std::string version = "1.3";
 
     class Parameter {
@@ -143,8 +144,12 @@ class CommandlineArguments {
         Datastructure( std::vector<std::string> key, std::string description, std::string type, std::vector<Parameter> parameter, std::string group ) : key( key ), description( description ), type( type ), parameter( parameter ), group( group ){};
 
         // Checks if key used comparse to this datastructure. if use_hyphens is True, it is assumed that kk is passed as with either - or -- prefix
-        bool validkey( std::string kk, bool use_hyphens = false ) const {
-            for ( const auto& k : key ) {
+        bool validkey( std::string kk, bool use_hyphens = false, bool lowercase = false ) const {
+            if ( lowercase )
+                kk = QDLC::String::to_lower( kk );
+            for ( auto k : key ) {
+                if ( lowercase )
+                    k = QDLC::String::to_lower( k );
                 if ( kk.compare( ( use_hyphens ? ( type.compare( "1hyphen" ) == 0 ? "-" : "--" ) : "" ) + k ) == 0 ) return true;
             }
             return false;
@@ -152,9 +157,11 @@ class CommandlineArguments {
 
         // Looks for keyword filter
         bool validfilter( std::string filter ) const {
-            if ( validkey( filter ) || key.at( 0 ).find( filter ) != std::string::npos ) return true;
+            filter = QDLC::String::to_lower( filter );
+            if ( validkey( filter ) || QDLC::String::to_lower( key.at( 0 ) ).find( filter ) != std::string::npos ) return true;
             if ( group.compare( filter ) == 0 || group.find( filter ) != std::string::npos ) return true;
-            for ( const auto& word : String::split( description ) ) {
+            for ( auto word : String::split( description ) ) {
+                word = QDLC::String::to_lower( word );
                 if ( word.compare( filter ) == 0 || word.find( filter ) != std::string::npos ) return true;
             }
             for ( const auto& param : parameter ) {
@@ -167,7 +174,7 @@ class CommandlineArguments {
             return false;
         }
 
-        void identify( int len1, int len2, std::string div = "|     ", std::ostream& out = std::cout ) const {
+        void identify( int len1, int len2, std::string div = "|     ", const std::string& markup = "", std::ostream& out = std::cout ) const {
             int lines_needed = std::max( (int)( description.size() / len2 ) + 1, (int)key.size() );
             std::vector<std::string> lines;
             std::string cur;
@@ -193,7 +200,13 @@ class CommandlineArguments {
                     }
                 }
             }
-            for ( const auto& s : lines ) {
+            for ( auto s : lines ) {
+                if ( s.find( "DEPRECATED" ) )
+                    s = QDLC::String::replace( s, "DEPRECATED", "\033[1m\033[31mDEPRECATED\033[0m" );
+                if ( s.find( "NOTIMPLEMENTED" ) )
+                    s = QDLC::String::replace( s, "NOTIMPLEMENTED", "\033[1m\033[31mNOT\033[31mIMPLEMENTED\033[0m" );
+                if ( markup.size() != 0 )
+                    s = QDLC::String::add_prefix_and_suffix( s, markup, "\033[32m", "\033[0m", true );
                 out << s << std::endl;
             }
         }
@@ -272,7 +285,7 @@ class CommandlineArguments {
                 if ( String::startswith( configfile.at( i ), "type = " ) )
                     temp.type = String::strip( configfile.at( i ) );
                 else if ( String::startswith( configfile.at( i ), "key = " ) )
-                    temp.key = String::strip( String::split( configfile.at( i ), " or " ) ); //TODO: Vorher die ' splits machen, sonst kann "or" nicht im key stehen!
+                    temp.key = String::strip( String::split( configfile.at( i ), " or " ) ); // TODO: Vorher die ' splits machen, sonst kann "or" nicht im key stehen!
                 else if ( String::startswith( configfile.at( i ), "description = " ) )
                     temp.description = String::strip( configfile.at( i ) );
                 else if ( String::startswith( configfile.at( i ), "group = " ) )
@@ -285,8 +298,8 @@ class CommandlineArguments {
                 }
             }
         }
-        //map_index();
-        //std::sort(cla_datastructures.begin(), cla_datastructures.end(), [](const Datastructure& a, const Datastructure& b)->bool {std::cout << "is " << a.group_index << " greater than " << b.group_index << "?" << std::endl; return a.group_index > b.group_index;});
+        // map_index();
+        // std::sort(cla_datastructures.begin(), cla_datastructures.end(), [](const Datastructure& a, const Datastructure& b)->bool {std::cout << "is " << a.group_index << " greater than " << b.group_index << "?" << std::endl; return a.group_index > b.group_index;});
         return true;
     }
 
@@ -317,7 +330,7 @@ class CommandlineArguments {
             } else if ( !first ) {
                 std::cout << String::tail( "", len1 ) + "-" + String::tail( "", len2 + div.size() - 1 ) << std::endl; //<< String::tail( "", cla_width, " . " ) << std::endl;
             }
-            datastructure.identify( len1, len2, div );
+            datastructure.identify( len1, len2, div, filter );
             first = false;
         }
         return true;
@@ -477,7 +490,7 @@ class CommandlineArguments {
             std::string temp;
             std::cout << "Enter a key:";
             std::getline( std::cin, temp );
-            //TODO: Check if key already exists
+            // TODO: Check if key already exists
             key.emplace_back( temp );
             std::cout << "Do you want to add another alias? [j/n] ";
             std::getline( std::cin, jn );
@@ -546,12 +559,12 @@ class CommandlineArguments {
 
     // Singleton Elements:
 
-    static CommandlineArguments &Get() {
+    static CommandlineArguments& Get() {
         static CommandlineArguments instance;
         return instance;
     }
-    
-    CommandlineArguments( ) {
+
+    CommandlineArguments() {
     }
     void Iinit( int argc, char* argv[], std::string filepath ) {
         convert_argv( argc, argv );
@@ -592,42 +605,40 @@ class CommandlineArguments {
         return param_empty;
     }
 
-
    public:
-    CommandlineArguments(const CommandlineArguments& cla) = delete;
+    CommandlineArguments( const CommandlineArguments& cla ) = delete;
 
     static Parameter get( std::string key, std::string subkey = "", bool use_hyphens = true ) {
-        return Get().Iget(key, subkey, use_hyphens);
+        return Get().Iget( key, subkey, use_hyphens );
     }
-    
-    //inline Parameter operator()( std::string key, std::string subkey = "" ) const { 
-    //    return get( key, subkey ); 
-    //};
-    
+
+    // inline Parameter operator()( std::string key, std::string subkey = "" ) const {
+    //     return get( key, subkey );
+    // };
+
     static std::vector<std::string> get_vector() {
         return Get().commandlinearguments;
     }
     static void init( int argc, char* argv[], const std::string& filepath = "" ) {
-        Get().Iinit(argc, argv, filepath);
+        Get().Iinit( argc, argv, filepath );
     }
     static void init( const std::vector<std::string>& argv, std::string filepath = "" ) {
         Get().Iinit( argv, filepath );
     }
 
     // Some usefull getter functions:
-    static bool get_parameter_passed( const std::string &key, const std::string &subkey = "" ) {
+    static bool get_parameter_passed( const std::string& key, const std::string& subkey = "" ) {
         return Get().get( key, subkey ).toBool();
     }
     template <class T>
-    static T get_parameter( const std::string &key, const std::string &subkey = "" ) {
+    static T get_parameter( const std::string& key, const std::string& subkey = "" ) {
         std::string arg = Get().get( key, subkey );
         return QDLC::Misc::convertParam<T>( arg );
     }
-    static std::string get_parameter( const std::string &key, const std::string &subkey = "" ) {
+    static std::string get_parameter( const std::string& key, const std::string& subkey = "" ) {
         std::string arg = Get().get( key, subkey );
         return arg;
     }
-
 };
 
-} // namespace CommandlineArguments
+} // namespace QDLC

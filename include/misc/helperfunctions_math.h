@@ -38,6 +38,8 @@ double factorial_range( double upper, double lower );
 
 double getCoherent( double alpha, double N );
 
+double getThermal( double alpha, double N );
+
 QDLC::Type::Scalar getSqueezed( double r, double phi, double N );
 
 bool is_number( const std::string &s );

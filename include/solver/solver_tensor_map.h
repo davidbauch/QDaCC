@@ -15,6 +15,18 @@ namespace QDLC {
 
 namespace Numerics {
 
+// TODO:
+//  Switch iVector index to plain c++ vector
+//  Implement uint_64t index instead of vector if partially summed is used -> much less memory
+//  And feasable, because e.g. 36^2*2^(2*7) (NC = 8) = 21233664 which easyly fits into an integer.
+// Maybe even limit to uint64_t index, because all other cases are useless.
+// AND: have 1 vector of indices that map the integer onto the index vector!
+
+// That way indices can even be restored, because the main index vector is just 1,2,3....,max (length of index map)
+
+// Other TODO: correlation func for PI reimplementieren, dann einen punkt für 09 nachrechnen.
+// Rechnungen auf cluster meddeln
+
 // https://wjngkoh.wordpress.com/2015/03/04/c-hash-function-for-eigen-matrix-and-vector/
 struct vector_hash : std::unary_function<QDLC::Type::iVector, size_t> {
     static std::hash<QDLC::Type::iVector::Scalar> hasher;
@@ -192,13 +204,13 @@ class Tensor {
             addUniqueIndex( indicesX, indicesY );
     }
 
-    T &getTriplet( const QDLC::Type::iVector &indicesX, const QDLC::Type::iVector &indicesY ) {
+    inline T &getTriplet( const QDLC::Type::iVector &indicesX, const QDLC::Type::iVector &indicesY ) {
         if ( not getCurrentValues().contains( indicesX ) or not getCurrentValues()[indicesX].contains( indicesY ) )
             return zero;
         return getCurrentValues()[indicesX][indicesY];
     }
 
-    T &getNextTriplet( const QDLC::Type::iVector &indicesX, const QDLC::Type::iVector &indicesY ) {
+    inline T &getNextTriplet( const QDLC::Type::iVector &indicesX, const QDLC::Type::iVector &indicesY ) {
         return values[next_value_vector][indicesX][indicesY];
     }
 

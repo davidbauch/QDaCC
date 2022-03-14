@@ -31,59 +31,16 @@ std::pair<Sparse, double> QDLC::Numerics::iterate_definite_integral( const Spars
     return std::make_pair( ret, err );
 }
 
-std::vector<QDLC::SaveState> QDLC::Numerics::calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
+std::vector<QDLC::SaveState> QDLC::Numerics::calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
     double t_step = step;
     std::vector<QDLC::SaveState> ret;
     ret.emplace_back( QDLC::SaveState( rho, t0 ) );
 
     double t_t = t0;
-    while ( t0 < t1 ? t_t < t1 : t_t > t1 ) {
+    while ( t0 < t1 ? t_t <= t1 : t_t >= t1 ) {
         bool accept = false;
         // Hit endpoint exactly
         if ( t0 < t1 ? t_t + t_step > t1 : t_t + t_step < t1 ) {
-            t_step = t1 - t_t;
-            accept = true;
-        }
-        // Runge-Kutta iteration
-        auto rkret = iterate_definite_integral( rho, rungefunction, t_t, t_step, order );
-        double error = rkret.second;
-        double dh = std::pow( tolerance / 2. / error, 0.25 );
-        if ( error < tolerance or order != 45 ) {
-            accept = true;
-        }
-        double t_step_new = t_step * dh;
-        if ( order == 45 and stepdelta > 0 ) {
-            t_step_new = t_step;
-            if ( dh < 1 and t_step_new - stepdelta > 0 and t_step_new - stepdelta > stepmin ) {
-                t_step_new -= stepdelta * std::floor( 1.0 / dh );
-            } else if ( dh > 1 and t_step_new + stepdelta < stepmax ) {
-                t_step_new += stepdelta * std::floor( dh );
-            }
-            if ( t_step_new - stepmin <= 1E-15 )
-                accept = true;
-        }
-        if ( accept ) {
-            t_t += t_step;
-            ret.emplace_back( QDLC::SaveState( rkret.first, t_t ) );
-        }
-        if ( order == 45 )
-            t_step = t_step_new;
-    }
-    return ret;
-}
-
-QDLC::SaveState QDLC::Numerics::calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { //std::function<MatrixXcd( const MatrixXcd &, const double )>
-    double t_step = step;
-    double t_t = t0;
-    int iterations = 0;
-    double maxerror = 0;
-    Log::L3( "Calculating Definite Integral from t0 = {} to t1 = {} at initial step = {}\n", t0, t1, step );
-    Log::L3( "Beginning Rho:\n{}\n", Dense( rho ) );
-    while ( t0 < t1 ? t_t < t1 : t_t > t1 ) {
-        bool accept = false;
-        // Hit endpoint exactly
-        if ( t0 < t1 ? t_t + t_step > t1 : t_t + t_step < t1 ) {
-            Log::L3( " - - - - Timestep would overshoot to t1 = {} (dt = {}), adjusting to {}\n", t1 + t_step, t_step, t_t - t1 );
             t_step = t1 - t_t;
             accept = true;
         }
@@ -110,21 +67,69 @@ QDLC::SaveState QDLC::Numerics::calculate_definite_integral( Sparse rho, std::fu
                 accept = true;
             }
         }
-        Log::L3( " - [t = {}] - - - Local error: {} - dh = {}, current timestep is: {}, new timestep will be: {}, current accept: {}\n", t_t, error, dh, t_step, t_step_new, accept );
         if ( accept ) {
-            Log::L3( " - [t = {}] - Accepdet step - Local error: {} - current timestep: {}, dh = {}\n", t_t, error, t_step, dh );
+            t_t += t0 < t1 ? t_step : -t_step;
+            ret.emplace_back( QDLC::SaveState( rkret.first, t_t ) );
+        }
+        if ( order == 45 )
+            t_step = t_step_new;
+    }
+    return ret;
+}
+
+QDLC::SaveState QDLC::Numerics::calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
+    double t_step = step;
+    double t_t = t0;
+    int iterations = 0;
+    double maxerror = 0;
+    // Log::L3( "Calculating Definite Integral from t0 = {} to t1 = {} at initial step = {}\n", t0, t1, step );
+    // Log::L3( "Beginning Rho:\n{}\n", Dense( rho ) );
+    while ( t0 < t1 ? t_t < t1 : t_t > t1 ) {
+        bool accept = false;
+        // Hit endpoint exactly
+        if ( t0 < t1 ? t_t + t_step > t1 : t_t + t_step < t1 ) {
+            // Log::L3( " - - - - Timestep would overshoot to t1 = {} (dt = {}), adjusting to {}\n", t1 + t_step, t_step, t_t - t1 );
+            t_step = t1 - t_t;
+            accept = true;
+        }
+        // Runge-Kutta iteration
+        auto rkret = iterate_definite_integral( rho, rungefunction, t_t, t_step, order );
+        double error = rkret.second;
+        double dh = std::pow( tolerance / 2. / error, 0.25 );
+        if ( error < tolerance or order != 45 ) {
+            accept = true;
+        }
+        double t_step_new = t_step * dh;
+        if ( order == 45 and stepdelta > 0 ) {
+            t_step_new = t_step;
+            if ( dh < 1 ) {
+                t_step_new -= stepdelta * std::floor( 1.0 / dh );
+            } else {
+                t_step_new += stepdelta * std::floor( dh );
+            }
+            if ( t_step_new < stepmin ) {
+                t_step_new = stepmin;
+                accept = true;
+            } else if ( t_step_new > stepmax ) {
+                t_step_new = stepmax;
+                accept = true;
+            }
+        }
+        // Log::L3( " - [t = {}] - - - Local error: {} - dh = {}, current timestep is: {}, new timestep will be: {}, current accept: {}\n", t_t, error, dh, t_step, t_step_new, accept );
+        if ( accept ) {
+            // Log::L3( " - [t = {}] - Accepdet step - Local error: {} - current timestep: {}, dh = {}\n", t_t, error, t_step, dh );
             t_t += t0 < t1 ? t_step : -t_step;
             rho = rkret.first;
             maxerror = std::max( maxerror, error );
         }
         if ( order == 45 )
-            t_step = t_step_new; //FIXME: wenn t_step*dh = 0 oder wenn t_t + t_step*dh = t_t wäre, dann failt das hier! am besten auch die diskreten timesteps übernehmen, warum nicht...
+            t_step = t_step_new; // FIXME: wenn t_step*dh = 0 oder wenn t_t + t_step*dh = t_t wäre, dann failt das hier! am besten auch die diskreten timesteps übernehmen, warum nicht...
         iterations++;
     }
-    Log::L3( "Calculating Definite Integral from t0 = {} to t1 = {} at initial step = {} -- Done.\n", t0, t1, step );
-    Log::L3( "Done Chi integrating, (t0 = {}) t1 was supposted to be {} and ended up {}, maxerror was {}, did {}/{} iterations (var/const dt) \n", t0, t1, t_t, maxerror, iterations, std::floor( t1 - t0 / step ) );
-    Log::L3( "End Rho:\n{}\n", Dense( rho ) );
+    // Log::L3( "Calculating Definite Integral from t0 = {} to t1 = {} at initial step = {} -- Done.\n", t0, t1, step );
+    // Log::L3( "Done Chi integrating, (t0 = {}) t1 was supposted to be {} and ended up {}, maxerror was {}, did {}/{} iterations (var/const dt) \n", t0, t1, t_t, maxerror, iterations, std::floor( t1 - t0 / step ) );
+    // Log::L3( "End Rho:\n{}\n", Dense( rho ) );
     return QDLC::SaveState( rho, t1 );
 }
 
-//const unsigned int QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM = 1111111111;
+// const unsigned int QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM = 1111111111;

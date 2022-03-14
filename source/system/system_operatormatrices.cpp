@@ -16,9 +16,9 @@ OperatorMatrices::OperatorMatrices( Parameters &p ) {
 }
 
 bool OperatorMatrices::generateOperators( Parameters &p ) {
-    Eigen::IOFormat CleanFmt( 4, 0, ", ", "\n", "[", "]" );
+    output_format = Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" );
     // Zeroing Hamiltons (redundant at this point)
-    Log::L2( "[System-OperatorMatrices] Creating operator matrices, dimension = {}\nCreating base matrices...\n", p.maxStates );
+    Log::L2( "[System-OperatorMatrices] Creating operator matrices, dimension = {}, creating base matrices...\n", p.maxStates );
 
     // Generate Electronic and Photonic Base States and Self-Hilbert Matrices
     // Electronic
@@ -227,6 +227,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     rho = Sparse( p.maxStates, p.maxStates );
 
     // Analytical Time Trafo Matrix
+    // TODO: Puls mit in trafo? Trafohamilton dann H_el + H_phot + H_pulse
     Log::L2( "[System-OperatorMatrices] Creating Analytical Time Transformation Cache Matrix...\n" );
     timetrafo_cachematrix = Dense::Zero( base.size(), base.size() );
     for ( auto &iss : base_index_map ) {
@@ -295,14 +296,15 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     // }
 
     Log::L2( "[System-OperatorMatrices] Creating Polaron Cache Matrices...\n" );
-    // Precalculate Polaron Matrices
+    // Precalculate Polaron Matrices.
     polaron_factors.emplace_back( Sparse( base.size(), base.size() ) );
-    // TODO: Das hier ist einfach H_I?
+    // Transition is always |0><1| (annihilator), hence reversed is |1><0| (creator)
     for ( auto &[mode, param] : p.input_photonic ) {
         int i = 0;
         for ( auto transition : param.string_v["CoupledTo"] ) {
+            Log::L2( "[System-PME] Adding Polaron Cavity Transition |{}><{}|b_{}\n", transition.front(), transition.back(), mode );
             std::reverse( transition.begin(), transition.end() );
-            polaron_factors.back() += el_transitions[transition].hilbert * p.p_omega_coupling * param.numerical_v["CouplingScaling"][i] * ph_transitions[mode + "b"].hilbert;
+            polaron_factors[0] += el_transitions[transition].hilbert * p.p_omega_coupling * param.numerical_v["CouplingScaling"][i] * ph_transitions[mode + "b"].hilbert;
             i++;
         }
     }
@@ -312,6 +314,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             polaron_pulse_factors_explicit_time.emplace_back( Sparse( base.size(), base.size() ) );
             std::string transition_transposed = transition;
             std::reverse( transition_transposed.begin(), transition_transposed.end() );
+            Log::L2( "[System-PME] Adding Polaron Pulse Transition |{}><{}|Omega_{}\n", transition.front(), transition.back(), mode );
             if ( el_transitions.count( transition_transposed ) > 0 ) {
                 temp += el_transitions[transition_transposed].hilbert;
                 polaron_pulse_factors_explicit_time.back() += el_transitions[transition_transposed].projector;
@@ -369,13 +372,13 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             auto index = state1;
             if ( !temp_base_indices.count( index ) > 0 ) {
                 temp_base_indices[index] = new_index++;
-                phononCouplingIndexValue.emplace_back( factor );
+                phonon_coupling_index_value.emplace_back( factor );
             }
-            phononCouplingIndex.emplace_back( temp_base_indices[index] );
+            phonon_coupling_index.emplace_back( temp_base_indices[index] );
         }
-        phononGroupToIndices = std::vector<std::vector<int>>( temp_base_indices.size() );
+        phonon_group_to_indices = std::vector<std::vector<int>>( temp_base_indices.size() );
         for ( int i = 0; i < base.size(); i++ ) {
-            phononGroupToIndices[phononCouplingIndex[i]].emplace_back( i );
+            phonon_group_to_indices[phonon_coupling_index[i]].emplace_back( i );
         }
     } else if ( sorting == "factor" ) {
         std::map<double, int> temp_base_indices;
@@ -386,47 +389,49 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             auto index = factor; // state1;
             if ( !temp_base_indices.count( index ) > 0 ) {
                 temp_base_indices[index] = new_index++;
-                phononCouplingIndexValue.emplace_back( factor );
+                phonon_coupling_index_value.emplace_back( factor );
             }
-            phononCouplingIndex.emplace_back( temp_base_indices[index] );
+            phonon_coupling_index.emplace_back( temp_base_indices[index] );
         }
-        phononGroupToIndices = std::vector<std::vector<int>>( temp_base_indices.size() );
+        phonon_group_to_indices = std::vector<std::vector<int>>( temp_base_indices.size() );
         for ( int i = 0; i < base.size(); i++ ) {
-            phononGroupToIndices[phononCouplingIndex[i]].emplace_back( i );
+            phonon_group_to_indices[phonon_coupling_index[i]].emplace_back( i );
         }
     } else {
         Log::L2( "[System-OperatorMatrices] Sorting Parameter for Partially Summed ADM mismatch!\n" );
     }
-    Log::L2( "[System-OperatorMatrices] Phonon Coupling Index Vector: {}\n", phononCouplingIndex );
-    Log::L2( "[System-OperatorMatrices] Phonon Coupling Value Vector: {}\n", phononCouplingIndexValue );
+    Log::L2( "[System-OperatorMatrices] Phonon Coupling Index Vector: {}\n", phonon_coupling_index );
+    Log::L2( "[System-OperatorMatrices] Phonon Coupling Value Vector: {}\n", phonon_coupling_index_value );
 
     // Creating Phonon Coupling Matrix
-    phononCouplingMatrix = Sparse( base.size(), base.size() );
-    for ( auto i = 0; i < phononCouplingMatrix.rows(); i++ )
-        for ( auto j = 0; j < phononCouplingMatrix.cols(); j++ ) {
-            Scalar coupling = phononCouplingIndexValue[phononCouplingIndex[i]] * phononCouplingIndexValue[phononCouplingIndex[j]];
-            if ( QDLC::Math::abs2( coupling ) == 0 )
-                coupling = std::max( phononCouplingIndexValue[phononCouplingIndex[i]], phononCouplingIndexValue[phononCouplingIndex[j]] );
+    polaron_phonon_coupling_matrix = Sparse( base.size(), base.size() );
+    for ( auto i = 0; i < polaron_phonon_coupling_matrix.rows(); i++ )
+        for ( auto j = 0; j < polaron_phonon_coupling_matrix.cols(); j++ ) {
+            Scalar coupling = phonon_coupling_index_value[phonon_coupling_index[i]] * phonon_coupling_index_value[phonon_coupling_index[j]];
+            if ( QDLC::Math::abs2( coupling ) == 0.0 )
+                coupling = std::max( phonon_coupling_index_value[phonon_coupling_index[i]], phonon_coupling_index_value[phonon_coupling_index[j]] );
             if ( QDLC::Math::abs2( coupling ) != 0.0 )
-                phononCouplingMatrix.coeffRef( i, j ) = coupling;
+                polaron_phonon_coupling_matrix.coeffRef( i, j ) = coupling;
         }
     // Map this matrix to every nonzero entries in any of the polaron transition matrices, all other entries can be discarded
     Sparse projector = QDLC::Matrix::sparse_projector( std::accumulate( polaron_factors.begin(), polaron_factors.end(), Sparse( base.size(), base.size() ) ) );
     Sparse projector_adjoint = projector.adjoint();
     // Remove to-be-zero elements from the Coupling Matrix
-    phononCouplingMatrix = phononCouplingMatrix.cwiseProduct( projector + projector_adjoint );
-    std::cout << Dense( phononCouplingMatrix ).format( CleanFmt ) << std::endl;
+    // polaron_phonon_coupling_matrix = polaron_phonon_coupling_matrix.cwiseProduct( projector + projector_adjoint );
     // Scale Interaction Hamilton Operator and Pulse matrices with <B> if PME is used. Note that because K = exp(-0.5*integral J), the scaling has to be exponential in B, e.g. local_b^factor
     // The Scaling for the Polaron Frame is squared, because the coupling factor n_Level is applied twice in the PI and otherwise only once in the PME.
     if ( p.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL ) {
         Log::L2( "[System-OperatorMatrices] Scaling H_I,Cavity and H_I,Pulse with <B> = {}\n", p.p_phonon_b );
-        Sparse b_matrix = phononCouplingMatrix.unaryExpr( [&]( Scalar val ) { return std::pow( p.p_phonon_b.get(), 1.0 * val ); } );
+        Sparse b_matrix = polaron_phonon_coupling_matrix.unaryExpr( [&]( Scalar val ) { return std::pow( p.p_phonon_b.get(), 1.0 * val ); } );
         H_I_a = H_I_a.cwiseProduct( b_matrix );
         H_I_b = H_I_b.cwiseProduct( b_matrix );
+        // Scale Pulse Matrices for Pulse evaluations for the Hamilton Operators
         std::for_each( pulse_mat.begin(), pulse_mat.end(), [&]( auto &mat ) { mat = mat.cwiseProduct( b_matrix ); } );
+        // Scale Polaron Cache Matrices for Chi evaluations
+        std::for_each( polaron_factors.begin(), polaron_factors.end(), [&]( auto &mat ) { mat = mat.cwiseProduct( b_matrix ); } );
     }
 
-    for ( auto &a : phononGroupToIndices )
+    for ( auto &a : phonon_group_to_indices )
         Log::L2( "[System-OperatorMatrices] Phonon Group Index Vector: {}\n", a );
 
     Log::L2( "[System-OperatorMatrices] Creating Initial State Vector...\n" );
@@ -438,8 +443,9 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         // Scalar amp = state[0] == '|' ? 1.0 : ( state.back() == 'i' ? 1.0i * stod( QDLC::String::splitline( state.substr( 0, state.size() - 1 ), '|' ).front() ) : stod( QDLC::String::splitline( state, '|' ).front() ) );
         Scalar amp = state[0] == '|' ? 1.0 : stod( QDLC::String::splitline( state, '|' ).front() );
         std::string pure_state = state.substr( state.find( '|' ) );
-        if ( state.find( "#" ) != std::string::npos ) {
-            auto modev = QDLC::String::splitline( state, '#' );
+        // Coherent State
+        if ( pure_state.find( "#" ) != std::string::npos ) {
+            auto modev = QDLC::String::splitline( pure_state, '#' );
             auto front = QDLC::String::splitline( modev.front(), '|' );
             std::string front_base = "|";
             for ( int i = 0; i < front.size() - 1; i++ ) {
@@ -454,14 +460,16 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 // Add initial state with amplitudes
                 initial_state_vector_ket( base_index_map[current] ) += amp * QDLC::Math::getCoherent( alpha, n );
             }
-        } else if ( state.find( "&" ) != std::string::npos ) {
-            auto modev = QDLC::String::splitline( state, '&' );
+        }
+        // Squeezed State
+        else if ( pure_state.find( "&" ) != std::string::npos ) {
+            auto modev = QDLC::String::splitline( pure_state, '&' );
             auto front = QDLC::String::splitline( modev.front(), '|' );
             std::string front_base = "|";
             for ( int i = 0; i < front.size() - 1; i++ ) {
                 front_base += front[i] + "|";
             }
-            auto cmplx = QDLC::String::splitline( front.back(), 'i' );
+            auto cmplx = QDLC::String::splitline( front.back(), '_' );
             double r = std::stod( cmplx.front() );
             double phi = std::stod( cmplx.back() );
             std::string mode = modev.back().substr( 0, 1 );
@@ -473,6 +481,24 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
                 Log::L2( "[System-OperatorMatrices] Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getSqueezed( r, phi, n ) * amp );
                 // Add initial state with amplitudes
                 initial_state_vector_ket( base_index_map[current] ) += amp * QDLC::Math::getSqueezed( r, phi, n );
+            }
+        }
+        // Thermal State
+        else if ( pure_state.find( "@" ) != std::string::npos ) {
+            auto modev = QDLC::String::splitline( pure_state, '@' );
+            auto front = QDLC::String::splitline( modev.front(), '|' );
+            std::string front_base = "|";
+            for ( int i = 0; i < front.size() - 1; i++ ) {
+                front_base += front[i] + "|";
+            }
+            double alpha = std::stod( front.back() );
+            std::string mode = modev.back().substr( 0, 1 );
+            Log::L2( "[System-OperatorMatrices] Creating superpositioned Thermal state {} for mode {} with alpha = {} and scaled amplitude {}\n", pure_state, mode, alpha, amp );
+            for ( int n = 0; n < p.input_photonic[mode].numerical["MaxPhotons"]; n++ ) {
+                std::string current = front_base + std::to_string( n ) + modev.back();
+                Log::L2( "[System-OperatorMatrices] Creating thermal substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getThermal( alpha, n ) * amp );
+                // Add initial state with amplitudes
+                initial_state_vector_ket( base_index_map[current] ) += amp * QDLC::Math::getThermal( alpha, n );
             }
         } else {
             Log::L2( "[System-OperatorMatrices] Creating superpositioned state {} ({}) with amplitude {}\n", pure_state, base_index_map[pure_state], amp );
