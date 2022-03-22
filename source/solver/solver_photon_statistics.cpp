@@ -45,6 +45,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
         time.emplace_back( std::real( akf_mat_g1_time( i, 0 ) ) );
     }
     // TODO: indist timedependent
+    // TODO: zeitabhängiges integral -> drechecksmatrix von klein nach groß etztalla
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int i = 0; i < T; i++ ) {
         double t_t = std::real( akf_mat_g1_time( i, 0 ) );
@@ -243,9 +244,9 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         // Log::L1("Eigenvalues {}: C = {} - {} - {} - {}\n",k,eigenvalues(3),eigenvalues(2),eigenvalues(1),eigenvalues(0));
         auto conc_g2zero = eigenvalues_g2zero( 3 ) - eigenvalues_g2zero( 2 ) - eigenvalues_g2zero( 1 ) - eigenvalues_g2zero( 0 );
         output.at( k ) = conc;
-        output_simple.at( k ) = 2.0 * std::abs( rho_2phot( 3, 0 ) ); // / rho_2phot.trace()  );
+        output_simple.at( k ) = 2.0 * std::abs( rho_2phot( 3, 0 ) / rho_2phot.trace() );
         output_g2zero.at( k ) = conc_g2zero;
-        output_g2zero_simple.at( k ) = 2.0 * std::abs( rho_2phot_g2zero( 3, 0 ) ); // / ( rho_2phot_g2zero( 0, 0 ) + rho_2phot_g2zero( 3, 3 ) ) );
+        output_g2zero_simple.at( k ) = 2.0 * std::abs( rho_2phot_g2zero( 3, 0 ) / rho_2phot_g2zero.trace() );
         time.at( k ) = std::real( mat_time( k, 0 ) );
         // std::cout << "Rho(3,0) = "<<rho_2phot( 3, 0 )<<", rho.trace() = "<<rho_2phot.trace()<<", Rho before saving :\n" << rho_2phot.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
         // std::cout << "Rho_g20(3,0) = "<<rho_2phot_g2zero( 3, 0 )<<", rho_g20.trace() = "<<rho_2phot_g2zero.trace()<<", Rho_g20 before saving :\n" << rho_2phot_g2zero.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;

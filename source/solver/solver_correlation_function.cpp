@@ -61,9 +61,8 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
         // Interpolate saved states to equidistant timestep
         savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
         size_t j;
-        double t_tau;
         for ( j = 0; j < savedRhos.size() and i + j < matdim; j++ ) {
-            t_tau = savedRhos.at( j ).t;
+            double t_tau = savedRhos.at( j ).t;
             gmat( i, j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, op_creator, t_tau );
             // gmat_time( i, j ) = Scalar( t_t, t_tau );
             //  Log::L2( "Time anticipated: {} {}, time got: {} {}\n", std::real( gmat_time( i, j ) ), std::imag( gmat_time( i, j ) ), t_t, t_tau );

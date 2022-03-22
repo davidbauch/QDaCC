@@ -276,7 +276,7 @@ bool Parameters::adjustInput() {
         Log::L2( "[System] Delta t was set to {}\n", t_step );
     }
 
-    if ( t_end >= 0 ) {
+    if ( t_end >= 0 and ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) ) {
         iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
         if ( iterations_tau_resolution < 1 and t_end >= 0 )
             iterations_tau_resolution = iterations_t_max + 1;
@@ -305,9 +305,9 @@ bool Parameters::adjustInput() {
     iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
 
     // Build dt vector. Use standard if not specified otherwise for all calculations. Path integral cannot use other timestep than the original.
-    {
+    if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) {
         input_correlation_resolution["Standard"].numerical_v["Time"] = { t_end };
-        input_correlation_resolution["Standard"].numerical_v["Delta"] = { t_step };
+        input_correlation_resolution["Standard"].numerical_v["Delta"] = { numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step };
         auto &settings = input_correlation_resolution.count( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
         double skip = input_correlation_resolution.count( "Modified" ) == 0 ? 1.0 * iterations_t_skip : 1.0;
         Log::L2( "[System] Iteration Skip for Grid is {}.\n", iterations_t_skip );
@@ -328,6 +328,8 @@ bool Parameters::adjustInput() {
         }
         // std::cout << "Values for "<<mode<<": " << t_values[mode] << std::endl;
         Log::L2( "[System] (Re)Setting time vector to {}\n", grid_values.size() );
+    } else {
+        Log::L2( "[System] Not setting time vector because timestep is negative!\n" );
     }
 
     // Set interpolation order:

@@ -10,6 +10,7 @@
 #include <array>
 
 #include "typedef.h"
+#include "misc/log.h"
 
 namespace QDLC {
 
@@ -80,6 +81,7 @@ class Tensor {
     std::vector<int> dimensions;
     // Ordered map including SparseIndex;Value pairs.
     std::vector<TensorMap> values;
+    // Indices
     std::vector<QDLC::Type::iVector> indices_single;
     std::vector<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>> indices;
     std::unordered_set<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>, tuple_vector_hash> unique_indices;
@@ -120,6 +122,8 @@ class Tensor {
     Tensor( const TensorMap &other ) : dimensions( other.dimensions ),
                                        values( other.values ),
                                        indices( other.indices ),
+                                       indices_single( other.indices_single ),
+                                       unique_indices( other.unique_indices ),
                                        next_value_vector( other.next_value_vector ),
                                        current_value_vector( other.current_value_vector ),
                                        tensor_type( other.tensor_type ) {}
@@ -137,11 +141,11 @@ class Tensor {
         tensor_type = TYPE_SPARSE;
     }
     void convertToDense() {
-        // indices.clear();
-        // for ( auto &[indx, map] : getCurrentValues() )
-        //     for ( auto &[indy, v] : map )
-        //         indices.emplace_back( std::make_tuple( indx, indy ) );
-        indices = std::vector<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>>( unique_indices.begin(), unique_indices.end() );
+        indices.clear();
+        for ( auto &[indx, map] : getCurrentValues() )
+            for ( auto &[indy, v] : map )
+                indices.emplace_back( std::make_tuple( indx, indy ) );
+        // indices = std::vector<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>>( unique_indices.begin(), unique_indices.end() );
         for ( auto &[x, y] : indices ) {
             if ( not getCurrentValues().contains( x ) or not getCurrentValues()[x].contains( y ) )
                 getCurrentValues()[x][y] = 0.0;
@@ -160,10 +164,10 @@ class Tensor {
         }
     }
 
-    inline bool isDenseTensor() {
+    inline bool isDense() {
         return tensor_type == TYPE_DENSE;
     }
-    inline bool isSparseTensor() {
+    inline bool isSparse() {
         return tensor_type == TYPE_SPARSE;
     }
 

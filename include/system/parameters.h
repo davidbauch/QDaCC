@@ -59,8 +59,8 @@ class Parameters {
     bool numerics_pathintegral_force_dense;
     // Dynamic Cutoff; While true, the squared threshold will be increased or decreased until the number of ADM elements is approximately equal to the cutoff iterations set.
     long long numerics_pathintegral_dynamiccutoff_iterations_max; //=0
-    // Sparse or Dense Tensor
-    bool numerics_pathintegral_use_dense_tensor = false;
+    // PI Density Change Coefficients
+    int numerics_dynamic_densitychange_limit = 3; // If fillrate doesnt change for this number of iterations, switch tensor to dense
 
     // System Parameters
     // Time variables
