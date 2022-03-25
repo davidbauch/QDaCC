@@ -268,7 +268,7 @@ std::vector<QDLC::SaveState> System::dgl_phonons_calculate_transformation( Spars
     // Matrix Exponential
     else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
         // auto H = dgl_getHamilton( t );
-        Sparse H = operatorMatrices.H_used + dgl_pulse( t ); // + dgl_chirp( t );
+        Sparse H = dgl_timetrafo( operatorMatrices.H_used + dgl_pulse( t ) + dgl_chirp( t ), t );
         std::vector<QDLC::SaveState> ret( std::ceil( tau / parameters.numerics_subiterator_stepsize ), QDLC::SaveState() );
 #pragma omp parallel for ordered schedule( dynamic ) num_threads( parameters.numerics_phonons_maximum_threads )
         for ( int i = 0; i < ret.size(); i++ ) {
@@ -314,8 +314,8 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
         Sparse chi = dgl_phonons_chi( t );
         Sparse chi_adjoint = chi.adjoint();
         // Calculate generic X_u and X_g from the initial Chi(t)
-        Sparse XGT = dgl_timetrafo( chi + chi_adjoint, t );            // dgl_phonons_chiToX( chi, t, 'u' );
-        Sparse XUT = dgl_timetrafo( 1.0i * ( chi - chi_adjoint ), t ); // dgl_phonons_chiToX( chi, t, 'g' );
+        Sparse XGT = chi + chi_adjoint;            // dgl_phonons_chiToX( chi, t, 'u' );
+        Sparse XUT = 1.0i * ( chi - chi_adjoint ); // dgl_phonons_chiToX( chi, t, 'g' );
         //// QD-Cavity
         // Sparse adj = operatorMatrices.polaron_factors[0].adjoint();
         // Sparse XGT = operatorMatrices.polaron_factors[0] + adj;
@@ -383,7 +383,9 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                     //  Log::L3( "[System-Polaron-Frame] Thread #{} - _tau = {}, size of vec = {}, Chi Index = {}\n", omp_get_thread_num(), _tau, chis_transformed_u.size(), std::min<int>( chis_transformed_u.size() - 1, _tau ) );
                     //  auto &X_tau_back_u = X_transformed_u.at( std::min<int>( X_transformed_u.size() - 1, _tau ) ).mat;
                     // auto &X_tau_back_g = X_transformed_g.at( std::min<int>( X_transformed_g.size() - 1, _tau ) ).mat;
-                    auto &chi_tau_back = chis_transformed.at( std::min<int>( chis_transformed.size() - 1, _tau ) ).mat;
+                    // auto &chi_tau_back = chis_transformed.at( std::min<int>( chis_transformed.size() - 1, _tau ) ).mat;
+                    // Sparse chi_tau_back = dgl_timetrafo( chis_transformed.at( std::min<int>( chis_transformed.size() - 1, _tau ) ).mat, t - tau );
+                    Sparse chi_tau_back = chis_transformed.at( std::min<int>( chis_transformed.size() - 1, _tau ) ).mat;
                     Sparse chi_tau_back_adjoint = chi_tau_back.adjoint();
                     auto X_tau_back_g = chi_tau_back + chi_tau_back_adjoint;           // dgl_phonons_chiToX( chi_tau_back, 'g' );
                     auto X_tau_back_u = 1.i * ( chi_tau_back - chi_tau_back_adjoint ); // dgl_phonons_chiToX( chi_tau_back, 'u' );

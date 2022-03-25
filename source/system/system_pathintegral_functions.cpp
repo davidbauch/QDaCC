@@ -21,8 +21,6 @@ Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
 
 Scalar System::dgl_phonon_S_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd ) {
     Scalar result = 0.0;
-    // if ( i_nd == j_nd )
-    //     return result;
     if ( i_n == i_nd )
         result -= phi_vector_int[t_delta] * operatorMatrices.phonon_coupling_index_value[i_n];
     if ( j_n == j_nd )
