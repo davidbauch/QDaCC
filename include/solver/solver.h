@@ -6,9 +6,6 @@ namespace QDLC {
 
 namespace Numerics {
 
-// Command variables
-static const unsigned int CHANGE_TO_SINGLETHREADED_MAINPROGRAM = 1111111111;
-
 namespace RKCoefficients {
 
 // RK 4&5 coefficients (Dormand–Prince method)
