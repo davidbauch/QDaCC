@@ -131,5 +131,3 @@ QDLC::SaveState QDLC::Numerics::calculate_definite_integral( Sparse rho, std::fu
     // Log::L3( "End Rho:\n{}\n", Dense( rho ) );
     return QDLC::SaveState( rho, t1 );
 }
-
-// const unsigned int QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM = 1111111111;

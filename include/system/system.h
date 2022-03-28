@@ -71,9 +71,6 @@ class System {
     // Finalizes all system parameters, empties cached variables and saves all outputs.
     bool exit_system( const int failure = 0 );
 
-    // Helperfunction for the solver class. This method allows the solver to change system parameters
-    bool command( unsigned int index = 0 );
-
     // Calculates the chirped Hamilton operator
     Sparse dgl_chirp( const double t );
 

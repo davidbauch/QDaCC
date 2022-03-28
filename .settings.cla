@@ -217,7 +217,7 @@ CLA_ARGUMENT = {
 	}
 	CLA_PARAMETER = {
 		subkey = 'phonontcutoff'
-		value = '-1'
+		value = '4ps'
 		datatype = 'string'
 		description = 'Phonon Cutoff time. -1 for automatic determination.'
 	}
@@ -746,6 +746,18 @@ CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'advLog' or 'L2' or 'L3'
 	description = 'Advanced logging.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'error'
+	description = 'Output Numerical RK45 Error. Only works if no interpolation method for the main time calculations is used.'
 	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''

@@ -26,7 +26,7 @@ Scalar System::dgl_phonons_phi( const double t ) {
  */
 void System::initialize_polaron_frame_functions() {
     if ( parameters.p_phonon_T >= 0 ) {
-        Log::L2( "[System-Polaron-Frame] Initializing Polaron Frame Functions.\n" );
+        Log::L2( "[System-PME] Initializing Polaron Frame Functions.\n" );
         // Initialize Phi(tau)
         double tau = 0.0;
         double last = 1.0;
@@ -34,11 +34,12 @@ void System::initialize_polaron_frame_functions() {
         while ( parameters.p_phonon_tcutoff < 0 ? true : ( tau < parameters.p_phonon_tcutoff ) ) {
             phi_vector[tau] = dgl_phonons_phi( tau );
             dgl_phonons_greenf_matrix( tau, 'g' );
+            // FIXME: doesnt really work for stepsizes < 100fs
             if ( parameters.p_phonon_tcutoff < 0 and phi_vector.size() > 1 ) {
-                double current = std::abs( phi_vector[tau] );
-                if ( std::abs( 1.0 - current / last ) < 1E-2 or std::abs( 1.0 - current / first ) < 1E-3 ) {
+                double current = std::real( phi_vector[tau] );
+                if ( std::abs( 1.0 - last / current ) < 1E-3 ) {
                     parameters.p_phonon_tcutoff = tau;
-                    Log::L2( "[System-Polaron-Frame] Polaron t-cutoff was automatically determined to t_cutoff = {}\n", parameters.p_phonon_tcutoff );
+                    Log::L2( "[System-PME] Polaron t-cutoff was automatically determined to t_cutoff = {}\n", parameters.p_phonon_tcutoff );
                     break;
                 }
                 last = current;
@@ -63,7 +64,7 @@ void System::initialize_polaron_frame_functions() {
             // }
             // std::fclose( fp_phonons );
         }
-        Log::L2( "[System-Polaron-Frame] Done.\n" );
+        Log::L2( "[System-PME] Done.\n" );
     }
 }
 
@@ -191,7 +192,7 @@ Sparse &System::dgl_phonons_greenf_matrix( double t, const char mode ) {
             u.coeffRef( row, col ) = std::sinh( phi * val );
         }
     }
-    Log::L3( "[System-Polaron-Frame] Calculated Phi Phonon Matrix cache for tau = {} -> Phi(tau) = {}\n", t, phi );
+    Log::L3( "[System-PME] Calculated Phi Phonon Matrix cache for tau = {} -> Phi(tau) = {}\n", t, phi );
     if ( mode == 'g' )
         return operatorMatrices.phi_vector_matrix_cache_g[t];
     return operatorMatrices.phi_vector_matrix_cache_u[t];
@@ -342,13 +343,13 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             // Index was found, chi(t-tau) sum used from saved vector
             auto map_index_to = savedCoefficients.begin();
             if ( parameters.numerics_use_saved_coefficients and savedCoefficients.count( t ) > 0 ) {
-                Log::L3( "[System-Polaron-Frame] Thread #{} - Found {}\n", omp_get_thread_num(), t );
+                Log::L3( "[System-PME] Thread #{} - Found {}\n", omp_get_thread_num(), t );
                 auto &coeff = savedCoefficients[t][0.0];
                 chi_tau_back_u = coeff.mat1;
                 chi_tau_back_g = coeff.mat2;
                 track_getcoefficient_read++;
             } else if ( parameters.numerics_use_saved_coefficients and savedCoefficients.size() > 2 and savedCoefficients.rbegin()->first > t ) {
-                Log::L3( "[System-Polaron-Frame] Element {} should be in here as max is {}, trying to find it...\n", t, savedCoefficients.rbegin()->first );
+                Log::L3( "[System-PME] Element {} should be in here as max is {}, trying to find it...\n", t, savedCoefficients.rbegin()->first );
                 QDLC::SaveStateTau *min;
                 QDLC::SaveStateTau *max;
                 for ( auto &[nt, other] : savedCoefficients ) {
@@ -358,12 +359,12 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                     min = max;
                 }
 
-                Log::L3( "[System-Polaron-Frame] Found Phonon index! Interpolating from {} - {} to {}\n", min->t, max->t, t );
+                Log::L3( "[System-PME] Found Phonon index! Interpolating from {} - {} to {}\n", min->t, max->t, t );
                 chi_tau_back_u = min->mat1 + ( t - min->t ) / ( max->t - min->t ) * max->mat1;
                 chi_tau_back_g = min->mat2 + ( t - min->t ) / ( max->t - min->t ) * max->mat2;
                 track_getcoefficient_read_interpolated++;
             } else {
-                Log::L3( "[System-Polaron-Frame] {} (Re)Calculating {}\n", omp_get_thread_num(), t );
+                Log::L3( "[System-PME] {} (Re)Calculating {}\n", omp_get_thread_num(), t );
                 // Index was not found, (re)calculate chi(t-tau) sum
                 // Initialize temporary matrices to zero for threads to write to
                 std::vector<Sparse> threadmap_u( parameters.numerics_phonons_maximum_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
@@ -380,7 +381,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 for ( int _tau = 0; _tau < _taumax; _tau++ ) {
                     double tau = ( 1.0 * _tau ) * parameters.numerics_subiterator_stepsize;
                     // Sparse chi_tau = dgl_phonons_chi( t ); // dgl_phonons_chi( t - tau );
-                    //  Log::L3( "[System-Polaron-Frame] Thread #{} - _tau = {}, size of vec = {}, Chi Index = {}\n", omp_get_thread_num(), _tau, chis_transformed_u.size(), std::min<int>( chis_transformed_u.size() - 1, _tau ) );
+                    //  Log::L3( "[System-PME] Thread #{} - _tau = {}, size of vec = {}, Chi Index = {}\n", omp_get_thread_num(), _tau, chis_transformed_u.size(), std::min<int>( chis_transformed_u.size() - 1, _tau ) );
                     //  auto &X_tau_back_u = X_transformed_u.at( std::min<int>( X_transformed_u.size() - 1, _tau ) ).mat;
                     // auto &X_tau_back_g = X_transformed_g.at( std::min<int>( X_transformed_g.size() - 1, _tau ) ).mat;
                     // auto &chi_tau_back = chis_transformed.at( std::min<int>( chis_transformed.size() - 1, _tau ) ).mat;
@@ -412,7 +413,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             // Calculate phonon contributions from (saved/calculated) coefficients and rho(t)
             Sparse integrant = parameters.numerics_subiterator_stepsize * ( dgl_kommutator( XUT, chi_tau_back_u * rho ) + dgl_kommutator( XGT, chi_tau_back_g * rho ) );
             Sparse adjoint = integrant.adjoint();
-            Log::L3( "[System-Polaron-Frame] Thread #{} - Adding ret value for {}\n", omp_get_thread_num(), t );
+            Log::L3( "[System-PME] Thread #{} - Adding ret value for {}\n", omp_get_thread_num(), t );
             ret -= integrant + adjoint;
         } else {
             std::vector<Sparse> threadmap_u( parameters.numerics_phonons_maximum_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
@@ -474,6 +475,6 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             }
         }
     }
-    Log::L3( "[System-Polaron-Frame] Thread #{} - Returning for {}\n", omp_get_thread_num(), t );
+    Log::L3( "[System-PME] Thread #{} - Returning for {}\n", omp_get_thread_num(), t );
     return ret;
 }

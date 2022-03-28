@@ -24,6 +24,8 @@ class ODESolver {
     std::map<double, Sparse> savedHamiltons;                               // Vector for saved matrix-time tuples for hamilton operators
     std::map<double, std::vector<std::vector<Sparse>>> pathint_propagator; // Propagators for the path integral. Used for their corresponding correlation functions.
     std::map<double, size_t> rho_index_map;                                // Maps t_t onto i for accessing the savedSate Vector via doubles.
+    std::vector<std::tuple<double, double>> rk_error_accepted;
+    std::vector<std::tuple<double, double, double, int>> rk_error;
 
     // Path Integral Helper Variables
     std::vector<int> pathint_tensor_dimensions;
@@ -132,6 +134,9 @@ class ODESolver {
 
     // Integrates the Raman photon population. Very runtime costly. TODO: Multithread/Optimize integral.
     bool calculate_raman_population( System &s, const std::string &electronic_transition1, const std::string &electronic_transition2, const std::string &optical_transition, const std::string &pulse_mode );
+
+    // Outputs numerical data
+    bool output_numerical_data( System &s );
 };
 
 } // namespace Numerics

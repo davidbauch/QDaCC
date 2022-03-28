@@ -26,14 +26,14 @@ endif
 ifeq ($(OS),Windows_NT)
 	LIB_FLAGS += -std=c++2a
 	TARGET_DIR = ../../Threadhandler
-	TARGET_EXEC := QDLC-3.3.3.exe
+	TARGET_EXEC := QDLC-3.3.4.exe
 	BUILD_DIR = ./build/win
 	LIB_LINKS += external/easy/libeasy_profiler.dll.a
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
 		LIB_FLAGS += -std=c++20
-		TARGET_EXEC = QDLC-3.3.3.out
+		TARGET_EXEC = QDLC-3.3.4.out
 		TARGET_DIR = /Users/davidbauch/bin
 		BUILD_DIR = ./build/darwin
 		COMPILER = g++-10
@@ -41,7 +41,7 @@ else
 	endif
 	ifeq ($(UNAME_S),Linux)
 		LIB_FLAGS += -std=c++2a
-		TARGET_EXEC = QDLC-3.3.3.out
+		TARGET_EXEC = QDLC-3.3.4.out
 		TARGET_DIR = ./
 		BUILD_DIR = ./build/linux
 		COMPILER = g++

@@ -228,7 +228,7 @@ bool System::exit_system( const int failure ) {
         p.log();
     for ( auto &c : chirp )
         c.log();
-    Log::L2( "[System-Polaron-Frame] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Interpolate/Read: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_interpolated );
+    Log::L2( "[System-PME] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Interpolate/Read: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_interpolated );
     Log::L2( "[System] Number of approx +/- adjustments: {}\n", globaltries );
     Log::L1( "[System] Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
     fileoutput.close();

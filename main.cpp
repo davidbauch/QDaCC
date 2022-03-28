@@ -86,6 +86,9 @@ int main( int argc, char* argv[] ) {
         // G1 and G2 statistics
         solver.calculate_advanced_photon_statistics( system );
 
+        // Output Numerical stuff
+        solver.output_numerical_data( system );
+
         // Finalizing all calculations
         system.exit_system();
 

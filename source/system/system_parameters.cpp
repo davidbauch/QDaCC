@@ -97,7 +97,6 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     p_omega_decay = QDLC::CommandlineArguments::get_parameter<double>( "--system", "gamma" );
     p_initial_state_s = QDLC::CommandlineArguments::get_parameter( "--R" );
 
-    // Look for --spectrum, if not found, no spectrum is evaluated
     iterations_tau_resolution = QDLC::CommandlineArguments::get_parameter<int>( "--G", "gridres" );
     numerics_use_interactionpicture = QDLC::CommandlineArguments::get_parameter_passed( "-noInteractionpic" ) ? false : true;
     numerics_use_rwa = QDLC::CommandlineArguments::get_parameter_passed( "-noRWA" ) ? 0 : 1;
@@ -120,6 +119,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     numerics_calculate_timeresolution_indistinguishability = QDLC::CommandlineArguments::get_parameter_passed( "-timedepInd" ); // DEPRECATED                                                                             //FIXME: Doesnt work right now //DEPRECATED
     numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
     s_numerics_interpolate = QDLC::CommandlineArguments::get_parameter( "--interpolateOrder" );
+    numerics_output_rkerror = QDLC::CommandlineArguments::get_parameter_passed( "-error" );
 
     // Phonon Parameters
     p_phonon_alpha = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononalpha" );

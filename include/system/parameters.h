@@ -73,6 +73,9 @@ class Parameters {
     std::string p_initial_state_s;
     int p_initial_state;
 
+    // Output RK Error
+    bool numerics_output_rkerror;
+
     Parameter p_omega_coupling;
     Parameter p_omega_cavity_loss;
     Parameter p_omega_pure_dephasing;

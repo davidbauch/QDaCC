@@ -7,8 +7,8 @@
 // @return: [bool] True if calculations were sucessfull, else false
 
 bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution, bool normalize ) {
-    // Send system command to change to single core mainprogram, because this memberfunction is already using multithreading
-    s.command( QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM );
+    // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading
+    s.parameters.numerics_phonons_maximum_threads = 1;
     // Calculate G1(t,tau) with given operator matrices
     std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 );
     auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
