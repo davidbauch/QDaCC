@@ -68,6 +68,7 @@ std::vector<QDLC::SaveState> interpolate_curve( const std::vector<QDLC::SaveStat
 double get_tdelta( const Dense &gmat_time, size_t fixed_index, size_t var_index );
 double get_taudelta( const Dense &gmat_time, size_t fixed_index, size_t var_index );
 double get_tdelta( const std::vector<SaveState> &savedStates, size_t var_index );
+
 } // namespace Numerics
 
 } // namespace QDLC

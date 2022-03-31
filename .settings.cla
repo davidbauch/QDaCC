@@ -146,6 +146,18 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '2hyphen'
+	key = 'detector'
+	description = 'Detector Settings'
+	group = 'Systemparameter'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'none'
+		datatype = 'string'
+		description = 'Detector Settings. Syntax: [time_center:time_range:spectral_center:spectral_range]'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
 	key = 'system'
 	description = 'All system parameters'
 	group = 'Systemparameter'

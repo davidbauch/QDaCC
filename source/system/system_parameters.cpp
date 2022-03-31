@@ -80,6 +80,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     inputstring_wigner = QDLC::CommandlineArguments::get_parameter( "--G", "GW" );
     inputstring_raman = QDLC::CommandlineArguments::get_parameter( "--G", "GR" );
     inputstring_correlation_resolution = QDLC::CommandlineArguments::get_parameter( "--G", "grid" );
+    inputstring_detector = QDLC::CommandlineArguments::get_parameter( "--detector" );
 
     inputstring_SPconf = QDLC::CommandlineArguments::get_parameter( "--SPconf" );
 
@@ -518,6 +519,19 @@ void Parameters::parse_system() {
             conf_s.numerical["Res"] = conf.size() > 2 ? QDLC::Misc::convertParam<Parameter>( conf[2] ) : Parameter( 0.0 );
             input_conf["PulseConf"] = conf_s;
         }
+    }
+    {
+        input_s conf_s;
+        if ( !( inputstring_detector == "none" ) ) {
+            Log::L2( "[System-Parameters] Setting up detector...\n" );
+            auto conf = QDLC::String::splitline( inputstring_detector, ':' );
+            conf_s.numerical["time_center"] = QDLC::Misc::convertParam<Parameter>( conf[0] );
+            conf_s.numerical["time_range"] = QDLC::Misc::convertParam<Parameter>( conf[1] );
+            conf_s.numerical["spectral_range"] = QDLC::Misc::convertParam<Parameter>( conf[2] );
+            conf_s.numerical["center_range"] = QDLC::Misc::convertParam<Parameter>( conf[3] );
+            conf_s.numerical["power_amplitude"] = QDLC::Misc::convertParam<Parameter>( conf[4] );
+        }
+        input_conf["Detector"] = conf_s;
     }
 }
 

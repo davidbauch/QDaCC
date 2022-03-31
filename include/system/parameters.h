@@ -206,6 +206,7 @@ class Parameters {
     std::string inputstring_pulse;
     std::string inputstring_chirp;
     std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_raman, inputstring_correlation_resolution, inputstring_SPconf;
+    std::string inputstring_detector;
     // Input Maps. The Temporary Inputstrings will get verwurstet into these maps, such that their parameters are available via their corresponding string key.
     std::map<std::string, input_s> input_electronic;
     std::map<std::string, input_s> input_photonic;

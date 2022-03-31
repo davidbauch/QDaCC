@@ -3,6 +3,28 @@
 #include <complex>
 //#include <specfunc.h>
 
+void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, const Dense &timemat ) {
+    if ( s.parameters.inputstring_detector == "none" ) {
+        if ( detector_matrix.rows() == 0 )
+            detector_matrix = Dense::Ones( mat.rows(), mat.cols() );
+        return;
+    }
+    if ( detector_matrix.rows() == 0 ) {
+        detector_matrix = Dense( mat.rows(), mat.cols() );
+        double detector_t_center = s.parameters.input_conf["Detector"].numerical["time_center"];
+        double detector_t_range = s.parameters.input_conf["Detector"].numerical["time_range"];
+        double detector_power = s.parameters.input_conf["Detector"].numerical["power_amplitude"];
+        for ( int i = 0; i < mat.rows(); i++ ) {
+            double time = std::real( timemat( i, 0 ) );
+            for ( int j = 0; j < mat.cols() - i; j++ ) {
+                double tau = std::imag( timemat( i, j ) );
+                detector_matrix( i, j ) = std::exp( -std::pow( ( time - detector_t_center ) / detector_t_range, detector_power ) ) * std::exp( -std::pow( ( tau - detector_t_center ) / detector_t_range, detector_power ) );
+            }
+        }
+    }
+    mat = mat.cwiseProduct( detector_matrix );
+}
+
 bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s ) {
     // Calculate Spectra
     auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
@@ -31,6 +53,19 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     auto &raman_s = s.parameters.input_correlation["Raman"];
     for ( int i = 0; i < raman_s.string_v["ElMode1"].size(); i++ ) {
         calculate_raman_population( s, raman_s.string_v["ElMode1"][i], raman_s.string_v["ElMode2"][i], raman_s.string_v["OpMode"][i], raman_s.string_v["PMode"][i] );
+    }
+    // Detector Matrix
+    if ( detector_matrix.rows() != 0 ) {
+        Log::L2( "Saving Detector Matrix to detector_matrix.txt...\n" );
+        FILE *f_detector = std::fopen( ( s.parameters.working_directory + "detector_matrix.txt" ).c_str(), "w" );
+        fmt::print( f_detector, "Time_index\ttau_index\tD(t)*D(t+tau)\n" );
+        for ( int k = 0; k < detector_matrix.rows(); k++ ) {
+            for ( int l = 0; l < detector_matrix.cols(); l++ ) {
+                fmt::print( f_detector, "{}\t{}\t{:.8e}\n", k, l, std::real( detector_matrix( k, l ) ) );
+            }
+            fmt::print( f_detector, "\n" );
+        }
+        std::fclose( f_detector );
     }
     // Calculate G1/G2 functions
     auto &gs_s = s.parameters.input_correlation["GFunc"];

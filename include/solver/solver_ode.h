@@ -30,6 +30,9 @@ class ODESolver {
     // Path Integral Helper Variables
     std::vector<int> pathint_tensor_dimensions;
 
+    // Detector matrix
+    Dense detector_matrix;
+
     // Description: Saves a tuple of a complex (density-)matrix and time, ensuring times and matrices don't get mixed up
     // Type: ODESolver private function
     // @param mat: [&Sparse] Matrix to save
@@ -136,6 +139,8 @@ class ODESolver {
 
     // Outputs numerical data
     bool output_numerical_data( System &s );
+
+    void apply_detector_function( System &s, Dense &mat, const Dense &timemat );
 };
 
 } // namespace Numerics
