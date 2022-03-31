@@ -17,8 +17,6 @@ class System {
 
     // ##### System Components #####
     std::vector<Chirp> chirp;
-    // Pulse pulse_H; //REMOVE
-    // Pulse pulse_V; //REMOVE
     std::vector<Pulse> pulse;
     FileOutput fileoutput;
     Parameters parameters;
@@ -32,16 +30,6 @@ class System {
 
     // ##### Helper Variables #####
     std::map<std::string, double> emission_probabilities;
-    // Helpervariables for photon emission probability
-    // double photonemissionprob_integral_H = 0;
-    // double photonemissionprob_integral_V = 0;
-    // double electronic_emissionprob_integral_H = 0;
-    // double electronic_emissionprob_integral_V = 0;
-    //// Helpervariables for raman emission process
-    // double ramanphotonemissionprob_integral_H = 0;
-    // double ramanphotonemissionprob_integral_V = 0;
-    // Scalar ramanphotonpopulation_integral_H = 0;
-    // Scalar ramanphotonpopulation_integral_V = 0;
 
     // Coefficient Tracking variables
     int track_getcoefficient_read = 0;              // Read coefficient from vector
@@ -54,111 +42,217 @@ class System {
     // Time Trafo Matrix Caching
     Sparse timeTrafoMatrix;
 
-    // ##### Content #####
-    // Constructor
+    /**
+     * @brief Constructs System
+     *
+     */
     System();
     System( const std::vector<std::string> &input );
 
-    // Initializes the System class. Will be called inside the system constructor
+    /**
+     * @brief Transforms a Matrix into the interaction picture if enabled.
+     *
+     * @return Sparse input matrix in the interaction picture
+     */
     Sparse dgl_timetrafo( Sparse ret, const double t );
 
-    // Calculates the differential equation for different input times for evaluation with the any-order Runge-Kutta solver
-    Sparse dgl_rungeFunction( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos );
+    /**
+     * @brief Calculates the differential equation for different input times for evaluation with the any-order Runge-Kutta solver
+     *
+     * @return Sparse Matrix Runge Function
+     */
+    Sparse dgl_runge_function( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos );
 
-    // Initializes all system parameters, cache variables and precalculates all functions that allow for caching
+    /**
+     * @brief Initializes all system parameters, cache variables and precalculates all functions that allow for caching
+     *
+     * @return true If Initialization was succesfull
+     * @return false Otherwise
+     */
     bool init_system();
 
-    // Finalizes all system parameters, empties cached variables and saves all outputs.
+    /**
+     * @brief Finalizes all system parameters, empties cached variables and saves all outputs.
+     *
+     * @return true If Finalization was succesfull
+     * @return false Otherwise
+     */
     bool exit_system( const int failure = 0 );
 
-    // Calculates the chirped Hamilton operator
+    /**
+     * @brief Calculates the chirped Hamilton operator
+     *
+     * @return Sparse Matrix Chirp Contribution to add onto the Hamilton Operator
+     */
     Sparse dgl_chirp( const double t );
 
-    // Calculates the pulse Hamilton operator
+    /**
+     * @brief Calculates the pulse Hamilton operator
+     *
+     * @return Sparse Matrix Pulse Contribution to add onto the Hamilton Operator
+     */
     Sparse dgl_pulse( const double t );
 
-    // Calculates and outputs expectation values for all available observables
-    void expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer );
+    /**
+     * @brief Calculates and outputs expectation values for all available observables
+     *
+     */
+    void calculate_expectation_values( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer );
 
-    // Calculates or returns the cached(if allowed) Hamiltonian for current time t.
-    // This function is important because it allows for e.g. path integral to use different definitions of H
-    // where no phonon <B> is incorporated.
-    Sparse dgl_getHamilton( const double t );
+    /**
+     * @brief Calculates or returns the cached(if allowed) Hamiltonian for current time t.
+     *
+     * @return Sparse Matrix Hamilton Operator
+     */
+    Sparse dgl_get_hamilton( const double t );
 
-    // Validates trace is still contained, if not, outputs trace in file and returns false.
-    // Can also be forced by setting force = true
-    bool traceValid( Sparse &rho, double t_hit, bool force = false );
+    /**
+     * @brief Validates trace is still contained, if not, outputs trace in file and returns false. Can also be forced by setting force = true.
+     *
+     * @return true Trace is valid
+     * @return false Trace is not valid
+     */
+    bool trace_valid( Sparse &rho, double t_hit, bool force = false );
 
     // ##### Phonon Functions and Helperfunctions #####
 
-    // Calculates the differential for the phonon matrix. Uses the dgl_getHamilton function.
+    /**
+     * @brief Calculates the differential for the phonon matrix. Uses the dgl_get_hamilton function.
+     *
+     * @return Sparse Matrix Runge Function
+     */
     Sparse dgl_phonons_rungefunc( const Sparse &chi, const double t );
 
-    // Calculates the phonon X Matrix from a given Chi
+    /**
+     * @brief Calculates the phonon X Matrix from a given Chi
+     *
+     * @return Sparse Matrix X
+     */
     Sparse dgl_phonons_chiToX( const Sparse &chi, const double t = 0.0, const char mode = 'u' );
 
-    // Either calculates or returns the polaron green function from cache
+    /**
+     * @brief Either calculates or returns the polaron green function from cache
+     *
+     * @return Scalar valued Green Function
+     */
     Scalar dgl_phonons_greenf( double t, const char mode = 'u' );
 
-    // Same but with phonon coupling scaling, returning a Sparse Matrix to do cwiseMultiplication with
+    /**
+     * @brief Same but with phonon coupling scaling, returning a Sparse Matrix to do cwiseMultiplication with. This function will cache the matrices to avoid expensive recalculations.
+     *
+     * @return Sparse& Matrix Reference with Green Function per element.
+     */
     Sparse &dgl_phonons_greenf_matrix( double t, const char mode = 'u' );
 
-    // Claculates the Phi function for the polaron green function. This function will be cached
+    /**
+     * @brief Calculates the Phonon Correlation Kerbal Phi(tau) = int_0^inf dw J(w) / w^2 * [coth(hbar w/(2 k_b T)) * cos(w t) - i*sin(w t)]
+     *
+     * @return Scalar value Phi(t)
+     */
     Scalar dgl_phonons_phi( const double t );
 
-    // Calculates the Lindbladian coefficients for the analytical phonon contributions using the polaron frame
+    /**
+     * @brief Calculates the Lindbladian coefficients for the analytical phonon contributions using the polaron frame
+     *
+     * @return double valued rate for the corresponding coefficient
+     */
     double dgl_phonons_lindblad_coefficients( double t, double energy, double coupling, Scalar pulse, const char mode = 'L', const double sign = 1.0 );
 
-    // Initializes the polaron functions
+    /**
+     * @brief Initializes the Polaron Frame Functions by precalculating the Phi(tau) function and the corresponding Green functions
+     *
+     */
     void initialize_polaron_frame_functions();
 
-    // Calculates Chi(t,0)
+    /**
+     * @brief Calculates Chi(t,0)
+     *
+     * @return Sparse Matrix
+     */
     Sparse dgl_phonons_chi( const double t );
 
-    // Calculates Chi(t,tau > 0) after Chi(t,0) was calculated with dgl_phonons_chi.
-    // Uses different approaches
+    /**
+     * @brief Calculates Chi(t,tau > 0) after Chi(t,0) was calculated with dgl_phonons_chi.
+     *
+     * @return Vector of SavedStates
+     */
     std::vector<QDLC::SaveState> dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, double tau );
 
-    // Calculates L_phonons(t)
+    /**
+     * @brief Calculates the Polaron Master Equation Contribution L_phonons(t)
+     *
+     * @return Sparse Matrix to add onto the usual von-Neumann equatation / the runge function
+     */
     Sparse dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDLC::SaveState> &past_rhos );
 
-    // Path integral phonon functions
+    /**
+     * @brief Initializes the Path Integral Functions by precalculating the Kernel functions
+     *
+     */
     void initialize_path_integral_functions();
-    Scalar dgl_phonons_kernel( const double t, const double t_step );
-    Scalar dgl_phonon_S_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd );
-    // ##### Template Functions #####
 
-    // Calculates the expectation values for a given operator
+    /**
+     * @brief Calculates the Phonon Kernel Functions for the Path Integral Method
+     *
+     * @return Scalar valued K(t)
+     */
+    Scalar dgl_phonons_kernel( const double t, const double t_step );
+
+    /**
+     * @brief Calculates the phonon Correlation function for the Path Integral Method
+     *
+     * @return Scalar valued S(i,j,id,jd)
+     */
+    Scalar dgl_phonon_S_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd );
+
+    /**
+     * @brief Calculates the expectation values for a given operator
+     *
+     * @return Expectation Value <op>
+     */
     template <typename T, typename R>
     inline R dgl_expectationvalue( const T &rho, const T &op, const double t ) {
-        return getTrace<R>( ( rho * dgl_timetrafo( op, t ) ).eval() );
+        return get_trace<R>( ( rho * dgl_timetrafo( op, t ) ).eval() );
     }
 
-    // Calculates the transformed density matrix for the first order correlation function
+    /**
+     * @brief Calculates the transformed two-time density matrix for the first order correlation function
+     *
+     * @return T op*rho
+     */
     template <typename T>
     inline T dgl_calc_rhotau( const T &rho, const T &op, const double t ) {
         return dgl_timetrafo( op, t ) * rho;
     }
 
-    // Calculates the transformed density matrix for the second order correlation function
+    /**
+     * @brief Calculates the transformed two-time density matrix for the second order correlation function.
+     *
+     * @return op1*rho*op2
+     */
     template <typename T>
     inline T dgl_calc_rhotau_2( const T &rho, const T &op1, const T &op2, const double t ) {
         return dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
     }
 
-    // Functions to determine numerical matrix trace from input types supporting .trace()
-    // @param &mat: Input dense matrix
-    // @return Matrix trace
+    /**
+     * @brief Wrapper to calculate the matrix trace from Dense input types
+     *
+     * @return Trace(mat)
+     */
     template <typename T>
-    inline T getTrace( const Dense &mat ) const {
+    inline T get_trace( const Dense &mat ) const {
         return mat.trace();
     }
-    // Functions to determine numerical matrix trace from sparse input types not supporting .trace()
-    // @param &mat: Input sparse matrix
-    // @return Matrix trace of type T
+
+    /**
+     * @brief Wrapper to calculate the matrix trace from Sparse input types not supporting .trace()
+     *
+     * @return Trace(mat)
+     */
     template <typename T>
-    inline T getTrace( const Sparse &mat ) const {
-        // return getTrace<T>( Dense( mat ) );
+    inline T get_trace( const Sparse &mat ) const {
+        // return get_trace<T>( Dense( mat ) );
         T ret = (T)0.0;
         for ( int k = 0; k < mat.outerSize(); ++k ) {
             for ( Sparse::InnerIterator it( mat, k ); it; ++it ) {
@@ -170,8 +264,12 @@ class System {
         return ret;
     }
 
-    // Function to calculate the partial trace for a specific base index
-    Dense partialTrace( const Sparse &mat, int i ) {
+    /**
+     * @brief Function to calculate the partial trace for a specific base index. The base index is an internal value determined automatically on generation of the matrices.
+     * The base index from a base state vector |i,j,k,l,...> can be one of the i,j,k,l indices to partially trace over.
+     * @return Dense
+     */
+    Dense partial_trace( const Sparse &mat, int i ) {
         Dense ret = Dense::Zero( operatorMatrices.base_selfhilbert.at( i ).rows(), operatorMatrices.base_selfhilbert.at( i ).cols() );
         for ( int k = 0; k < mat.outerSize(); ++k ) {
             for ( Sparse::InnerIterator it( mat, k ); it; ++it ) {
@@ -186,33 +284,31 @@ class System {
         return ret;
     }
 
-    // Calculates the Kommutator of two matrices of identical type
-    // @param &A,&B: Input matrices
-    // @return Kommutator of A and B where [A,B] = AB-BA
+    /**
+     * @brief Calculates the Kommutator [A,B] of two matrices A and B of identical type
+     *
+     * @return Eigen Reference for A*B-B*A
+     */
     template <typename T1, typename T2>
     inline Eigen::CwiseBinaryOp<Eigen::internal::scalar_difference_op<typename T1::Scalar, typename T1::Scalar>, const Eigen::Product<T1, T2, 2>, const Eigen::Product<T2, T1, 2>> dgl_kommutator( const T1 &A, const T2 &B ) {
         return A * B - B * A;
     }
 
-    // Calculates the Anti-Kommutator of two matrices of identical type
-    // @param &A,&B: Input matrices
-    // @return Anti-Kommutator of A and B where [A,B]^- = BA-AB
+    /**
+     * @brief Calculates the Anti-Kommutator [A,B]_- of two matrices A and B of identical type
+     *
+     * @return Eigen Reference for A*B+B*A
+     */
     template <typename T1, typename T2>
     inline Eigen::CwiseBinaryOp<Eigen::internal::scalar_sum_op<typename T1::Scalar, typename T1::Scalar>, const Eigen::Product<T1, T2, 2>, const Eigen::Product<T2, T1, 2>> dgl_antikommutator( const T1 &A, const T2 &B ) {
         return A * B + B * A;
     }
 
-    // Calculates the Lindbladian of two input matrices where L = 2*A*rho*B - B*A*rho - rho*B*A
-    // @param &rho: Input density matrix
-    // @param &op: Input matrix O
-    // @param &opd: Input matrix O^dagger
-    // @return Returns the Lindbladian of rho, O and O^dagger
-
-    // 2*A
-    // Eigen::CwiseBinaryOp<Eigen::internal::scalar_product_op<double, std::__1::complex<double>>, const Eigen::CwiseNullaryOp<Eigen::internal::scalar_constant_op<double>, const Eigen::MatrixXd>, const QDLC::Type::Sparse>
-    // A*B*C
-    // Eigen::Product<Eigen::Product<QDLC::Type::Sparse, QDLC::Type::Sparse, 2>, QDLC::Type::Sparse, 2>
-
+    /**
+     * @brief Calculates the Lindbladian of two input matrices where L = 2*op*rho*opd - opd*op*rho - rho*opd*op
+     *
+     * @return T
+     */
     template <typename T, typename T2, typename T3>
     inline T dgl_lindblad( const T &rho, const T2 &op, const T3 &opd ) {
         return 2.0 * op * rho * opd - opd * op * rho - rho * opd * op;

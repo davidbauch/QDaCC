@@ -8,7 +8,7 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
     Log::L2( "[Wigner] Calculating Wigner function for mode {}/{}\n", s_mode, base );
     // The Wigner function uses the interpolated savedStates, not the actually calculated states from the RK45 method.
     for ( int i = 0; i < savedStates.size(); i += skips ) {
-        reduced_rho.emplace_back( s.partialTrace( getRhoAt( i ), base ) );
+        reduced_rho.emplace_back( s.partial_trace( getRhoAt( i ), base ) );
         time.emplace_back( getTimeAt( i ) );
     }
 

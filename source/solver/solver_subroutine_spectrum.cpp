@@ -17,7 +17,7 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
 
     // Create Timer and Progressbar for the spectrum loop
     Timer &timer = Timers::create( "Spectrum (" + s_g1 + ")" );
-    int totalIterations = resolution; // getIterationNumberSpectrum( s );
+    int totalIterations = resolution;
     ProgressBar progressbar = ProgressBar();
     timer.start();
     Log::L2( "Calculating spectrum... Calculating frequencies...\n" );

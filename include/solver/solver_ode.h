@@ -69,7 +69,6 @@ class ODESolver {
     // @return [int] Number of tau-direction iterations
     int getIterationNumberTau( System &s );
 
-    int getIterationNumberSpectrum( System &s );
     double &getTimeAt( int i );
     Sparse &getRhoAt( int i );
 

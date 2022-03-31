@@ -49,7 +49,7 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Timer &evalTimer = Timers::create( "Expectation-Value-Loop" );
     evalTimer.start();
     Log::L2( "[Solver] Calculating expectation values...\n" );
-    s.expectationValues( output_states, evalTimer );
+    s.calculate_expectation_values( output_states, evalTimer );
     evalTimer.end();
     Log::L2( "[Solver] Done!\n" );
 

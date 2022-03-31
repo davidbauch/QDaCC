@@ -59,20 +59,21 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
     for ( auto mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
         auto &gmat_time = cache[mode + "_time"];
-        bool didout = false;
-        // rho[mode][0] = cache[mode]( 0, 0 ) * Numerics::get_tdelta( gmat_time, 0, 0 ) * Numerics::get_taudelta( gmat_time, 0, 0 ); //*dt*dtau* Numerics::get_tdelta( gmat_time, 0, 0 );
-        // rho_g2zero[mode][0] = s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( 0 ), matmap_g2zero[mode], getTimeAt( 0 ) ) * Numerics::get_tdelta( gmat_time, 0, 0 );
-        for ( size_t i = 0; i < T; i++ ) {
-            double dt = Numerics::get_tdelta( gmat_time, 0, i );
-            rho[mode][i] = i > 0 ? rho[mode][i - 1] : 0.0;
-            for ( int tau = 0; tau < T - i; tau++ ) {
+        for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
+            // G2(t,tau)
+            rho[mode][upper_limit] = upper_limit > 0 ? rho[mode][upper_limit - 1] : 0.0;
+            for ( int i = 0; i <= upper_limit; i++ ) {
+                double dt = Numerics::get_tdelta( gmat_time, 0, i );
+                int tau = upper_limit - i;
+                // for ( int tau = 0; tau < T - i; tau++ ) {
                 double dtau = Numerics::get_taudelta( gmat_time, i, tau ); // Numerics::get_tdelta( gmat_time, 0, i + tau );
-                rho[mode][i] += cache[mode]( i, tau ) * dt * dtau;
+                rho[mode][upper_limit] += cache[mode]( i, tau ) * dt * dtau;
             }
-            double t_t = std::real( gmat_time( i, 0 ) ); // Note: all correlation functions have to have the same times. cache[mode+"_time"] else.
-            rho_g2zero[mode][i] = i > 0 ? rho_g2zero[mode][i - 1] + s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( rho_index_map[t_t] ), matmap_g2zero[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( 0 ), matmap_g2zero[mode], getTimeAt( 0 ) ) * dt;
-            if ( not didout ) {
-                didout = true;
+            // G2(t,0)
+            double dt = Numerics::get_tdelta( gmat_time, 0, upper_limit );
+            double t_t = std::real( gmat_time( upper_limit, 0 ) ); // Note: all correlation functions have to have the same times. cache[mode+"_time"] else.
+            rho_g2zero[mode][upper_limit] = upper_limit > 0 ? rho_g2zero[mode][upper_limit - 1] + s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( rho_index_map[t_t] ), matmap_g2zero[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( 0 ), matmap_g2zero[mode], getTimeAt( 0 ) ) * dt;
+            if ( mode == s_g2_1111 ) {
                 timer_c.iterate();
                 Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + "): " );
             }
@@ -129,11 +130,16 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         // Log::L3( "R = {}\n", R );
         // Log::L3( "Calculating sqrt(R)\n" );
         // Eigen::MatrixPower<Dense> SMPow( R );
-        auto R5 = R.sqrt();               // SMPow( 0.5 );
-        auto R5_g2zero = R_g2zero.sqrt(); // SMPow( 0.5 );
+        Dense R5 = R.sqrt();               // SMPow( 0.5 );
+        Dense R5_g2zero = R_g2zero.sqrt(); // SMPow( 0.5 );
         // Log::L3( "Calculating Eigenvalues\n" );
-        auto eigenvalues = R5.eigenvalues();
-        auto eigenvalues_g2zero = R5_g2zero.eigenvalues();
+        // auto eigenvalues = R5.eigenvalues();
+        // auto eigenvalues_g2zero = R5_g2zero.eigenvalues();
+        Eigen::SelfAdjointEigenSolver<Dense> eigensolver( R5 );
+        auto eigenvalues = eigensolver.eigenvalues();
+        Eigen::SelfAdjointEigenSolver<Dense> eigensolver_g2zero( R5_g2zero );
+        auto eigenvalues_g2zero = eigensolver_g2zero.eigenvalues();
+
         // Sometimes, the numerical method for eigenvalue evaluation yields crap (first element really big, rest shifted), so we check this here:
         // if ( QDLC::Math::abs2( eigenvalues( 3 ) ) > 50.0 ) {
         //    eigenvalues( 3 ) = eigenvalues( 2 );
@@ -149,7 +155,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         //}
         // Log::L1( "rho2phot = {}\n\nsqrtrho2phot = {}\n\nR = {}\n\nRS = {}\nEigenvalues at t = {} are {}\n", rho_2phot, sqrtrho2phot, R, R5, getTimeAt( i ), eigenvalues );
         auto conc = eigenvalues( 3 ) - eigenvalues( 2 ) - eigenvalues( 1 ) - eigenvalues( 0 );
-        // Log::L3( "Eigenvalues {}: C = {} - {} - {} - {}\n", k, eigenvalues( 3 ), eigenvalues( 2 ), eigenvalues( 1 ), eigenvalues( 0 ) );
+        // Log::L2( "Eigenvalues {} (size of vec: {}): C = {} - {} - {} - {}\n", k, eigenvalues.size(), eigenvalues( 3 ), eigenvalues( 2 ), eigenvalues( 1 ), eigenvalues( 0 ) );
         auto conc_g2zero = eigenvalues_g2zero( 3 ) - eigenvalues_g2zero( 2 ) - eigenvalues_g2zero( 1 ) - eigenvalues_g2zero( 0 );
         output.at( k ) = conc;
         output_simple.at( k ) = 2.0 * std::abs( rho_2phot( 3, 0 ) / rho_2phot.trace() );

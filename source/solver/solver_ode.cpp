@@ -17,7 +17,7 @@ Sparse QDLC::Numerics::ODESolver::getHamilton( System &s, const double t, bool u
     if ( s.parameters.numerics_use_saved_hamiltons ) {
         if ( savedHamiltons.count( t ) == 0 ) {
 #pragma omp critical
-            saveHamilton( s.dgl_getHamilton( t ), t );
+            saveHamilton( s.dgl_get_hamilton( t ), t );
             track_gethamilton_write++;
             track_gethamilton_calc++;
         }
@@ -25,7 +25,7 @@ Sparse QDLC::Numerics::ODESolver::getHamilton( System &s, const double t, bool u
         return savedHamiltons[t];
     }
     track_gethamilton_calc++;
-    return s.dgl_getHamilton( t );
+    return s.dgl_get_hamilton( t );
 }
 
 void QDLC::Numerics::ODESolver::saveState( const Sparse &mat, const double t, std::vector<QDLC::SaveState> &savedStates ) {
@@ -50,20 +50,6 @@ int QDLC::Numerics::ODESolver::getIterationNumberTau( System &s ) {
         for ( double t_tau = t_t + ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step ); t_tau < s.parameters.t_end; t_tau += ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step ) ) { // t + +s.parameters.t_step
             num++;
         }
-    }
-    return num;
-}
-
-// Description: Function to calculate the number of iterations used for spectru calculations
-// Type: ODESolver private function
-// @param s: [&System] Class providing set of system functions
-// @return: [int] Number of spectrum iterations
-
-int QDLC::Numerics::ODESolver::getIterationNumberSpectrum( System &s ) {
-    int num = 0;
-    // Spectrum steps
-    for ( int spec_w = 0; spec_w < s.parameters.iterations_w_resolution; spec_w++ ) {
-        num++;
     }
     return num;
 }

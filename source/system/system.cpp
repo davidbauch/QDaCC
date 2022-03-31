@@ -7,7 +7,7 @@ System::System( const std::vector<std::string> &input ) {
     // Initialize all subclasses with the input vector
     parameters = Parameters( input );
     operatorMatrices = OperatorMatrices( parameters );
-    operatorMatrices.outputOperators( parameters );
+    operatorMatrices.output_operators( parameters );
     // Create all possible file outputs
     fileoutput = FileOutput( parameters, operatorMatrices );
     // Initialize / Adjust the remaining system class
@@ -40,10 +40,10 @@ bool System::init_system() {
     }
     // pulse_V = Pulse( pulseinputs_V );
     if ( pulse.size() > 0 ) {
-        Pulse::fileOutput( parameters.subfolder + "pulse.txt", pulse, parameters.t_start, parameters.t_end, parameters.t_step );
+        Pulse::fileOutput( parameters.working_directory + "pulse.txt", pulse, parameters.t_start, parameters.t_end, parameters.t_step );
     }
     if ( chirp.size() > 0 ) {
-        chirp.back().fileOutput( parameters.subfolder + "chirp.txt" );
+        chirp.back().fileOutput( parameters.working_directory + "chirp.txt" );
     }
 
     // if ( parameters.numerics_use_saved_coefficients )
@@ -67,7 +67,7 @@ bool System::init_system() {
     return true;
 }
 
-Sparse System::dgl_rungeFunction( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos ) {
+Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos ) {
     Sparse ret = -1.0i * dgl_kommutator( H, rho );
     Sparse loss = Sparse( rho.rows(), rho.cols() );
     // Photon Loss
@@ -155,7 +155,7 @@ Sparse System::dgl_pulse( const double t ) {
     return ret;
 }
 
-void System::expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer ) {
+void System::calculate_expectation_values( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer ) {
     // Output expectation Values
     double t_pre = rhos.front().t;
     for ( auto &tup : rhos ) {
@@ -190,9 +190,9 @@ void System::expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer 
         if ( operatorMatrices.el_states.size() > 0 )
             fmt::print( fileoutput.fp_atomicinversion, "{:}\t{:}\n", el_out, el_em );
 
-        if ( !parameters.output_no_dm ) {
+        if ( !parameters.numerics_output_no_dm ) {
             fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
-            if ( parameters.output_full_dm ) {
+            if ( parameters.numerics_output_full_dm ) {
                 for ( int i = 0; i < parameters.maxStates; i++ )
                     for ( int j = 0; j < parameters.maxStates; j++ ) {
                         fmt::print( fileoutput.fp_densitymatrix, "{:.10e}\t", std::real( rho.coeff( i, j ) ) );
@@ -210,17 +210,8 @@ void System::expectationValues( const std::vector<QDLC::SaveState> &rhos, Timer 
     }
 }
 
-Sparse System::dgl_getHamilton( const double t ) {
+Sparse System::dgl_get_hamilton( const double t ) {
     return dgl_timetrafo( operatorMatrices.H_used + dgl_pulse( t ) + dgl_chirp( t ), t );
-}
-
-bool System::command( unsigned int index ) {
-    // The only reason for classes using this system class to set the main programs maximum threads to 1 is, if the usual T-direction is already done.
-    if ( index == QDLC::Numerics::CHANGE_TO_SINGLETHREADED_MAINPROGRAM ) {
-        parameters.numerics_phonons_maximum_threads = 1;
-        Log::L2( "[System] Set maximum number of Threads for primary calculations to {}\n", parameters.numerics_phonons_maximum_threads );
-    }
-    return true;
 }
 
 bool System::exit_system( const int failure ) {
@@ -235,14 +226,14 @@ bool System::exit_system( const int failure ) {
     return true;
 }
 
-bool System::traceValid( Sparse &rho, double t_hit, bool force ) {
-    double trace = std::real( getTrace<Scalar>( rho ) );
+bool System::trace_valid( Sparse &rho, double t_hit, bool force ) {
+    double trace = std::real( get_trace<Scalar>( rho ) );
     parameters.trace.emplace_back( trace );
     if ( trace < 0.99 || trace > 1.01 || force ) {
         if ( force )
             fmt::print( "[System] {} {} -> trace check failed at t = {} with trace(rho) = {}\n", QDLC::Message::Prefix::PERROR, QDLC::Message::global_error_divergent, t_hit, trace );
         terminate_message = QDLC::Message::global_error_divergent;
-        FILE *fp_trace = std::fopen( ( parameters.subfolder + "trace.txt" ).c_str(), "w" );
+        FILE *fp_trace = std::fopen( ( parameters.working_directory + "trace.txt" ).c_str(), "w" );
         for ( int i = 0; i < (int)parameters.trace.size() && parameters.t_step * 1.0 * i < t_hit; i++ ) {
             fmt::print( fp_trace, "{:.10e} {:.15e}\n", parameters.t_step * 1.0 * ( i + 1 ), parameters.trace.at( i ) );
         }

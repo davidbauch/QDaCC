@@ -20,18 +20,16 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
 
     int pbsize = akf_mat_g1.rows();
 
-    std::vector<Scalar> outp, outpv;
-    std::vector<Scalar> time;
-
     Sparse M1 = op_creator * op_annihilator;
 
     std::string fout = s_op_creator + "-" + s_op_annihilator;
     Timer &timer = Timers::create( "Indistinguishability " + fout );
     timer.start();
 
-    size_t T = std::min<size_t>( akf_mat_g1.rows(), savedStates.size() ); // Make sure G1 and G2 have same rows/cols/dts?
+    size_t T = std::min<size_t>( akf_mat_g1.rows(), savedStates.size() );
 
-    std::vector<Scalar> top, bottom, topv;
+    std::vector<Scalar> top, bottom, topv, outp, outpv, time;
+
     for ( int i = 0; i < T; i++ ) {
         outp.emplace_back( 0 );
         outpv.emplace_back( 0 );
@@ -40,26 +38,50 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
         topv.emplace_back( 0 );
         time.emplace_back( std::real( akf_mat_g1_time( i, 0 ) ) );
     }
-    // TODO: indist timedependent
-    // TODO: zeitabhängiges integral -> drechecksmatrix von klein nach groß etztalla
+
+    /**
+     * @brief Iteratively extracts the next "section" of a triangular integral, e.g
+     *
+     *  :
+     *  + :
+     *  : + :
+     *  : : + :
+     *  : : : + :
+     *  : : : : + :
+     *  : : : : : + :
+     * Where the "+" row is between current_iteration and upper_limit.
+     *
+     */
+    // for ( int current_iteration = 0; current_iteration < T; current_iteration++ ) {
+    //     Scalar result = 0.0;
+    //     for ( int t = current_iteration; t < upper_limit; t++ ) {
+    //         for ( int tau = 0; tau < upper_limit - current_iteration; tau++ ) {
+    //             top[t] += function( i, j );
+    //         }
+    //     }
+    // }
+
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-    for ( int i = 0; i < T; i++ ) {
-        double t_t = std::real( akf_mat_g1_time( i, 0 ) );
-        auto rho = getRhoAt( rho_index_map[t_t] );
-        for ( int j = 0; j < T - i and i + j < T; j++ ) {
-            double t_tau = std::real( akf_mat_g1_time( i + j, 0 ) ); // das hier is t+tau und nicht tau...
+    for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
+        for ( int i = 0; i <= upper_limit; i++ ) {
+            double t_t = std::real( akf_mat_g1_time( i, 0 ) );
+            auto rho = getRhoAt( rho_index_map[t_t] );
+            // for ( int j = 0; j < T - i and i + j < T; j++ ) {
+            int j = upper_limit - i;
+            double t_tau = std::real( akf_mat_g1_time( i + j, 0 ) ); // Important: t+tau (i+j)!
             auto rho_tau = getRhoAt( rho_index_map[t_tau] );
             Scalar gpop = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
             Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t_t );
             double dt = Numerics::get_tdelta( akf_mat_g1_time, 0, i );
             double dtau = Numerics::get_taudelta( akf_mat_g1_time, i, j ); // Numerics::get_tdelta( akf_mat_g1_time, 0, i + j );
-            top[i] += ( gpop + akf_mat_g2( i, j ) - akf_mat_g1( i, j ) * std::conj( akf_mat_g1( i, j ) ) ) * dt * dtau;
-            bottom[i] += ( 2.0 * gpop - gbot * std::conj( gbot ) ) * dt * dtau;
-            topv[i] += std::pow( std::abs( akf_mat_g1( i, j ) ), 2.0 ) * dt * dtau;
+            top[upper_limit] += ( gpop + akf_mat_g2( i, j ) - akf_mat_g1( i, j ) * std::conj( akf_mat_g1( i, j ) ) ) * dt * dtau;
+            bottom[upper_limit] += ( 2.0 * gpop - gbot * std::conj( gbot ) ) * dt * dtau;
+            topv[upper_limit] += std::pow( std::abs( akf_mat_g1( i, j ) ), 2.0 ) * dt * dtau;
         }
         Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), pbsize, "Indistinguishability (Simplified) (" + fout + "): " );
         timer.iterate();
     }
+
     Scalar topsum = 0;
     Scalar bottomsum = 0;
     Scalar topsumv = 0;

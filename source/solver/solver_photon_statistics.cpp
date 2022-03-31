@@ -57,7 +57,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         // G2(t,tau)
         if ( gs_s.numerical_v["Integrated"][i] == 0 || gs_s.numerical_v["Integrated"][i] == 2 ) {
             Log::L2( "Saving G{} function matrix to {}_m.txt...\n", order, purpose );
-            FILE *f_gfunc = std::fopen( ( s.parameters.subfolder + purpose + "_m.txt" ).c_str(), "w" );
+            FILE *f_gfunc = std::fopen( ( s.parameters.working_directory + purpose + "_m.txt" ).c_str(), "w" );
             fmt::print( f_gfunc, "Time\tTau\tAbs\tReal\tImag\n" );
             for ( int k = 0; k < gmat.rows(); k++ ) {
                 double t_t = std::real( gmat_time( k, 0 ) );
@@ -70,15 +70,14 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             std::fclose( f_gfunc );
         }
         // G2(0)
-        std::vector<Scalar> topv, g2ofzero;
-        for ( int i = 0; i < std::min<int>( gmat.cols(), savedStates.size() ); i++ ) {
-            g2ofzero.emplace_back( 0 );
-            topv.emplace_back( 0 );
-        }
+        int T = std::min<int>( gmat.cols(), savedStates.size() );
+        std::vector<Scalar> topv( T, 0 );
+        std::vector<Scalar> g2ofzero( T, 0 );
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
-        for ( int i = 0; i < std::min<int>( gmat.cols(), savedStates.size() ); i++ ) {
-            for ( int j = 0; j < gmat.cols() - i; j++ ) {
-                topv[i] += gmat( i, j );
+        for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
+            for ( int i = 0; i <= upper_limit; i++ ) {
+                int j = upper_limit - i;
+                topv[upper_limit] += gmat( i, j );
             }
         }
         Scalar topsumv = 0;
@@ -93,7 +92,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         // G2(t,0) and G2(tau)
         if ( gs_s.numerical_v["Integrated"][i] == 1 || gs_s.numerical_v["Integrated"][i] == 2 ) {
             Log::L2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
-            FILE *f_gfunc = std::fopen( ( s.parameters.subfolder + purpose + ".txt" ).c_str(), "w" );
+            FILE *f_gfunc = std::fopen( ( s.parameters.working_directory + purpose + ".txt" ).c_str(), "w" );
             fmt::print( f_gfunc, "Time\tAbs(g{0}(tau))\tReal(g{0}(tau))\tImag(g{0}(tau))\tAbs(g{0}(t,0))\tReal(g{0}(t,0))\tImag(g{0}(t,0))\tAbs(g{0}(0))\tReal(g{0}(0))\tImag(g{0}(0))\n", order );
             for ( int l = 0; l < topv.size(); l++ ) { // gmat.cols()
                 Scalar g2oftau = 0;
@@ -118,7 +117,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     // Output Spectra and Rest in seperate Files
     for ( auto &[mode, data] : to_output["Spectrum"] ) {
         Log::L2( "[PhotonStatistics] Saving Emission Spectrum to spectrum_" + mode + ".txt...\n" );
-        FILE *f_spectrum = std::fopen( ( s.parameters.subfolder + "spectrum_" + mode + ".txt" ).c_str(), "w" );
+        FILE *f_spectrum = std::fopen( ( s.parameters.working_directory + "spectrum_" + mode + ".txt" ).c_str(), "w" );
         fmt::print( f_spectrum, "Omega\t{}\n", mode );
         for ( int i = 0; i < to_output["Spectrum"][mode].size(); i++ ) {
             fmt::print( f_spectrum, "{:.8e}\t{:.8e}\n", std::real( to_output["Spectrum_frequency"][mode][i] ), std::real( to_output["Spectrum"][mode][i] ) );
@@ -130,7 +129,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         if ( mode.compare( "Time" ) == 0 )
             continue;
         Log::L2( "[PhotonStatistics] Saving Indistinguishability and Visibility to indist_" + mode + ".txt...\n" );
-        FILE *f_indist = std::fopen( ( s.parameters.subfolder + "indist_" + mode + ".txt" ).c_str(), "w" );
+        FILE *f_indist = std::fopen( ( s.parameters.working_directory + "indist_" + mode + ".txt" ).c_str(), "w" );
         fmt::print( f_indist, "Time\tIndist_{}\tVisibility_{}\n", mode, mode );
         for ( int i = 0; i < to_output["Indist"][mode].size(); i++ ) {
             fmt::print( f_indist, "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Indist"]["Time"][i] ), std::real( to_output["Indist"][mode][i] ), std::real( to_output["Visibility"][mode][i] ) );
@@ -142,7 +141,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         if ( mode.compare( "Time" ) == 0 )
             continue;
         Log::L2( "[PhotonStatistics] Saving Concurrence to conc_" + mode + ".txt...\n" );
-        FILE *f_indist = std::fopen( ( s.parameters.subfolder + "conc_" + mode + ".txt" ).c_str(), "w" );
+        FILE *f_indist = std::fopen( ( s.parameters.working_directory + "conc_" + mode + ".txt" ).c_str(), "w" );
         fmt::print( f_indist, "Time\t{0}\t{0}_simple\t{0}(g2(0))\t{0}_simple(g2(0))\n", mode );
         // fmt::print( f_indist, "Time\t{0}\t{0}(g2(0))\n", mode );
         for ( int i = 0; i < to_output["Conc"][mode].size(); i++ ) {
@@ -156,7 +155,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         if ( mode.compare( "Time" ) == 0 )
             continue;
         Log::L2( "[PhotonStatistics] Saving Raman Population to raman_" + mode + ".txt...\n" );
-        FILE *f_raman = std::fopen( ( s.parameters.subfolder + "raman_" + mode + ".txt" ).c_str(), "w" );
+        FILE *f_raman = std::fopen( ( s.parameters.working_directory + "raman_" + mode + ".txt" ).c_str(), "w" );
         fmt::print( f_raman, "Time\t{0}\tEM({0})\n", mode );
         for ( int i = 0; i < to_output["Raman"][mode].size(); i++ ) {
             fmt::print( f_raman, "{:.8e}\t{:.8e}\t{:.8e}\n", getTimeAt( i ), std::real( to_output["Raman"][mode][i] ), std::real( to_output["RamanEmProb"][mode][i] ) );
@@ -168,7 +167,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         if ( mode.compare( "Time" ) == 0 )
             continue;
         Log::L2( "[PhotonStatistics] Saving Two-Photon Matrix to twopmat_" + mode + ".txt...\n" );
-        FILE *f_twophot = std::fopen( ( s.parameters.subfolder + "twopmat_" + mode + ".txt" ).c_str(), "w" );
+        FILE *f_twophot = std::fopen( ( s.parameters.working_directory + "twopmat_" + mode + ".txt" ).c_str(), "w" );
         fmt::print( f_twophot, "Time\t" );
         std::vector<std::string> modes = { "11", "12", "21", "22" };
         for ( int k = 0; k < 4; k++ ) {
@@ -206,7 +205,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         if ( mode.compare( "Time" ) == 0 )
             continue;
         Log::L2( "[PhotonStatistics] Saving Wigner function to wigner_" + mode + ".txt...\n" );
-        FILE *f_wigner = std::fopen( ( s.parameters.subfolder + "wigner_" + mode + ".txt" ).c_str(), "w" );
+        FILE *f_wigner = std::fopen( ( s.parameters.working_directory + "wigner_" + mode + ".txt" ).c_str(), "w" );
         if ( mode.starts_with( "rho_" ) ) {
             // Gather base:
             fmt::print( f_wigner, "Time\t" );

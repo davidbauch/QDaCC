@@ -7,10 +7,10 @@ Sparse QDLC::Numerics::ODESolver::iterateRungeKutta4( const Sparse &rho, System 
     Sparse H_calc_k23 = getHamilton( s, t + t_step * 0.5 );
     Sparse H_calc_k4 = getHamilton( s, t + t_step );
     // k1-4 ausrechnen
-    Sparse rk1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
-    Sparse rk2 = s.dgl_rungeFunction( rho + t_step * 0.5 * rk1, H_calc_k23, t + t_step * 0.5, savedStates );
-    Sparse rk3 = s.dgl_rungeFunction( rho + t_step * 0.5 * rk2, H_calc_k23, t + t_step * 0.5, savedStates );
-    Sparse rk4 = s.dgl_rungeFunction( rho + t_step * rk3, H_calc_k4, t + t_step, savedStates );
+    Sparse rk1 = s.dgl_runge_function( rho, H_calc_k1, t, savedStates );
+    Sparse rk2 = s.dgl_runge_function( rho + t_step * 0.5 * rk1, H_calc_k23, t + t_step * 0.5, savedStates );
+    Sparse rk3 = s.dgl_runge_function( rho + t_step * 0.5 * rk2, H_calc_k23, t + t_step * 0.5, savedStates );
+    Sparse rk4 = s.dgl_runge_function( rho + t_step * rk3, H_calc_k4, t + t_step, savedStates );
     // Dichtematrix
     return rho + t_step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
 }
@@ -24,12 +24,12 @@ Sparse QDLC::Numerics::ODESolver::iterateRungeKutta5( const Sparse &rho, System 
     Sparse H_calc_k5 = getHamilton( s, t + RKCoefficients::a5 * t_step );
     Sparse H_calc_k6 = getHamilton( s, t + RKCoefficients::a6 * t_step );
     // k1-6 ausrechnen
-    Sparse k1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
-    Sparse k2 = s.dgl_rungeFunction( rho + t_step * RKCoefficients::b11 * k1, H_calc_k2, t + RKCoefficients::a2 * t_step, savedStates );
-    Sparse k3 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), H_calc_k3, t + RKCoefficients::a3 * t_step, savedStates );
-    Sparse k4 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), H_calc_k4, t + RKCoefficients::a4 * t_step, savedStates );
-    Sparse k5 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), H_calc_k5, t + RKCoefficients::a5 * t_step, savedStates );
-    Sparse k6 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), H_calc_k6, t + RKCoefficients::a6 * t_step, savedStates );
+    Sparse k1 = s.dgl_runge_function( rho, H_calc_k1, t, savedStates );
+    Sparse k2 = s.dgl_runge_function( rho + t_step * RKCoefficients::b11 * k1, H_calc_k2, t + RKCoefficients::a2 * t_step, savedStates );
+    Sparse k3 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), H_calc_k3, t + RKCoefficients::a3 * t_step, savedStates );
+    Sparse k4 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), H_calc_k4, t + RKCoefficients::a4 * t_step, savedStates );
+    Sparse k5 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), H_calc_k5, t + RKCoefficients::a5 * t_step, savedStates );
+    Sparse k6 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), H_calc_k6, t + RKCoefficients::a6 * t_step, savedStates );
     // Dichtematrix
     return rho + t_step * ( RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6 );
 }
@@ -44,17 +44,17 @@ std::pair<Sparse, double> QDLC::Numerics::ODESolver::iterateRungeKutta45( const 
     Sparse H_calc_k6 = getHamilton( s, t + RKCoefficients::a6 * t_step );
     Sparse H_calc_k7 = getHamilton( s, t + t_step );
     // k1-6 ausrechnen
-    Sparse k1 = s.dgl_rungeFunction( rho, H_calc_k1, t, savedStates );
-    Sparse k2 = s.dgl_rungeFunction( rho + t_step * RKCoefficients::b11 * k1, H_calc_k2, t + RKCoefficients::a2 * t_step, savedStates );
-    Sparse k3 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), H_calc_k3, t + RKCoefficients::a3 * t_step, savedStates );
-    Sparse k4 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), H_calc_k4, t + RKCoefficients::a4 * t_step, savedStates );
-    Sparse k5 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), H_calc_k5, t + RKCoefficients::a5 * t_step, savedStates );
-    Sparse k6 = s.dgl_rungeFunction( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), H_calc_k6, t + RKCoefficients::a6 * t_step, savedStates );
+    Sparse k1 = s.dgl_runge_function( rho, H_calc_k1, t, savedStates );
+    Sparse k2 = s.dgl_runge_function( rho + t_step * RKCoefficients::b11 * k1, H_calc_k2, t + RKCoefficients::a2 * t_step, savedStates );
+    Sparse k3 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), H_calc_k3, t + RKCoefficients::a3 * t_step, savedStates );
+    Sparse k4 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), H_calc_k4, t + RKCoefficients::a4 * t_step, savedStates );
+    Sparse k5 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), H_calc_k5, t + RKCoefficients::a5 * t_step, savedStates );
+    Sparse k6 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), H_calc_k6, t + RKCoefficients::a6 * t_step, savedStates );
 
     Sparse drho = RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6;
     Sparse ret = rho + t_step * drho;
     // Error
-    Sparse k7 = s.dgl_rungeFunction( ret, H_calc_k7, t + t_step, savedStates );
+    Sparse k7 = s.dgl_runge_function( ret, H_calc_k7, t + t_step, savedStates );
     dSparse errmat = ( drho - ( k1 * RKCoefficients::e1 + k3 * RKCoefficients::e3 + k4 * RKCoefficients::e4 + k5 * RKCoefficients::e5 + k6 * RKCoefficients::e6 + k7 * RKCoefficients::e7 ) ).cwiseAbs2();
     double err = errmat.sum() / drho.cwiseAbs2().sum();
 
@@ -110,8 +110,8 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
         s.parameters.numerics_calculate_till_converged = false;
         s.parameters.t_end = t_end;
         s.parameters.iterations_t_max = output.size();
-        s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.iterations_tau_resolution ) );
-        s.parameters.adjustInput();
+        s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.grid_resolution ) );
+        s.parameters.adjust_input();
         reset( s );
         Log::L1( "[RKSOLVER] Adjusted t_end to {}.\n", s.parameters.t_end );
     }
@@ -186,8 +186,8 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
         s.parameters.numerics_calculate_till_converged = false;
         s.parameters.t_end = t_end;
         s.parameters.iterations_t_max = output.size();
-        s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.iterations_tau_resolution ) );
-        s.parameters.adjustInput();
+        s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.grid_resolution ) );
+        s.parameters.adjust_input();
         reset( s );
         Log::L1( "[RK45SOLVER] Adjusted t_end to {}.\n", s.parameters.t_end );
     }

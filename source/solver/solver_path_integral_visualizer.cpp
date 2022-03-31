@@ -3,7 +3,7 @@
 bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
     std::vector<QDLC::SaveState> dummy{ { rho0, 0.0 } };
     FILE *fp_dot;
-    fp_dot = std::fopen( ( s.parameters.subfolder + "pathintegral.dot" ).c_str(), "w" );
+    fp_dot = std::fopen( ( s.parameters.working_directory + "pathintegral.dot" ).c_str(), "w" );
     fmt::print( fp_dot, "digraph G{{\ngraph [pad=\"0.5\", nodesep=\"0.1\", ranksep=\"3\", rankdir=\"TB\"]\n" );
 
     // Cache Parameters
@@ -125,12 +125,12 @@ bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
                     Scalar val = 0;
                     for ( int tau = 0; tau < s.parameters.p_phonon_nc; tau++ )
                         if ( s.parameters.numerics_pathint_partially_summed )
-                            val += s.dgl_phonon_S_function( tau, s.operatorMatrices.phonon_coupling_index[i], s.operatorMatrices.phonon_coupling_index[j], s.operatorMatrices.phonon_coupling_index[i_n], s.operatorMatrices.phonon_coupling_index[j_n] );
+                            val += s.dgl_phonon_S_function( tau, s.operatorMatrices.phonon_hilbert_index_to_group_index[i], s.operatorMatrices.phonon_hilbert_index_to_group_index[j], s.operatorMatrices.phonon_hilbert_index_to_group_index[i_n], s.operatorMatrices.phonon_hilbert_index_to_group_index[j_n] );
                         else
                             val += s.dgl_phonon_S_function( tau, i, j, i_n, j_n );
                     if ( std::abs( val ) > 1E-15 )
                         fmt::print( fp_dot, "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( val ), std::imag( val ), "dodgerblue2", 1.0, 0.1, "Phonon Kernel" );
-                    // fmt::print( "i = {}, j = {}, id = {}, jd = {} --> converted i = {}, j = {}, id = {}, jd = {} --> {}\n", i, j, i_n, j_n, s.operatorMatrices.phonon_coupling_index[i], s.operatorMatrices.phonon_coupling_index[j], s.operatorMatrices.phonon_coupling_index[i_n], s.operatorMatrices.phonon_coupling_index[j_n], val );
+                    // fmt::print( "i = {}, j = {}, id = {}, jd = {} --> converted i = {}, j = {}, id = {}, jd = {} --> {}\n", i, j, i_n, j_n, s.operatorMatrices.phonon_hilbert_index_to_group_index[i], s.operatorMatrices.phonon_hilbert_index_to_group_index[j], s.operatorMatrices.phonon_hilbert_index_to_group_index[i_n], s.operatorMatrices.phonon_hilbert_index_to_group_index[j_n], val );
                 }
 
     // Polaron Frame Mapping
@@ -158,7 +158,7 @@ bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
 
     fmt::print( fp_dot, "}}" );
     std::fclose( fp_dot );
-    std::system( fmt::format( "dot -Kneato -Tsvg '{0}pathintegral.dot' -o '{0}pathintegral.svg'", s.parameters.subfolder ).c_str() );
-    std::system( fmt::format( "dot -Tsvg '{0}pathintegral.dot' -o '{0}pathintegral_unordered.svg'", s.parameters.subfolder ).c_str() );
+    std::system( fmt::format( "dot -Kneato -Tsvg '{0}pathintegral.dot' -o '{0}pathintegral.svg'", s.parameters.working_directory ).c_str() );
+    std::system( fmt::format( "dot -Tsvg '{0}pathintegral.dot' -o '{0}pathintegral_unordered.svg'", s.parameters.working_directory ).c_str() );
     return true;
 }

@@ -6,7 +6,7 @@ OperatorMatrices::OperatorMatrices( Parameters &p ) {
     Timer &timer_operatormatrices = Timers::create( "Operator Matrices", true, false );
     timer_operatormatrices.start();
     Log::L2( "[System-OperatorMatrices] Generating operator matrices...\n" );
-    if ( !generateOperators( p ) ) {
+    if ( !generate_operators( p ) ) {
         Log::L2( "[System-OperatorMatrices] Generating operator matrices failed! Exitting program...\n" );
         Log::close();
         exit( EXIT_FAILURE );
@@ -15,7 +15,7 @@ OperatorMatrices::OperatorMatrices( Parameters &p ) {
     Log::L2( "[System-OperatorMatrices] Generating operator matrices was successful. Elapsed time is {}ms\n", timer_operatormatrices.getWallTime( Timers::MILLISECONDS ) );
 }
 
-bool OperatorMatrices::generateOperators( Parameters &p ) {
+bool OperatorMatrices::generate_operators( Parameters &p ) {
     output_format = Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" );
     // Zeroing Hamiltons (redundant at this point)
     Log::L2( "[System-OperatorMatrices] Creating operator matrices, dimension = {}, creating base matrices...\n", p.maxStates );
@@ -220,7 +220,6 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
     Log::L1( "System Base ({}): {}\n", base.size(), ss.str() );
     p.maxStates = base.size();
 
-    H = Sparse( p.maxStates, p.maxStates );
     H_0 = Sparse( p.maxStates, p.maxStates );
     H_I = Sparse( p.maxStates, p.maxStates );
     H_used = Sparse( p.maxStates, p.maxStates );
@@ -257,43 +256,6 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             timetrafo_cachematrix( iss.second, jss.second ) = 1.0i * val;
         }
     }
-    // Precalculate Lindbladians. Doesnt Work lul me dumb.
-    lindblad_factors = std::vector<Sparse>( 6, Sparse( base.size(), base.size() ) );
-    // Cavity Terms //TODO: Testen das die hier richtig sind!
-    // for ( auto &cav : ph_transitions ) {
-    //    if ( cav.second.direction == 1 )
-    //        continue;
-    //    std::string mode = cav.first.substr( 0, 1 );
-    //    auto &params = p.input_photonic[mode];
-    //    lindblad_factors[0] += 2.0 * 0.5 * p.p_omega_cavity_loss * params.numerical["DecayScaling"] * ph_transitions[mode + "b"].hilbert;
-    //    lindblad_factors[1] += ph_transitions[mode + "bd"].hilbert;
-    //    lindblad_factors[2] += 0.5 * p.p_omega_cavity_loss * params.numerical["DecayScaling"] * ph_transitions[mode + "bd"].hilbert * ph_transitions[mode + "b"].hilbert;
-    //    lindblad_factors[3] += 0.5 * p.p_omega_cavity_loss * params.numerical["DecayScaling"] * ph_transitions[mode + "bd"].hilbert * ph_transitions[mode + "b"].hilbert;
-    //}
-    //// Radiative decay //TODO: Testen das die hier richtig sind!
-    // for ( auto &trans : el_transitions ) {
-    //     if ( trans.second.direction == 1 )
-    //         continue;
-    //     std::string transition = trans.first;
-    //     std::string state = transition.substr( transition.size() - 1, 1 );
-    //     auto &params = p.input_electronic[state];
-    //     //std::cout << "Transition " << transition << " with state info from " << state << " --> " << params.numerical["DecayScaling"] << std::endl;
-    //     std::string trans_transposed = transition;
-    //     std::reverse( trans_transposed.begin(), trans_transposed.end() );
-    //     lindblad_factors[0] += 0.5 * p.p_omega_decay * params.numerical["DecayScaling"] * el_transitions[transition].hilbert;
-    //     lindblad_factors[1] += el_transitions[trans_transposed].hilbert;
-    //     lindblad_factors[2] += 0.5 * p.p_omega_decay * params.numerical["DecayScaling"] * el_transitions[trans_transposed].hilbert * el_transitions[transition].hilbert;
-    //     lindblad_factors[3] += 0.5 * p.p_omega_decay * params.numerical["DecayScaling"] * el_transitions[transition].hilbert * el_transitions[trans_transposed].hilbert;
-    // }
-    //// Electronic Dephasing
-    // for ( auto &state_a : el_states ) {
-    //     for ( auto &state_b : el_states ) {
-    //         if ( state_a.first.compare( state_b.first ) == 0 )
-    //             continue;
-    //         lindblad_factors[4] += 0.5 * p.p_omega_pure_dephasing * p.input_electronic[state_a.first].numerical["DephasingScaling"] * el_states[state_a.first].hilbert;
-    //         lindblad_factors[5] += p.input_electronic[state_b.first].numerical["DephasingScaling"] * el_states[state_b.first].hilbert;
-    //     }
-    // }
 
     Log::L2( "[System-OperatorMatrices] Creating Polaron Cache Matrices...\n" );
     // Precalculate Polaron Matrices.
@@ -372,13 +334,13 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             auto index = state1;
             if ( !temp_base_indices.count( index ) > 0 ) {
                 temp_base_indices[index] = new_index++;
-                phonon_coupling_index_value.emplace_back( factor );
+                phonon_group_index_to_coupling_value.emplace_back( factor );
             }
-            phonon_coupling_index.emplace_back( temp_base_indices[index] );
+            phonon_hilbert_index_to_group_index.emplace_back( temp_base_indices[index] );
         }
-        phonon_group_to_indices = std::vector<std::vector<int>>( temp_base_indices.size() );
+        phonon_group_index_to_hilbert_indices = std::vector<std::vector<int>>( temp_base_indices.size() );
         for ( int i = 0; i < base.size(); i++ ) {
-            phonon_group_to_indices[phonon_coupling_index[i]].emplace_back( i );
+            phonon_group_index_to_hilbert_indices[phonon_hilbert_index_to_group_index[i]].emplace_back( i );
         }
     } else if ( sorting == "factor" ) {
         std::map<double, int> temp_base_indices;
@@ -389,27 +351,27 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
             auto index = factor; // state1;
             if ( !temp_base_indices.count( index ) > 0 ) {
                 temp_base_indices[index] = new_index++;
-                phonon_coupling_index_value.emplace_back( factor );
+                phonon_group_index_to_coupling_value.emplace_back( factor );
             }
-            phonon_coupling_index.emplace_back( temp_base_indices[index] );
+            phonon_hilbert_index_to_group_index.emplace_back( temp_base_indices[index] );
         }
-        phonon_group_to_indices = std::vector<std::vector<int>>( temp_base_indices.size() );
+        phonon_group_index_to_hilbert_indices = std::vector<std::vector<int>>( temp_base_indices.size() );
         for ( int i = 0; i < base.size(); i++ ) {
-            phonon_group_to_indices[phonon_coupling_index[i]].emplace_back( i );
+            phonon_group_index_to_hilbert_indices[phonon_hilbert_index_to_group_index[i]].emplace_back( i );
         }
     } else {
         Log::L2( "[System-OperatorMatrices] Sorting Parameter for Partially Summed ADM mismatch!\n" );
     }
-    Log::L2( "[System-OperatorMatrices] Phonon Coupling Index Vector: {}\n", phonon_coupling_index );
-    Log::L2( "[System-OperatorMatrices] Phonon Coupling Value Vector: {}\n", phonon_coupling_index_value );
+    Log::L2( "[System-OperatorMatrices] Phonon Coupling Index Vector: {}\n", phonon_hilbert_index_to_group_index );
+    Log::L2( "[System-OperatorMatrices] Phonon Coupling Value Vector: {}\n", phonon_group_index_to_coupling_value );
 
     // Creating Phonon Coupling Matrix
     polaron_phonon_coupling_matrix = Sparse( base.size(), base.size() );
     for ( auto i = 0; i < polaron_phonon_coupling_matrix.rows(); i++ )
         for ( auto j = 0; j < polaron_phonon_coupling_matrix.cols(); j++ ) {
-            Scalar coupling = phonon_coupling_index_value[phonon_coupling_index[i]] * phonon_coupling_index_value[phonon_coupling_index[j]];
+            Scalar coupling = phonon_group_index_to_coupling_value[phonon_hilbert_index_to_group_index[i]] * phonon_group_index_to_coupling_value[phonon_hilbert_index_to_group_index[j]];
             if ( QDLC::Math::abs2( coupling ) == 0.0 )
-                coupling = std::max( phonon_coupling_index_value[phonon_coupling_index[i]], phonon_coupling_index_value[phonon_coupling_index[j]] );
+                coupling = std::max( phonon_group_index_to_coupling_value[phonon_hilbert_index_to_group_index[i]], phonon_group_index_to_coupling_value[phonon_hilbert_index_to_group_index[j]] );
             if ( QDLC::Math::abs2( coupling ) != 0.0 )
                 polaron_phonon_coupling_matrix.coeffRef( i, j ) = coupling;
         }
@@ -431,7 +393,7 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         std::for_each( polaron_factors.begin(), polaron_factors.end(), [&]( auto &mat ) { mat = mat.cwiseProduct( b_matrix ); } );
     }
 
-    for ( auto &a : phonon_group_to_indices )
+    for ( auto &a : phonon_group_index_to_hilbert_indices )
         Log::L2( "[System-OperatorMatrices] Phonon Group Index Vector: {}\n", a );
 
     Log::L2( "[System-OperatorMatrices] Creating Initial State Vector...\n" );
@@ -517,22 +479,20 @@ bool OperatorMatrices::generateOperators( Parameters &p ) {
         H_I = p.p_omega_coupling * H_I_a;
     else
         H_I = p.p_omega_coupling * ( H_I_a + H_I_b );
-    H = H_0 + H_I;
     if ( p.numerics_use_interactionpicture )
         H_used = H_I;
     else
-        H_used = H;
+        H_used = H_0 + H_I;
 
     Log::L2( "[System-OperatorMatrices] Done!\n" );
     return true;
 }
 
-void OperatorMatrices::outputOperators( Parameters &p ) {
+void OperatorMatrices::output_operators( Parameters &p ) {
     if ( p.output_operators > 0 ) {
         std::ostringstream out;
         Eigen::IOFormat CleanFmt( 4, 0, ", ", "\n", "[", "]" );
-        out << "[System-OperatorMatrices] Hamilton and Rho:\nH=H_0+H_I (no RWA)\n"
-            << Dense( H ).format( CleanFmt ) << std::endl;
+        out << "[System-OperatorMatrices] Hamilton and Rho:\n";
         out << "H_0\n"
             << Dense( H_0 ).format( CleanFmt ) << std::endl;
         out << "H_I\n"
@@ -545,7 +505,7 @@ void OperatorMatrices::outputOperators( Parameters &p ) {
         Log::L2( out.str() );
         // Log::L2( "[System-OperatorMatrices] Outputting String Matrices...\n" );
         //  OperatorMatricesText test = OperatorMatricesText();
-        //  test.generateOperators( p );
+        //  test.generate_operators( p );
         if ( p.output_operators == 3 )
             exit( 0 );
     }

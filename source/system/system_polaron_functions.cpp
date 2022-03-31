@@ -1,11 +1,5 @@
 #include "system/system.h"
 
-/**
- * @brief Calculates the Phonon Correlation Kerbal Phi(tau) = int_0^inf dw J(w) / w^2 * [coth(hbar w/(2 k_b T)) * cos(w t) - i*sin(w t)]
- *
- * @param t Current Time
- * @return Scalar value Phi(t)
- */
 Scalar System::dgl_phonons_phi( const double t ) {
     Scalar integral = 0;
     double stepsize = 0.01 * parameters.p_phonon_wcutoff;
@@ -20,10 +14,6 @@ Scalar System::dgl_phonons_phi( const double t ) {
     return integral;
 }
 
-/**
- * @brief Initializes the Polaron Frame Functions by precalculating the Phi(tau) function and the corresponding Green functions
- *
- */
 void System::initialize_polaron_frame_functions() {
     if ( parameters.p_phonon_T >= 0 ) {
         Log::L2( "[System-PME] Initializing Polaron Frame Functions.\n" );
@@ -48,7 +38,7 @@ void System::initialize_polaron_frame_functions() {
         }
 
         // Output Phonon Functions
-        FILE *fp_phonons = std::fopen( ( parameters.subfolder + "phonons.txt" ).c_str(), "w" );
+        FILE *fp_phonons = std::fopen( ( parameters.working_directory + "phonons.txt" ).c_str(), "w" );
         fmt::print( fp_phonons, "t\treal(phi(t))\timag(phi(t))\treal(g_u(t))\timag(g_u(t))\treal(g_g(t))\timag(g_g(t))\n" );
         for ( double t = parameters.t_start; t <= parameters.p_phonon_tcutoff; t += parameters.t_step ) {
             auto greenu = dgl_phonons_greenf( t, 'u' );
@@ -57,7 +47,7 @@ void System::initialize_polaron_frame_functions() {
         }
         std::fclose( fp_phonons );
         if ( parameters.output_coefficients ) {
-            // fp_phonons = std::fopen( ( parameters.subfolder + "phonons_lb.txt" ).c_str(), "w" );
+            // fp_phonons = std::fopen( ( parameters.working_directory + "phonons_lb.txt" ).c_str(), "w" );
             // fmt::print( fp_phonons, "t\tL_a_+\tL_a_-\tL_c_+\tL_c_-\n" );
             // for ( double t = parameters.t_start; t < parameters.t_end; t += parameters.t_step ) {
             //     fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\n", t, dgl_phonons_lindblad_coefficients( t, 'L', 1.0 ), dgl_phonons_lindblad_coefficients( t, 'L', -1.0 ), dgl_phonons_lindblad_coefficients( t, 'C', 1.0 ), dgl_phonons_lindblad_coefficients( t, 'C', -1.0 ) );
@@ -102,7 +92,7 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
     }
     explicit_time = parameters.scaleVariable( explicit_time, 1.0 / parameters.scale_value );
 
-    Sparse hamilton = dgl_getHamilton( t );
+    Sparse hamilton = dgl_get_hamilton( t );
 
     return -1.0i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( QDLC::Matrix::sparse_projector( chi ) );
 }
@@ -268,7 +258,7 @@ std::vector<QDLC::SaveState> System::dgl_phonons_calculate_transformation( Spars
     }
     // Matrix Exponential
     else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
-        // auto H = dgl_getHamilton( t );
+        // auto H = dgl_get_hamilton( t );
         Sparse H = dgl_timetrafo( operatorMatrices.H_used + dgl_pulse( t ) + dgl_chirp( t ), t );
         std::vector<QDLC::SaveState> ret( std::ceil( tau / parameters.numerics_subiterator_stepsize ), QDLC::SaveState() );
 #pragma omp parallel for ordered schedule( dynamic ) num_threads( parameters.numerics_phonons_maximum_threads )

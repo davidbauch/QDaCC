@@ -17,13 +17,11 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     output_handlerstrings = 0;
     output_operators = 0;
     iterations_t_skip = 1;
-    iterations_tau_resolution = 1;
-    iterations_w_resolution = 1;
     scale_parameters = false;
     scale_value = 1E12;
     iterations_t_max = 1;
-    output_full_dm = false;
-    output_no_dm = false;
+    numerics_output_full_dm = false;
+    numerics_output_no_dm = false;
     maxStates = 0;
     numerics_calculate_till_converged = false;
 
@@ -32,36 +30,30 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     Log::wrapInBar( "Conversion of input variables", Log::BAR_SIZE_FULL, Log::LEVEL_2, Log::BAR_0 );
     Log::L2( "\n" );
     Log::L2( "[System] Parsing input variables...\n" );
+
     timer_parseInput.start();
-    if ( !parseInput( arguments ) ) {
-        Log::L2( "[System] Parsing input variables failed! Exitting program...\n" );
-        Log::close();
-        exit( EXIT_FAILURE );
-    }
+    parse_input( arguments );
     timer_parseInput.end();
     Log::L2( "[System] Successful. Elapsed time is {}ms\n", timer_parseInput.getWallTime( Timers::MILLISECONDS ) );
 
     // Scaling inputs:
     if ( scale_parameters ) {
         Log::L2( "[System] Rescaling parameters to {}...\n", scale_value );
-        scaleInputs( scale_value );
+        scale_inputs( scale_value );
         Log::L2( "[System] Done!\n" );
     }
 
     // Adjusting inputs:
     Timer &timer_adjustInput = Timers::create( "Adjusting parameters", true, false );
     Log::L2( "[System] Adjusting input variables...\n" );
+
     timer_adjustInput.start();
-    if ( !adjustInput() ) {
-        Log::L2( "[System] Adjusting input variables failed! Exitting program...\n" );
-        Log::close();
-        exit( EXIT_FAILURE );
-    }
-    Log::L2( "[System] Successful. Elapsed time is {}ms\n", timer_adjustInput.getWallTime( Timers::MILLISECONDS ) );
+    adjust_input();
     timer_adjustInput.end();
+    Log::L2( "[System] Successful. Elapsed time is {}ms\n", timer_adjustInput.getWallTime( Timers::MILLISECONDS ) );
 }
 
-bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
+void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     // Parse_Parameters params;
     //  Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
     t_start = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstart" );
@@ -97,7 +89,7 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     p_omega_decay = QDLC::CommandlineArguments::get_parameter<double>( "--system", "gamma" );
     p_initial_state_s = QDLC::CommandlineArguments::get_parameter( "--R" );
 
-    iterations_tau_resolution = QDLC::CommandlineArguments::get_parameter<int>( "--G", "gridres" );
+    grid_resolution = QDLC::CommandlineArguments::get_parameter<int>( "--G", "gridres" );
     numerics_use_interactionpicture = QDLC::CommandlineArguments::get_parameter_passed( "-noInteractionpic" ) ? false : true;
     numerics_use_rwa = QDLC::CommandlineArguments::get_parameter_passed( "-noRWA" ) ? 0 : 1;
     numerics_maximum_threads = QDLC::CommandlineArguments::get_parameter<int>( "--Threads" );
@@ -106,17 +98,15 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
     output_handlerstrings = QDLC::CommandlineArguments::get_parameter_passed( "-noHandler" ) ? 0 : 1;
     output_operators = QDLC::CommandlineArguments::get_parameter_passed( "-outputOp" ) ? 2 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputHamiltons" ) ? 1 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputOpStop" ) ? 3 : 0 ) );
     numerics_order_timetrafo = QDLC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
-    output_full_dm = QDLC::CommandlineArguments::get_parameter_passed( "-fullDM" );
-    output_no_dm = QDLC::CommandlineArguments::get_parameter_passed( "-noDM" );
+    numerics_output_full_dm = QDLC::CommandlineArguments::get_parameter_passed( "-fullDM" );
+    numerics_output_no_dm = QDLC::CommandlineArguments::get_parameter_passed( "-noDM" );
     scale_parameters = QDLC::CommandlineArguments::get_parameter_passed( "-scale" ); // MHMHMH
     numerics_use_saved_coefficients = !QDLC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
     numerics_use_saved_hamiltons = !QDLC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
     numerics_use_function_caching = !QDLC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
     numerics_force_caching = false; // If true, even if any saving was disabled internally (not by the user), the matrices will still be cached.
     numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
-    numerics_output_raman_population = QDLC::CommandlineArguments::get_parameter_passed( "-raman" ); // DEPRECATED
     logfilecounter = QDLC::Misc::convertParam<double>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
-    numerics_calculate_timeresolution_indistinguishability = QDLC::CommandlineArguments::get_parameter_passed( "-timedepInd" ); // DEPRECATED                                                                             //FIXME: Doesnt work right now //DEPRECATED
     numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
     s_numerics_interpolate = QDLC::CommandlineArguments::get_parameter( "--interpolateOrder" );
     numerics_output_rkerror = QDLC::CommandlineArguments::get_parameter_passed( "-error" );
@@ -159,12 +149,11 @@ bool Parameters::parseInput( const std::vector<std::string> &arguments ) {
 
     parse_system();
 
-    subfolder = arguments.back();
-    return true;
+    working_directory = arguments.back();
 }
 
 // TODO: this is broken. and unncesesary actually. remove. oder vernünftig alles scalen.
-bool Parameters::scaleInputs( const double scaling ) {
+void Parameters::scale_inputs( const double scaling ) {
     // Adjust normal parameters: time is multiplid by scaling, frequency divided
     t_start.setScale( scaling, Parameter::SCALE_TIME );
     t_end.setScale( scaling, Parameter::SCALE_TIME );
@@ -208,10 +197,9 @@ bool Parameters::scaleInputs( const double scaling ) {
     p_phonon_alpha.setScale( scaling * scaling, Parameter::SCALE_ENERGY );
     p_phonon_pure_dephasing.setScale( scaling, Parameter::SCALE_ENERGY );
     kb.setScale( scaling, Parameter::SCALE_ENERGY );
-    return true;
 }
 
-bool Parameters::adjustInput() {
+void Parameters::adjust_input() {
     Log::L2( "[System] Adjusting Inputs...\n" );
 
     if ( output_handlerstrings )
@@ -278,8 +266,8 @@ bool Parameters::adjustInput() {
 
     if ( t_end >= 0 and ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) ) {
         iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
-        if ( iterations_tau_resolution < 1 and t_end >= 0 )
-            iterations_tau_resolution = iterations_t_max + 1;
+        if ( grid_resolution < 1 and t_end >= 0 )
+            grid_resolution = iterations_t_max + 1;
     }
 
     if ( t_end < 0 ) {
@@ -302,7 +290,7 @@ bool Parameters::adjustInput() {
     // Calculate stuff for RK
 
     Log::L2( "[System] Maximum t-value for temporal calculations is {}\n", t_end );
-    iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / iterations_tau_resolution ) );
+    iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / grid_resolution ) );
 
     // Build dt vector. Use standard if not specified otherwise for all calculations. Path integral cannot use other timestep than the original.
     if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) {
@@ -310,7 +298,7 @@ bool Parameters::adjustInput() {
         input_correlation_resolution["Standard"].numerical_v["Delta"] = { numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step };
         auto &settings = input_correlation_resolution.count( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
         double skip = input_correlation_resolution.count( "Modified" ) == 0 ? 1.0 * iterations_t_skip : 1.0;
-        Log::L2( "[System] Iteration Skip for Grid is {}.\n", iterations_t_skip );
+        Log::L2( "[System] Iteration Skip for Grid is {}.\n", skip );
         double t_t = 0;
         int current = 0;
         grid_values.clear();
@@ -318,9 +306,12 @@ bool Parameters::adjustInput() {
         grid_value_indices.clear();
         grid_values.emplace_back( t_start );
         grid_value_indices[t_start] = 0;
+        Log::L2( "[System] Initial Timestep Limit is {} at a timestep of {}.\n", settings.numerical_v["Time"][current], settings.numerical_v["Delta"][current] * skip );
         while ( t_t < t_end ) {
-            if ( t_t > settings.numerical_v["Time"][current] and current < settings.numerical_v["Time"].size() )
+            if ( t_t > settings.numerical_v["Time"][current] and current < settings.numerical_v["Time"].size() ) {
                 current++;
+                Log::L2( "[System] New Timestep Limit is {} at a timestep of {}.\n", settings.numerical_v["Time"][current], settings.numerical_v["Delta"][current] * skip );
+            }
             grid_steps.emplace_back( settings.numerical_v["Delta"][current] * skip );
             t_t += grid_steps.back();
             grid_values.emplace_back( t_t );
@@ -371,9 +362,7 @@ bool Parameters::adjustInput() {
     // numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 * ( p_phonon_tcutoff / t_step ) ) + 10;
     trace.reserve( iterations_t_max + 5 );
 
-    numerics_saved_coefficients_cutoff = 0; //( numerics_calculate_spectrum || numerics_calculate_g2 ) ? 0 : ( p_phonon_tcutoff / t_step ) * 5;
     Log::L2( "[System] Adjusting Inputs Done!\n" );
-    return true;
 }
 
 void Parameters::parse_system() {
@@ -636,7 +625,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             Log::L1( " - Hole Radius = {} nm\n", 1E9 * p_phonon_qd_ae / p_phonon_qd_ratio );
         }
         Log::L1( "<B> = {}\n", p_phonon_b );
-        Log::L1( "First Markov approximation used? (rho(t) = rho(t-tau)) - {}\n", ( numerics_phonon_approximation_markov1 == 1 ? "Yes" : "No" ) );
+        Log::L1( "First Markov approximation used? (rho(t) = rho(t-tau)) - {}\n", ( numerics_phonon_approximation_markov1 ? "Yes" : "No" ) );
         Log::L1( "Transformation approximation used: {} - {}\n", numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
         // Pathintegral
         if ( numerics_phonon_approximation_order == 5 ) {

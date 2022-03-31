@@ -12,6 +12,11 @@
 #include "typedef.h"
 #include "misc/log.h"
 
+// Windows Workaround for unsigned int struct
+#ifndef u_int64_t
+    #define u_int64_t uint64_t
+#endif
+
 namespace QDLC {
 
 namespace Numerics {
