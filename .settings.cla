@@ -540,8 +540,8 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '1hyphen'
-	key = 'noHandler'
-	description = 'Disables handler output and instead outputs direct progress into the console'
+	key = 'handler'
+	description = 'Enables handler output'
 	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''

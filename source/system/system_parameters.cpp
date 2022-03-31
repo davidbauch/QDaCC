@@ -95,7 +95,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     numerics_maximum_threads = QDLC::CommandlineArguments::get_parameter<int>( "--Threads" );
     if ( numerics_maximum_threads == -1 )
         numerics_maximum_threads = omp_get_max_threads();
-    output_handlerstrings = QDLC::CommandlineArguments::get_parameter_passed( "-noHandler" ) ? 0 : 1;
+    output_handlerstrings = QDLC::CommandlineArguments::get_parameter_passed( "-handler" );
     output_operators = QDLC::CommandlineArguments::get_parameter_passed( "-outputOp" ) ? 2 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputHamiltons" ) ? 1 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputOpStop" ) ? 3 : 0 ) );
     numerics_order_timetrafo = QDLC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
     numerics_output_full_dm = QDLC::CommandlineArguments::get_parameter_passed( "-fullDM" );

@@ -39,34 +39,11 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
         time.emplace_back( std::real( akf_mat_g1_time( i, 0 ) ) );
     }
 
-    /**
-     * @brief Iteratively extracts the next "section" of a triangular integral, e.g
-     *
-     *  :
-     *  + :
-     *  : + :
-     *  : : + :
-     *  : : : + :
-     *  : : : : + :
-     *  : : : : : + :
-     * Where the "+" row is between current_iteration and upper_limit.
-     *
-     */
-    // for ( int current_iteration = 0; current_iteration < T; current_iteration++ ) {
-    //     Scalar result = 0.0;
-    //     for ( int t = current_iteration; t < upper_limit; t++ ) {
-    //         for ( int tau = 0; tau < upper_limit - current_iteration; tau++ ) {
-    //             top[t] += function( i, j );
-    //         }
-    //     }
-    // }
-
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
         for ( int i = 0; i <= upper_limit; i++ ) {
             double t_t = std::real( akf_mat_g1_time( i, 0 ) );
             auto rho = getRhoAt( rho_index_map[t_t] );
-            // for ( int j = 0; j < T - i and i + j < T; j++ ) {
             int j = upper_limit - i;
             double t_tau = std::real( akf_mat_g1_time( i + j, 0 ) ); // Important: t+tau (i+j)!
             auto rho_tau = getRhoAt( rho_index_map[t_tau] );
