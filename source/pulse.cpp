@@ -73,6 +73,7 @@ void Pulse::generate( double t_start, double t_end, double t_step, double omega_
     if ( inputs.numerical_v["Frequency"].size() > 0 ) {
         Log::L2( "[System-Pulse] Calculating pulse fourier transformation...\n" );
         Log::L2( "[System-Pulse] Initial w_center = {}, w_range = {}, dw = {} (dt = {})\n", omega_center, omega_range, dw, t_step );
+        // Finding Spectral integration window
         if ( omega_center == 0 ) {
             for ( auto &input : inputs.numerical_v["Frequency"] ) {
                 omega_center += input;
@@ -91,11 +92,20 @@ void Pulse::generate( double t_start, double t_end, double t_step, double omega_
         }
         if ( dw == 0 )
             dw = 2.0 * double( steps.size() ) * omega_range / double( size );
-        Log::L2( "[System-Pulse] Using w_center = {}, w_range = {}, dw = {} (dt = {})\n", omega_center, omega_range, dw, t_step );
+        // Finding Temporal integration window
+        double pulse_begin = 0.0;
+        double pulse_end = 0.0;
+        for ( int i = 0; i < inputs.numerical_v["Width"].size(); i++ ) {
+            pulse_begin = std::min<double>( pulse_begin, inputs.numerical_v["Center"][i] - 8.0 * inputs.numerical_v["Width"][i] );
+            pulse_end = std::max<double>( pulse_begin, inputs.numerical_v["Center"][i] + 8.0 * inputs.numerical_v["Width"][i] );
+        }
+        pulse_begin = std::max<double>( pulse_begin, t_start );
+        pulse_end = std::min<double>( pulse_end, t_end );
+        Log::L2( "[System-Pulse] Using w_center = {}, w_range = {}, dw = {} (dt = {}) in time window {} to {}\n", omega_center, omega_range, dw, t_step, pulse_begin, pulse_end );
         for ( double w = omega_center - omega_range; w < omega_center + omega_range; w += dw ) {
             fourier.emplace_back( w );
             Scalar spectral_amp = 0;
-            for ( double t = t_start; t < t_end + t_step; t += t_step ) { // bad for bigger timesteps
+            for ( double t = pulse_begin; t < pulse_end; t += t_step ) { // bad for bigger timesteps
                 spectral_amp += get( t ) * std::exp( 1.i * w * t ) * t_step;
             }
             pulsearray_fourier.emplace_back( spectral_amp );
