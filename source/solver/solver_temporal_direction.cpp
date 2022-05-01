@@ -28,8 +28,8 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     // Finalize
     rkTimer.end();
     Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), rkTimer.getTotalIterationNumber(), "T-Direction: ", Timers::PROGRESS_FORCE_OUTPUT );
-    Log::L2( "[Solver] Done! Saved {} states.\n", savedStates.size() );
-    Log::L2( "[Solver] Hamiltons: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}. Done!\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_read );
+    Log::L2( "[Solver] Saved {} states.\n", savedStates.size() );
+    Log::L2( "[Solver] Hamiltons: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}.\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_read );
     size_t sum = 0;
     std::for_each( s.savedCoefficients.begin(), s.savedCoefficients.end(), [&]( const std::pair<double, std::map<double, QDLC::SaveStateTau>> &m ) { sum += m.second.size(); } );
     Log::L2( "[Solver] Cached {} phonon matrices.\n", sum );
@@ -42,7 +42,7 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
 
     // Index Map:
     for ( int i = 0; i < savedStates.size(); i++ ) {
-        rho_index_map[getTimeAt( i )] = i;
+        rho_index_map[get_time_at( i )] = i;
     }
 
     // Calculate expectation values
@@ -51,7 +51,6 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Log::L2( "[Solver] Calculating expectation values...\n" );
     s.calculate_expectation_values( output_states, evalTimer );
     evalTimer.end();
-    Log::L2( "[Solver] Done!\n" );
 
     return true;
 }

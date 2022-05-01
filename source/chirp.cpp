@@ -19,7 +19,6 @@ Chirp::Chirp( Chirp::Inputs &_inputs ) : inputs( _inputs ) {
         inputs.isSineChirp = true;
     }
     generate();
-    Log::L2( "Done!\n" );
 }
 
 double Chirp::evaluate( double t ) {

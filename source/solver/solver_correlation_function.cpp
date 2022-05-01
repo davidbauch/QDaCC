@@ -30,7 +30,6 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
     }
 
     Timer &timer = Timers::create( "RungeKutta-G1-Loop (" + purpose + ")" );
-    int totalIterations = getIterationNumberTau( s );
     ProgressBar progressbar = ProgressBar();
     timer.start();
     std::string progressstring = "G1(" + purpose + "): ";
@@ -48,14 +47,14 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
         }
     }
     // Calculate G1 Function
-    Log::L2( "[G1Correlation] Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, savedStates.size() );
+    Log::L2( "[G1Correlation] Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), savedStates.size() );
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( size_t i = 0; i < std::min<size_t>( matdim, savedStates.size() ); i++ ) {
         std::vector<QDLC::SaveState> savedRhos;
         // Get Time from saved State
-        double t_t = getTimeAt( i );
+        double t_t = get_time_at( i );
         // Calculate New Modified Density Matrix
-        Sparse rho_tau = s.dgl_calc_rhotau( getRhoAt( i ), op_annihilator, t_t );
+        Sparse rho_tau = s.dgl_calc_rhotau( get_rho_at( i ), op_annihilator, t_t );
         // Calculate Runge Kutta
         calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, progressstring, s, savedRhos, false );
         // Interpolate saved states to equidistant timestep
@@ -72,7 +71,7 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
 
     timer.end();
     Timers::outputProgress( timer, progressbar, savedStates.size(), savedStates.size(), progressstring, Timers::PROGRESS_FORCE_OUTPUT );
-    Log::L2( "[G1Correlation] Done! G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    Log::L2( "[G1Correlation] G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
 
     // Manually Apply the detector function
     apply_detector_function( s, gmat, gmat_time );
@@ -96,7 +95,6 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
 
     // Create Timer and Progresbar
     Timer &timer = Timers::create( "RungeKutta-G2-Loop (" + purpose + ")" );
-    int totalIterations = getIterationNumberTau( s );
     ProgressBar progressbar = ProgressBar();
     timer.start();
     Sparse evalOperator = op_creator_2 * op_annihilator_1;
@@ -114,16 +112,16 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
         }
     }
     // Calculate G2 Function
-    Log::L2( "[G2Correlation] Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{}, maximum iterations: {}, iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), totalIterations, std::min<size_t>( matdim, savedStates.size() ) );
+    Log::L2( "[G2Correlation] Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{},  iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), std::min<size_t>( matdim, savedStates.size() ) );
     // Main G2 Loop
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( size_t i = 0; i < std::min<size_t>( matdim, savedStates.size() ); i++ ) {
         // Create and reserve past rho's vector
         std::vector<QDLC::SaveState> savedRhos;
         // Get Time from saved State
-        double t_t = getTimeAt( i );
+        double t_t = get_time_at( i );
         // Calculate New Modified Density Matrix
-        Sparse rho_tau = s.dgl_calc_rhotau_2( getRhoAt( i ), op_annihilator_2, op_creator_1, t_t );
+        Sparse rho_tau = s.dgl_calc_rhotau_2( get_rho_at( i ), op_annihilator_2, op_creator_1, t_t );
         // Calculate Runge Kutta
         calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, progressstring, s, savedRhos, false );
         // Interpolate saved states to equidistant timestep
@@ -137,7 +135,7 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
 
     timer.end();
     Timers::outputProgress( timer, progressbar, savedStates.size(), savedStates.size(), progressstring, Timers::PROGRESS_FORCE_OUTPUT );
-    Log::L2( "[G2Correlation] G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}. Done!\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    Log::L2( "[G2Correlation] G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
 
     // Manually Apply the detector function
     apply_detector_function( s, gmat, gmat_time );

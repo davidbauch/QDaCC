@@ -43,10 +43,10 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
     for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
         for ( int i = 0; i <= upper_limit; i++ ) {
             double t_t = std::real( akf_mat_g1_time( i, 0 ) );
-            auto rho = getRhoAt( rho_index_map[t_t] );
+            auto rho = get_rho_at( rho_index_map[t_t] );
             int j = upper_limit - i;
             double t_tau = std::real( akf_mat_g1_time( i + j, 0 ) ); // Important: t+tau (i+j)!
-            auto rho_tau = getRhoAt( rho_index_map[t_tau] );
+            auto rho_tau = get_rho_at( rho_index_map[t_tau] );
             Scalar gpop = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
             Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t_t );
             double dt = Numerics::get_tdelta( akf_mat_g1_time, 0, i );
@@ -69,7 +69,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
         topsum += top[i];
         bottomsum += bottom[i];
         topsumv += topv[i];
-        bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( getRhoAt( rho_index_map[t_t] ), M1, t_t ) * dt;
+        bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( rho_index_map[t_t] ), M1, t_t ) * dt;
         outpv[i] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 );
         outp[i] = 1.0 - std::abs( topsum / bottomsum );
     }

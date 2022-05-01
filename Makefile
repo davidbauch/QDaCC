@@ -7,12 +7,14 @@ BUILD_DIR := ./build
 SRC_DIRS := ./source ./external/ALGLIB
 COMPILER = $(CXX)
 
+VERSION := 3.3.5
+
 SRCS := $(shell find $(SRC_DIRS) -name '*.cpp')
 
 INC_DIRS := include/ external/ #$(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-LIB_DIRS := external/easy/ #$(shell find $(SRC_DIRS) -type d)
+LIB_DIRS :=  #$(shell find $(SRC_DIRS) -type d)
 LIB_FLAGS := $(addprefix -L,$(LIB_DIRS)) -O3 -DFMT_HEADER_ONLY
 LIB_LINKS := 
 
@@ -26,20 +28,20 @@ endif
 ifeq ($(OS),Windows_NT)
 	LIB_FLAGS += -std=c++2a
 	TARGET_DIR = ../../Threadhandler
-	TARGET_EXEC := QDLC-3.3.4.exe
+	TARGET_EXEC := QDLC-$(VERSION).exe
 	BUILD_DIR = ./build/win
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
 		LIB_FLAGS += -std=c++20
-		TARGET_EXEC = QDLC-3.3.4.out
+		TARGET_EXEC = QDLC-$(VERSION).out
 		TARGET_DIR = /Users/davidbauch/bin
 		BUILD_DIR = ./build/darwin
 		COMPILER = g++-10
 	endif
 	ifeq ($(UNAME_S),Linux)
 		LIB_FLAGS += -std=c++2a
-		TARGET_EXEC = QDLC-3.3.4.out
+		TARGET_EXEC = QDLC-$(VERSION).out
 		TARGET_DIR = ./
 		BUILD_DIR = ./build/linux
 		COMPILER = g++
@@ -54,6 +56,7 @@ CPPFLAGS := $(INC_FLAGS) $(LIB_FLAGS)
 $(TARGET_DIR)/$(TARGET_EXEC): $(OBJS)
 	@echo Compiling Main Program into $@
 	@$(COMPILER) main.cpp -o $@ $(OBJS) $(LIB_LINKS) $(CPPFLAGS)
+	ln -sf $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/QDLC
 
 # Build step for C++ source
 $(BUILD_DIR)/%.cpp.o: %.cpp

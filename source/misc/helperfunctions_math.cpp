@@ -5,11 +5,11 @@ int QDLC::Math::delta( int i, int j ) {
 }
 
 double QDLC::Math::Hz_to_eV( double hz, double scaling ) {
-    return hz * 6.582119516885722624E-16 * scaling;
+    return hz * QDLC::Math::ev_conversion * scaling;
 }
 
 double QDLC::Math::eV_to_Hz( double eV ) {
-    return eV / 6.582119516885722624E-16;
+    return eV / QDLC::Math::ev_conversion;
 }
 
 double QDLC::Math::Hz_to_wavelength( double hz, double scaling ) {
@@ -35,9 +35,11 @@ double QDLC::Math::factorial_range( double upper, double lower ) {
 double QDLC::Math::getCoherent( double alpha, double N ) {
     return std::exp( -std::pow( alpha, 2.0 ) ) * std::pow( std::pow( alpha, 2.0 ), N ) / QDLC::Math::factorial( N );
 }
+
 double QDLC::Math::getThermal( double alpha, double N ) {
     return std::pow( alpha, N ) / std::pow( 1.0 + alpha, N + 1 );
 }
+
 QDLC::Type::Scalar QDLC::Math::getSqueezed( double r, double phi, double N ) {
     return 1.0 / std::sqrt( std::cosh( r ) ) * std::pow( -std::exp( 1.0i * phi ) * std::tanh( r ), N ) * std::sqrt( factorial_range( 2 * N, N ) * factorial( N ) ) / factorial( N ) / std::pow( 2.0, N );
 }

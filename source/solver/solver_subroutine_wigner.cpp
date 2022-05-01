@@ -7,9 +7,12 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
     int base = s.operatorMatrices.el_states.count( s_mode ) != 0 ? s.operatorMatrices.el_states[s_mode].base : s.operatorMatrices.ph_states[s_mode].base;
     Log::L2( "[Wigner] Calculating Wigner function for mode {}/{}\n", s_mode, base );
     // The Wigner function uses the interpolated savedStates, not the actually calculated states from the RK45 method.
+    // TODO: interaction pic sollte man hier ausstellen können. am besten für normale rho ausgabe auch.
+    bool int_trafo = s.parameters.input_conf["DMconfig"].string["interaction_picture"] == "int";
+    Log::L2( "[Wigner] Output Matrix format will be {}\n", int_trafo ? "in the interaction frame." : "in the Schrödinger frame." );
     for ( int i = 0; i < savedStates.size(); i += skips ) {
-        reduced_rho.emplace_back( s.partial_trace( getRhoAt( i ), base ) );
-        time.emplace_back( getTimeAt( i ) );
+        reduced_rho.emplace_back( s.partial_trace( int_trafo ? get_rho_at( i ) : s.dgl_timetrafo( get_rho_at( i ), get_time_at( i ) ), base ) );
+        time.emplace_back( get_time_at( i ) );
     }
 
     double g = std::sqrt( 2 );

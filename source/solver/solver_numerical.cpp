@@ -1,11 +1,16 @@
 #include "solver/solver_ode.h"
 
-/**
- * @brief Outputs numerical data to file
- *
- * @param s System
- * @return true
- */
+void QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( System &s ) {
+    auto output_format = Eigen::IOFormat( -1, 0, "\t", ", ", "", "" );
+    for ( auto &tup : savedStates ) {
+        auto &t = tup.t;
+        auto hamilton = s.dgl_get_hamilton( t );
+        // Eigen::EigenSolver<Dense> eigensolver( hamilton );
+        auto eigs = Dense( hamilton ).eigenvalues().real() * QDLC::Math::ev_conversion;
+        fmt::print( s.fileoutput.fp_eigenvalues, "{}\t{}\n", t, eigs.format( output_format ) );
+    }
+}
+
 bool QDLC::Numerics::ODESolver::output_numerical_data( System &s ) {
     // Output Numerical RK Error
     if ( s.parameters.numerics_output_rkerror ) { // Chain...
@@ -25,6 +30,8 @@ bool QDLC::Numerics::ODESolver::output_numerical_data( System &s ) {
             fmt::print( s.fileoutput.fp_numerical, "{}\t{}\t{}\t{}\n", t_t, error, t_step, tries );
         }
     }
-    Log::L2( "[Solver] Done!\n" );
+    if ( s.parameters.output_eigenvalues ) {
+        QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( s );
+    }
     return true;
 }

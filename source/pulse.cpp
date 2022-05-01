@@ -12,7 +12,7 @@ Pulse::Pulse( Parameters::input_s &inputs, Parameters &p ) : inputs( inputs ) {
     else
         steps = { 0, 0.5 * p.t_step };
     Log::L2( "[System-Pulse] Done initializing class, creating precalculated pulse...\n" );
-    generate( p.t_start, p.t_end, p.t_step, p.input_conf["PulseConf"].numerical["Center"], p.input_conf["PulseConf"].numerical["Range"], p.input_conf["PulseConf"].numerical["Res"] );
+    generate( p.t_start, p.t_end, p.t_step, p.input_conf["PulseConf"].numerical["Center"], p.input_conf["PulseConf"].numerical["Range"], p.input_conf["PulseConf"].numerical["Res"], p.input_conf["PulseConf"].numerical["dt"] );
     Log::L2( "[System-Pulse] Done!\n" );
 }
 
@@ -53,7 +53,7 @@ Scalar Pulse::evaluate_integral( double t, double dt ) {
 }
 
 // Generate array of energy-values corresponding to the Pulse
-void Pulse::generate( double t_start, double t_end, double t_step, double omega_center, double omega_range, double dw ) {
+void Pulse::generate( double t_start, double t_end, double t_step, double omega_center, double omega_range, double dw, double dt ) {
     // Log::L3( "generating type " + inputs.pulse_type + "... " );
     double t;
     for ( double t1 = t_start; t1 < t_end + t_step * steps.size(); t1 += t_step ) {
@@ -72,7 +72,7 @@ void Pulse::generate( double t_start, double t_end, double t_step, double omega_
     Log::L2( "[System-Pulse] Pulsearray.size() = {}... \n", size );
     if ( inputs.numerical_v["Frequency"].size() > 0 ) {
         Log::L2( "[System-Pulse] Calculating pulse fourier transformation...\n" );
-        Log::L2( "[System-Pulse] Initial w_center = {}, w_range = {}, dw = {} (dt = {})\n", omega_center, omega_range, dw, t_step );
+        Log::L2( "[System-Pulse] Initial w_center = {}, w_range = {}, dw = {} (dt = {})\n", omega_center, omega_range, dw, dt );
         // Finding Spectral integration window
         if ( omega_center == 0 ) {
             for ( auto &input : inputs.numerical_v["Frequency"] ) {
@@ -101,12 +101,12 @@ void Pulse::generate( double t_start, double t_end, double t_step, double omega_
         }
         pulse_begin = std::max<double>( pulse_begin, t_start );
         pulse_end = std::min<double>( pulse_end, t_end );
-        Log::L2( "[System-Pulse] Using w_center = {}, w_range = {}, dw = {} (dt = {}) in time window {} to {}\n", omega_center, omega_range, dw, t_step, pulse_begin, pulse_end );
+        Log::L2( "[System-Pulse] Using w_center = {}, w_range = {}, dw = {} (dt = {}) in time window {} to {}\n", omega_center, omega_range, dw, dt, pulse_begin, pulse_end );
         for ( double w = omega_center - omega_range; w < omega_center + omega_range; w += dw ) {
             fourier.emplace_back( w );
             Scalar spectral_amp = 0;
-            for ( double t = pulse_begin; t < pulse_end; t += t_step ) { // bad for bigger timesteps
-                spectral_amp += get( t ) * std::exp( 1.i * w * t ) * t_step;
+            for ( double t = pulse_begin; t < pulse_end; t += dt ) {
+                spectral_amp += get( t ) * std::exp( 1.i * w * t ) * dt;
             }
             pulsearray_fourier.emplace_back( spectral_amp );
         }
@@ -135,7 +135,6 @@ void Pulse::fileOutput( std::string filepath, double t_start, double t_end, doub
         i++;
     }
     std::fclose( pulsefile );
-    Log::L2( "Done!\n" );
 }
 
 Scalar Pulse::get( double t, bool force_evaluate ) {

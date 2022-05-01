@@ -119,6 +119,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         auto current = base_selfhilbert;
         current.front() = bel.second.self_hilbert;
         bel.second.hilbert = QDLC::Matrix::tensor( current ).sparseView();
+        Log::L3( "[System-OperatorMatrices] Electronic Transition Matrix for Transition {} in self-Hilbert space:\n{}\n", bel.first, Dense( bel.second.self_hilbert ).format( output_format ) );
+        Log::L3( "[System-OperatorMatrices] Electronic Transition Matrix for Transition {} in total-Hilbert space:\n{}\n", bel.first, Dense( bel.second.hilbert ).format( output_format ) );
         bel.second.projector = QDLC::Matrix::sparse_projector( bel.second.hilbert );
     }
     Log::L2( "[System-OperatorMatrices] Creating Photonic Projector Matrices...\n" );
@@ -126,6 +128,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         auto current = base_selfhilbert;
         current[phot.second.base] = phot.second.self_hilbert;
         phot.second.hilbert = QDLC::Matrix::tensor( current ).sparseView();
+        Log::L3( "[System-OperatorMatrices] Cavity Transition Matrix for Transition {} in self-Hilbert space:\n{}\n", phot.first, Dense( phot.second.self_hilbert ).format( output_format ) );
+        Log::L3( "[System-OperatorMatrices] Cavity Transition Matrix for Transition {} in total-Hilbert space:\n{}\n", phot.first, Dense( phot.second.hilbert ).format( output_format ) );
         phot.second.projector = QDLC::Matrix::sparse_projector( phot.second.hilbert );
     }
 
@@ -145,9 +149,13 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     Log::L2( "[System-OperatorMatrices] Creating Pulse Cache Matrices...\n" );
     // Generate prechaced pulse and chirp matrices. 2 matrices are generated per pulse for Omega and Omega^*
     // Generate transition matrices from the initial state matrices to allow for addidional transitions and the cavity modes to be included.
+    // Create a cache Vector for the cavity pulses to allow for the phonon scaling to still apply, meaning the cavity pulse matrices will be added after the phonon scaling was applied:
+    std::vector<QDLC::Type::Sparse> pulse_mat_cavity_cache;
     for ( auto &pulse : p.input_pulse ) {
         Sparse pulsemat = Sparse( base.size(), base.size() );
         Sparse pulsemat_star = Sparse( base.size(), base.size() );
+        pulse_mat_cavity_cache.emplace_back( pulsemat );
+        pulse_mat_cavity_cache.emplace_back( pulsemat_star );
         for ( int i = 0; i < pulse.second.string_v["CoupledTo"].size(); i++ ) {
             std::string transition = pulse.second.string_v["CoupledTo"][i];
             std::string transition_transposed = transition;
@@ -188,14 +196,18 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
                 pulsemat_star += transition_transposed_hilbert;
             } else {
                 Log::L2( "[System-OperatorMatrices] Pulse transition {} is cavity...\n", transition );
-                pulsemat += ph_transitions[transition + "b"].hilbert;
-                pulsemat_star += ph_transitions[transition + "bd"].hilbert;
+                // pulsemat += ph_transitions[transition + "b"].hilbert;
+                // pulsemat_star += ph_transitions[transition + "bd"].hilbert;
+                pulse_mat_cavity_cache[pulse_mat_cavity_cache.size() - 2] += ph_transitions[transition + "b"].hilbert;
+                pulse_mat_cavity_cache[pulse_mat_cavity_cache.size() - 1] += ph_transitions[transition + "bd"].hilbert;
             }
         }
         pulse_mat.emplace_back( pulsemat );
         pulse_mat.emplace_back( pulsemat_star );
+        Log::L3( "[System-OperatorMatrices] Added Pulse Matrix for Pulse {} in total-Hilbert space (normal+transposed):\n{}\n", pulse.first, Dense( pulsemat + pulse_mat_cavity_cache[pulse_mat_cavity_cache.size() - 2] + pulsemat_star + pulse_mat_cavity_cache[pulse_mat_cavity_cache.size() - 1] ).format( output_format ) );
     }
 
+    // TODO: chirp cavity
     Log::L2( "[System-OperatorMatrices] Creating Chirp Cache Matrices...\n" );
     // 1 matrix is generated per chirp
     for ( auto &chirp : p.input_chirp ) {
@@ -292,7 +304,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         polaron_factors.emplace_back( temp );
     }
 
-    Log::L2( "[System-OperatorMatrices] Everything Done! Creating Hamiltonoperator...\n" );
+    Log::L2( "[System-OperatorMatrices] Creating Hamiltonoperator...\n" );
     // Generate Self Action Hamilton H_0:
     H_0 = Sparse( base.size(), base.size() );
     for ( auto &state : el_states ) {
@@ -318,7 +330,6 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
             H_I_b += cav.second.numerical_v["CouplingScaling"][i] * el_transitions[transition].hilbert * ph_transitions[cav.first + "b"].hilbert;
         }
     }
-    Log::L2( "[System-OperatorMatrices] Hamiltonoperator done!\n" );
 
     Log::L2( "[System-OperatorMatrices] Creating Path Integral Sorting Vectors...\n" );
     // The Path Integral can be partially summed by either: the electronic state index; or the electronic state coupling factor.
@@ -383,15 +394,18 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     // Scale Interaction Hamilton Operator and Pulse matrices with <B> if PME is used. Note that because K = exp(-0.5*integral J), the scaling has to be exponential in B, e.g. local_b^factor
     // The Scaling for the Polaron Frame is squared, because the coupling factor n_Level is applied twice in the PI and otherwise only once in the PME.
     if ( p.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL ) {
-        Log::L2( "[System-OperatorMatrices] Scaling H_I,Cavity and H_I,Pulse with <B> = {}\n", p.p_phonon_b );
         Sparse b_matrix = polaron_phonon_coupling_matrix.unaryExpr( [&]( Scalar val ) { return std::pow( p.p_phonon_b.get(), 1.0 * val ); } );
+        Log::L2( "[System-OperatorMatrices] Scaling H_I,Cavity and H_I,Pulse with <B> = {}\n", p.p_phonon_b );
+        Log::L2( "[System-OperatorMatrices] <B>-Matrix:\n{}\n", Dense( b_matrix ).format( output_format ) );
         H_I_a = H_I_a.cwiseProduct( b_matrix );
         H_I_b = H_I_b.cwiseProduct( b_matrix );
-        // Scale Pulse Matrices for Pulse evaluations for the Hamilton Operators
+        // Scale Pulse Matrices for Pulse evaluations for the Hamilton Operators. Note: If the pulse matrix consists of cavity transitions, the <B>-scaling must not be applied there!
         std::for_each( pulse_mat.begin(), pulse_mat.end(), [&]( auto &mat ) { mat = mat.cwiseProduct( b_matrix ); } );
         // Scale Polaron Cache Matrices for Chi evaluations
         std::for_each( polaron_factors.begin(), polaron_factors.end(), [&]( auto &mat ) { mat = mat.cwiseProduct( b_matrix ); } );
     }
+    // Add Cavity Pulse Transitions after scaling of the electronic transitions. Note that this way, the pure cavity driving is not influenced by the phonon coupling. IDK if this is correct.
+    std::for_each( pulse_mat.begin(), pulse_mat.end(), [&, indx = 0]( auto &mat ) mutable { mat += pulse_mat_cavity_cache[indx]; indx++; } );
 
     for ( auto &a : phonon_group_index_to_hilbert_indices )
         Log::L2( "[System-OperatorMatrices] Phonon Group Index Vector: {}\n", a );
@@ -435,12 +449,12 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
             double r = std::stod( cmplx.front() );
             double phi = std::stod( cmplx.back() );
             std::string mode = modev.back().substr( 0, 1 );
-            Log::L2( "[System-OperatorMatrices] Creating superpositioned coherent state {} for mode {} with r = {}, phi = {} and scaled amplitude {}\n", pure_state, mode, r, phi, amp );
+            Log::L2( "[System-OperatorMatrices] Creating superpositioned squeezed state {} for mode {} with r = {}, phi = {} and scaled amplitude {}\n", pure_state, mode, r, phi, amp );
             for ( int n = 0; n < p.input_photonic[mode].numerical["MaxPhotons"]; n++ ) {
                 if ( n % 2 != 0 )
                     continue;
                 std::string current = front_base + std::to_string( n ) + modev.back();
-                Log::L2( "[System-OperatorMatrices] Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getSqueezed( r, phi, n ) * amp );
+                Log::L2( "[System-OperatorMatrices] Creating squeezed substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getSqueezed( r, phi, n ) * amp );
                 // Add initial state with amplitudes
                 initial_state_vector_ket( base_index_map[current] ) += amp * QDLC::Math::getSqueezed( r, phi, n );
             }
@@ -484,7 +498,10 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     else
         H_used = H_0 + H_I;
 
-    Log::L2( "[System-OperatorMatrices] Done!\n" );
+    Log::L2( "[System-OperatorMatrices] Hamilton Eigenvalues:\n" );
+    Log::L2( "[System-OperatorMatrices] H_0: [{}]\n", ( Dense( H_0 ).eigenvalues() * QDLC::Math::ev_conversion ).format( Eigen::IOFormat( -1, 0, ", ", ", ", "", "" ) ) );
+    Log::L2( "[System-OperatorMatrices] H_I: [{}]\n", ( Dense( H_I ).eigenvalues() * QDLC::Math::ev_conversion ).format( Eigen::IOFormat( -1, 0, ", ", ", ", "", "" ) ) );
+    Log::L2( "[System-OperatorMatrices] H: [{}]\n", ( Dense( H_0 + H_I ).eigenvalues() * QDLC::Math::ev_conversion ).format( Eigen::IOFormat( -1, 0, ", ", ", ", "", "" ) ) );
     return true;
 }
 

@@ -2,8 +2,7 @@
 
 Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
     Scalar integral = 0;
-    double stepsize = 1.0E-4 * parameters.p_phonon_wcutoff;
-    for ( double w = 1E-10; w < 10.0 * parameters.p_phonon_wcutoff; w += stepsize ) {
+    for ( double w = 1E-10; w < 10.0 * parameters.p_phonon_wcutoff; w += parameters.p_phonon_wcutoffdelta ) {
         double J;
         if ( parameters.p_phonon_qd_ae == 0.0 )
             J = parameters.p_phonon_alpha * w * std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff );
@@ -11,9 +10,9 @@ Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
             J = w * parameters.hbar * std::pow( parameters.p_phonon_qd_de * std::exp( -w * w * parameters.p_phonon_qd_ae * parameters.p_phonon_qd_ae / ( 4. * parameters.p_phonon_qd_cs * parameters.p_phonon_qd_cs ) ) - parameters.p_phonon_qd_dh * std::exp( -w * w * parameters.p_phonon_qd_ae / parameters.p_phonon_qd_ratio * parameters.p_phonon_qd_ae / parameters.p_phonon_qd_ratio / ( 4. * parameters.p_phonon_qd_cs * parameters.p_phonon_qd_cs ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * parameters.p_phonon_qd_rho * std::pow( parameters.p_phonon_qd_cs, 5. ) );
         // double J = w * parameters.hbar * std::pow( eV7 * std::exp( -w * w * a_e * a_e / ( 4. * v_c * v_c ) ) - eV35 * std::exp( -w * w * a_h * a_h / ( 4. * v_c * v_c ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * rho * std::pow( v_c, 5. ) );
         if ( t < t_step / 2.0 ) {
-            integral += stepsize * J * ( ( 1.0 - std::cos( w * t_step ) ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) + 1.0i * std::sin( w * t_step ) ); // - 1.i * w * t_step );
+            integral += parameters.p_phonon_wcutoffdelta * J * ( ( 1.0 - std::cos( w * t_step ) ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) + 1.0i * std::sin( w * t_step ) ); // - 1.i * w * t_step );
         } else {
-            integral += stepsize * 2.0 * J * ( 1.0 - std::cos( w * t_step ) ) * ( std::cos( w * t ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) - 1.0i * std::sin( w * t ) );
+            integral += parameters.p_phonon_wcutoffdelta * 2.0 * J * ( 1.0 - std::cos( w * t_step ) ) * ( std::cos( w * t ) / std::tanh( parameters.hbar * w / 2.0 / parameters.kb / parameters.p_phonon_T ) - 1.0i * std::sin( w * t ) );
         }
     }
     return integral;
@@ -47,7 +46,7 @@ void System::initialize_path_integral_functions() {
         while ( true ) {
             double current = std::abs( dgl_phonons_kernel( tau, parameters.numerics_subiterator_stepsize ) );
             if ( std::abs( 1.0 - current / last ) < 1E-2 or ( last != 1.0 and std::abs( current / first ) < 1E-3 ) ) {
-                parameters.t_step_pathint = tau / ( 1.0 * parameters.p_phonon_nc );
+                parameters.t_step_pathint = tau / ( 1.0 * tau_max );
                 Log::L2( "[System-Path-Integral] Path Integral t-cutoff was automatically determined to t_cutoff = {}, resulting in a pathintegral timestep of {}\n", tau, parameters.t_step_pathint );
                 break;
             }

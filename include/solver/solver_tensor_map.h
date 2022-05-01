@@ -14,7 +14,7 @@
 
 // Windows Workaround for unsigned int struct
 #ifndef u_int64_t
-    #define u_int64_t uint64_t
+#    define u_int64_t uint64_t
 #endif
 
 namespace QDLC {
@@ -159,6 +159,50 @@ class Tensor {
         }
 
         tensor_type = TYPE_DENSE;
+    }
+
+    /**
+     * @brief Prunes the zero indices, leaving only index combinations with non-zero (> threshold) coefficients
+     *
+     */
+    void prune( double threshold = 0 ) {
+        getCurrentValues().clear();
+        int total_removed_noexist = 0;
+        int total_removed_zero = 0;
+        int total_removed = 0;
+        bool has_x = false;
+        std::vector<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>> temp;
+        for ( int i = 0; i < indices.size(); i++ ) {
+            auto &[x, y] = indices[i];
+            bool remove = false;
+            if ( not( has_x = getNextValues().contains( x ) ) or not getNextValues()[x].contains( y ) ) {
+                remove = true;
+                total_removed_noexist++;
+            } else if ( QDLC::Math::abs2( getNextValues()[x][y] ) < threshold ) {
+                remove = true;
+                total_removed_zero++;
+            }
+            if ( remove ) {
+                // Check for diagonal element
+                if ( not( x - y ).cwiseAbs2().sum() == 0 ) {
+                    // Remove
+                    // indices.erase( indices.begin() + i );
+                    total_removed++;
+                } else {
+                    remove = false;
+                    total_removed_zero--;
+                }
+            }
+            if ( not remove ) {
+                getCurrentValues()[x][y] = getNextValues()[x][y];
+                temp.emplace_back( std::make_tuple( x, y ) );
+            }
+        }
+        getNextValues().clear();
+        getNextValues() = getCurrentValues();
+        indices.clear();
+        indices = temp;
+        Log::L2( "[PathIntegral-TensorMap] Removed {} zero-coefficient indices ({} didn't exist and {} are zero.\n", total_removed, total_removed_noexist, total_removed_zero );
     }
 
     void switchType() {

@@ -10,23 +10,32 @@
 
 class System {
    public:
+    // Class Name
     std::string name;
+    // Final Terminate Message
     std::string terminate_message;
 
+    // Vector of input arguments. The argv elements will get pushed into this vector
     std::vector<std::string> arguments;
 
-    // ##### System Components #####
+    // Shift in Energy for any state or cavity mode
     std::vector<Chirp> chirp;
+    // Pulse for any transition or cavity mode
     std::vector<Pulse> pulse;
+    // FileOutput Object, handles all fileoutputs like opening/closing/header etc.
     FileOutput fileoutput;
+    // Parameters object, holds all system and numerical parameters
     Parameters parameters;
+    // OperatorMatrices object, holds all state- and transition matrices as well as some helpervariables
     OperatorMatrices operatorMatrices;
 
-    // ##### Cache Components #####
     // Runtime efficient caching vector
-    std::map<double, Scalar> phi_vector;                                      // Vector of saved phonon-phi function
-    std::vector<Scalar> phi_vector_int;                                       // Same, but with integers for path integral
-    std::map<double, std::map<double, QDLC::SaveStateTau>> savedCoefficients; // Vector of saved coefficients for e.g. phonon terms.
+    // Map of saved phonon-phi function
+    std::map<double, Scalar> phi_vector;
+    // Vector of saved phonon-phi function
+    std::vector<Scalar> phi_vector_int;
+    // Vector of saved coefficients for e.g. phonon terms.
+    std::map<double, std::map<double, QDLC::SaveStateTau>> savedCoefficients;
 
     // ##### Helper Variables #####
     std::map<std::string, double> emission_probabilities;

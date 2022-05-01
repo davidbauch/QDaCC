@@ -146,9 +146,9 @@ Sparse System::dgl_pulse( const double t ) {
         return ret;
     }
     for ( int i = 0; i < pulse.size(); i++ ) {
-        auto p = pulse[i].get( t, !parameters.numerics_use_function_caching );
+        auto p = pulse[i].get( t, not parameters.numerics_use_function_caching );
         if ( parameters.numerics_use_rwa )
-            ret += operatorMatrices.pulse_mat[2 * i + 1] * p + operatorMatrices.pulse_mat[2 * i] * std::conj( p ); // Das hier ist jetzt creator*Omega + annihilator*Omega^*. Ist das richtig?
+            ret += operatorMatrices.pulse_mat[2 * i + 1] * p + operatorMatrices.pulse_mat[2 * i] * std::conj( p );
         else
             ret += operatorMatrices.pulse_mat[2 * i + 1] * ( p + std::conj( p ) ) + operatorMatrices.pulse_mat[2 * i] * ( p + std::conj( p ) );
     }
@@ -159,7 +159,7 @@ void System::calculate_expectation_values( const std::vector<QDLC::SaveState> &r
     // Output expectation Values
     double t_pre = rhos.front().t;
     for ( auto &tup : rhos ) {
-        auto &rho = tup.mat;
+        auto rho = tup.mat;
         double t = tup.t;
         double dt = t - t_pre;
         t_pre = t;
@@ -186,13 +186,15 @@ void System::calculate_expectation_values( const std::vector<QDLC::SaveState> &r
         }
         // Output
         if ( operatorMatrices.ph_states.size() > 0 )
-            fmt::print( fileoutput.fp_photonpopulation, "{:}\t{:}\n", ph_out, ph_em );
+            fmt::print( fileoutput.fp_photonic, "{:}\t{:}\n", ph_out, ph_em );
         if ( operatorMatrices.el_states.size() > 0 )
-            fmt::print( fileoutput.fp_atomicinversion, "{:}\t{:}\n", el_out, el_em );
+            fmt::print( fileoutput.fp_electronic, "{:}\t{:}\n", el_out, el_em );
 
-        if ( !parameters.numerics_output_no_dm ) {
+        if ( parameters.input_conf["DMconfig"].string["output_mode"] != "none" ) {
             fmt::print( fileoutput.fp_densitymatrix, "{:.5e}\t", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
-            if ( parameters.numerics_output_full_dm ) {
+            if ( parameters.input_conf["DMconfig"].string["interaction_picture"] != "int" )
+                rho = dgl_timetrafo( rho, t );
+            if ( parameters.input_conf["DMconfig"].string["output_mode"] == "full" ) {
                 for ( int i = 0; i < parameters.maxStates; i++ )
                     for ( int j = 0; j < parameters.maxStates; j++ ) {
                         fmt::print( fileoutput.fp_densitymatrix, "{:.10e}\t", std::real( rho.coeff( i, j ) ) );
@@ -219,10 +221,10 @@ bool System::exit_system( const int failure ) {
         p.log();
     for ( auto &c : chirp )
         c.log();
-    Log::L2( "[System-PME] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Interpolate/Read: {}. Done!\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_interpolated );
+    Log::L2( "[System-PME] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Interpolate/Read: {}.\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_interpolated );
     Log::L2( "[System] Number of approx +/- adjustments: {}\n", globaltries );
     Log::L1( "[System] Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
-    fileoutput.close();
+    fileoutput.close( parameters );
     return true;
 }
 

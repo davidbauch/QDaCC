@@ -98,12 +98,12 @@ int main( int argc, char* argv[] ) {
             Log::L1( "{} ", ii );
         Log::L1( "\n\n" + system.terminate_message + "\n" );
 
-        Log::close();
         if ( system.parameters.output_handlerstrings ) {
-            fmt::print( "\n{0} {1:.1f}\n", QDLC::Message::Prefix::PERCENT_TIME_FINAL, finalTime );
-            fmt::print( "{0} Done in {1}\n", QDLC::Message::Prefix::SUFFIX, Timer::format( finalTime ) );
+            Log::L1( "\n{0} {1:.1f}\n", QDLC::Message::Prefix::PERCENT_TIME_FINAL, finalTime );
+            Log::L1( "{0} Done in {1}\n", QDLC::Message::Prefix::SUFFIX, Timer::format( finalTime ) );
         }
         Timers::reset();
+        Log::close();
     }
     exit( EXIT_SUCCESS );
 }

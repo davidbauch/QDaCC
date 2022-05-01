@@ -6,8 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "3.3"
-#define GLOBAL_PROGRAM_LASTCHANGE "Code Revamp"
+#define GLOBAL_PROGRAM_VERSION "3.3.5"
+#define GLOBAL_PROGRAM_LASTCHANGE "Bigg and Stronk"
 
 class Parameters {
    public:
@@ -52,15 +52,14 @@ class Parameters {
     std::vector<double> trace;
 
     // Output Switches
-    // Outputs either the full Densitymatrix, or no densitymatrix at all
-    bool numerics_output_full_dm;
-    bool numerics_output_no_dm;
     // Output RK45 Error
     bool numerics_output_rkerror;
     // Interpolate Outputs
     bool numerics_interpolate_outputs;
     // Output System Dynamical Paths
     bool output_path;
+    // Output Hamilton Eigenvalues
+    bool output_eigenvalues;
 
     // Maximum Threads for the Program to use in general
     int numerics_maximum_threads;
@@ -73,7 +72,7 @@ class Parameters {
     // Defines the Approximation Method used for the Polaron Timetransformation
     int numerics_phonon_approximation_order;
     // Quantum Dot / Phonon Parameters
-    Parameter p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_pure_dephasing;
+    Parameter p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_wcutoffdelta, p_phonon_pure_dephasing;
     Parameter p_phonon_qd_de, p_phonon_qd_dh, p_phonon_qd_rho, p_phonon_qd_cs, p_phonon_qd_ratio, p_phonon_qd_ae;
     // When false, the temperature depndent adjustments of both Radiative Decay and Pure Dephasing Rates is disabled
     bool p_phonon_adjust;
@@ -207,6 +206,7 @@ class Parameters {
     std::string inputstring_chirp;
     std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_raman, inputstring_correlation_resolution, inputstring_SPconf;
     std::string inputstring_detector;
+    std::string inputstring_densitymatrix_config;
     // Input Maps. The Temporary Inputstrings will get verwurstet into these maps, such that their parameters are available via their corresponding string key.
     std::map<std::string, input_s> input_electronic;
     std::map<std::string, input_s> input_photonic;

@@ -112,7 +112,6 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
         s.parameters.iterations_t_max = output.size();
         s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.grid_resolution ) );
         s.parameters.adjust_input();
-        reset( s );
         Log::L1( "[RKSOLVER] Adjusted t_end to {}.\n", s.parameters.t_end );
     }
     return true;
@@ -156,7 +155,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
                 accept = true;
             }
         }
-        Log::L3( "[RK45SOLVER{}] (t = {}) - Local error: {} - dh = {}, current timestep is: {}, new timestep will be: {}, accept current step = {}\n", omp_get_thread_num(), t_t, error, dh, t_step, t_step_new, accept );
+        Log::L3( "[Solver-RK45{}] (t = {}) - Local error: {} - dh = {}, current timestep is: {}, new timestep will be: {}, accept current step = {}\n", omp_get_thread_num(), t_t, error, dh, t_step, t_step_new, accept );
         if ( s.parameters.numerics_output_rkerror ) {
             if ( accept )
                 rk_error_accepted.emplace_back( std::make_tuple( t_t, error ) );
@@ -165,7 +164,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
         if ( accept ) {
             t_t += t_step;
             saveState( rkret.first, t_t, output );
-            Log::L3( "[RK45SOLVER{}] --> (t = {}) - Accepdet step - Local error: {} - current timestep: {}, dh = {}, accepted after {} tries\n", omp_get_thread_num(), t_t, error, t_step, dh, tries );
+            Log::L3( "[Solver-RK45{}] --> (t = {}) - Accepdet step - Local error: {} - current timestep: {}, dh = {}, accepted after {} tries\n", omp_get_thread_num(), t_t, error, t_step, dh, tries );
             // Progress and time output
             rkTimer.iterate();
             if ( do_output ) {
@@ -174,7 +173,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
             // Adjust t_end until ground state is reached.we assume the ground state is the first entry of the DM
             if ( s.parameters.numerics_calculate_till_converged and t_t + t_step > t_end and std::real( output.back().mat.coeff( s.parameters.numerics_groundstate, s.parameters.numerics_groundstate ) ) < 0.999 ) {
                 t_end += 10.0 * t_step;
-                Log::L3( "[RK45SOLVER{}] Adjusted Calculation end to {}\n", omp_get_thread_num(), t_end );
+                Log::L3( "[Solver-RK45{}] Adjusted Calculation end to {}\n", omp_get_thread_num(), t_end );
             }
             tries = 1;
         } else
@@ -188,8 +187,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
         s.parameters.iterations_t_max = output.size();
         s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.grid_resolution ) );
         s.parameters.adjust_input();
-        reset( s );
-        Log::L1( "[RK45SOLVER] Adjusted t_end to {}.\n", s.parameters.t_end );
+        Log::L1( "[Solver-RK45] Adjusted t_end to {}.\n", s.parameters.t_end );
     }
     if ( do_output )
         Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), rkTimer.getTotalIterationNumber(), progressbar_name );

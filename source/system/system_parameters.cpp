@@ -20,8 +20,6 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     scale_parameters = false;
     scale_value = 1E12;
     iterations_t_max = 1;
-    numerics_output_full_dm = false;
-    numerics_output_no_dm = false;
     maxStates = 0;
     numerics_calculate_till_converged = false;
 
@@ -40,7 +38,6 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     if ( scale_parameters ) {
         Log::L2( "[System] Rescaling parameters to {}...\n", scale_value );
         scale_inputs( scale_value );
-        Log::L2( "[System] Done!\n" );
     }
 
     // Adjusting inputs:
@@ -81,8 +78,8 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     inputstring_raman = QDLC::CommandlineArguments::get_parameter( "--G", "GR" );
     inputstring_correlation_resolution = QDLC::CommandlineArguments::get_parameter( "--G", "grid" );
     inputstring_detector = QDLC::CommandlineArguments::get_parameter( "--detector" );
-
-    inputstring_SPconf = QDLC::CommandlineArguments::get_parameter( "--SPconf" );
+    inputstring_densitymatrix_config = QDLC::CommandlineArguments::get_parameter( "--DMconfig" );
+    inputstring_SPconf = QDLC::CommandlineArguments::get_parameter( "--SPconfig" );
 
     p_omega_coupling = QDLC::CommandlineArguments::get_parameter<double>( "--system", "coupling" );
     p_omega_cavity_loss = QDLC::CommandlineArguments::get_parameter<double>( "--system", "kappa" );
@@ -98,9 +95,8 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
         numerics_maximum_threads = omp_get_max_threads();
     output_handlerstrings = QDLC::CommandlineArguments::get_parameter_passed( "-handler" );
     output_operators = QDLC::CommandlineArguments::get_parameter_passed( "-outputOp" ) ? 2 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputHamiltons" ) ? 1 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputOpStop" ) ? 3 : 0 ) );
+    output_eigenvalues = QDLC::CommandlineArguments::get_parameter_passed( "-outputEigs" );
     numerics_order_timetrafo = QDLC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
-    numerics_output_full_dm = QDLC::CommandlineArguments::get_parameter_passed( "-fullDM" );
-    numerics_output_no_dm = QDLC::CommandlineArguments::get_parameter_passed( "-noDM" );
     scale_parameters = QDLC::CommandlineArguments::get_parameter_passed( "-scale" ); // MHMHMH
     numerics_use_saved_coefficients = !QDLC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
     numerics_use_saved_hamiltons = !QDLC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
@@ -115,6 +111,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     // Phonon Parameters
     p_phonon_alpha = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononalpha" );
     p_phonon_wcutoff = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononwcutoff" );
+    p_phonon_wcutoffdelta = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononwcutoffdelta" );
     p_phonon_tcutoff = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phonontcutoff" );
     p_phonon_T = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "temperature" );
     numerics_phonon_approximation_order = QDLC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
@@ -319,7 +316,7 @@ void Parameters::adjust_input() {
             grid_value_indices[t_t] = grid_values.size() - 1;
         }
         // std::cout << "Values for "<<mode<<": " << t_values[mode] << std::endl;
-        Log::L2( "[System] (Re)Setting time vector to {}\n", grid_values.size() );
+        Log::L2( "[System] Setting correlation grid resolution to {0}x{0} for a t_end = {1}\n", grid_values.size(), t_end );
     } else {
         Log::L2( "[System] Not setting time vector because timestep is negative!\n" );
     }
@@ -362,8 +359,6 @@ void Parameters::adjust_input() {
     }
     // numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 * ( p_phonon_tcutoff / t_step ) ) + 10;
     trace.reserve( iterations_t_max + 5 );
-
-    Log::L2( "[System] Adjusting Inputs Done!\n" );
 }
 
 void Parameters::parse_system() {
@@ -394,7 +389,6 @@ void Parameters::parse_system() {
 
     // --SP 'p:GX:1pi,5pi:1.5eV,1eV:4ps,2ps:20ps,35ps:gauss:'
     // Type is cw or superposition (chained with '+', e.g. 'gauss+chirped(1E-24)' ) of gauss,cutoff,chirped(rate),super(delta),exponent(exponent)
-    // TODO ...
     // p:TYPE:...parameters...
     auto pulses = QDLC::String::splitline( inputstring_pulse, ';' );
     int pindex = 0;
@@ -511,19 +505,21 @@ void Parameters::parse_system() {
             conf_s.numerical["Center"] = conf_s.numerical_v["Center"][0];
             conf_s.numerical["Range"] = conf_s.numerical_v["Range"][0];
             conf_s.numerical["Res"] = conf_s.numerical_v["resW"][0];
+            conf_s.numerical["dt"] = numerics_subiterator_stepsize;
         } else if ( inputstring_SPconf.size() > 0 ) {
-            Log::L2( "[System-Parameters] Generating Pulse Fourier Configuration from Parameters.\n" );
-            auto conf = QDLC::String::splitline( inputstring_SPconf, ',' );
+            Log::L2( "[System-Parameters] Generating Pulse Fourier Configuration from Parameters using {}.\n", inputstring_SPconf );
+            auto conf = QDLC::String::splitline( inputstring_SPconf, ':' );
             conf_s.numerical["Center"] = conf.size() > 0 ? QDLC::Misc::convertParam<Parameter>( conf[0] ) : Parameter( 0.0 );
             conf_s.numerical["Range"] = conf.size() > 1 ? QDLC::Misc::convertParam<Parameter>( conf[1] ) : Parameter( 0.0 );
             conf_s.numerical["Res"] = conf.size() > 2 ? QDLC::Misc::convertParam<Parameter>( conf[2] ) : Parameter( 0.0 );
+            conf_s.numerical["dt"] = conf.size() > 3 ? QDLC::Misc::convertParam<Parameter>( conf[3] ) : Parameter( numerics_subiterator_stepsize );
             input_conf["PulseConf"] = conf_s;
         }
     }
     {
         input_s conf_s;
         if ( !( inputstring_detector == "none" ) ) {
-            Log::L2( "[System-Parameters] Setting up detector...\n" );
+            Log::L2( "[System-Parameters] Setting up detector using {}...\n", inputstring_detector );
             auto conf = QDLC::String::splitline( inputstring_detector, ':' );
             conf_s.numerical["time_center"] = QDLC::Misc::convertParam<Parameter>( conf[0] );
             conf_s.numerical["time_range"] = QDLC::Misc::convertParam<Parameter>( conf[1] );
@@ -532,6 +528,14 @@ void Parameters::parse_system() {
             conf_s.numerical["power_amplitude"] = QDLC::Misc::convertParam<Parameter>( conf[4] );
         }
         input_conf["Detector"] = conf_s;
+    }
+    {
+        input_s conf_s;
+        Log::L2( "[System-Parameters] Setting up density matrix output using {}...\n", inputstring_densitymatrix_config );
+        auto conf = QDLC::String::splitline( inputstring_densitymatrix_config, ':' );
+        conf_s.string["output_mode"] = conf[0];
+        conf_s.string["interaction_picture"] = conf.size() > 1 ? conf[1] : "schroedinger";
+        input_conf["DMconfig"] = conf_s;
     }
 }
 
@@ -668,7 +672,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
 
     Log::wrapInBar( "G-Function Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( input_correlation.size() > 0 ) {
-        Log::L1( "Tau-grid resolution is {}x{}\n", grid_values.size(), grid_values.size() );
+        Log::L1( "Tau-grid resolution is {}\n", numerics_calculate_till_converged ? "to be determined." : fmt::format( "{}x{}", grid_values.size(), grid_values.size() ) );
         Log::L1( "Calculating:\n" );
         for ( auto &[name, mat] : input_correlation ) {
             Log::L1( " - {} on mode(s) ", name );
@@ -707,5 +711,4 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
 
     Log::wrapInBar( "Program Log:", Log::BAR_SIZE_FULL, Log::LEVEL_2 );
     Log::L1( "\n" );
-    Log::L2( "OutputHandlerStrings: {}\n", output_handlerstrings );
 }

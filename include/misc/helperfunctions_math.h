@@ -12,6 +12,7 @@ namespace Math {
 
 const double PI = 3.14159265358979323846264338327950288;
 const double vLight = 299792458.0;
+const double ev_conversion = 6.582119516885722624E-16;
 
 int delta( int i, int j );
 

@@ -6,11 +6,11 @@
 class FileOutput {
    public:
     FILE *fp_densitymatrix;
-    bool numerics_output_no_dm = false;
-    FILE *fp_atomicinversion;
-    FILE *fp_photonpopulation;
+    FILE *fp_electronic;
+    FILE *fp_photonic;
     FILE *fp_numerical;
+    FILE *fp_eigenvalues;
     FileOutput(){};
     FileOutput( Parameters &p, OperatorMatrices &op );
-    void close();
+    void close( Parameters &p );
 };
