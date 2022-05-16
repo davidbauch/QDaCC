@@ -123,7 +123,8 @@ class Parameters {
     int numerics_interpolate_method_tau;
 
     // Stepparameters for the RK45 Method
-    Parameter numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax, numerics_rk_order, numerics_rk_tol;
+    Parameter numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax, numerics_rk_order;
+    std::vector<std::tuple<double, double>> numerics_rk_tol;
     // Enables the use of discrete timesteps using rk_stepdelta as an in- or decrease for dt
     bool numerics_rk_usediscrete_timesteps;
 
@@ -207,6 +208,7 @@ class Parameters {
     std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_raman, inputstring_correlation_resolution, inputstring_SPconf;
     std::string inputstring_detector;
     std::string inputstring_densitymatrix_config;
+    std::string inputstring_rk45_config;
     // Input Maps. The Temporary Inputstrings will get verwurstet into these maps, such that their parameters are available via their corresponding string key.
     std::map<std::string, input_s> input_electronic;
     std::map<std::string, input_s> input_photonic;

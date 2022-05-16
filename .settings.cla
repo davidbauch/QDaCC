@@ -459,7 +459,7 @@ CLA_ARGUMENT = {
 	CLA_PARAMETER = {
 		subkey = 'rktol'
 		value = '1E-6'
-		datatype = 'double'
+		datatype = 'string'
 		description = 'Tolerance for the RK45 method.'
 	}
 	CLA_PARAMETER = {

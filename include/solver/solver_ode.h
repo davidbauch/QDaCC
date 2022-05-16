@@ -42,7 +42,8 @@ class ODESolver {
     std::vector<int> pathint_tensor_dimensions;
 
     // Detector matrix
-    Dense detector_matrix;
+    Dense detector_temporal_mask;
+    std::vector<std::tuple<double, double>> detector_frequency_mask;
 
     /**
      * @brief Saves a tuple of a complex (density-)matrix and time, ensuring times and matrices don't get mixed up
@@ -190,7 +191,7 @@ class ODESolver {
      * @brief Iterates rho0 from t_start to t_end using RK45. This function does NOT interpolate the result but instead returns all calculated densitymatrices as vector.
      *
      */
-    bool calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output = true, double tolerance = 1E-4 );
+    bool calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output = true );
 
     /**
      * @brief Iterates rho0 from t_start to t_end using the Path Integral Method. If correlation functions are evaluated, this function calls calculate_path_integral_correlation multiple times per iteration.

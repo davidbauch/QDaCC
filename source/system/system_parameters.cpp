@@ -60,7 +60,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
 
     // Runge Kutta Parameters
     numerics_rk_order = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkorder" );
-    numerics_rk_tol = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rktol" );
+    inputstring_rk45_config = QDLC::CommandlineArguments::get_parameter( "--rk", "rktol" );
     numerics_rk_stepdelta = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepdelta" );
     numerics_rk_stepmin = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepmin" );
     numerics_rk_stepmax = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepmax" );
@@ -479,12 +479,13 @@ void Parameters::parse_system() {
         conf_s.string_v["PMode"] = QDLC::String::splitline( conf[3], ',' );
         input_correlation["Raman"] = conf_s;
     }
-    for ( std::string &gconf : QDLC::String::splitline( inputstring_correlation_resolution, ';' ) ) { // Redundant, only the latest will be used.
-        auto single = QDLC::String::splitline( gconf, ':' );
+    // Correlation Grid
+    if ( std::find( inputstring_correlation_resolution.begin(), inputstring_correlation_resolution.end(), ':' ) != inputstring_correlation_resolution.end() ) {
+        auto single = QDLC::String::splitline( inputstring_correlation_resolution, ';' );
         input_s conf_s;
         std::vector<Parameter> times, dts;
         for ( int i = 0; i < single.size(); i++ ) {
-            auto cur = QDLC::String::splitline( single[i], '-' );
+            auto cur = QDLC::String::splitline( single[i], ':' );
             times.emplace_back( QDLC::Misc::convertParam<Parameter>( cur[0] ) );
             dts.emplace_back( QDLC::Misc::convertParam<Parameter>( cur[1] ) );
         }
@@ -516,16 +517,36 @@ void Parameters::parse_system() {
             input_conf["PulseConf"] = conf_s;
         }
     }
+    // Detector Input. Split temporal and spectral filtering with ";"
     {
         input_s conf_s;
         if ( !( inputstring_detector == "none" ) ) {
             Log::L2( "[System-Parameters] Setting up detector using {}...\n", inputstring_detector );
-            auto conf = QDLC::String::splitline( inputstring_detector, ':' );
-            conf_s.numerical["time_center"] = QDLC::Misc::convertParam<Parameter>( conf[0] );
-            conf_s.numerical["time_range"] = QDLC::Misc::convertParam<Parameter>( conf[1] );
-            conf_s.numerical["spectral_range"] = QDLC::Misc::convertParam<Parameter>( conf[2] );
-            conf_s.numerical["center_range"] = QDLC::Misc::convertParam<Parameter>( conf[3] );
-            conf_s.numerical["power_amplitude"] = QDLC::Misc::convertParam<Parameter>( conf[4] );
+            auto conf_sep = QDLC::String::splitline( inputstring_detector, ';' );
+            if ( conf_sep[0] != "none" ) {
+                auto conf = QDLC::String::splitline( conf_sep[0], ':' );
+                conf_s.numerical_v["time_center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[0], ',' ) );
+                conf_s.numerical_v["time_range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );
+                conf_s.numerical_v["time_power_amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );
+                Log::L2( "[System-Parameters] Adding Temporal Detector mask using center = {}, range = {} and power_amp = {}.\n", conf_s.numerical_v["time_center"], conf_s.numerical_v["time_range"], conf_s.numerical_v["time_power_amplitude"] );
+            } else {
+                conf_s.numerical_v["time_center"] = {};
+                conf_s.numerical_v["time_range"] = {};
+                conf_s.numerical_v["time_power_amplitude"] = {};
+            }
+            if ( conf_sep.size() > 1 and conf_sep[1] != "none" ) {
+                auto conf = QDLC::String::splitline( conf_sep[1], ':' );
+                conf_s.numerical_v["spectral_range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[0], ',' ) );
+                conf_s.numerical_v["spectral_center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );
+                conf_s.numerical_v["spectral_power_amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );
+                conf_s.numerical_v["spectral_number_points"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );
+                Log::L2( "[System-Parameters] Adding Spectral Detector mask using center = {}, range = {}, power_amp = {} and {} points for the Fourier Transformation.\n", conf_s.numerical_v["spectral_center"], conf_s.numerical_v["spectral_range"], conf_s.numerical_v["spectral_power_amplitude"], conf_s.numerical_v["spectral_number_points"] );
+            } else {
+                conf_s.numerical_v["spectral_range"] = {};
+                conf_s.numerical_v["spectral_center"] = {};
+                conf_s.numerical_v["spectral_power_amplitude"] = {};
+                conf_s.numerical_v["spectral_number_points"] = {};
+            }
         }
         input_conf["Detector"] = conf_s;
     }
@@ -536,6 +557,20 @@ void Parameters::parse_system() {
         conf_s.string["output_mode"] = conf[0];
         conf_s.string["interaction_picture"] = conf.size() > 1 ? conf[1] : "schroedinger";
         input_conf["DMconfig"] = conf_s;
+    }
+    // RK 45 Tolerance Vector
+    {
+        if ( std::find( inputstring_rk45_config.begin(), inputstring_rk45_config.end(), ':' ) == inputstring_rk45_config.end() ) {
+            numerics_rk_tol.emplace_back( 1.0, QDLC::Misc::convertParam<double>( inputstring_rk45_config ) );
+            Log::L2( "[System-Parameters] Set fixed RK45 Tolerance to {}.\n", std::get<1>( numerics_rk_tol.back() ) );
+        } else {
+            Log::L2( "[System-Parameters] Setting up multiple tolerances...\n" );
+            for ( auto partial : QDLC::String::splitline( inputstring_rk45_config, ';' ) ) {
+                auto tuple = QDLC::String::splitline( partial, ':' );
+                numerics_rk_tol.emplace_back( std::make_tuple( QDLC::Misc::convertParam<double>( tuple.front() ), QDLC::Misc::convertParam<double>( tuple.back() ) ) );
+                Log::L2( "[System-Parameters] Set RK45 Tolerance to {} (from {}).\n", std::get<1>( numerics_rk_tol.back() ), partial );
+            }
+        }
     }
 }
 
@@ -687,7 +722,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "\n" );
 
     Log::wrapInBar( "Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
-    Log::L1( "Solver used: RK{}{}\n", numerics_rk_order, numerics_rk_order != 45 ? "" : fmt::format( " (Tolerance: {}, Stepdelta: {}, Steplimits: [{},{}])", numerics_rk_tol, numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax ) );
+    Log::L1( "Solver used: RK{}{}\n", numerics_rk_order, numerics_rk_order != 45 ? "" : fmt::format( " (Tolerance: {}, Stepdelta: {}, Steplimits: [{},{}])", inputstring_rk45_config, numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax ) );
     if ( numerics_rk_order == 45 and numerics_phonon_nork45 )
         Log::L1( "Will NOT use RK45 for the phonon backwards integral!\n" );
     Log::L1( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );

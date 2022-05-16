@@ -9,6 +9,7 @@ QDLC::Numerics::ODESolver::ODESolver( System &s ) {
     auto size = savedStates.size();
     savedStates.clear();
     savedStates.reserve( size );
+    detector_frequency_mask.clear();
 }
 
 // TODO: interpolation für tau direction, dann wieder cachen in t wie mit phononen
