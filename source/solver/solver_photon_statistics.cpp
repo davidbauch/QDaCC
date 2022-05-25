@@ -3,76 +3,6 @@
 #include <complex>
 //#include <specfunc.h>
 
-void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, const Dense &timemat ) {
-    if ( s.parameters.input_conf["Detector"].numerical_v["time_center"].size() > 0 ) {
-        if ( detector_temporal_mask.rows() == 0 ) {
-            detector_temporal_mask = Dense( mat.rows(), mat.cols() );
-            for ( int c = 0; c < s.parameters.input_conf["Detector"].numerical_v["time_center"].size(); c++ ) {
-                double detector_t_center = s.parameters.input_conf["Detector"].numerical_v["time_center"][c];
-                double detector_t_range = s.parameters.input_conf["Detector"].numerical_v["time_range"][c];
-                double detector_power = s.parameters.input_conf["Detector"].numerical_v["power_amplitude"][c];
-                for ( int i = 0; i < mat.rows(); i++ ) {
-                    double time = std::real( timemat( i, 0 ) );
-                    for ( int j = 0; j < mat.cols() - i; j++ ) {
-                        double tau = std::imag( timemat( i, j ) );
-                        detector_temporal_mask( i, j ) += std::exp( -std::pow( ( time - detector_t_center ) / detector_t_range, detector_power ) ) * std::exp( -std::pow( ( tau - detector_t_center ) / detector_t_range, detector_power ) );
-                    }
-                }
-            }
-        }
-        mat = mat.cwiseProduct( detector_temporal_mask );
-    }
-    if ( s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size() > 0 ) {
-        Dense new_g_mat = Dense( mat.rows(), mat.cols() );
-        Log::L2( "mask size {}\n", detector_frequency_mask.size() );
-        // Disgusting piece of code
-        if ( detector_frequency_mask.size() == 0 ) {
-            for ( int c = 0; c < s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size(); c++ ) {
-                double center = s.parameters.input_conf["Detector"].numerical_v["spectral_center"][c];
-                double range = s.parameters.input_conf["Detector"].numerical_v["spectral_range"][c];
-                double points = s.parameters.input_conf["Detector"].numerical_v["spectral_number_points"][c]; // Points-per-sigma
-                double power = s.parameters.input_conf["Detector"].numerical_v["spectral_power_amplitude"][c];
-                double delta_omega = range / points;
-                double w = 0;
-                while ( true ) {
-                    double amplitude = std::exp( -0.5 * std::pow( w / points, power ) );
-                    detector_frequency_mask.emplace_back( std::make_tuple( center - w / points * range, amplitude ) );
-                    detector_frequency_mask.emplace_back( std::make_tuple( center + w / points * range, amplitude ) );
-                    w += 1;
-                    if ( amplitude < 1E-5 )
-                        break;
-                }
-            }
-            std::sort( detector_frequency_mask.begin(), detector_frequency_mask.end(), []( std::tuple<double, double> &first, std::tuple<double, double> &second ) { return std::get<0>( first ) > std::get<0>( second ); } );
-        }
-        // Calculate main fourier transform integral with spectral amplitude
-        Dense mat_transformed = Dense( mat.rows(), detector_frequency_mask.size() );
-#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
-        for ( long unsigned int i = 0; i < mat.rows(); i++ ) {
-            for ( int w = 0; w < detector_frequency_mask.size(); w++ ) {
-                auto &[frequency_w, frequency_amp] = detector_frequency_mask[w];
-                for ( int j = 0; j < mat.cols() - i; j++ ) { // -i because of triangular grid
-                    double tau = std::imag( timemat( i, j ) ) - std::real( timemat( i, j ) );
-                    double dtau = Numerics::get_taudelta( timemat, i, j );
-                    mat_transformed( i, w ) += frequency_amp * std::exp( -1.0i * frequency_w * tau ) * mat( i, j ) * dtau;
-                }
-            }
-        }
-        // Transform Back
-        //#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
-        // for ( long unsigned int i = 0; i < mat_transformed.rows(); i++ ) {
-        //    for ( int tau = 0; tau < mat.size(); tau++ ) {
-        //        for ( int w = 0; w < detector_frequency_mask.size(); w++ ) {
-        //            auto &[frequency_w, frequency_amp] = detector_frequency_mask[w];
-        //            double tau = std::imag( timemat( i, j ) ) - std::real( timemat( i, j ) );
-        //            double dtau = Numerics::get_taudelta( timemat, i, j );
-        //            mat_transformed( i, w ) += frequency_amp * std::exp( -1.0i * frequency_w * tau ) * mat( i, j ) * dtau;
-        //        }
-        //    }
-        //}
-    }
-}
-
 bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s ) {
     // Calculate Spectra
     auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
@@ -104,7 +34,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     }
     // Detector Matrix
     if ( s.parameters.input_conf["Detector"].numerical_v["time_center"].size() > 0 ) {
-        Log::L2( "Saving Detector Matrix to detector_temporal_mask.txt...\n" );
+        Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask.txt...\n" );
         FILE *f_detector = std::fopen( ( s.parameters.working_directory + "detector_temporal_mask.txt" ).c_str(), "w" );
         fmt::print( f_detector, "Time_index\ttau_index\tD(t)*D(t+tau)\n" );
         for ( int k = 0; k < detector_temporal_mask.rows(); k++ ) {
@@ -116,10 +46,10 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         std::fclose( f_detector );
     }
     if ( s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size() > 0 ) {
-        Log::L2( "Saving Detector Matrix to detector_spectral_mask.txt...\n" );
+        Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_spectral_mask.txt...\n" );
         FILE *f_detector = std::fopen( ( s.parameters.working_directory + "detector_spectral_mask.txt" ).c_str(), "w" );
         fmt::print( f_detector, "Time_index\ttau_index\tD(t)*D(t+tau)\n" );
-        for ( auto &[freq, amp] : detector_frequency_mask ) {
+        for ( auto &[freq, amp, delta] : detector_frequency_mask ) {
             fmt::print( f_detector, "{:.8e}\t{:.8e}\n", freq, amp );
         }
         std::fclose( f_detector );
@@ -148,7 +78,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         auto &gmat_time = cache[purpose + "_time"];
         // G2(t,tau)
         if ( gs_s.numerical_v["Integrated"][i] == 0 || gs_s.numerical_v["Integrated"][i] == 2 ) {
-            Log::L2( "Saving G{} function matrix to {}_m.txt...\n", order, purpose );
+            Log::L2( "[PhotonStatistics] Saving G{} function matrix to {}_m.txt...\n", order, purpose );
             FILE *f_gfunc = std::fopen( ( s.parameters.working_directory + purpose + "_m.txt" ).c_str(), "w" );
             fmt::print( f_gfunc, "Time\tTau\tAbs\tReal\tImag\n" );
             for ( int k = 0; k < gmat.rows(); k++ ) {

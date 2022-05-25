@@ -74,7 +74,7 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
     Log::L2( "[G1Correlation] G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
 
     // Manually Apply the detector function
-    apply_detector_function( s, gmat, gmat_time );
+    apply_detector_function( s, gmat, gmat_time, purpose );
 
     return { op_creator, op_annihilator };
 }
@@ -138,7 +138,7 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
     Log::L2( "[G2Correlation] G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
 
     // Manually Apply the detector function
-    apply_detector_function( s, gmat, gmat_time );
+    apply_detector_function( s, gmat, gmat_time, purpose );
 
     return { op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2 };
 }

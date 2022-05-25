@@ -43,7 +43,8 @@ class ODESolver {
 
     // Detector matrix
     Dense detector_temporal_mask;
-    std::vector<std::tuple<double, double>> detector_frequency_mask;
+    std::vector<std::tuple<double, double, double>> detector_frequency_mask;
+    // Dense detector_frequency_mask_cache;
 
     /**
      * @brief Saves a tuple of a complex (density-)matrix and time, ensuring times and matrices don't get mixed up
@@ -227,7 +228,7 @@ class ODESolver {
      * @brief Applies the detector mapping function to a G1 or G2 correlation function.
      *
      */
-    void apply_detector_function( System &s, Dense &mat, const Dense &timemat );
+    void apply_detector_function( System &s, Dense &mat, const Dense &timemat, const std::string &purpose );
 
     /**
      * @brief Calculates the Eigenvalues of the Hamilton operators H_0, H_I and H_0+H_I and outputs them to "hamilton_eigenvalues.txt"
