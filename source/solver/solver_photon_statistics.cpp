@@ -48,9 +48,9 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     if ( s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size() > 0 ) {
         Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_spectral_mask.txt...\n" );
         FILE *f_detector = std::fopen( ( s.parameters.working_directory + "detector_spectral_mask.txt" ).c_str(), "w" );
-        fmt::print( f_detector, "Time_index\ttau_index\tD(t)*D(t+tau)\n" );
+        fmt::print( f_detector, "Omega\tAmp\tDelta\n" );
         for ( auto &[freq, amp, delta] : detector_frequency_mask ) {
-            fmt::print( f_detector, "{:.8e}\t{:.8e}\n", freq, amp );
+            fmt::print( f_detector, "{:.8e}\t{:.8e}\t{:.8e}\n", freq, amp, delta );
         }
         std::fclose( f_detector );
     }

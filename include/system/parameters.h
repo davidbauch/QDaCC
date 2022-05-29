@@ -6,8 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "3.3.5"
-#define GLOBAL_PROGRAM_LASTCHANGE "Bigg and Stronk"
+#define GLOBAL_PROGRAM_VERSION "3.3.6"
+#define GLOBAL_PROGRAM_LASTCHANGE "Now With Detector"
 
 class Parameters {
    public:
