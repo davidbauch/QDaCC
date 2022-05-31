@@ -71,19 +71,20 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
             Timers::outputProgress( timer, progressbar, i, mat.rows(), "Detector FT tau (" + purpose + "): " );
             timer.iterate();
         }
-        // Output. TODO: only if wanted
-        Log::L2( "[PhotonStatistics] Outputting FT({})...\n", purpose );
-        FILE *f_gfunc = std::fopen( ( s.parameters.working_directory + purpose + "_mFT.txt" ).c_str(), "w" );
-        fmt::print( f_gfunc, "Time\tOmega_tau\tAbs\tReal\tImag\n" );
-        for ( int k = 0; k < mat.rows(); k++ ) {
-            for ( int l = 0; l < detector_frequency_mask.size(); l++ ) {
-                auto &[frequency_w_l, frequency_amp_l, frequency_delta_l] = detector_frequency_mask[l];
-                fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( timemat( k, 0 ) ), frequency_w_l, std::abs( mat_transformed( k, l ) ), std::real( mat_transformed( k, l ) ), std::imag( mat_transformed( k, l ) ) );
+        // Output.
+        if ( s.parameters.output_detector_transformations ) {
+            Log::L2( "[PhotonStatistics] Outputting FT({})...\n", purpose );
+            FILE *f_gfunc = std::fopen( ( s.parameters.working_directory + purpose + "_mFT.txt" ).c_str(), "w" );
+            fmt::print( f_gfunc, "Time\tOmega_tau\tAbs\tReal\tImag\n" );
+            for ( int k = 0; k < mat.rows(); k++ ) {
+                for ( int l = 0; l < detector_frequency_mask.size(); l++ ) {
+                    auto &[frequency_w_l, frequency_amp_l, frequency_delta_l] = detector_frequency_mask[l];
+                    fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( timemat( k, 0 ) ), frequency_w_l, std::abs( mat_transformed( k, l ) ), std::real( mat_transformed( k, l ) ), std::imag( mat_transformed( k, l ) ) );
+                }
+                fmt::print( f_gfunc, "\n" );
             }
-            fmt::print( f_gfunc, "\n" );
+            std::fclose( f_gfunc );
         }
-        std::fclose( f_gfunc );
-
         // Transform Back
         Log::L2( "[PhotonStatistics] Calculating iFT({})...\n", purpose );
         mat = Dense::Zero( mat.rows(), mat.cols() );

@@ -570,6 +570,18 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '1hyphen'
+	key = 'outputDetector'
+	description = 'Enables Output of the Detector transformed Matrices, e.g. the FT of the G_i functions.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
 	key = 'outputOp'
 	description = 'NOTIMPLEMENTED Enables outputting operators. Some Operators will also be output when using the -L3 Flag.'
 	group = 'General'

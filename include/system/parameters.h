@@ -60,6 +60,8 @@ class Parameters {
     bool output_path;
     // Output Hamilton Eigenvalues
     bool output_eigenvalues;
+    // Output Detector Transformations
+    bool output_detector_transformations;
 
     // Maximum Threads for the Program to use in general
     int numerics_maximum_threads;

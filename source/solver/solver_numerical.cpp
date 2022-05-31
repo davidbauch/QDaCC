@@ -1,13 +1,27 @@
 #include "solver/solver_ode.h"
 
 void QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( System &s ) {
-    auto output_format = Eigen::IOFormat( -1, 0, "\t", ", ", "", "" );
+    bool did_title = false;
     for ( auto &tup : savedStates ) {
         auto &t = tup.t;
         auto hamilton = s.dgl_get_hamilton( t );
         // Eigen::EigenSolver<Dense> eigensolver( hamilton );
-        auto eigs = Dense( hamilton ).eigenvalues().real() * QDLC::Math::ev_conversion;
-        fmt::print( s.fileoutput.fp_eigenvalues, "{}\t{}\n", t, eigs.format( output_format ) );
+        auto eigs = Dense( hamilton ).eigenvalues() * QDLC::Math::ev_conversion;
+        if ( not did_title ) {
+            fmt::print( s.fileoutput.fp_eigenvalues, "Time" );
+            for ( int i = 0; i < eigs.size(); i++ )
+                fmt::print( s.fileoutput.fp_eigenvalues, "\tReal({})", i );
+            for ( int i = 0; i < eigs.size(); i++ )
+                fmt::print( s.fileoutput.fp_eigenvalues, "\tImag({})", i );
+            fmt::print( s.fileoutput.fp_eigenvalues, "\n" );
+            did_title = true;
+        }
+        fmt::print( s.fileoutput.fp_eigenvalues, "{:.8e}", t );
+        for ( int i = 0; i < eigs.size(); i++ )
+            fmt::print( s.fileoutput.fp_eigenvalues, "\t{:.10e}", eigs.real()( i ) );
+        for ( int i = 0; i < eigs.size(); i++ )
+            fmt::print( s.fileoutput.fp_eigenvalues, "\t{:.10e}", eigs.imag()( i ) );
+        fmt::print( s.fileoutput.fp_eigenvalues, "\n" );
     }
 }
 

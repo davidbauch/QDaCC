@@ -88,8 +88,8 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     p_initial_state_s = QDLC::CommandlineArguments::get_parameter( "--R" );
 
     grid_resolution = QDLC::CommandlineArguments::get_parameter<int>( "--G", "gridres" );
-    numerics_use_interactionpicture = QDLC::CommandlineArguments::get_parameter_passed( "-noInteractionpic" ) ? false : true;
-    numerics_use_rwa = QDLC::CommandlineArguments::get_parameter_passed( "-noRWA" ) ? 0 : 1;
+    numerics_use_interactionpicture = not QDLC::CommandlineArguments::get_parameter_passed( "-noInteractionpic" );
+    numerics_use_rwa = not QDLC::CommandlineArguments::get_parameter_passed( "-noRWA" );
     numerics_maximum_threads = QDLC::CommandlineArguments::get_parameter<int>( "--Threads" );
     if ( numerics_maximum_threads == -1 )
         numerics_maximum_threads = omp_get_max_threads();
@@ -107,6 +107,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
     s_numerics_interpolate = QDLC::CommandlineArguments::get_parameter( "--interpolateOrder" );
     numerics_output_rkerror = QDLC::CommandlineArguments::get_parameter_passed( "-error" );
+    output_detector_transformations = QDLC::CommandlineArguments::get_parameter_passed( "-outputDetector" );
 
     // Phonon Parameters
     p_phonon_alpha = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononalpha" );
@@ -525,8 +526,8 @@ void Parameters::parse_system() {
             auto conf_sep = QDLC::String::splitline( inputstring_detector, ';' );
             if ( conf_sep[0] != "none" ) {
                 auto conf = QDLC::String::splitline( conf_sep[0], ':' );
-                conf_s.numerical_v["time_center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[0], ',' ) );
-                conf_s.numerical_v["time_range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );
+                conf_s.numerical_v["time_center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );
+                conf_s.numerical_v["time_range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[0], ',' ) );
                 conf_s.numerical_v["time_power_amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );
                 Log::L2( "[System-Parameters] Adding Temporal Detector mask using center = {}, range = {} and power_amp = {}.\n", conf_s.numerical_v["time_center"], conf_s.numerical_v["time_range"], conf_s.numerical_v["time_power_amplitude"] );
             } else {
@@ -716,6 +717,27 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             Log::L1( "\n" );
         }
         Log::L1( "\n" );
+        // Detector Stuff
+        if ( input_conf["Detector"].numerical_v["time_center"].size() > 0 ) {
+            Log::L1( "Using {} temporal detection windows with parameters:\n", input_conf["Detector"].numerical_v["time_center"].size() );
+            for ( int i = 0; i < input_conf["Detector"].numerical_v["time_center"].size(); i++ ) {
+                Log::L1( " - Temporal Detection Window {}:\n", i );
+                Log::L1( " - - Center: {} - {} ps\n", input_conf["Detector"].numerical_v["time_center"][i], input_conf["Detector"].numerical_v["time_center"][i].getSI( Parameter::UNIT_TIME_PS ) );
+                Log::L1( " - - Sigma: {} - {} ps\n", input_conf["Detector"].numerical_v["time_range"][i], input_conf["Detector"].numerical_v["time_range"][i].getSI( Parameter::UNIT_TIME_PS ) );
+                Log::L1( " - - Power: {}\n", input_conf["Detector"].numerical_v["time_power_amplitude"][i] );
+            }
+        }
+        if ( input_conf["Detector"].numerical_v["spectral_center"].size() > 0 ) {
+            Log::L1( "Using {} spectral detection windows with parameters:\n", input_conf["Detector"].numerical_v["spectral_center"].size() );
+            for ( int i = 0; i < input_conf["Detector"].numerical_v["spectral_center"].size(); i++ ) {
+                Log::L1( " - Spectral Detection Window {}:\n", i );
+                Log::L1( " - - Center: {} - {} eV\n", input_conf["Detector"].numerical_v["spectral_center"][i], input_conf["Detector"].numerical_v["spectral_center"][i].getSI( Parameter::UNIT_ENERGY_EV ) );
+                Log::L1( " - - Sigma: {} - {} meV\n", input_conf["Detector"].numerical_v["spectral_range"][i], input_conf["Detector"].numerical_v["spectral_range"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
+                Log::L1( " - - Power: {}\n", input_conf["Detector"].numerical_v["spectral_power_amplitude"][i] );
+                Log::L1( " - - FT Points: {}\n", input_conf["Detector"].numerical_v["spectral_number_points"][i] );
+            }
+        }
+
     } else {
         Log::L1( "Not using any G1 or G2 correlation functions.\n\n" );
     }
