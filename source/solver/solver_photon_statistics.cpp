@@ -160,14 +160,14 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         if ( mode.compare( "Time" ) == 0 )
             continue;
         Log::L2( "[PhotonStatistics] Saving Concurrence to conc_" + mode + ".txt...\n" );
-        FILE *f_indist = std::fopen( ( s.parameters.working_directory + "conc_" + mode + ".txt" ).c_str(), "w" );
-        fmt::print( f_indist, "Time\t{0}\t{0}_simple\t{0}(g2(0))\t{0}_simple(g2(0))\n", mode );
+        FILE *f_conc = std::fopen( ( s.parameters.working_directory + "conc_" + mode + ".txt" ).c_str(), "w" );
+        fmt::print( f_conc, "Time\t{0}\t{0}_simple\t\t{0}_fidelity\t{0}(g2(0))\t{0}_simple(g2(0))\t{0}_fidelity(g2(0))\n", mode );
         // fmt::print( f_indist, "Time\t{0}\t{0}(g2(0))\n", mode );
         for ( int i = 0; i < to_output["Conc"][mode].size(); i++ ) {
-            fmt::print( f_indist, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ) );
+            fmt::print( f_conc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ),std::real( to_output["Conc_fidelity"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ),std::real( to_output["Conc_g2zero_fidelity"][mode][i] ) );
             // fmt::print( f_indist, "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ) );
         }
-        std::fclose( f_indist );
+        std::fclose( f_conc );
     }
     for ( auto &[mode, data] : to_output["Raman"] ) {
         if ( mode.compare( "Time" ) == 0 )

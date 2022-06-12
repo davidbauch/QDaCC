@@ -26,7 +26,8 @@ class Timer {
     std::string name;
 
    public:
-    bool addtoTotalStatistic, printToSummary;
+    bool addtoTotalStatistic;
+    bool printToSummary;
     Timer();
     Timer( const std::string &_name, bool _addtoTotalStatistic, bool _printToSummary );
     void start();

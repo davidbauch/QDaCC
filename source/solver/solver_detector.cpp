@@ -21,10 +21,10 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
     }
     if ( s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size() > 0 ) {
         Timer &timer = Timers::create( "Detector (" + purpose + ")" );
-        ProgressBar progressbar = ProgressBar();
+        auto progressbar = ProgressBar();
         timer.start();
         // Disgusting piece of code
-        if ( detector_frequency_mask.size() == 0 ) {
+        if ( detector_frequency_mask.empty() ) {
             Log::L2( "[PhotonStatistics] Calculating Detector Spectral Mask... \n" );
             for ( int c = 0; c < s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size(); c++ ) {
                 double center = s.parameters.input_conf["Detector"].numerical_v["spectral_center"][c];
@@ -43,7 +43,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
                         break;
                 }
             }
-            std::sort( detector_frequency_mask.begin(), detector_frequency_mask.end(), []( std::tuple<double, double, double> &first, std::tuple<double, double, double> &second ) { return std::get<0>( first ) < std::get<0>( second ); } );
+            std::ranges::sort( detector_frequency_mask.begin(), detector_frequency_mask.end(), []( std::tuple<double, double, double> &first, std::tuple<double, double, double> &second ) { return std::get<0>( first ) < std::get<0>( second ); } );
             // for ( int i = 0; i < detector_frequency_mask.size() - 1; i++ ) {
             //     auto &[w1, a, dw1] = detector_frequency_mask[i];
             //     auto &[w2, c, dw2] = detector_frequency_mask[i + 1];
@@ -92,9 +92,9 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
         for ( int i = 0; i < mat.rows(); i++ ) {
             for ( int j = 0; j < mat.cols(); j++ ) {
                 double tau = std::imag( timemat( i, j ) ) - std::real( timemat( i, j ) );
-                double dtau = Numerics::get_taudelta( timemat, i, j );
+                //double dtau = Numerics::get_taudelta( timemat, i, j );
                 for ( int v = 0; v < detector_frequency_mask.size(); v++ ) {
-                    auto &[frequency_v, frequency_amp, frequency_delta] = detector_frequency_mask[v];
+                    const auto &[frequency_v, frequency_amp, frequency_delta] = detector_frequency_mask[v];
                     mat( i, j ) += std::exp( 1.0i * frequency_v * tau ) * mat_transformed( i, v ) * frequency_delta;
                 }
             }

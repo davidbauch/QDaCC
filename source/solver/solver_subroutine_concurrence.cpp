@@ -84,6 +84,8 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     std::vector<Scalar> output_g2zero( T, 0 );
     std::vector<Scalar> output_simple( T, 0 );
     std::vector<Scalar> output_g2zero_simple( T, 0 );
+    std::vector<Scalar> output_fidelity( T, 0 );
+    std::vector<Scalar> output_fidelity_g2zero( T, 0 );
     std::vector<Scalar> time( T, 0 );
     std::vector<Dense> twophotonmatrix( T, Dense::Zero( 4, 4 ) );
     std::vector<Dense> twophotonmatrix_g2zero( T, Dense::Zero( 4, 4 ) );
@@ -155,12 +157,16 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         //}
         // Log::L1( "rho2phot = {}\n\nsqrtrho2phot = {}\n\nR = {}\n\nRS = {}\nEigenvalues at t = {} are {}\n", rho_2phot, sqrtrho2phot, R, R5, get_time_at( i ), eigenvalues );
         auto conc = eigenvalues( 3 ) - eigenvalues( 2 ) - eigenvalues( 1 ) - eigenvalues( 0 );
+        double fidelity = std::pow(std::real(R5.trace()),2.0);
         // Log::L2( "Eigenvalues {} (size of vec: {}): C = {} - {} - {} - {}\n", k, eigenvalues.size(), eigenvalues( 3 ), eigenvalues( 2 ), eigenvalues( 1 ), eigenvalues( 0 ) );
         auto conc_g2zero = eigenvalues_g2zero( 3 ) - eigenvalues_g2zero( 2 ) - eigenvalues_g2zero( 1 ) - eigenvalues_g2zero( 0 );
+        double fidelity_g2zero = std::pow(std::real(R5_g2zero.trace()),2.0);
         output.at( k ) = conc;
         output_simple.at( k ) = 2.0 * std::abs( rho_2phot( 3, 0 ) / rho_2phot.trace() );
+        output_fidelity.at( k ) = fidelity;
         output_g2zero.at( k ) = conc_g2zero;
         output_g2zero_simple.at( k ) = 2.0 * std::abs( rho_2phot_g2zero( 3, 0 ) / rho_2phot_g2zero.trace() );
+        output_fidelity_g2zero.at( k ) = fidelity_g2zero;
         time.at( k ) = std::real( mat_time( k, 0 ) );
         // std::cout << "Rho(3,0) = "<<rho_2phot( 3, 0 )<<", rho.trace() = "<<rho_2phot.trace()<<", Rho before saving :\n" << rho_2phot.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
         // std::cout << "Rho_g20(3,0) = "<<rho_2phot_g2zero( 3, 0 )<<", rho_g20.trace() = "<<rho_2phot_g2zero.trace()<<", Rho_g20 before saving :\n" << rho_2phot_g2zero.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
@@ -176,8 +182,10 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         to_output["Conc"]["Time"] = time;
     to_output["Conc"][fout] = output;
     to_output["Conc_simple"][fout] = output_simple;
+    to_output["Conc_fidelity"][fout] = output_fidelity;
     to_output["Conc_g2zero"][fout] = output_g2zero;
     to_output["Conc_g2zero_simple"][fout] = output_g2zero_simple;
+    to_output["Conc_g2zero_fidelity"][fout] = output_fidelity_g2zero;
     to_output_m["TwoPMat"][fout] = twophotonmatrix;
     to_output_m["TwoPMat"][fout + "_g2zero"] = twophotonmatrix_g2zero;
     Log::L1( "Final Concurrence: {:.10f} ({:.10f} simple) {}\n", std::real( output.back() ), std::real( output_simple.back() ), fout );

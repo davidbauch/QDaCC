@@ -72,7 +72,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
     if ( s.parameters.numerics_rk_order == 45 ) {
         return calculate_runge_kutta_45( rho0, t_start, t_end, rkTimer, progressbar, progressbar_name, s, output, do_output );
     }
-    size_t t_index = std::min<size_t>( size_t( std::lower_bound( s.parameters.grid_values.begin(), s.parameters.grid_values.end(), t_start ) - s.parameters.grid_values.begin() ), s.parameters.grid_values.size() - 2 ); // s.parameters.grid_value_indices[t_start];
+    size_t t_index = std::min<size_t>( size_t( std::ranges::lower_bound( s.parameters.grid_values.begin(), s.parameters.grid_values.end(), t_start ) - s.parameters.grid_values.begin() ), s.parameters.grid_values.size() - 2 ); // s.parameters.grid_value_indices[t_start];
     double t_step_initial = std::min<double>( s.parameters.grid_steps[t_index], s.parameters.t_step );
     // Log::L2("t_index = {}, t_step_initial = {}\n",t_index, t_step_initial);
 
@@ -119,7 +119,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
 
 bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output ) {
     size_t t_index = std::min<size_t>( size_t( std::lower_bound( s.parameters.grid_values.begin(), s.parameters.grid_values.end(), t_start ) - s.parameters.grid_values.begin() ), s.parameters.grid_values.size() - 2 ); // s.parameters.grid_value_indices[t_start];
-    double t_step_initial = s.parameters.t_step;                                                                                                                                                                          // s.parameters.grid_steps[t_index];
+    double t_step_initial = s.parameters.numerics_subiterator_stepsize;                                                                                                                                                                          // s.parameters.grid_steps[t_index];
     double t_step = t_step_initial;
 
     // Find local tolerance

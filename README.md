@@ -652,6 +652,8 @@ Uses 500 timesteps for the correlation grid.
 
 Uses `10ps/100fs + 20ps/200fs + 30ps/300fs = 300` points for the grid, where for the first 10ps a timestep of 100fs is used, between 10ps and 20ps a timestep of 200fs is used, and between 20ps and 30ps a timestep of 300fs is used.
 
+NOTE: If no `grid` nor `gridres` is provided, the `gridres` value is determined automatically. The timestep provided via the `--time` flag will then directly determine the gridres. This may lead to very low resolution grids. In this case, the grid should be provided seperately with the `--grid` flag.
+
 ---
 
 ### Interpolation

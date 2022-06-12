@@ -14,7 +14,7 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
         calculate_path_integral( rho, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step_pathint, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
     } else {
         // If using RK45 and calculating correlation functions, disable USING cached functions while enabling caching them, then reenable using the cached matrices for Tau direction
-        if ( s.parameters.numerics_rk_order >= 45 and s.parameters.input_correlation.size() > 0 and s.parameters.numerics_use_saved_coefficients ) {
+        if ( s.parameters.numerics_rk_order >= 45 and not s.parameters.input_correlation.empty() and s.parameters.numerics_use_saved_coefficients ) {
             s.parameters.numerics_force_caching = true;
             s.parameters.numerics_use_saved_coefficients = false;
         }
@@ -31,7 +31,7 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Log::L2( "[Solver] Saved {} states.\n", savedStates.size() );
     Log::L2( "[Solver] Hamiltons: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}.\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_read );
     size_t sum = 0;
-    std::for_each( s.savedCoefficients.begin(), s.savedCoefficients.end(), [&]( const std::pair<double, std::map<double, QDLC::SaveStateTau>> &m ) { sum += m.second.size(); } );
+    std::ranges::for_each( s.savedCoefficients.begin(), s.savedCoefficients.end(), [&]( const std::pair<double, std::map<double, QDLC::SaveStateTau>> &m ) { sum += m.second.size(); } );
     Log::L2( "[Solver] Cached {} phonon matrices.\n", sum );
 
     // Interpolate Outputstates with spline interpolation

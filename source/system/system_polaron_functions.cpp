@@ -68,7 +68,7 @@ void System::initialize_polaron_frame_functions() {
 Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
     // TODO Maybe? Cache explicit times?
     double chirpcorrection = chirp.size() > 0 ? ( chirp.back().get( t ) + t * ( chirp.back().get( t ) - parameters.scaleVariable( chirp.back().derivative( t ), parameters.scale_value ) ) ) : 0;
-    Sparse explicit_time = Sparse( chi.rows(), chi.cols() );
+    auto explicit_time = Sparse( chi.rows(), chi.cols() );
     for ( auto &[mode, param] : operatorMatrices.el_transitions ) {
         if ( param.direction == -1 )
             continue;
