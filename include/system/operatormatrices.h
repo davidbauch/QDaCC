@@ -32,6 +32,8 @@ class OperatorMatrices {
         int direction;
         // State Energy or Transition Energy
         double energy;
+        // String identifiers. This is either a state or a transition with a "from" and a "to" state.
+        std::string name, name_transposed, from, to;
         // Default Constructor
         matrix_s() : direction( 0 ), base( -1 ), energy( 0 ){};
     };

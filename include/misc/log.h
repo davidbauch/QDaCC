@@ -34,15 +34,19 @@ class Log {
     }
     template <typename... Args>
     static void L1( const std::string &msg, const Args &...args ) {
-        return Get().Ilevel1_log( msg, fmt::make_format_args( args... ) );
+        return Get().Ilevel1_log( msg, true, fmt::make_format_args( args... ) );
+    }
+    template <typename... Args>
+    static void P1( const std::string &msg, const Args &...args ) {
+        return Get().Ilevel1_log( msg, false, fmt::make_format_args( args... ) );
     }
     template <typename... Args>
     static void L2( const std::string &msg, const Args &...args ) {
-        return Get().Ilevel2_log( msg, fmt::make_format_args( args... ) );
+        return Get().Ilevel2_log( msg, true, true, fmt::make_format_args( args... ) );
     }
     template <typename... Args>
     static void L3( const std::string &msg, const Args &...args ) {
-        return Get().Ilevel3_log( msg, fmt::make_format_args( args... ) );
+        return Get().Ilevel3_log( msg, true, true, fmt::make_format_args( args... ) );
     }
     static void Bar( int size = Log::BAR_SIZE_FULL, int level = Log::LEVEL_1, int _bar = Log::BAR_0 ) {
         return Get().Ibar( size, level, _bar );
@@ -93,12 +97,13 @@ class Log {
         }
     }
     template <class Args>
-    void Ilevel1_log( const std::string &msg, const Args &args ) {
+    void Ilevel1_log( const std::string &msg, bool to_file, const Args &args ) {
         fmt::vprint( msg, args );
-        fmt::vprint( file, msg, args );
+        if ( to_file )
+            fmt::vprint( file, msg, args );
     }
     template <class Args>
-    void Ilevel2_log( const std::string &msg, const Args &args, bool use_colormap = true ) {
+    void Ilevel2_log( const std::string &msg, bool use_colormap, bool to_file, const Args &args ) {
         if ( max_loglevel > LEVEL_1 ) {
             if ( use_colormap ) {
                 auto p1 = msg.find_first_of( "[" ) + 1;
@@ -115,11 +120,12 @@ class Log {
             }
             if ( not use_colormap )
                 fmt::vprint( "| \033[38;2;100;100;100m" + msg + "\033[0m", args );
-            fmt::vprint( file, " | " + msg, args );
+            if ( to_file )
+                fmt::vprint( file, " | " + msg, args );
         }
     }
     template <class Args>
-    void Ilevel3_log( const std::string &msg, const Args &args, bool use_colormap = true ) {
+    void Ilevel3_log( const std::string &msg, bool use_colormap, bool to_file, const Args &args ) {
         if ( max_loglevel > LEVEL_2 ) {
             if ( use_colormap ) {
                 auto p1 = msg.find_first_of( "[" ) + 1;
@@ -136,7 +142,8 @@ class Log {
             }
             if ( not use_colormap )
                 fmt::vprint( " | \033[31m- \033[93m" + msg + "\033[0m", args );
-            fmt::vprint( file, " | - " + msg, args );
+            if ( to_file )
+                fmt::vprint( file, " | - " + msg, args );
         }
     }
     void Ibar( int size, int level, int _bar ) {

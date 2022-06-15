@@ -44,7 +44,7 @@ Sparse &QDLC::Numerics::ODESolver::get_rho_at( int i ) {
     return savedStates.at( i ).mat;
 }
 
-std::tuple<std::string, std::string> QDLC::Numerics::ODESolver::get_operator_strings( const std::string &operators ) {
+std::tuple<std::string, std::string> QDLC::Numerics::ODESolver::get_operator_strings( System &s, const std::string &operators ) {
     std::string s_creator = "";
     std::string s_annihilator = "";
     for ( auto split_s_op : QDLC::String::splitline( operators, '+' ) ) {
@@ -52,10 +52,9 @@ std::tuple<std::string, std::string> QDLC::Numerics::ODESolver::get_operator_str
             s_creator += "+";
             s_annihilator += "+";
         }
-        if ( std::isupper( split_s_op.front() ) ) {
+        if ( s.operatorMatrices.el_transitions.contains( split_s_op ) ) {
             s_annihilator += split_s_op;
-            std::reverse( split_s_op.begin(), split_s_op.end() );
-            s_creator += split_s_op;
+            s_creator += s.operatorMatrices.el_transitions[split_s_op].name_transposed;
         } else {
             s_creator += split_s_op + "bd";
             s_annihilator += split_s_op + "b";

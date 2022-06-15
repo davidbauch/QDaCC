@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 
 namespace QDLC {
 
@@ -23,6 +24,12 @@ bool startswith( std::string input, std::string find );
 // Splits std::string at every "lit" and returns std::vector of std::string
 std::vector<std::string> split( std::string input, std::string lit = " " );
 
+// Splits std::string once at "lit" and returns a pair of the split elements
+std::pair<std::string, std::string> split_pair( const std::string &input, const std::string &lit = " " );
+
+// Splits std::string at every "lit", reverses the vector and returns a joint string again
+std::string split_and_reverse( const std::string &input, const std::string &lit = " " );
+
 // Finds tofind in arr. Returns position if found, -1 if not.
 int instr( const std::string &arr, const std::string tofind, int start = 0 );
 
@@ -30,7 +37,7 @@ int instr( const std::string &arr, const std::string tofind, int start = 0 );
 std::vector<std::string> str_to_vec( std::string input = "[]" );
 
 // Finds a string in vector and returns index of first found element
-int vec_find_str( std::string toFind, const std::vector<std::string> &input );
+int vec_find_str( const std::string &toFind, const std::vector<std::string> &input );
 
 // Split input string at spli
 std::vector<std::string> splitline( const std::string &input = "", const char splitter = ' ' );

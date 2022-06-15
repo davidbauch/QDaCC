@@ -71,33 +71,31 @@ Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const dou
     Sparse ret = -1.0i * dgl_kommutator( H, rho );
     Sparse loss = Sparse( rho.rows(), rho.cols() );
     // Photon Loss
-    if ( parameters.p_omega_cavity_loss )
-        for ( auto &cav : operatorMatrices.ph_transitions ) {
-            if ( cav.second.direction == 1 )
+    if ( parameters.p_omega_cavity_loss != 0.0 )
+        for ( const auto &[transition, data] : operatorMatrices.ph_transitions ) {
+            if ( data.direction == 1 )
                 continue;
-            std::string mode = cav.first.substr( 0, 1 );
+            std::string mode = data.to;
             auto &params = parameters.input_photonic[mode];
             loss += 0.5 * parameters.p_omega_cavity_loss * params.numerical["DecayScaling"] * dgl_lindblad( rho, operatorMatrices.ph_transitions[mode + "b"].hilbert, operatorMatrices.ph_transitions[mode + "bd"].hilbert );
         }
     // Radiative Decay
-    if ( parameters.p_omega_decay > 0 )
-        for ( auto &trans : operatorMatrices.el_transitions ) {
-            if ( trans.second.direction == 1 )
+    if ( parameters.p_omega_decay != 0.0 )
+        for ( const auto &[transition, data] : operatorMatrices.el_transitions ) {
+            if ( data.direction == 1 )
                 continue;
-            std::string transition = trans.first;
-            std::string state = transition.substr( transition.size() - 1, 1 );
+            const std::string &state = data.to;
             auto &params = parameters.input_electronic[state];
-            std::string trans_transposed = transition;
-            std::reverse( trans_transposed.begin(), trans_transposed.end() );
+            const std::string &trans_transposed = data.name_transposed;
             loss += 0.5 * parameters.p_omega_decay * params.numerical["DecayScaling"] * dgl_lindblad( rho, operatorMatrices.el_transitions[transition].hilbert, operatorMatrices.el_transitions[trans_transposed].hilbert );
         }
     // Electronic Dephasing
-    if ( parameters.p_omega_pure_dephasing > 0 )
-        for ( auto &state_a : operatorMatrices.el_states ) {
-            for ( auto &state_b : operatorMatrices.el_states ) { // TODO: dephasing über el transitions machen.
-                if ( state_a.first.compare( state_b.first ) == 0 )
+    if ( parameters.p_omega_pure_dephasing != 0.0 )
+        for ( const auto &[name_a, data_a] : operatorMatrices.el_states ) {
+            for ( const auto &[name_b, data_b] : operatorMatrices.el_states ) { // TODO: dephasing über el transitions machen.
+                if ( name_a == name_b )
                     continue;
-                loss -= 0.5 * parameters.input_electronic[state_b.first].numerical["DephasingScaling"] * parameters.input_electronic[state_a.first].numerical["DephasingScaling"] * parameters.p_omega_pure_dephasing * operatorMatrices.el_states[state_a.first].hilbert * rho * operatorMatrices.el_states[state_b.first].hilbert;
+                loss -= 0.5 * parameters.input_electronic[name_b].numerical["DephasingScaling"] * parameters.input_electronic[name_a].numerical["DephasingScaling"] * parameters.p_omega_pure_dephasing * data_a.hilbert * rho * data_b.hilbert;
             }
         }
 
@@ -118,8 +116,8 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
             for ( int k = 0; k < ret.outerSize(); ++k ) {
                 for ( Sparse::InnerIterator it( ret, k ); it; ++it ) {
                     // Convert row/col into respective photon numbers / atomic state
-                    int i = it.row();
-                    int j = it.col();
+                    auto i = it.row();
+                    auto j = it.col();
                     // ret.coeffRef( i, j ) *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) ); // it.value() = ?
                     it.valueRef() *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) ); // it.value() = ?
                 }
@@ -135,14 +133,14 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
 }
 
 Sparse System::dgl_chirp( const double t ) {
-    if ( chirp.size() == 0 )
+    if ( chirp.empty() )
         return Sparse( parameters.maxStates, parameters.maxStates );
     return operatorMatrices.chirp_mat.back() * chirp.back().get( t, !parameters.numerics_use_function_caching );
 }
 
 Sparse System::dgl_pulse( const double t ) {
     Sparse ret = Sparse( parameters.maxStates, parameters.maxStates );
-    if ( pulse.size() == 0 ) {
+    if ( pulse.empty() ) {
         return ret;
     }
     for ( int i = 0; i < pulse.size(); i++ ) {

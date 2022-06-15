@@ -58,6 +58,21 @@ std::vector<std::string> QDLC::String::split( std::string input, std::string lit
     return ret;
 }
 
+std::string QDLC::String::split_and_reverse( const std::string &input, const std::string &lit ) {
+    auto vec = split( input, lit );
+    std::ranges::reverse( vec );
+    std::string ret = "";
+    for ( int i = 0; i < vec.size(); i++ ) {
+        ret += ( i == vec.size() - 1 ) ? vec[i] : vec[i] + lit;
+    }
+    return ret;
+}
+
+std::pair<std::string, std::string> QDLC::String::split_pair( const std::string &input, const std::string &lit ) {
+    auto pos = input.find( lit );
+    return std::make_pair( input.substr( 0, pos ), input.substr( pos + lit.size() ) );
+}
+
 int QDLC::String::instr( const std::string &arr, const std::string tofind, int start ) {
     bool found = true;
     for ( int i = start; i < (int)arr.size() + 1 - (int)tofind.size(); i++ ) {
@@ -95,7 +110,7 @@ std::vector<std::string> QDLC::String::str_to_vec( std::string input ) {
     return ret;
 }
 
-int QDLC::String::vec_find_str( std::string toFind, const std::vector<std::string> &input ) {
+int QDLC::String::vec_find_str( const std::string &toFind, const std::vector<std::string> &input ) {
     for ( int i = 0; i < (int)input.size(); i++ ) {
         if ( input.at( i ).compare( toFind ) == 0 )
             return i;
@@ -121,7 +136,7 @@ std::vector<std::string> QDLC::String::argv_to_vec( int argc, char **argv ) {
     std::vector<std::string> ret;
     ret.reserve( argc );
     for ( int i = 0; i < argc; i++ )
-        ret.push_back( std::string( argv[i] ) );
+        ret.emplace_back( std::string( argv[i] ) );
     return ret;
 }
 
@@ -142,6 +157,6 @@ std::string QDLC::String::add_prefix_and_suffix( std::string input, const std::s
 }
 
 std::string QDLC::String::to_lower( std::string str ) {
-    std::transform( str.begin(), str.end(), str.begin(), []( unsigned char c ) { return std::tolower( c ); } );
+    std::ranges::transform( str.begin(), str.end(), str.begin(), []( unsigned char c ) { return std::tolower( c ); } );
     return str;
 }

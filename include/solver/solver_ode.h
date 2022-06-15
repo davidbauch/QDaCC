@@ -126,7 +126,7 @@ class ODESolver {
      * @brief Takes a superposition of cavity modes or annihilator-type operator strings (e.g. 'h+GH+HZ') and returns a tuple of [creator, annihilator] strings
      *
      */
-    std::tuple<std::string, std::string> get_operator_strings( const std::string &operators );
+    std::tuple<std::string, std::string> get_operator_strings( System &s, const std::string &operators );
 
     /**
      * @brief Returns an intentifier string for a combination of G-function order and a superposition of operators

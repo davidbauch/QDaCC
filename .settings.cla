@@ -43,7 +43,7 @@ CLA_ARGUMENT = {
 	CLA_PARAMETER = {
 		subkey = ''
 		value = '0'
-		datatype = 'int'
+		datatype = 'string'
 		description = 'Ground State Index'
 	}
 }

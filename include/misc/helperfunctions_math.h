@@ -14,7 +14,7 @@ const double PI = 3.14159265358979323846264338327950288;
 const double vLight = 299792458.0;
 const double ev_conversion = 6.582119516885722624E-16;
 
-int delta( int i, int j );
+inline int delta( int i, int j );
 
 double Hz_to_eV( double hz, double scaling = 1.0 );
 
@@ -44,6 +44,7 @@ double getThermal( double alpha, double N );
 QDLC::Type::Scalar getSqueezed( double r, double phi, double N );
 
 bool is_number( const std::string &s );
+bool is_number( const char &s );
 
 template <typename T>
 double abs2( const T &v1 ) {

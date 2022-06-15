@@ -34,7 +34,7 @@ namespace Numerics {
 // Rechnungen auf cluster meddeln
 
 // https://wjngkoh.wordpress.com/2015/03/04/c-hash-function-for-eigen-matrix-and-vector/
-struct vector_hash : std::unary_function<QDLC::Type::iVector, size_t> {
+struct vector_hash {
     static std::hash<QDLC::Type::iVector::Scalar> hasher;
     std::size_t operator()( QDLC::Type::iVector const &vec ) const {
         size_t seed = 0;
@@ -50,7 +50,7 @@ struct vector_compare {
         return vector_hash()( A ) < vector_hash()( B );
     }
 };
-struct tuple_vector_hash : std::unary_function<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>, size_t> {
+struct tuple_vector_hash {
     static std::hash<QDLC::Type::iVector::Scalar> hasher;
     std::size_t operator()( std::tuple<QDLC::Type::iVector, QDLC::Type::iVector> const &tup ) const {
         size_t seed = 0;

@@ -7,13 +7,13 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     // Calculate Spectra
     auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
     for ( int i = 0; i < spectrum_s.string_v["Modes"].size(); i++ ) {
-        const auto &[s_creator, s_annihilator] = get_operator_strings( spectrum_s.string_v["Modes"][i] );
+        const auto &[s_creator, s_annihilator] = get_operator_strings( s, spectrum_s.string_v["Modes"][i] );
         calculate_spectrum( s, s_creator, s_annihilator, spectrum_s.numerical_v["Center"][i], spectrum_s.numerical_v["Range"][i], spectrum_s.numerical_v["resW"][i], spectrum_s.string_v["Normalize"][i] == "True" );
     }
     // Calculate Indist
     auto &indist_s = s.parameters.input_correlation["Indist"];
     for ( int i = 0; i < indist_s.string_v["Modes"].size(); i++ ) {
-        const auto &[s_creator, s_annihilator] = get_operator_strings( indist_s.string_v["Modes"][i] );
+        const auto &[s_creator, s_annihilator] = get_operator_strings( s, indist_s.string_v["Modes"][i] );
         calculate_indistinguishability( s, s_creator, s_annihilator );
     }
     // Calculate Conc
@@ -21,7 +21,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     for ( auto &modes : conc_s.string_v["Modes"] ) {
         std::vector<std::string> s_creator, s_annihilator;
         for ( auto &mode : QDLC::String::splitline( modes, '-' ) ) {
-            const auto &[ss_creator, ss_annihilator] = get_operator_strings( mode );
+            const auto &[ss_creator, ss_annihilator] = get_operator_strings( s, mode );
             s_creator.emplace_back( ss_creator );
             s_annihilator.emplace_back( ss_annihilator );
         }
@@ -61,7 +61,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         /// TODO : in funktion
         auto modes = gs_s.string_v["Modes"][i];
         int order = std::abs( gs_s.numerical_v["Order"][i] );
-        const auto &[s_creator, s_annihilator] = get_operator_strings( modes );
+        const auto &[s_creator, s_annihilator] = get_operator_strings( s, modes );
         std::string purpose = order == 1 ? get_operators_purpose( { s_creator, s_annihilator }, 1 ) : get_operators_purpose( { s_creator, s_annihilator, s_creator, s_annihilator }, 2 );
         Sparse creator, annihilator;
         if ( order == 1 ) {
@@ -164,7 +164,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         fmt::print( f_conc, "Time\t{0}\t{0}_simple\t\t{0}_fidelity\t{0}(g2(0))\t{0}_simple(g2(0))\t{0}_fidelity(g2(0))\n", mode );
         // fmt::print( f_indist, "Time\t{0}\t{0}(g2(0))\n", mode );
         for ( int i = 0; i < to_output["Conc"][mode].size(); i++ ) {
-            fmt::print( f_conc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ),std::real( to_output["Conc_fidelity"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ),std::real( to_output["Conc_g2zero_fidelity"][mode][i] ) );
+            fmt::print( f_conc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ), std::real( to_output["Conc_fidelity"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ), std::real( to_output["Conc_g2zero_fidelity"][mode][i] ) );
             // fmt::print( f_indist, "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ) );
         }
         std::fclose( f_conc );
@@ -226,7 +226,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             // Gather base:
             fmt::print( f_wigner, "Time\t" );
             std::string smode = mode.substr( 4 );
-            int base = s.operatorMatrices.el_states.count( smode ) != 0 ? s.operatorMatrices.el_states[smode].base : s.operatorMatrices.ph_states[smode].base;
+            int base = s.operatorMatrices.el_states.contains( smode ) ? s.operatorMatrices.el_states[smode].base : s.operatorMatrices.ph_states[smode].base;
             if ( base == 0 ) {
                 for ( auto &[name, dat] : s.parameters.input_electronic )
                     for ( auto &[name2, dat2] : s.parameters.input_electronic )

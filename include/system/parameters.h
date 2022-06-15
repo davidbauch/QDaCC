@@ -6,8 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "3.3.6"
-#define GLOBAL_PROGRAM_LASTCHANGE "Now With Detector"
+#define GLOBAL_PROGRAM_VERSION "3.4.0"
+#define GLOBAL_PROGRAM_LASTCHANGE "Oops Transitions have changed?"
 
 class Parameters {
    public:
@@ -23,6 +23,7 @@ class Parameters {
     // If True, the program will extend itself until the system converges into the defined groundstate
     bool numerics_calculate_till_converged;
     int numerics_groundstate;
+    std::string numerics_groundstate_string;
 
     // Order of the Timetransformation. Can be Analytical or Numerical
     int numerics_order_timetrafo;
@@ -143,6 +144,9 @@ class Parameters {
     // Matrix Index of the initial state
     int p_initial_state;
 
+    // State Transition Delimiter
+    std::string transition_delimiter = "=";
+
     // Environmental Coupling Constantes
     // QD-Cavity Coupling Rate
     Parameter p_omega_coupling;
@@ -154,8 +158,8 @@ class Parameters {
     Parameter p_omega_decay;
 
     // Constructor
-    Parameters(){};
-    Parameters( const std::vector<std::string> &arguments );
+    Parameters() = default;
+    explicit Parameters( const std::vector<std::string> &arguments );
 
     /**
      * @brief A general input struct containing parameter maps. These maps either map to a string, a vector of strings, a parameter or a vector of parameters.
