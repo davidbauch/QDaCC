@@ -4,18 +4,18 @@
 Chirp::Chirp( Chirp::Inputs &_inputs ) : inputs( _inputs ) {
     counter_evaluated = 0;
     counter_returned = 0;
-    Log::L2( "Creating Chirp with {} points of type {}...\n", inputs.t.size(), inputs.type );
+    LOG2( "Creating Chirp with {} points of type {}...\n", inputs.t.size(), inputs.type );
     int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 2.0 + 5 );
     if ( inputs.order > 5 )
         steps = { QDLC::Numerics::RKCoefficients::a1 * inputs.t_step, QDLC::Numerics::RKCoefficients::a2 * inputs.t_step, QDLC::Numerics::RKCoefficients::a3 * inputs.t_step, QDLC::Numerics::RKCoefficients::a4 * inputs.t_step, QDLC::Numerics::RKCoefficients::a5 * inputs.t_step };
     else
         steps = { 0, 0.5 * inputs.t_step };
     if ( inputs.type.compare( "sine" ) != 0 ) {
-        Log::L2( "Done initializing class, creating interpolant...\n" );
+        LOG2( "Done initializing class, creating interpolant...\n" );
         interpolant = Interpolant( inputs.t, inputs.y, inputs.ddt, inputs.type );
-        Log::L2( "Done creating interpolant, generating chirp...\n" );
+        LOG2( "Done creating interpolant, generating chirp...\n" );
     } else {
-        Log::L2( "No interpolant class used, using sine chirp instead." );
+        LOG2( "No interpolant class used, using sine chirp instead." );
         inputs.isSineChirp = true;
     }
     generate();
@@ -47,16 +47,16 @@ void Chirp::generate() {
             chirparray[t] = get( t );
         }
         chirparray_derivative[t1] = derivative( t1 );
-        chirparray_integral[t1] = 0.0; //integral( t1 ); // FIXME: segmentation fault, just integrade properly.
+        chirparray_integral[t1] = 0.0; // integral( t1 ); // FIXME: segmentation fault, just integrade properly.
     }
     size = chirparray.size();
-    Log::L2( "chirparray.size() = {}... ", size );
+    LOG2( "chirparray.size() = {}... ", size );
 }
 
 void Chirp::fileOutput( std::string filepath ) {
     FILE *chirpfile = std::fopen( filepath.c_str(), "w" );
     if ( !chirpfile ) {
-        Log::L2( "Failed to open outputfile for chirp!\n" );
+        LOG2( "Failed to open outputfile for chirp!\n" );
         return;
     }
     fmt::print( chirpfile, "Time\tChirp\tDerivative\tIntegral\n" );
@@ -74,7 +74,7 @@ void Chirp::Inputs::add( double _t, double _y, double _ddt ) {
 
 void Chirp::Inputs::add( std::vector<Parameter> &_t, std::vector<Parameter> &_y, std::vector<Parameter> &_ddt ) {
     if ( !( _t.size() == _y.size() && _t.size() == _ddt.size() ) ) {
-        Log::L2( "Input arrays don't have the same length! No Vectors are created, initializing interpolant will fail!\n" );
+        LOG2( "Input arrays don't have the same length! No Vectors are created, initializing interpolant will fail!\n" );
         return;
     }
     for ( int i = 0; i < (int)_t.size(); i++ ) {
@@ -131,5 +131,5 @@ double Chirp::integral( double t, bool force_evaluate ) {
 }
 
 void Chirp::log() {
-    Log::L2( "Chirp evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
+    LOG2( "Chirp evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
 }

@@ -10,6 +10,18 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <vector>
+template <class T>
+std::ostream &operator<<( std::ostream &os, const std::vector<T> &v ) {
+    os << "[";
+    // std::for_each(v.begin(), v.end(), [os](T& el){os << el;});
+    for ( typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii ) {
+        os << *ii;
+        if ( ii != v.end() )
+            os << " ";
+    }
+    os << "]";
+    return os;
+}
 // #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int
 //#define EIGEN_NO_DEBUG
 #include <Eigen/Dense>
@@ -63,16 +75,3 @@ using namespace QDLC::Type;
 #define PHONON_APPROXIMATION_LINDBLAD_FULL 3
 #define PHONON_APPROXIMATION_MIXED 4
 #define PHONON_PATH_INTEGRAL 5
-
-template <class T>
-std::ostream &operator<<( std::ostream &os, const std::vector<T> &v ) {
-    os << "[";
-    // std::for_each(v.begin(), v.end(), [os](T& el){os << el;});
-    for ( typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii ) {
-        os << *ii;
-        if ( ii != v.end() )
-            os << " ";
-    }
-    os << "]";
-    return os;
-}

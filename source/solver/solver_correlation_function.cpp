@@ -18,14 +18,14 @@ double QDLC::Numerics::get_tdelta( const std::vector<SaveState> &savedStates, si
 // @return: [bool] True if calculations were sucessfull, else false
 std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, std::string purpose ) {
     // Find Operator Matrices
-    Log::L2( "[G1Correlation] Preparing to calculate G1 Correlation function\n" );
-    Log::L2( "[G1Correlation] Generating Sparse Operator Matrices from String input...\n" );
+    LOG2( "[G1Correlation] Preparing to calculate G1 Correlation function\n" );
+    LOG2( "[G1Correlation] Generating Sparse Operator Matrices from String input...\n" );
     auto [op_creator, op_annihilator] = get_operators_matrices( s, s_op_creator, s_op_annihilator );
 
     int matdim = s.parameters.grid_values.size(); // int( savedStates.size() / s.parameters.iterations_t_skip );
 
     if ( cache.count( purpose ) != 0 ) {
-        Log::L2( "[G1Correlation] G1(tau) for {} already exists.\n", purpose );
+        LOG2( "[G1Correlation] G1(tau) for {} already exists.\n", purpose );
         return { op_creator, op_annihilator };
     }
 
@@ -34,7 +34,7 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
     timer.start();
     std::string progressstring = "G1(" + purpose + "): ";
     // Generate Cache Matrices
-    Log::L2( "[G1Correlation] Preparing Cache Matrices...\n" );
+    LOG2( "[G1Correlation] Preparing Cache Matrices...\n" );
     cache[purpose] = Dense::Zero( matdim, matdim );
     cache[purpose + "_time"] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
@@ -47,7 +47,7 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
         }
     }
     // Calculate G1 Function
-    Log::L2( "[G1Correlation] Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), savedStates.size() );
+    LOG2( "[G1Correlation] Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), savedStates.size() );
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( size_t i = 0; i < std::min<size_t>( matdim, savedStates.size() ); i++ ) {
         std::vector<QDLC::SaveState> savedRhos;
@@ -64,14 +64,14 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
             double t_tau = savedRhos.at( j ).t;
             gmat( i, j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, op_creator, t_tau );
             // gmat_time( i, j ) = Scalar( t_t, t_tau );
-            //  Log::L2( "Time anticipated: {} {}, time got: {} {}\n", std::real( gmat_time( i, j ) ), std::imag( gmat_time( i, j ) ), t_t, t_tau );
+            //  LOG2( "Time anticipated: {} {}, time got: {} {}\n", std::real( gmat_time( i, j ) ), std::imag( gmat_time( i, j ) ), t_t, t_tau );
         }
         Timers::outputProgress( timer, progressbar, i, savedStates.size(), progressstring );
     }
 
     timer.end();
     Timers::outputProgress( timer, progressbar, savedStates.size(), savedStates.size(), progressstring, Timers::PROGRESS_FORCE_OUTPUT );
-    Log::L2( "[G1Correlation] G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    LOG2( "[G1Correlation] G1 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
 
     // Manually Apply the detector function
     apply_detector_function( s, gmat, gmat_time, purpose );
@@ -81,13 +81,13 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
 
 std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, std::string purpose ) {
     // Find Operator Matrices
-    Log::L2( "[G2Correlation] Preparing to calculate G2 Correlation function\n" );
-    Log::L2( "[G2Correlation] Generating Sparse Operator Matrices from String input...\n" );
+    LOG2( "[G2Correlation] Preparing to calculate G2 Correlation function\n" );
+    LOG2( "[G2Correlation] Generating Sparse Operator Matrices from String input...\n" );
     auto [op_creator_1, op_annihilator_1] = get_operators_matrices( s, s_op_creator_1, s_op_annihilator_1 );
     auto [op_creator_2, op_annihilator_2] = get_operators_matrices( s, s_op_creator_2, s_op_annihilator_2 );
 
     if ( cache.count( purpose ) != 0 ) {
-        Log::L2( "[G2Correlation] G2(tau) for {} already exists.\n", purpose );
+        LOG2( "[G2Correlation] G2(tau) for {} already exists.\n", purpose );
         return { op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2 };
     }
 
@@ -99,7 +99,7 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
     timer.start();
     Sparse evalOperator = op_creator_2 * op_annihilator_1;
     std::string progressstring = "G2(" + purpose + "): ";
-    Log::L2( "[G2Correlation] Preparing Cache Matrices...\n" );
+    LOG2( "[G2Correlation] Preparing Cache Matrices...\n" );
     cache[purpose] = Dense::Zero( matdim, matdim );
     cache[purpose + "_time"] = Dense::Zero( matdim, matdim );
     auto &gmat = cache[purpose];
@@ -112,7 +112,7 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
         }
     }
     // Calculate G2 Function
-    Log::L2( "[G2Correlation] Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{},  iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), std::min<size_t>( matdim, savedStates.size() ) );
+    LOG2( "[G2Correlation] Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{},  iterating over {} saved states...\n", purpose, gmat.cols(), gmat.rows(), std::min<size_t>( matdim, savedStates.size() ) );
     // Main G2 Loop
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( size_t i = 0; i < std::min<size_t>( matdim, savedStates.size() ); i++ ) {
@@ -135,7 +135,7 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
 
     timer.end();
     Timers::outputProgress( timer, progressbar, savedStates.size(), savedStates.size(), progressstring, Timers::PROGRESS_FORCE_OUTPUT );
-    Log::L2( "[G2Correlation] G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+    LOG2( "[G2Correlation] G2 ({}): Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
 
     // Manually Apply the detector function
     apply_detector_function( s, gmat, gmat_time, purpose );

@@ -2,7 +2,7 @@
 #include "solver/solver.h"
 
 Pulse::Pulse( Parameters::input_s &inputs, Parameters &p ) : inputs( inputs ) {
-    Log::L2( "[System-Pulse] Creating total pulse with {} individual pulses...\n", inputs.numerical_v["Amplitude"].size() );
+    LOG2( "[System-Pulse] Creating total pulse with {} individual pulses...\n", inputs.numerical_v["Amplitude"].size() );
     counter_evaluated = 0;
     counter_returned = 0;
     maximum = 0;
@@ -11,9 +11,9 @@ Pulse::Pulse( Parameters::input_s &inputs, Parameters &p ) : inputs( inputs ) {
         steps = { QDLC::Numerics::RKCoefficients::a1 * p.t_step, QDLC::Numerics::RKCoefficients::a2 * p.t_step, QDLC::Numerics::RKCoefficients::a3 * p.t_step, QDLC::Numerics::RKCoefficients::a4 * p.t_step, QDLC::Numerics::RKCoefficients::a5 * p.t_step };
     else
         steps = { 0, 0.5 * p.t_step };
-    Log::L2( "[System-Pulse] Done initializing class, creating precalculated pulse...\n" );
+    LOG2( "[System-Pulse] Done initializing class, creating precalculated pulse...\n" );
     generate( p.t_start, p.t_end, p.t_step, p.input_conf["PulseConf"].numerical["Center"], p.input_conf["PulseConf"].numerical["Range"], p.input_conf["PulseConf"].numerical["Res"], p.input_conf["PulseConf"].numerical["dt"] );
-    Log::L2( "[System-Pulse] Done!\n" );
+    LOG2( "[System-Pulse] Done!\n" );
 }
 
 Scalar Pulse::evaluate( double t ) {
@@ -54,7 +54,7 @@ Scalar Pulse::evaluate_integral( double t, double dt ) {
 
 // Generate array of energy-values corresponding to the Pulse
 void Pulse::generate( double t_start, double t_end, double t_step, double omega_center, double omega_range, double dw, double dt ) {
-    // Log::L3( "generating type " + inputs.pulse_type + "... " );
+    // LOG3( "generating type " + inputs.pulse_type + "... " );
     double t;
     for ( double t1 = t_start; t1 < t_end + t_step * steps.size(); t1 += t_step ) {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
@@ -69,10 +69,10 @@ void Pulse::generate( double t_start, double t_end, double t_step, double omega_
     }
 
     size = pulsearray.size();
-    Log::L2( "[System-Pulse] Pulsearray.size() = {}... \n", size );
+    LOG2( "[System-Pulse] Pulsearray.size() = {}... \n", size );
     if ( inputs.numerical_v["Frequency"].size() > 0 ) {
-        Log::L2( "[System-Pulse] Calculating pulse fourier transformation...\n" );
-        Log::L2( "[System-Pulse] Initial w_center = {}, w_range = {}, dw = {} (dt = {})\n", omega_center, omega_range, dw, dt );
+        LOG2( "[System-Pulse] Calculating pulse fourier transformation...\n" );
+        LOG2( "[System-Pulse] Initial w_center = {}, w_range = {}, dw = {} (dt = {})\n", omega_center, omega_range, dw, dt );
         // Finding Spectral integration window
         if ( omega_center == 0 ) {
             for ( auto &input : inputs.numerical_v["Frequency"] ) {
@@ -101,7 +101,7 @@ void Pulse::generate( double t_start, double t_end, double t_step, double omega_
         }
         pulse_begin = std::max<double>( pulse_begin, t_start );
         pulse_end = std::min<double>( pulse_end, t_end );
-        Log::L2( "[System-Pulse] Using w_center = {}, w_range = {}, dw = {} (dt = {}) in time window {} to {}\n", omega_center, omega_range, dw, dt, pulse_begin, pulse_end );
+        LOG2( "[System-Pulse] Using w_center = {}, w_range = {}, dw = {} (dt = {}) in time window {} to {}\n", omega_center, omega_range, dw, dt, pulse_begin, pulse_end );
         for ( double w = omega_center - omega_range; w < omega_center + omega_range; w += dw ) {
             fourier.emplace_back( w );
             Scalar spectral_amp = 0;
@@ -110,15 +110,15 @@ void Pulse::generate( double t_start, double t_end, double t_step, double omega_
             }
             pulsearray_fourier.emplace_back( spectral_amp );
         }
-        Log::L2( "[System-Pulse] Fourier pulsearray.size() = {}...\n", pulsearray_fourier.size() );
+        LOG2( "[System-Pulse] Fourier pulsearray.size() = {}...\n", pulsearray_fourier.size() );
     }
 }
 
 void Pulse::fileOutput( std::string filepath, double t_start, double t_end, double t_step ) {
-    Log::L2( "Outputting Pulse Array to file...\n" );
+    LOG2( "Outputting Pulse Array to file...\n" );
     FILE *pulsefile = std::fopen( filepath.c_str(), "w" );
     if ( !pulsefile ) {
-        Log::L2( "Failed to open outputfile for Pulse!\n" );
+        LOG2( "Failed to open outputfile for Pulse!\n" );
         return;
     }
     fmt::print( pulsefile, "t\tabs(Omega(t))\treal(Omega(t)))\tw\treal(FT(Omega(t)))\tabs(FT(Omega(t)))\n" );
@@ -188,13 +188,13 @@ Scalar Pulse::integral( double t, double t_step, bool force_evaluate ) {
 }
 
 void Pulse::log() {
-    Log::L2( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
+    LOG2( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
 }
 
 void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses, double t_start, double t_end, double t_step ) {
     FILE *pulsefile = std::fopen( filepath.c_str(), "w" );
     if ( !pulsefile ) {
-        Log::L2( "Failed to open outputfile for Pulse!\n" );
+        LOG2( "Failed to open outputfile for Pulse!\n" );
         return;
     }
     fmt::print( pulsefile, "t" );

@@ -2,7 +2,7 @@
 
 // Description: Calculates Concurrence
 bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 ) {
-    Log::L2( "[Concurrence] Conc for modes {} {} and {} {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2 );
+    LOG2( "[Concurrence] Conc for modes {} {} and {} {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2 );
 
     // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading
     s.parameters.numerics_phonons_maximum_threads = 1;
@@ -95,10 +95,10 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     spinflip( 1, 2 ) = 1;
     spinflip( 2, 1 ) = 1;
     spinflip( 3, 0 ) = -1;
-    Log::L2( "[Concurrence] Spinflip Matrix: {}\n", spinflip );
+    LOG2( "[Concurrence] Spinflip Matrix: {}\n", spinflip );
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
     for ( size_t k = 0; k < T; k++ ) { // cache[s_g2_1111].rows() statt T?
-        // Log::L3( "Creating 2 photon matrix\n" );
+        // LOG3( "Creating 2 photon matrix\n" );
         Dense rho_2phot = Dense::Zero( 4, 4 );
         Dense rho_2phot_g2zero = Dense::Zero( 4, 4 );
         rho_2phot( 0, 0 ) = rho[s_g2_1111][k];
@@ -119,22 +119,22 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         rho_2phot_g2zero( 1, 1 ) = std::abs( rho_g2zero[s_g2_2112][k] ) != 0 ? rho_g2zero[s_g2_2112][k] : 1E-100;
         rho_2phot_g2zero( 2, 2 ) = std::abs( rho_g2zero[s_g2_1221][k] ) != 0 ? rho_g2zero[s_g2_1221][k] : 1E-100;
         rho_2phot_g2zero = rho_2phot_g2zero / std::abs( rho_2phot_g2zero.trace() );
-        // Log::L3( "Normalizing 2 photon matrix\n" );
+        // LOG3( "Normalizing 2 photon matrix\n" );
         // if ( std::abs( rho_2phot.trace() ) != 0 ) {
-        // Log::L3( "Rho_2phot = {}\n", rho_2phot );
-        // Log::L3( "Calculating sqrt(rho)\n" );
+        // LOG3( "Rho_2phot = {}\n", rho_2phot );
+        // LOG3( "Calculating sqrt(rho)\n" );
         // Eigen::MatrixPower<Dense> Mpow( rho_2phot );
         Dense sqrtrho2phot = rho_2phot.sqrt();               // Mpow( 0.5 );
         Dense sqrtrho2phot_g2zero = rho_2phot_g2zero.sqrt(); // Mpow( 0.5 );
-        // Log::L3( "Calculating R\n" );
+        // LOG3( "Calculating R\n" );
         Dense R = sqrtrho2phot * spinflip * rho_2phot * spinflip * sqrtrho2phot;
         Dense R_g2zero = sqrtrho2phot_g2zero * spinflip * rho_2phot_g2zero * spinflip * sqrtrho2phot_g2zero;
-        // Log::L3( "R = {}\n", R );
-        // Log::L3( "Calculating sqrt(R)\n" );
+        // LOG3( "R = {}\n", R );
+        // LOG3( "Calculating sqrt(R)\n" );
         // Eigen::MatrixPower<Dense> SMPow( R );
         Dense R5 = R.sqrt();               // SMPow( 0.5 );
         Dense R5_g2zero = R_g2zero.sqrt(); // SMPow( 0.5 );
-        // Log::L3( "Calculating Eigenvalues\n" );
+        // LOG3( "Calculating Eigenvalues\n" );
         // auto eigenvalues = R5.eigenvalues();
         // auto eigenvalues_g2zero = R5_g2zero.eigenvalues();
         Eigen::SelfAdjointEigenSolver<Dense> eigensolver( R5 );
@@ -155,12 +155,12 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         //    eigenvalues_g2zero( 1 ) = eigenvalues_g2zero( 0 );
         //    eigenvalues_g2zero( 0 ) = 0.0;
         //}
-        // Log::L1( "rho2phot = {}\n\nsqrtrho2phot = {}\n\nR = {}\n\nRS = {}\nEigenvalues at t = {} are {}\n", rho_2phot, sqrtrho2phot, R, R5, get_time_at( i ), eigenvalues );
+        // LOG( "rho2phot = {}\n\nsqrtrho2phot = {}\n\nR = {}\n\nRS = {}\nEigenvalues at t = {} are {}\n", rho_2phot, sqrtrho2phot, R, R5, get_time_at( i ), eigenvalues );
         auto conc = eigenvalues( 3 ) - eigenvalues( 2 ) - eigenvalues( 1 ) - eigenvalues( 0 );
-        double fidelity = std::pow(std::real(R5.trace()),2.0);
-        // Log::L2( "Eigenvalues {} (size of vec: {}): C = {} - {} - {} - {}\n", k, eigenvalues.size(), eigenvalues( 3 ), eigenvalues( 2 ), eigenvalues( 1 ), eigenvalues( 0 ) );
+        double fidelity = std::pow( std::real( R5.trace() ), 2.0 );
+        // LOG2( "Eigenvalues {} (size of vec: {}): C = {} - {} - {} - {}\n", k, eigenvalues.size(), eigenvalues( 3 ), eigenvalues( 2 ), eigenvalues( 1 ), eigenvalues( 0 ) );
         auto conc_g2zero = eigenvalues_g2zero( 3 ) - eigenvalues_g2zero( 2 ) - eigenvalues_g2zero( 1 ) - eigenvalues_g2zero( 0 );
-        double fidelity_g2zero = std::pow(std::real(R5_g2zero.trace()),2.0);
+        double fidelity_g2zero = std::pow( std::real( R5_g2zero.trace() ), 2.0 );
         output.at( k ) = conc;
         output_simple.at( k ) = 2.0 * std::abs( rho_2phot( 3, 0 ) / rho_2phot.trace() );
         output_fidelity.at( k ) = fidelity;
@@ -188,7 +188,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     to_output["Conc_g2zero_fidelity"][fout] = output_fidelity_g2zero;
     to_output_m["TwoPMat"][fout] = twophotonmatrix;
     to_output_m["TwoPMat"][fout + "_g2zero"] = twophotonmatrix_g2zero;
-    Log::L1( "Final Concurrence: {:.10f} ({:.10f} simple) {}\n", std::real( output.back() ), std::real( output_simple.back() ), fout );
-    Log::L1( "Final Concurrence with g2(0): {:.10f} ({:.10f} simple) {}\n", std::real( output_g2zero.back() ), std::real( output_g2zero_simple.back() ), fout );
+    LOG( "Final Concurrence: {:.10f} ({:.10f} simple) {}\n", std::real( output.back() ), std::real( output_simple.back() ), fout );
+    LOG( "Final Concurrence with g2(0): {:.10f} ({:.10f} simple) {}\n", std::real( output_g2zero.back() ), std::real( output_g2zero_simple.back() ), fout );
     return true;
 }

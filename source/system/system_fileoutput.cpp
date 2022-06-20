@@ -1,11 +1,11 @@
 #include "system/fileoutput.h"
 
 FileOutput::FileOutput( Parameters &p, OperatorMatrices &op ) {
-    Log::L2( "[System-Fileoutput] Creating FileOutputs...\n" );
+    LOG2( "[System-Fileoutput] Creating FileOutputs...\n" );
     if ( p.input_conf["DMconfig"].string["output_mode"] != "none" ) {
         fp_densitymatrix = std::fopen( ( p.working_directory + "densitymatrix.txt" ).c_str(), "w" );
         if ( !fp_densitymatrix ) {
-            Log::L2( "[System-Fileoutput] Could not open file for densitymatrix!\n" );
+            LOG2( "[System-Fileoutput] Could not open file for densitymatrix!\n" );
         } else {
             fmt::print( fp_densitymatrix, "t\t" );
             if ( p.input_conf["DMconfig"].string["output_mode"] == "full" ) {
@@ -26,7 +26,7 @@ FileOutput::FileOutput( Parameters &p, OperatorMatrices &op ) {
     }
     fp_electronic = std::fopen( ( p.working_directory + "electronic.txt" ).c_str(), "w" );
     if ( !fp_electronic ) {
-        Log::L2( "[System-Fileoutput] Could not open file for atomic inversion!\n" );
+        LOG2( "[System-Fileoutput] Could not open file for atomic inversion!\n" );
     } else {
         fmt::print( fp_electronic, "t\t" ); //|G><G|\t|X_H><X_H|\t|X_V><X_V|\t|B><B|\n" );
         for ( auto &[name, rem] : p.input_electronic )
@@ -39,7 +39,7 @@ FileOutput::FileOutput( Parameters &p, OperatorMatrices &op ) {
     }
     fp_photonic = std::fopen( ( p.working_directory + "photonic.txt" ).c_str(), "w" );
     if ( !fp_photonic ) {
-        Log::L2( "[System-Fileoutput] Could not open file for photonpopulation!\n" );
+        LOG2( "[System-Fileoutput] Could not open file for photonpopulation!\n" );
     } else {
         fmt::print( fp_photonic, "t\t" ); //|G><G|\t|X_H><X_H|\t|X_V><X_V|\t|B><B|\n" );
         for ( auto &[name, rem] : p.input_photonic )
@@ -52,33 +52,33 @@ FileOutput::FileOutput( Parameters &p, OperatorMatrices &op ) {
     if ( p.numerics_output_rkerror ) {
         fp_numerical = std::fopen( ( p.working_directory + "numerical.txt" ).c_str(), "w" );
         if ( !fp_numerical ) {
-            Log::L2( "[System-Fileoutput] Could not open file for numerical data!\n" );
+            LOG2( "[System-Fileoutput] Could not open file for numerical data!\n" );
         }
     }
     if ( p.output_eigenvalues ) {
         fp_eigenvalues = std::fopen( ( p.working_directory + "eigenvalues.txt" ).c_str(), "w" );
         if ( !fp_eigenvalues ) {
-            Log::L2( "[System-Fileoutput] Could not open file for eigenvalue data!\n" );
+            LOG2( "[System-Fileoutput] Could not open file for eigenvalue data!\n" );
         }
     }
 }
 
 void FileOutput::close( Parameters &p ) {
-    Log::L2( "[System-Fileoutput] Closing file outputs...\n" );
-    Log::L2( "[System-Fileoutput] Closing Density Matrix Output\n" );
+    LOG2( "[System-Fileoutput] Closing file outputs...\n" );
+    LOG2( "[System-Fileoutput] Closing Density Matrix Output\n" );
     if ( p.input_conf["DMconfig"].string["output_mode"] != "none" ) {
         std::fclose( fp_densitymatrix );
     }
-    Log::L2( "[System-Fileoutput] Closing Electronic States Output\n" );
+    LOG2( "[System-Fileoutput] Closing Electronic States Output\n" );
     std::fclose( fp_electronic );
-    Log::L2( "[System-Fileoutput] Closing Photonic States Output\n" );
+    LOG2( "[System-Fileoutput] Closing Photonic States Output\n" );
     std::fclose( fp_photonic );
     if ( p.numerics_output_rkerror ) {
-        Log::L2( "[System-Fileoutput] Closing Numerical Output\n" );
+        LOG2( "[System-Fileoutput] Closing Numerical Output\n" );
         std::fclose( fp_numerical );
     }
     if ( p.output_eigenvalues ) {
-        Log::L2( "[System-Fileoutput] Closing Eigenvalue Output\n" );
+        LOG2( "[System-Fileoutput] Closing Eigenvalue Output\n" );
         std::fclose( fp_eigenvalues );
     }
 }

@@ -27,20 +27,20 @@ T convertParam( std::string input ) {
         input = input.substr( 1 );
     }
     int index;
-    Log::L3( "Attempting to convert '{}'...\n", input );
+    LOG3( "Attempting to convert '{}'...\n", input );
     // "Meter" Scale
     if ( input.back() == 'm' ) {
         index = input.size() - 1;
         if ( input.at( index - 1 ) == 'm' ) {
-            Log::L3( "\tfrom mm to Hz...\n" );
+            LOG3( "\tfrom mm to Hz...\n" );
             value = QDLC::Math::wavelength_to_Hz( 1E-3 * std::stod( input.substr( 0, index - 1 ) ) );
         }
         if ( input.at( index - 2 ) == 'm' and input.at( index - 1 ) == 'u' ) {
-            Log::L3( "\tfrom mum to Hz...\n" );
+            LOG3( "\tfrom mum to Hz...\n" );
             value = QDLC::Math::wavelength_to_Hz( 1E-6 * std::stod( input.substr( 0, index - 2 ) ) );
         }
         if ( input.at( index - 1 ) == 'n' ) {
-            Log::L3( "\tfrom nm to Hz...\n" );
+            LOG3( "\tfrom nm to Hz...\n" );
             value = QDLC::Math::wavelength_to_Hz( 1E-9 * std::stod( input.substr( 0, index - 1 ) ) );
         }
     }
@@ -49,21 +49,21 @@ T convertParam( std::string input ) {
         // Found 'eV' as unit (energy), now check for scaling
         if ( input.at( index - 1 ) == 'm' ) {
             // meV
-            Log::L3( "\tfrom meV to Hz...\n" );
+            LOG3( "\tfrom meV to Hz...\n" );
             value = QDLC::Math::eV_to_Hz( std::stod( input.substr( 0, index - 1 ) ) );
             conversion = 1E-3;
         } else if ( int( index ) > 1 and input.at( index - 2 ) == 'm' and input.at( index - 1 ) == 'u' ) {
             // mueV
-            Log::L3( "\tfrom mueV to Hz...\n" );
+            LOG3( "\tfrom mueV to Hz...\n" );
             value = QDLC::Math::eV_to_Hz( std::stod( input.substr( 0, index - 2 ) ) );
             conversion = 1E-6;
         } else if ( QDLC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
             // eV
-            Log::L3( "\tfrom eV to Hz...\n" );
+            LOG3( "\tfrom eV to Hz...\n" );
             value = QDLC::Math::eV_to_Hz( std::stod( input.substr( 0, index ) ) );
             conversion = 1.0;
         } else {
-            Log::L3( "Conversion of input '{}' from eV failed!\n", input );
+            LOG3( "Conversion of input '{}' from eV failed!\n", input );
             return (T)0.0;
         }
     }
@@ -73,58 +73,58 @@ T convertParam( std::string input ) {
         // fmt::print("\n {} {} {} {}\n",index, input.at(index-1)=='n',input.compare(index-1,1,"n") ,input.at(index-1));
         if ( input.at( index - 1 ) == 'n' ) {
             // ns
-            Log::L3( "\tfrom ns to s...\n" );
+            LOG3( "\tfrom ns to s...\n" );
             value = std::stod( input.substr( 0, index - 1 ) );
             conversion = 1E-9;
         } else if ( input.at( index - 1 ) == 'p' ) {
             // ps
-            Log::L3( "\tfrom ps to s...\n" );
+            LOG3( "\tfrom ps to s...\n" );
             value = std::stod( input.substr( 0, index - 1 ) );
             conversion = 1E-12; // fmt::print("{} {} ... ", value, conversion);
         } else if ( input.at( index - 1 ) == 'f' ) {
             // fs
-            Log::L3( "\tfrom fs to s...\n" );
+            LOG3( "\tfrom fs to s...\n" );
             value = std::stod( input.substr( 0, index - 1 ) );
             conversion = 1E-15; // fmt::print("{} {} ... ", value, conversion);
         } else if ( QDLC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
             // s
-            Log::L3( "\tfrom s to s...\n" );
+            LOG3( "\tfrom s to s...\n" );
             value = std::stod( input.substr( 0, index ) );
             conversion = 1.0;
         } else {
-            Log::L3( "Conversion from input '{}' from time failed!\n", input );
+            LOG3( "Conversion from input '{}' from time failed!\n", input );
             return (T)0.0;
         }
     } else if ( -1 != ( index = QDLC::String::instr( input, "Hz" ) ) ) {
         // Found 'Hz' as unit (Frequency)
-        Log::L3( "\tfrom Hz to Hz...\n" );
+        LOG3( "\tfrom Hz to Hz...\n" );
         if ( QDLC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
             value = std::stod( input.substr( 0, index - 1 ) );
             conversion = 1.0;
         } else {
-            Log::L3( "Conversion from input '{}' from frequency failed!\n", input );
+            LOG3( "Conversion from input '{}' from frequency failed!\n", input );
             return (T)0.0;
         }
     } else if ( -1 != ( index = QDLC::String::instr( input, "pi" ) ) ) {
         // Found 'Hz' as unit (Frequency)
-        Log::L3( "\tfrom Xpi to rad...\n" );
+        LOG3( "\tfrom Xpi to rad...\n" );
         if ( QDLC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
             value = std::stod( input.substr( 0, index ) );
             conversion = 1.0;
         } else {
-            Log::L3( "Conversion from input '{}' from frequency failed!\n", input );
+            LOG3( "Conversion from input '{}' from frequency failed!\n", input );
             return (T)0.0;
         }
     } else if ( QDLC::Math::is_number( input ) ) {
         // Assuming Frequency input
-        Log::L3( "\tno conversion...\n" );
+        LOG3( "\tno conversion...\n" );
         value = std::stod( input );
     } else {
         // Input type is unknown
-        Log::L3( "Input Type of input '{}' is unkown!\n", input );
+        LOG3( "Input Type of input '{}' is unkown!\n", input );
         return (T)0.0;
     }
-    Log::L3( "Done! Final value = {}{}\n", value * conversion, complex ? ", is imag!" : "!" );
+    LOG3( "Done! Final value = {}{}\n", value * conversion, complex ? ", is imag!" : "!" );
     // if ( complex )
     //     return (T)( 1.i * value * conversion );
     return (T)( value * conversion );

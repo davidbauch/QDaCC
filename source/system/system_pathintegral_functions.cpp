@@ -32,10 +32,10 @@ Scalar System::dgl_phonon_S_function( const int t_delta, const int i_n, const in
 }
 
 void System::initialize_path_integral_functions() {
-    Log::L2( "[System-Path-Integral] Initializing Path-Integral functions...\n" );
+    LOG2( "[System-Path-Integral] Initializing Path-Integral functions...\n" );
     // kernel in phi-vector schreiben
     int tau_max = parameters.p_phonon_nc + 1;
-    Log::L2( "[System-Path-Integral] Initializing Kernel Memory functions...\n" );
+    LOG2( "[System-Path-Integral] Initializing Kernel Memory functions...\n" );
     phi_vector_int.clear();
 
     // If required, determine tau_max and t_step_pathint automatically
@@ -47,7 +47,7 @@ void System::initialize_path_integral_functions() {
             double current = std::abs( dgl_phonons_kernel( tau, parameters.numerics_subiterator_stepsize ) );
             if ( std::abs( 1.0 - current / last ) < 1E-2 or ( last != 1.0 and std::abs( current / first ) < 1E-3 ) ) {
                 parameters.t_step_pathint = tau / ( 1.0 * tau_max );
-                Log::L2( "[System-Path-Integral] Path Integral t-cutoff was automatically determined to t_cutoff = {}, resulting in a pathintegral timestep of {}\n", tau, parameters.t_step_pathint );
+                LOG2( "[System-Path-Integral] Path Integral t-cutoff was automatically determined to t_cutoff = {}, resulting in a pathintegral timestep of {}\n", tau, parameters.t_step_pathint );
                 break;
             }
             last = current;
@@ -63,7 +63,7 @@ void System::initialize_path_integral_functions() {
         phi_vector_int.emplace_back( kernel );
     }
 
-    Log::L2( "[PathIntegral] Outputting phonon functions to phonons.txt from phi_vector({})...\n", phi_vector.size() );
+    LOG2( "[PathIntegral] Outputting phonon functions to phonons.txt from phi_vector({})...\n", phi_vector.size() );
     // Output Phonon Functions
     FILE *fp_phonons = std::fopen( ( parameters.working_directory + "phonons.txt" ).c_str(), "w" );
     fmt::print( fp_phonons, "t\tabs(K(t))\treal(K(t))\timag(K(t))\tabs(K(t))\treal(K(t))\timag(K(t))\n" );
@@ -93,5 +93,5 @@ void System::initialize_path_integral_functions() {
     //     fmt::print( fp_phonons, "{}\t{}\t{}\t{}\n", t, std::abs( phi_vector_o.at( i ) ), std::real( phi_vector_o.at( i ) ), std::imag( phi_vector_o.at( i ) ) );
     // }
     std::fclose( fp_phonons );
-    Log::L2( "[PathIntegral] Done...\n" );
+    LOG2( "[PathIntegral] Done...\n" );
 }

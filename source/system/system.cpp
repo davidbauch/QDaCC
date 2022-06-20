@@ -3,7 +3,7 @@
 System::System( const std::vector<std::string> &input ) {
     // Set Name of this system.
     name = "Generic Electronic System";
-    Log::L2( "[System] Creating System Class for '{}'\n", name );
+    LOG2( "[System] Creating System Class for '{}'\n", name );
     // Initialize all subclasses with the input vector
     parameters = Parameters( input );
     operatorMatrices = OperatorMatrices( parameters );
@@ -13,14 +13,14 @@ System::System( const std::vector<std::string> &input ) {
     // Initialize / Adjust the remaining system class
     terminate_message = QDLC::Message::global_normaltermination;
     Timer &timer_systeminit = Timers::create( "System Initialization", true, false );
-    Log::L2( "[System] Initialization...\n" );
+    LOG2( "[System] Initialization...\n" );
     timer_systeminit.start();
     if ( !init_system() ) {
-        Log::L2( "[System] Initialization failed! Exitting program...\n" );
+        LOG2( "[System] Initialization failed! Exitting program...\n" );
         Log::close();
         exit( EXIT_FAILURE );
     }
-    Log::L2( "[System] Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( Timers::MILLISECONDS ) );
+    LOG2( "[System] Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( Timers::MILLISECONDS ) );
     // Log the operator matrix base
     parameters.log( operatorMatrices.initial_state_vector_ket );
     timer_systeminit.end();
@@ -62,7 +62,7 @@ bool System::init_system() {
     Sparse temp = dgl_timetrafo( operatorMatrices.H_used, 505E-12 );
     double error = std::abs( 1.0 - Dense( temp ).sum() / Dense( ttrafo ).sum() );
     if ( error >= 1E-8 ) {
-        Log::L1( "[System] Unitary timetransformation error is {:.3f}\%!\n", error * 100.0 );
+        LOG( "[System] Unitary timetransformation error is {:.3f}\%!\n", error * 100.0 );
     }
     return true;
 }
@@ -101,7 +101,7 @@ Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const dou
 
     if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T >= 0.0 ) {
         // Sparse phonons = dgl_phonons_pmeq( rho, t, past_rhos ).pruned( 1E-10 );
-        //  Log::L2( "Equation:\n{}\nPhonon Part:\n{}\n", Dense( ret ).format( operatorMatrices.output_format ), Dense( phonons ).format( operatorMatrices.output_format ) );
+        //  LOG2( "Equation:\n{}\nPhonon Part:\n{}\n", Dense( ret ).format( operatorMatrices.output_format ), Dense( phonons ).format( operatorMatrices.output_format ) );
         ret += dgl_phonons_pmeq( rho, t, past_rhos );
     }
 
@@ -219,9 +219,9 @@ bool System::exit_system( const int failure ) {
         p.log();
     for ( auto &c : chirp )
         c.log();
-    Log::L2( "[System-PME] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Interpolate/Read: {}.\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_interpolated );
-    Log::L2( "[System] Number of approx +/- adjustments: {}\n", globaltries );
-    Log::L1( "[System] Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
+    LOG2( "[System-PME] Coefficients: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}, Interpolate/Read: {}.\n", track_getcoefficient_calcattempt, track_getcoefficient_write, track_getcoefficient_calculate, track_getcoefficient_read, track_getcoefficient_read_interpolated );
+    LOG2( "[System] Number of approx +/- adjustments: {}\n", globaltries );
+    LOG( "[System] Maximum RAM used: {} MB\n", getPeakRSS() / 1024 / 1024 );
     fileoutput.close( parameters );
     return true;
 }

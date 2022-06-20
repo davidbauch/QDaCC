@@ -202,7 +202,7 @@ class Tensor {
         getNextValues() = getCurrentValues();
         indices.clear();
         indices = temp;
-        Log::L2( "[PathIntegral-TensorMap] Removed {} zero-coefficient indices ({} didn't exist and {} are zero.\n", total_removed, total_removed_noexist, total_removed_zero );
+        LOG2( "[PathIntegral-TensorMap] Removed {} zero-coefficient indices ({} didn't exist and {} are zero.\n", total_removed, total_removed_noexist, total_removed_zero );
     }
 
     void switchType() {

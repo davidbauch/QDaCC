@@ -82,7 +82,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
         to_output["Indist"]["Time"] = time;
     to_output["Indist"][fout] = outp;
     to_output["Visibility"][fout] = outpv;
-    Log::L1( "Final Indistinguishability: {} {}\n", std::real( outp.back() ), fout );
-    Log::L1( "Final Visibility: {} {}\n", std::real( outpv.back() ), fout );
+    LOG( "Final Indistinguishability: {} {}\n", std::real( outp.back() ), fout );
+    LOG( "Final Visibility: {} {}\n", std::real( outpv.back() ), fout );
     return true;
 }

@@ -8,6 +8,9 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 
+// TODO: fix vector overload
+#include <sstream>
+
 class Log {
    public:
     const static int LEVEL_1 = 1;
@@ -22,7 +25,6 @@ class Log {
     const static int BAR_5 = 5;
     const static int BAR_6 = 6;
 
-   public:
     Log( const Log & ) = delete;
 
     static Log &Get() {
@@ -43,6 +45,13 @@ class Log {
     template <typename... Args>
     static void L2( const std::string &msg, const Args &...args ) {
         return Get().Ilevel2_log( msg, true, true, fmt::make_format_args( args... ) );
+    }
+    // ?????
+    template <typename T>
+    static void L2( const std::string &msg, const std::vector<T> &vec ) {
+        std::stringstream kekw;
+        std::for_each( vec.begin(), vec.end(), [&kekw]( const auto &el ) { kekw << el << ","; } );
+        return Get().Ilevel2_log( msg, true, true, fmt::make_format_args( kekw.str() ) );
     }
     template <typename... Args>
     static void L3( const std::string &msg, const Args &...args ) {
@@ -185,3 +194,28 @@ class Log {
 // TODO:
 //  #define LOG_ERROR logError(__FILE__, __FUNCTION__, __LINE__)
 //  inline void logError(const char* file, const char* func, int line) {cout them}
+
+// Log Macros to disable L2 and especially L3 logging at compile time
+//#define LOG_DISABLE_L1
+//#define LOG_DISABLE_L2
+//#define LOG_DISABLE_L3
+
+#ifdef LOG_DISABLE_L1
+#    define LOG( fmt, ... )
+#    define LOG1( fmt, ... )
+#else
+#    define LOG( fmt, ... ) Log::L1( fmt, ##__VA_ARGS__ )
+#    define LOG1( fmt, ... ) Log::L1( fmt, ##__VA_ARGS__ )
+#endif
+
+#ifdef LOG_DISABLE_L2
+#    define LOG2( fmt, ... )
+#else
+#    define LOG2( fmt, ... ) Log::L2( fmt, ##__VA_ARGS__ )
+#endif
+
+#ifdef LOG_DISABLE_L3
+#    define LOG3( fmt, ... )
+#else
+#    define LOG3( fmt, ... ) Log::L3( fmt, ##__VA_ARGS__ )
+#endif

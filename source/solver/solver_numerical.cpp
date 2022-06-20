@@ -28,7 +28,7 @@ void QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( System &s ) {
 bool QDLC::Numerics::ODESolver::output_numerical_data( System &s ) {
     // Output Numerical RK Error
     if ( s.parameters.numerics_output_rkerror ) { // Chain...
-        Log::L2( "[Solver] Outputting Numerical RK45 error...\n" );
+        LOG2( "[Solver] Outputting Numerical RK45 error...\n" );
         // Header
         if ( not s.parameters.numerics_interpolate_outputs )
             fmt::print( s.fileoutput.fp_numerical, "t\tRK_Error_Acceped\t" );

@@ -96,7 +96,7 @@ class Timers {
     }
     Timer &Icreate( const std::string &name, bool addToTotalStatistic, bool printToSummary ) {
         timers.push_back( { name, addToTotalStatistic, printToSummary } );
-        Log::L2( "[Timer] Created timer with name '{}'{}.\n", name, ( addToTotalStatistic ? " which will be added to total statistics" : "" ) );
+        LOG2( "[Timer] Created timer with name '{}'{}.\n", name, ( addToTotalStatistic ? " which will be added to total statistics" : "" ) );
         return timers.back();
     }
     void IoutputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );

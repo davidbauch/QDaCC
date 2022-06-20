@@ -93,14 +93,14 @@ int main( int argc, char* argv[] ) {
         system.exit_system();
 
         double finalTime = Timers::summary();
-        Log::L1( "\nStartcommand: " );
+        LOG( "\nStartcommand: " );
         for ( auto& ii : inputs )
-            Log::L1( "{} ", ii );
-        Log::L1( "\n\n" + system.terminate_message + "\n" );
+            LOG( "{} ", ii );
+        LOG( "\n\n" + system.terminate_message + "\n" );
 
         if ( system.parameters.output_handlerstrings ) {
-            Log::L1( "\n{0} {1:.1f}\n", QDLC::Message::Prefix::PERCENT_TIME_FINAL, finalTime );
-            Log::L1( "{0} Done in {1}\n", QDLC::Message::Prefix::SUFFIX, Timer::format( finalTime ) );
+            LOG( "\n{0} {1:.1f}\n", QDLC::Message::Prefix::PERCENT_TIME_FINAL, finalTime );
+            LOG( "{0} Done in {1}\n", QDLC::Message::Prefix::SUFFIX, Timer::format( finalTime ) );
         }
         Timers::reset();
         Log::close();
