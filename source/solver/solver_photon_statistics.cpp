@@ -34,25 +34,23 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     }
     // Detector Matrix
     if ( s.parameters.input_conf["Detector"].numerical_v["time_center"].size() > 0 ) {
-        LOG2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask.txt...\n" );
-        FILE *f_detector = std::fopen( ( s.parameters.working_directory + "detector_temporal_mask.txt" ).c_str(), "w" );
-        fmt::print( f_detector, "Time_index\ttau_index\tD(t)*D(t+tau)\n" );
+        Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask.txt...\n" );
+        auto &f_detector = FileOutput::add_file( "detector_temporal_mask" );
+        f_detector << "Time_index\ttau_index\tD(t)*D(t+tau)\n";
         for ( int k = 0; k < detector_temporal_mask.rows(); k++ ) {
             for ( int l = 0; l < detector_temporal_mask.cols(); l++ ) {
-                fmt::print( f_detector, "{}\t{}\t{:.8e}\n", k, l, std::real( detector_temporal_mask( k, l ) ) );
+                f_detector << fmt::format( "{}\t{}\t{:.8e}\n", k, l, std::real( detector_temporal_mask( k, l ) ) );
             }
-            fmt::print( f_detector, "\n" );
+            f_detector << "\n";
         }
-        std::fclose( f_detector );
     }
     if ( s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size() > 0 ) {
-        LOG2( "[PhotonStatistics] Saving Detector Matrix to detector_spectral_mask.txt...\n" );
-        FILE *f_detector = std::fopen( ( s.parameters.working_directory + "detector_spectral_mask.txt" ).c_str(), "w" );
-        fmt::print( f_detector, "Omega\tAmp\tDelta\n" );
+        Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_spectral_mask.txt...\n" );
+        auto &f_detector = FileOutput::add_file( "detector_spectral_mask" );
+        f_detector << "Omega\tAmp\tDelta\n";
         for ( auto &[freq, amp, delta] : detector_frequency_mask ) {
-            fmt::print( f_detector, "{:.8e}\t{:.8e}\t{:.8e}\n", freq, amp, delta );
+            f_detector << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", freq, amp, delta );
         }
-        std::fclose( f_detector );
     }
     // Calculate G1/G2 functions
     auto &gs_s = s.parameters.input_correlation["GFunc"];
@@ -78,18 +76,17 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         auto &gmat_time = cache[purpose + "_time"];
         // G2(t,tau)
         if ( gs_s.numerical_v["Integrated"][i] == 0 || gs_s.numerical_v["Integrated"][i] == 2 ) {
-            LOG2( "[PhotonStatistics] Saving G{} function matrix to {}_m.txt...\n", order, purpose );
-            FILE *f_gfunc = std::fopen( ( s.parameters.working_directory + purpose + "_m.txt" ).c_str(), "w" );
-            fmt::print( f_gfunc, "Time\tTau\tAbs\tReal\tImag\n" );
+            Log::L2( "[PhotonStatistics] Saving G{} function matrix to {}_m.txt...\n", order, purpose );
+            auto &f_gfunc = FileOutput::add_file( purpose + "_m" );
+            f_gfunc << "Time\tTau\tAbs\tReal\tImag\n";
             for ( int k = 0; k < gmat.rows(); k++ ) {
                 double t_t = std::real( gmat_time( k, 0 ) );
                 for ( int l = 0; l < gmat.cols(); l++ ) {
                     double t_tau = std::imag( gmat_time( k, l ) ) - std::real( gmat_time( k, l ) );
-                    fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_t, t_tau, std::abs( gmat( k, l ) ), std::real( gmat( k, l ) ), std::imag( gmat( k, l ) ) );
+                    f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_t, t_tau, std::abs( gmat( k, l ) ), std::real( gmat( k, l ) ), std::imag( gmat( k, l ) ) );
                 }
-                fmt::print( f_gfunc, "\n" );
+                f_gfunc << "\n";
             }
-            std::fclose( f_gfunc );
         }
         // G2(0)
         int T = std::min<int>( gmat.cols(), savedStates.size() );
@@ -113,9 +110,9 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         }
         // G2(t,0) and G2(tau)
         if ( gs_s.numerical_v["Integrated"][i] == 1 || gs_s.numerical_v["Integrated"][i] == 2 ) {
-            LOG2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
-            FILE *f_gfunc = std::fopen( ( s.parameters.working_directory + purpose + ".txt" ).c_str(), "w" );
-            fmt::print( f_gfunc, "Time\tAbs(g{0}(tau))\tReal(g{0}(tau))\tImag(g{0}(tau))\tAbs(g{0}(t,0))\tReal(g{0}(t,0))\tImag(g{0}(t,0))\tAbs(g{0}(0))\tReal(g{0}(0))\tImag(g{0}(0))\n", order );
+            Log::L2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
+            auto &f_gfunc = FileOutput::add_file( purpose );
+            f_gfunc << fmt::format( "Time\tAbs(g{0}(tau))\tReal(g{0}(tau))\tImag(g{0}(tau))\tAbs(g{0}(t,0))\tReal(g{0}(t,0))\tImag(g{0}(t,0))\tAbs(g{0}(0))\tReal(g{0}(0))\tImag(g{0}(0))\n", order );
             for ( int l = 0; l < topv.size(); l++ ) { // gmat.cols()
                 Scalar g2oftau = 0;
                 for ( int k = 0; k < gmat.rows(); k++ ) {
@@ -124,9 +121,8 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
                 double t_tau = std::imag( gmat_time( 0, l ) );
                 size_t tau_index = rho_index_map[t_tau];
                 Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * creator * annihilator * annihilator, t_tau ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( l ), creator * annihilator, get_time_at( l ) ), 2.0 );
-                fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_tau, std::abs( g2oftau ), std::real( g2oftau ), std::imag( g2oftau ), std::abs( g2oft ), std::real( g2oft ), std::imag( g2oft ), std::abs( g2ofzero[l] ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ) );
+                f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_tau, std::abs( g2oftau ), std::real( g2oftau ), std::imag( g2oftau ), std::abs( g2oft ), std::real( g2oft ), std::imag( g2oft ), std::abs( g2ofzero[l] ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ) );
             }
-            std::fclose( f_gfunc );
         }
     }
     // Calculate Conc
@@ -137,131 +133,124 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
 
     // Output Spectra and Rest in seperate Files
     for ( auto &[mode, data] : to_output["Spectrum"] ) {
-        LOG2( "[PhotonStatistics] Saving Emission Spectrum to spectrum_" + mode + ".txt...\n" );
-        FILE *f_spectrum = std::fopen( ( s.parameters.working_directory + "spectrum_" + mode + ".txt" ).c_str(), "w" );
-        fmt::print( f_spectrum, "Omega\t{}\n", mode );
+        Log::L2( "[PhotonStatistics] Saving Emission Spectrum to spectrum_" + mode + ".txt...\n" );
+        auto &f_spectrum = FileOutput::add_file( "spectrum_" + mode );
+        f_spectrum << fmt::format( "Omega\t{}\n", mode );
         for ( int i = 0; i < to_output["Spectrum"][mode].size(); i++ ) {
-            fmt::print( f_spectrum, "{:.8e}\t{:.8e}\n", std::real( to_output["Spectrum_frequency"][mode][i] ), std::real( to_output["Spectrum"][mode][i] ) );
+            f_spectrum << fmt::format( "{:.8e}\t{:.8e}\n", std::real( to_output["Spectrum_frequency"][mode][i] ), std::real( to_output["Spectrum"][mode][i] ) );
         }
-        std::fclose( f_spectrum );
     }
     for ( auto &[mode, data] : to_output["Indist"] ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
-        LOG2( "[PhotonStatistics] Saving Indistinguishability and Visibility to indist_" + mode + ".txt...\n" );
-        FILE *f_indist = std::fopen( ( s.parameters.working_directory + "indist_" + mode + ".txt" ).c_str(), "w" );
-        fmt::print( f_indist, "Time\tIndist_{}\tVisibility_{}\n", mode, mode );
+        Log::L2( "[PhotonStatistics] Saving Indistinguishability and Visibility to indist_" + mode + ".txt...\n" );
+        auto &f_indist = FileOutput::add_file( "indist_" + mode );
+        f_indist << fmt::format( "Time\tIndist_{}\tVisibility_{}\n", mode, mode );
         for ( int i = 0; i < to_output["Indist"][mode].size(); i++ ) {
-            fmt::print( f_indist, "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Indist"]["Time"][i] ), std::real( to_output["Indist"][mode][i] ), std::real( to_output["Visibility"][mode][i] ) );
+            f_indist << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Indist"]["Time"][i] ), std::real( to_output["Indist"][mode][i] ), std::real( to_output["Visibility"][mode][i] ) );
         }
-        std::fclose( f_indist );
     }
     for ( auto &[mode, data] : to_output["Conc"] ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
-        LOG2( "[PhotonStatistics] Saving Concurrence to conc_" + mode + ".txt...\n" );
-        FILE *f_conc = std::fopen( ( s.parameters.working_directory + "conc_" + mode + ".txt" ).c_str(), "w" );
-        fmt::print( f_conc, "Time\t{0}\t{0}_simple\t\t{0}_fidelity\t{0}(g2(0))\t{0}_simple(g2(0))\t{0}_fidelity(g2(0))\n", mode );
+        Log::L2( "[PhotonStatistics] Saving Concurrence to conc_" + mode + ".txt...\n" );
+        auto &f_conc = FileOutput::add_file( "conc_" + mode );
+        f_conc << fmt::format( "Time\t{0}\t{0}_simple\t\t{0}_fidelity\t{0}(g2(0))\t{0}_simple(g2(0))\t{0}_fidelity(g2(0))\n", mode );
         // fmt::print( f_indist, "Time\t{0}\t{0}(g2(0))\n", mode );
         for ( int i = 0; i < to_output["Conc"][mode].size(); i++ ) {
-            fmt::print( f_conc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ), std::real( to_output["Conc_fidelity"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ), std::real( to_output["Conc_g2zero_fidelity"][mode][i] ) );
-            // fmt::print( f_indist, "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ) );
+            f_conc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ), std::real( to_output["Conc_fidelity"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ), std::real( to_output["Conc_g2zero_fidelity"][mode][i] ) );
         }
-        std::fclose( f_conc );
     }
     for ( auto &[mode, data] : to_output["Raman"] ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
-        LOG2( "[PhotonStatistics] Saving Raman Population to raman_" + mode + ".txt...\n" );
-        FILE *f_raman = std::fopen( ( s.parameters.working_directory + "raman_" + mode + ".txt" ).c_str(), "w" );
-        fmt::print( f_raman, "Time\t{0}\tEM({0})\n", mode );
+        Log::L2( "[PhotonStatistics] Saving Raman Population to raman_" + mode + ".txt...\n" );
+        auto &f_raman = FileOutput::add_file( "raman_" + mode );
+        f_raman << fmt::format( "Time\t{0}\tEM({0})\n", mode );
         for ( int i = 0; i < to_output["Raman"][mode].size(); i++ ) {
-            fmt::print( f_raman, "{:.8e}\t{:.8e}\t{:.8e}\n", get_time_at( i ), std::real( to_output["Raman"][mode][i] ), std::real( to_output["RamanEmProb"][mode][i] ) );
+            f_raman << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", get_time_at( i ), std::real( to_output["Raman"][mode][i] ), std::real( to_output["RamanEmProb"][mode][i] ) );
         }
-        std::fclose( f_raman );
     }
     for ( auto &[mode, data] : to_output_m["TwoPMat"] ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
-        LOG2( "[PhotonStatistics] Saving Two-Photon Matrix to twopmat_" + mode + ".txt...\n" );
-        FILE *f_twophot = std::fopen( ( s.parameters.working_directory + "twopmat_" + mode + ".txt" ).c_str(), "w" );
-        fmt::print( f_twophot, "Time\t" );
+        Log::L2( "[PhotonStatistics] Saving Two-Photon Matrix to twopmat_" + mode + ".txt...\n" );
+        auto &f_twophot = FileOutput::add_file( "twopmat_" + mode );
+        f_twophot << "Time\t";
         std::vector<std::string> modes = { "11", "12", "21", "22" };
         for ( int k = 0; k < 4; k++ ) {
             for ( int l = 0; l < 4; l++ ) {
-                fmt::print( f_twophot, "Re({}{})\t", modes[k], modes[l] );
+                f_twophot << fmt::format( "Re({}{})\t", modes[k], modes[l] );
             }
         }
         for ( int k = 0; k < 4; k++ ) {
             for ( int l = 0; l < 4; l++ ) {
-                fmt::print( f_twophot, "Im({}{})\t", modes[k], modes[l] );
+                f_twophot << fmt::format( "Im({}{})\t", modes[k], modes[l] );
             }
         }
-        fmt::print( f_twophot, "\n" );
+        f_twophot << "\n";
         for ( int i = 0; i < to_output_m["TwoPMat"][mode].size(); i++ ) {
             fmt::print( f_twophot, "{:.8e}\t", std::real( to_output["Conc"]["Time"][i] ) );
             auto &mat = to_output_m["TwoPMat"][mode][i];
             for ( int k = 0; k < 4; k++ ) {
                 for ( int l = 0; l < 4; l++ ) {
-                    fmt::print( f_twophot, "{:.8e}\t", std::real( mat( k, l ) ) );
+                    f_twophot << fmt::format( "{:.8e}\t", std::real( mat( k, l ) ) );
                 }
             }
             for ( int k = 0; k < 4; k++ ) {
                 for ( int l = 0; l < 4; l++ ) {
-                    fmt::print( f_twophot, "{:.8e}\t", std::imag( mat( k, l ) ) );
+                    f_twophot << fmt::format( "{:.8e}\t", std::imag( mat( k, l ) ) );
                 }
             }
 
-            fmt::print( f_twophot, "\n" );
+            f_twophot << "\n";
         }
-        std::fclose( f_twophot );
     }
     for ( auto &[mode, data] : to_output_m["Wigner"] ) {
         auto &wigner_s = s.parameters.input_correlation["Wigner"];
         if ( mode.compare( "Time" ) == 0 )
             continue;
-        LOG2( "[PhotonStatistics] Saving Wigner function to wigner_" + mode + ".txt...\n" );
-        FILE *f_wigner = std::fopen( ( s.parameters.working_directory + "wigner_" + mode + ".txt" ).c_str(), "w" );
+        Log::L2( "[PhotonStatistics] Saving Wigner function to wigner_" + mode + ".txt...\n" );
+        auto &f_wigner = FileOutput::add_file( "wigner_" + mode );
         if ( mode.starts_with( "rho_" ) ) {
             // Gather base:
-            fmt::print( f_wigner, "Time\t" );
+            f_wigner << "Time\t";
             std::string smode = mode.substr( 4 );
             int base = s.operatorMatrices.el_states.contains( smode ) ? s.operatorMatrices.el_states[smode].base : s.operatorMatrices.ph_states[smode].base;
             if ( base == 0 ) {
                 for ( auto &[name, dat] : s.parameters.input_electronic )
                     for ( auto &[name2, dat2] : s.parameters.input_electronic )
-                        fmt::print( f_wigner, "Re(|{}><{}|)\t", name, name2 );
+                        f_wigner << fmt::format( "Re(|{}><{}|)\t", name, name2 );
                 for ( auto &[name, dat] : s.parameters.input_electronic )
                     for ( auto &[name2, dat2] : s.parameters.input_electronic )
-                        fmt::print( f_wigner, "Im(|{}><{}|)\t", name, name2 );
+                        f_wigner << fmt::format( "Im(|{}><{}|)\t", name, name2 );
             } else {
                 for ( int i = 0; i < data[0].rows(); i++ )
                     for ( int j = 0; j < data[0].rows(); j++ )
-                        fmt::print( f_wigner, "Re(|{}_{}><{}_{}|)\t", smode, i, smode, j );
+                        f_wigner << fmt::format( "Re(|{}_{}><{}_{}|)\t", smode, i, smode, j );
                 for ( int i = 0; i < data[0].rows(); i++ )
                     for ( int j = 0; j < data[0].rows(); j++ )
-                        fmt::print( f_wigner, "Im(|{}_{}><{}_{}|)\t", smode, i, smode, j );
+                        f_wigner << fmt::format( "Im(|{}_{}><{}_{}|)\t", smode, i, smode, j );
             }
-            fmt::print( f_wigner, "\n" );
+            f_wigner << "\n";
         } else {
-            fmt::print( f_wigner, "Time\t{}\n", mode );
+            f_wigner << fmt::format( "Time\t{}\n", mode );
         }
         for ( int i = 0; i < data.size(); i++ ) {
-            fmt::print( f_wigner, "{:.8e}\t", std::real( to_output["Wigner"]["Time"][i] ) );
+            f_wigner << fmt::format( "{:.8e}\t", std::real( to_output["Wigner"]["Time"][i] ) );
             auto &currentwigner = data[i];
             for ( int k = 0; k < currentwigner.rows(); k++ ) {
                 for ( int l = 0; l < currentwigner.cols(); l++ ) {
-                    fmt::print( f_wigner, "{:.8e}\t", std::real( currentwigner( k, l ) ) );
+                    f_wigner << fmt::format( "{:.8e}\t", std::real( currentwigner( k, l ) ) );
                 }
             }
             for ( int k = 0; k < currentwigner.rows(); k++ ) {
                 for ( int l = 0; l < currentwigner.cols(); l++ ) {
-                    fmt::print( f_wigner, "{:.8e}\t", std::imag( currentwigner( k, l ) ) );
+                    f_wigner << fmt::format( "{:.8e}\t", std::imag( currentwigner( k, l ) ) );
                 }
             }
-            fmt::print( f_wigner, "\n" );
+            f_wigner << "\n";
         }
-        std::fclose( f_wigner );
     }
     return true;
 }
@@ -294,7 +283,7 @@ bool QDLC::Numerics::ODESolver::calculate_raman_population( System &s, const std
     // double e_optical_transition = s.operatorMatrices.ph_transitions[optical_transition + "bd"].energy;
     // int pulse_index = s.parameters.input_pulse[pulse_mode].numerical["PulseIndex"];
     //
-    // LOG2( "Using w_1 = {}, w_2 = {}, w_c = {}, pulse index = {}({})\n", e_electronic_transition1, e_electronic_transition2, e_optical_transition, pulse_mode, pulse_index );
+    // Log::L2( "Using w_1 = {}, w_2 = {}, w_c = {}, pulse index = {}({})\n", e_electronic_transition1, e_electronic_transition2, e_optical_transition, pulse_mode, pulse_index );
     //
     // std::vector<Scalar> raman_pop;
     // std::vector<Scalar> raman_emission;

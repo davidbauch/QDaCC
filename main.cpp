@@ -66,7 +66,7 @@ int main( int argc, char* argv[] ) {
         std::filesystem::create_directories( fp );
         // Logfile
         int loglevel = ( QDLC::String::vec_find_str( "-advLog", inputs ) != -1 || QDLC::String::vec_find_str( "-L2", inputs ) != -1 ? 2 : ( QDLC::String::vec_find_str( "-L3", inputs ) != -1 ? 3 : 1 ) );
-        Log::init( std::string( inputs.back() ) + "logfile.log", loglevel );
+        Log::Logger::init( std::string( inputs.back() ) + "logfile.log", loglevel );
 
         // System
         System system = System( inputs );
@@ -93,17 +93,17 @@ int main( int argc, char* argv[] ) {
         system.exit_system();
 
         double finalTime = Timers::summary();
-        LOG( "\nStartcommand: " );
+        Log::L1( "\nStartcommand: " );
         for ( auto& ii : inputs )
-            LOG( "{} ", ii );
-        LOG( "\n\n" + system.terminate_message + "\n" );
+            Log::L1( "{} ", ii );
+        Log::L1( "\n\n" + system.terminate_message + "\n" );
 
         if ( system.parameters.output_handlerstrings ) {
-            LOG( "\n{0} {1:.1f}\n", QDLC::Message::Prefix::PERCENT_TIME_FINAL, finalTime );
-            LOG( "{0} Done in {1}\n", QDLC::Message::Prefix::SUFFIX, Timer::format( finalTime ) );
+            Log::L1( "\n{0} {1:.1f}\n", QDLC::Message::Prefix::PERCENT_TIME_FINAL, finalTime );
+            Log::L1( "{0} Done in {1}\n", QDLC::Message::Prefix::SUFFIX, Timer::format( finalTime ) );
         }
         Timers::reset();
-        Log::close();
+        Log::Logger::close();
     }
     exit( EXIT_SUCCESS );
 }

@@ -7,7 +7,7 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     ProgressBar progressbar = ProgressBar();
     rkTimer.start();
 
-    LOG2( "[Solver] Calculating t-direction from {} to {} at stepsize {}...\n", s.parameters.t_start, s.parameters.t_end, s.parameters.t_step );
+    Log::L2( "[Solver] Calculating t-direction from {} to {} at stepsize {}...\n", s.parameters.t_start, s.parameters.t_end, s.parameters.t_step );
 
     // Calculate Time evolution on time vector timestamps.
     if ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
@@ -28,11 +28,11 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     // Finalize
     rkTimer.end();
     Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), rkTimer.getTotalIterationNumber(), "T-Direction: ", Timers::PROGRESS_FORCE_OUTPUT );
-    LOG2( "[Solver] Saved {} states.\n", savedStates.size() );
-    LOG2( "[Solver] Hamiltons: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}.\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_read );
+    Log::L2( "[Solver] Saved {} states.\n", savedStates.size() );
+    Log::L2( "[Solver] Hamiltons: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}.\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_read );
     size_t sum = 0;
     std::ranges::for_each( s.savedCoefficients.begin(), s.savedCoefficients.end(), [&]( const std::pair<double, std::map<double, QDLC::SaveStateTau>> &m ) { sum += m.second.size(); } );
-    LOG2( "[Solver] Cached {} phonon matrices.\n", sum );
+    Log::L2( "[Solver] Cached {} phonon matrices.\n", sum );
 
     // Interpolate Outputstates with spline interpolation
     auto output_states = s.parameters.numerics_interpolate_outputs ? Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_threads, s.parameters.numerics_interpolate_method_time ) : savedStates;
@@ -48,7 +48,7 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     // Calculate expectation values
     Timer &evalTimer = Timers::create( "Expectation-Value-Loop" );
     evalTimer.start();
-    LOG2( "[Solver] Calculating expectation values...\n" );
+    Log::L2( "[Solver] Calculating expectation values...\n" );
     s.calculate_expectation_values( output_states, evalTimer );
     evalTimer.end();
 

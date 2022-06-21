@@ -25,7 +25,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
         timer.start();
         // Disgusting piece of code
         if ( detector_frequency_mask.empty() ) {
-            LOG2( "[PhotonStatistics] Calculating Detector Spectral Mask... \n" );
+            Log::L2( "[PhotonStatistics] Calculating Detector Spectral Mask... \n" );
             for ( int c = 0; c < s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size(); c++ ) {
                 double center = s.parameters.input_conf["Detector"].numerical_v["spectral_center"][c];
                 double range = s.parameters.input_conf["Detector"].numerical_v["spectral_range"][c];
@@ -51,10 +51,10 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
             //     dw1 = dw;
             //     dw2 = dw;
             // }
-            LOG2( "[PhotonStatistics] Calculating Detector Spectral Mask done, Mask size is {} \n", detector_frequency_mask.size() );
+            Log::L2( "[PhotonStatistics] Calculating Detector Spectral Mask done, Mask size is {} \n", detector_frequency_mask.size() );
         }
-        LOG2( "[PhotonStatistics] Applying Detector Mask for {}\n", purpose );
-        LOG2( "[PhotonStatistics] Calculating FT({})...\n", purpose );
+        Log::L2( "[PhotonStatistics] Applying Detector Mask for {}\n", purpose );
+        Log::L2( "[PhotonStatistics] Calculating FT({})...\n", purpose );
         // Calculate main fourier transform integral with spectral amplitude in tau direction.
         // Transform Tau Direction for every t_i
         Dense mat_transformed = Dense::Zero( mat.rows(), detector_frequency_mask.size() );
@@ -73,7 +73,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
         }
         // Output.
         if ( s.parameters.output_detector_transformations ) {
-            LOG2( "[PhotonStatistics] Outputting FT({})...\n", purpose );
+            Log::L2( "[PhotonStatistics] Outputting FT({})...\n", purpose );
             FILE *f_gfunc = std::fopen( ( s.parameters.working_directory + purpose + "_mFT.txt" ).c_str(), "w" );
             fmt::print( f_gfunc, "Time\tOmega_tau\tAbs\tReal\tImag\n" );
             for ( int k = 0; k < mat.rows(); k++ ) {
@@ -86,7 +86,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
             std::fclose( f_gfunc );
         }
         // Transform Back
-        LOG2( "[PhotonStatistics] Calculating iFT({})...\n", purpose );
+        Log::L2( "[PhotonStatistics] Calculating iFT({})...\n", purpose );
         mat = Dense::Zero( mat.rows(), mat.cols() );
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
         for ( int i = 0; i < mat.rows(); i++ ) {

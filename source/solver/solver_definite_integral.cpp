@@ -82,13 +82,13 @@ QDLC::SaveState QDLC::Numerics::calculate_definite_integral( Sparse rho, std::fu
     double t_t = t0;
     int iterations = 0;
     double maxerror = 0;
-    // LOG3( "Calculating Definite Integral from t0 = {} to t1 = {} at initial step = {}\n", t0, t1, step );
-    // LOG3( "Beginning Rho:\n{}\n", Dense( rho ) );
+    // Log::L3( "Calculating Definite Integral from t0 = {} to t1 = {} at initial step = {}\n", t0, t1, step );
+    // Log::L3( "Beginning Rho:\n{}\n", Dense( rho ) );
     while ( t0 < t1 ? t_t < t1 : t_t > t1 ) {
         bool accept = false;
         // Hit endpoint exactly
         if ( t0 < t1 ? t_t + t_step > t1 : t_t + t_step < t1 ) {
-            // LOG3( " - - - - Timestep would overshoot to t1 = {} (dt = {}), adjusting to {}\n", t1 + t_step, t_step, t_t - t1 );
+            // Log::L3( " - - - - Timestep would overshoot to t1 = {} (dt = {}), adjusting to {}\n", t1 + t_step, t_step, t_t - t1 );
             t_step = t1 - t_t;
             accept = true;
         }
@@ -115,9 +115,9 @@ QDLC::SaveState QDLC::Numerics::calculate_definite_integral( Sparse rho, std::fu
                 accept = true;
             }
         }
-        // LOG3( " - [t = {}] - - - Local error: {} - dh = {}, current timestep is: {}, new timestep will be: {}, current accept: {}\n", t_t, error, dh, t_step, t_step_new, accept );
+        // Log::L3( " - [t = {}] - - - Local error: {} - dh = {}, current timestep is: {}, new timestep will be: {}, current accept: {}\n", t_t, error, dh, t_step, t_step_new, accept );
         if ( accept ) {
-            // LOG3( " - [t = {}] - Accepdet step - Local error: {} - current timestep: {}, dh = {}\n", t_t, error, t_step, dh );
+            // Log::L3( " - [t = {}] - Accepdet step - Local error: {} - current timestep: {}, dh = {}\n", t_t, error, t_step, dh );
             t_t += t0 < t1 ? t_step : -t_step;
             rho = rkret.first;
             maxerror = std::max( maxerror, error );
@@ -126,8 +126,8 @@ QDLC::SaveState QDLC::Numerics::calculate_definite_integral( Sparse rho, std::fu
             t_step = t_step_new; // FIXME: wenn t_step*dh = 0 oder wenn t_t + t_step*dh = t_t wäre, dann failt das hier! am besten auch die diskreten timesteps übernehmen, warum nicht...
         iterations++;
     }
-    // LOG3( "Calculating Definite Integral from t0 = {} to t1 = {} at initial step = {} -- Done.\n", t0, t1, step );
-    // LOG3( "Done Chi integrating, (t0 = {}) t1 was supposted to be {} and ended up {}, maxerror was {}, did {}/{} iterations (var/const dt) \n", t0, t1, t_t, maxerror, iterations, std::floor( t1 - t0 / step ) );
-    // LOG3( "End Rho:\n{}\n", Dense( rho ) );
+    // Log::L3( "Calculating Definite Integral from t0 = {} to t1 = {} at initial step = {} -- Done.\n", t0, t1, step );
+    // Log::L3( "Done Chi integrating, (t0 = {}) t1 was supposted to be {} and ended up {}, maxerror was {}, did {}/{} iterations (var/const dt) \n", t0, t1, t_t, maxerror, iterations, std::floor( t1 - t0 / step ) );
+    // Log::L3( "End Rho:\n{}\n", Dense( rho ) );
     return QDLC::SaveState( rho, t1 );
 }

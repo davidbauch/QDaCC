@@ -22,6 +22,8 @@ class Parameters {
 
     // If True, the program will extend itself until the system converges into the defined groundstate
     bool numerics_calculate_till_converged;
+
+    // Groundstate Parameters
     int numerics_groundstate;
     std::string numerics_groundstate_string;
 

@@ -23,22 +23,22 @@ void Timer::iterate( int num ) {
 }
 // Start Timer
 void Timer::start() {
-    // LOG2("Starting timer '{}'... ",name);
+    // Log::L2("Starting timer '{}'... ",name);
     wallTimeStarted = omp_get_wtime();
     cpuTimeStarted = clock();
     running = true;
-    // LOG2("Done!\n");
+    // Log::L2("Done!\n");
 }
 // End Timer
 void Timer::end() {
-    // LOG2("Ending timer '{}'... ",name);
+    // Log::L2("Ending timer '{}'... ",name);
     wallTimeEnded = omp_get_wtime();
     cpuTimeEnded = clock();
     running = false;
     totalCPUTime = getCPUTimeOnce();
     totalWallTime = getWallTimeOnce();
     iterate();
-    // LOG2("Done!\n");
+    // Log::L2("Done!\n");
 }
 // Add time
 void Timer::add( time_t cpu, double wall ) {
@@ -114,22 +114,22 @@ double Timers::Isummary( bool output ) {
             len = timer.getName().size();
     }
     if ( output ) {
-        Log::inBar( "Timer" );
+        Log::Logger::inBar( "Timer" );
         for ( Timer timer : timers ) {
             if ( timer.addtoTotalStatistic ) {
                 totalWallTime += timer.getWallTime();
                 totalCPUTime += timer.getCPUTime();
             }
             if ( timer.printToSummary ) {
-                LOG( "{:<{}}: Walltime: {} ", timer.getName(), len, Timer::format( timer.getWallTime() ) );
+                Log::L1( "{:<{}}: Walltime: {} ", timer.getName(), len, Timer::format( timer.getWallTime() ) );
                 if ( timer.getTotalIterationNumber() > 1 )
-                    LOG( "CPUTime: {} Iterations: {} Average Time per Iteration: {}", ( timer.getCPUTime() != 0 ) ? Timer::format( timer.getCPUTime() ) : "--", timer.getTotalIterationNumber(), Timer::format( timer.getAverageIterationTime() ) );
-                LOG( "\n" );
+                    Log::L1( "CPUTime: {} Iterations: {} Average Time per Iteration: {}", ( timer.getCPUTime() != 0 ) ? Timer::format( timer.getCPUTime() ) : "--", timer.getTotalIterationNumber(), Timer::format( timer.getAverageIterationTime() ) );
+                Log::L1( "\n" );
             }
         }
-        Log::Bar( 75, Log::LEVEL_1, Log::BAR_1 );
-        LOG( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0 ? Timer::format( totalCPUTime ) : "--" ) );
-        Log::Bar();
+        Log::Logger::Bar( 75, Log::Logger::LEVEL_1, Log::Logger::BAR_1 );
+        Log::L1( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0 ? Timer::format( totalCPUTime ) : "--" ) );
+        Log::Logger::Bar();
     }
     return totalWallTime;
 }

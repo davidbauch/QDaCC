@@ -20,7 +20,7 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
     int totalIterations = resolution;
     ProgressBar progressbar = ProgressBar();
     timer.start();
-    LOG2( "Calculating spectrum... Calculating frequencies...\n" );
+    Log::L2( "Calculating spectrum... Calculating frequencies...\n" );
 
     // Calculate frequencies:
     std::vector<Scalar> spectrum_frequency_w;
@@ -29,9 +29,9 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
         spectrum_frequency_w.push_back( frequency_center - ( frequency_range ) + w / ( (double)resolution ) * ( 2. * ( frequency_range ) ) );
         out.push_back( 0 );
     }
-    LOG2( "Done, calculating fourier transform via direct integral...\n" );
+    Log::L2( "Done, calculating fourier transform via direct integral...\n" );
     double t_step = ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step );
-    LOG2( "Size = {} x {}, using dt = {}\n", akf_mat.rows(), akf_mat.cols(), t_step );
+    Log::L2( "Size = {} x {}, using dt = {}\n", akf_mat.rows(), akf_mat.cols(), t_step );
     // Calculate main fourier transform integral
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
     for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {

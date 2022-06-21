@@ -11,7 +11,9 @@
 // TODO: fix vector overload
 #include <sstream>
 
-class Log {
+namespace Log {
+
+class Logger {
    public:
     const static int LEVEL_1 = 1;
     const static int LEVEL_2 = 2;
@@ -25,10 +27,10 @@ class Log {
     const static int BAR_5 = 5;
     const static int BAR_6 = 6;
 
-    Log( const Log & ) = delete;
+    Logger( const Logger & ) = delete;
 
-    static Log &Get() {
-        static Log instance;
+    static Logger &Get() {
+        static Logger instance;
         return instance;
     }
     static void init( const std::string &filepath, int max_log_level ) {
@@ -57,13 +59,19 @@ class Log {
     static void L3( const std::string &msg, const Args &...args ) {
         return Get().Ilevel3_log( msg, true, true, fmt::make_format_args( args... ) );
     }
-    static void Bar( int size = Log::BAR_SIZE_FULL, int level = Log::LEVEL_1, int _bar = Log::BAR_0 ) {
+
+    template <typename... Args>
+    static void Error( const std::string &file, const std::string &function, int line, const std::string &msg, const Args &...args ) {
+        return Get().Ierror_log( file, function, line, msg, fmt::make_format_args( args... ) );
+    }
+
+    static void Bar( int size = Logger::BAR_SIZE_FULL, int level = Logger::LEVEL_1, int _bar = Logger::BAR_0 ) {
         return Get().Ibar( size, level, _bar );
     }
-    static void inBar( const std::string &msg, int size = Log::BAR_SIZE_FULL, int level = Log::LEVEL_1, int _bar = Log::BAR_0 ) {
+    static void inBar( const std::string &msg, int size = Logger::BAR_SIZE_FULL, int level = Logger::LEVEL_1, int _bar = Logger::BAR_0 ) {
         return Get().Iinbar( msg, size, level, _bar );
     }
-    static void wrapInBar( const std::string &msg, int size = Log::BAR_SIZE_FULL, int level = Log::LEVEL_1, int _barOut = Log::BAR_0, int _barIn = -1 ) {
+    static void wrapInBar( const std::string &msg, int size = Logger::BAR_SIZE_FULL, int level = Logger::LEVEL_1, int _barOut = Logger::BAR_0, int _barIn = -1 ) {
         return Get().Iwrapinbar( msg, size, level, _barOut, _barIn );
     }
 
@@ -80,7 +88,7 @@ class Log {
     std::unordered_map<std::string, std::string> colormap;
     FILE *file;
     std::vector<std::string> bars;
-    Log(){};
+    Logger(){};
     std::string repeat( std::string s, int n ) {
         std::string s1 = s;
         for ( int i = 1; i < n; i++ )
@@ -94,13 +102,13 @@ class Log {
         std::setbuf( stdout, NULL );
         max_loglevel = max_log_level;
         debug_counter = 0;
-        bars = { repeat( "=", Log::BAR_SIZE_FULL ),
-                 repeat( "-", Log::BAR_SIZE_FULL ),
-                 repeat( "o", Log::BAR_SIZE_FULL ),
-                 repeat( "#", Log::BAR_SIZE_FULL ),
-                 repeat( ":", Log::BAR_SIZE_FULL ),
-                 repeat( "+", Log::BAR_SIZE_FULL ),
-                 repeat( "*", Log::BAR_SIZE_FULL ) };
+        bars = { repeat( "=", Logger::BAR_SIZE_FULL ),
+                 repeat( "-", Logger::BAR_SIZE_FULL ),
+                 repeat( "o", Logger::BAR_SIZE_FULL ),
+                 repeat( "#", Logger::BAR_SIZE_FULL ),
+                 repeat( ":", Logger::BAR_SIZE_FULL ),
+                 repeat( "+", Logger::BAR_SIZE_FULL ),
+                 repeat( "*", Logger::BAR_SIZE_FULL ) };
         if ( max_loglevel >= 2 ) {
             fmt::print( file, "Succesfully created logfile '{}'!\n", filepath );
         }
@@ -155,8 +163,14 @@ class Log {
                 fmt::vprint( file, " | - " + msg, args );
         }
     }
+    template <class Args>
+    void Ierror_log( const std::string &in_file, const std::string &function, int line, const std::string &msg, const Args &args ) {
+        std::string error_message = fmt::format( "On line {} in function {} in file {} -- ", in_file, function, line );
+        fmt::vprint( "\033[31m[ERROR]\033[93m " + error_message + msg + "\033[0m", args );
+        fmt::vprint( file, "[ERROR] " + error_message + msg, args );
+    }
     void Ibar( int size, int level, int _bar ) {
-        size = std::min( std::max( size, 0 ), Log::BAR_SIZE_FULL );
+        size = std::min( std::max( size, 0 ), Logger::BAR_SIZE_FULL );
         std::string ret = bars.at( _bar ).substr( 0, size );
         if ( level == LEVEL_1 ) {
             L1( "{}{}\n", ret, ret );
@@ -201,21 +215,24 @@ class Log {
 //#define LOG_DISABLE_L3
 
 #ifdef LOG_DISABLE_L1
-#    define LOG( fmt, ... )
-#    define LOG1( fmt, ... )
+#    define L1( fmt, ... )
 #else
-#    define LOG( fmt, ... ) Log::L1( fmt, ##__VA_ARGS__ )
-#    define LOG1( fmt, ... ) Log::L1( fmt, ##__VA_ARGS__ )
+#    define L1( fmt, ... ) Logger::L1( fmt, ##__VA_ARGS__ )
 #endif
 
 #ifdef LOG_DISABLE_L2
-#    define LOG2( fmt, ... )
+#    define L2( fmt, ... )
 #else
-#    define LOG2( fmt, ... ) Log::L2( fmt, ##__VA_ARGS__ )
+#    define L2( fmt, ... ) Logger::L2( fmt, ##__VA_ARGS__ )
 #endif
 
 #ifdef LOG_DISABLE_L3
-#    define LOG3( fmt, ... )
+#    define L3( fmt, ... )
 #else
-#    define LOG3( fmt, ... ) Log::L3( fmt, ##__VA_ARGS__ )
+#    define L3( fmt, ... ) Logger::L3( fmt, ##__VA_ARGS__ )
 #endif
+
+#define E( fmt, ... ) Logger::Error( __FILE__, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__ )
+#define Error( fmt, ... ) Logger::Error( __FILE__, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__ )
+
+} // namespace Log

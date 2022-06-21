@@ -1,8 +1,9 @@
 #include "pulse.h"
 #include "solver/solver.h"
+#include "system/fileoutput.h"
 
 Pulse::Pulse( Parameters::input_s &inputs, Parameters &p ) : inputs( inputs ) {
-    LOG2( "[System-Pulse] Creating total pulse with {} individual pulses...\n", inputs.numerical_v["Amplitude"].size() );
+    Log::L2( "[System-Pulse] Creating total pulse with {} individual pulses...\n", inputs.numerical_v["Amplitude"].size() );
     counter_evaluated = 0;
     counter_returned = 0;
     maximum = 0;
@@ -11,9 +12,9 @@ Pulse::Pulse( Parameters::input_s &inputs, Parameters &p ) : inputs( inputs ) {
         steps = { QDLC::Numerics::RKCoefficients::a1 * p.t_step, QDLC::Numerics::RKCoefficients::a2 * p.t_step, QDLC::Numerics::RKCoefficients::a3 * p.t_step, QDLC::Numerics::RKCoefficients::a4 * p.t_step, QDLC::Numerics::RKCoefficients::a5 * p.t_step };
     else
         steps = { 0, 0.5 * p.t_step };
-    LOG2( "[System-Pulse] Done initializing class, creating precalculated pulse...\n" );
+    Log::L2( "[System-Pulse] Done initializing class, creating precalculated pulse...\n" );
     generate( p.t_start, p.t_end, p.t_step, p.input_conf["PulseConf"].numerical["Center"], p.input_conf["PulseConf"].numerical["Range"], p.input_conf["PulseConf"].numerical["Res"], p.input_conf["PulseConf"].numerical["dt"] );
-    LOG2( "[System-Pulse] Done!\n" );
+    Log::L2( "[System-Pulse] Done!\n" );
 }
 
 Scalar Pulse::evaluate( double t ) {
@@ -54,7 +55,7 @@ Scalar Pulse::evaluate_integral( double t, double dt ) {
 
 // Generate array of energy-values corresponding to the Pulse
 void Pulse::generate( double t_start, double t_end, double t_step, double omega_center, double omega_range, double dw, double dt ) {
-    // LOG3( "generating type " + inputs.pulse_type + "... " );
+    // Log::L3( "generating type " + inputs.pulse_type + "... " );
     double t;
     for ( double t1 = t_start; t1 < t_end + t_step * steps.size(); t1 += t_step ) {
         for ( int i = 0; i < (int)steps.size(); i++ ) {
@@ -69,10 +70,10 @@ void Pulse::generate( double t_start, double t_end, double t_step, double omega_
     }
 
     size = pulsearray.size();
-    LOG2( "[System-Pulse] Pulsearray.size() = {}... \n", size );
+    Log::L2( "[System-Pulse] Pulsearray.size() = {}... \n", size );
     if ( inputs.numerical_v["Frequency"].size() > 0 ) {
-        LOG2( "[System-Pulse] Calculating pulse fourier transformation...\n" );
-        LOG2( "[System-Pulse] Initial w_center = {}, w_range = {}, dw = {} (dt = {})\n", omega_center, omega_range, dw, dt );
+        Log::L2( "[System-Pulse] Calculating pulse fourier transformation...\n" );
+        Log::L2( "[System-Pulse] Initial w_center = {}, w_range = {}, dw = {} (dt = {})\n", omega_center, omega_range, dw, dt );
         // Finding Spectral integration window
         if ( omega_center == 0 ) {
             for ( auto &input : inputs.numerical_v["Frequency"] ) {
@@ -101,7 +102,7 @@ void Pulse::generate( double t_start, double t_end, double t_step, double omega_
         }
         pulse_begin = std::max<double>( pulse_begin, t_start );
         pulse_end = std::min<double>( pulse_end, t_end );
-        LOG2( "[System-Pulse] Using w_center = {}, w_range = {}, dw = {} (dt = {}) in time window {} to {}\n", omega_center, omega_range, dw, dt, pulse_begin, pulse_end );
+        Log::L2( "[System-Pulse] Using w_center = {}, w_range = {}, dw = {} (dt = {}) in time window {} to {}\n", omega_center, omega_range, dw, dt, pulse_begin, pulse_end );
         for ( double w = omega_center - omega_range; w < omega_center + omega_range; w += dw ) {
             fourier.emplace_back( w );
             Scalar spectral_amp = 0;
@@ -110,31 +111,26 @@ void Pulse::generate( double t_start, double t_end, double t_step, double omega_
             }
             pulsearray_fourier.emplace_back( spectral_amp );
         }
-        LOG2( "[System-Pulse] Fourier pulsearray.size() = {}...\n", pulsearray_fourier.size() );
+        Log::L2( "[System-Pulse] Fourier pulsearray.size() = {}...\n", pulsearray_fourier.size() );
     }
 }
 
 void Pulse::fileOutput( std::string filepath, double t_start, double t_end, double t_step ) {
-    LOG2( "Outputting Pulse Array to file...\n" );
-    FILE *pulsefile = std::fopen( filepath.c_str(), "w" );
-    if ( !pulsefile ) {
-        LOG2( "Failed to open outputfile for Pulse!\n" );
-        return;
-    }
-    fmt::print( pulsefile, "t\tabs(Omega(t))\treal(Omega(t)))\tw\treal(FT(Omega(t)))\tabs(FT(Omega(t)))\n" );
+    Log::L2( "Outputting Pulse Array to file...\n" );
+    auto &pulsefile = FileOutput::add_file( "pulse" );
+    pulsefile << "t\tabs(Omega(t))\treal(Omega(t)))\tw\treal(FT(Omega(t)))\tabs(FT(Omega(t)))\n";
     int i = 0;
     for ( double t = t_start; t < t_end + t_step; t += t_step ) {
         if ( i < pulsearray_fourier.size() )
-            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\t{:.10e}\t{:.10e}\t{:.10e}\n", t, std::abs( pulsearray[t] ), std::real( pulsearray[t] ), fourier[i], std::abs( pulsearray_fourier[i] ), std::real( pulsearray_fourier[i] ) );
+            pulsefile << fmt::format( "{:.10e}\t{:.10e}\t{:.10e}\t{:.10e}\t{:.10e}\t{:.10e}\n", t, std::abs( pulsearray[t] ), std::real( pulsearray[t] ), fourier[i], std::abs( pulsearray_fourier[i] ), std::real( pulsearray_fourier[i] ) );
         else
-            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\n", t, std::abs( pulsearray[t] ), std::real( pulsearray[t] ) );
+            pulsefile << fmt::format( "{:.10e}\t{:.10e}\t{:.10e}\n", t, std::abs( pulsearray[t] ), std::real( pulsearray[t] ) );
         i++;
     }
     while ( i < pulsearray_fourier.size() ) {
-        fmt::print( pulsefile, "NaN\tNaN\tNaN\t{:.10e}\t{:.10e}\t{:.10e}\n", fourier[i], std::abs( pulsearray_fourier[i] ), std::real( pulsearray_fourier[i] ) );
+        pulsefile << fmt::format( "NaN\tNaN\tNaN\t{:.10e}\t{:.10e}\t{:.10e}\n", fourier[i], std::abs( pulsearray_fourier[i] ), std::real( pulsearray_fourier[i] ) );
         i++;
     }
-    std::fclose( pulsefile );
 }
 
 Scalar Pulse::get( double t, bool force_evaluate ) {
@@ -188,47 +184,42 @@ Scalar Pulse::integral( double t, double t_step, bool force_evaluate ) {
 }
 
 void Pulse::log() {
-    LOG2( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
+    Log::L2( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
 }
 
 void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses, double t_start, double t_end, double t_step ) {
-    FILE *pulsefile = std::fopen( filepath.c_str(), "w" );
-    if ( !pulsefile ) {
-        LOG2( "Failed to open outputfile for Pulse!\n" );
-        return;
-    }
-    fmt::print( pulsefile, "t" );
+    auto &pulsefile = FileOutput::add_file( "pulse" );
+    pulsefile << "t";
     for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
-        fmt::print( pulsefile, "\tRe(Omega_{0}(t))\tIm(Omega_{0}(t)))", p );
+        pulsefile << fmt::format( "\tRe(Omega_{0}(t))\tIm(Omega_{0}(t)))", p );
     }
     for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
-        fmt::print( pulsefile, "\tw\tRe(FT(Omega_{0}(t)))\tIm(FT(Omega_{0}(t)))\t", p );
+        pulsefile << fmt::format( "\tw\tRe(FT(Omega_{0}(t)))\tIm(FT(Omega_{0}(t)))\t", p );
     }
-    fmt::print( pulsefile, "\n" );
+    pulsefile << "\n";
     int i = 0;
     for ( double t = t_start; t < t_end + t_step; t += t_step ) {
-        fmt::print( pulsefile, "{:.8e}\t", t );
+        pulsefile << fmt::format( "{:.8e}\t", t );
         for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
-            fmt::print( pulsefile, "{:.8e}\t{:.8e}\t", std::real( pulses.at( p ).pulsearray[t] ), std::imag( pulses.at( p ).pulsearray[t] ) );
+            pulsefile << fmt::format( "{:.8e}\t{:.8e}\t", std::real( pulses.at( p ).pulsearray[t] ), std::imag( pulses.at( p ).pulsearray[t] ) );
         }
         for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
             if ( i < pulses.at( p ).pulsearray_fourier.size() )
-                fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\t", pulses.at( p ).fourier[i], std::real( pulses.at( p ).pulsearray_fourier[i] ), std::imag( pulses.at( p ).pulsearray_fourier[i] ) );
+                pulsefile << fmt::format( "{:.10e}\t{:.10e}\t{:.10e}\t", pulses.at( p ).fourier[i], std::real( pulses.at( p ).pulsearray_fourier[i] ), std::imag( pulses.at( p ).pulsearray_fourier[i] ) );
             else
-                fmt::print( pulsefile, "\t\t" );
+                pulsefile << "\t\t";
         }
         i++;
-        fmt::print( pulsefile, "\n" );
+        pulsefile << "\n";
     }
     while ( i < pulses.at( 0 ).pulsearray_fourier.size() ) {
         for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
-            fmt::print( pulsefile, "NaN\tNaN\tNaN\t" );
+            pulsefile << "NaN\tNaN\tNaN\t";
         }
         for ( long unsigned int p = 0; p < pulses.size(); p++ ) {
-            fmt::print( pulsefile, "{:.10e}\t{:.10e}\t{:.10e}\t", pulses.at( p ).fourier[i], std::real( pulses.at( p ).pulsearray_fourier[i] ), std::imag( pulses.at( p ).pulsearray_fourier[i] ) );
+            pulsefile << fmt::format( "{:.10e}\t{:.10e}\t{:.10e}\t", pulses.at( p ).fourier[i], std::real( pulses.at( p ).pulsearray_fourier[i] ), std::imag( pulses.at( p ).pulsearray_fourier[i] ) );
         }
-        fmt::print( pulsefile, "\n" );
+        pulsefile << "\n";
         i++;
     }
-    std::fclose( pulsefile );
 }
