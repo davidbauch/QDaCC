@@ -415,6 +415,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         int new_index = 0;
         for ( const auto &current : base ) {
             auto state1 = QDLC::String::split( current.substr( 1 ), "|" ).front();
+            if (state1.back() == '>')
+                state1.pop_back();
             auto factor = (double)p.input_electronic[state1].numerical["PhononCoupling"].get();
             auto index = factor; // state1;
             if ( !temp_base_indices.contains( index ) ) {
