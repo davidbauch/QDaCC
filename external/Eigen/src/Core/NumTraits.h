@@ -10,6 +10,8 @@
 #ifndef EIGEN_NUMTRAITS_H
 #define EIGEN_NUMTRAITS_H
 
+#include "./InternalHeaderCheck.h"
+
 namespace Eigen {
 
 namespace internal {
@@ -83,17 +85,17 @@ namespace numext {
 // TODO: Replace by std::bit_cast (available in C++20)
 template <typename Tgt, typename Src>
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC Tgt bit_cast(const Src& src) {
-#if EIGEN_HAS_TYPE_TRAITS
   // The behaviour of memcpy is not specified for non-trivially copyable types
   EIGEN_STATIC_ASSERT(std::is_trivially_copyable<Src>::value, THIS_TYPE_IS_NOT_SUPPORTED);
   EIGEN_STATIC_ASSERT(std::is_trivially_copyable<Tgt>::value && std::is_default_constructible<Tgt>::value,
                       THIS_TYPE_IS_NOT_SUPPORTED);
-#endif
-
   EIGEN_STATIC_ASSERT(sizeof(Src) == sizeof(Tgt), THIS_TYPE_IS_NOT_SUPPORTED);
+
   Tgt tgt;
+  // Load src into registers first. This allows the memcpy to be elided by CUDA.
+  const Src staged = src;
   EIGEN_USING_STD(memcpy)
-  memcpy(&tgt, &src, sizeof(Tgt));
+  memcpy(&tgt, &staged, sizeof(Tgt));
   return tgt;
 }
 }  // namespace numext
@@ -162,11 +164,7 @@ template<typename T> struct GenericNumTraits
   };
 
   typedef T Real;
-  typedef typename internal::conditional<
-                     IsInteger,
-                     typename internal::conditional<sizeof(T)<=2, float, double>::type,
-                     T
-                   >::type NonInteger;
+  typedef std::conditional_t<IsInteger, std::conditional_t<sizeof(T)<=2, float, double>, T> NonInteger;
   typedef T Nested;
   typedef T Literal;
 
@@ -252,15 +250,15 @@ template<> struct NumTraits<long double>
   static inline long double dummy_precision() { return 1e-15l; }
 };
 
-template<typename _Real> struct NumTraits<std::complex<_Real> >
-  : GenericNumTraits<std::complex<_Real> >
+template<typename Real_> struct NumTraits<std::complex<Real_> >
+  : GenericNumTraits<std::complex<Real_> >
 {
-  typedef _Real Real;
-  typedef typename NumTraits<_Real>::Literal Literal;
+  typedef Real_ Real;
+  typedef typename NumTraits<Real_>::Literal Literal;
   enum {
     IsComplex = 1,
-    RequireInitialization = NumTraits<_Real>::RequireInitialization,
-    ReadCost = 2 * NumTraits<_Real>::ReadCost,
+    RequireInitialization = NumTraits<Real_>::RequireInitialization,
+    ReadCost = 2 * NumTraits<Real_>::ReadCost,
     AddCost = 2 * NumTraits<Real>::AddCost,
     MulCost = 4 * NumTraits<Real>::MulCost + 2 * NumTraits<Real>::AddCost
   };

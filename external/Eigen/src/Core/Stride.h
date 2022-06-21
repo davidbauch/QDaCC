@@ -10,6 +10,8 @@
 #ifndef EIGEN_STRIDE_H
 #define EIGEN_STRIDE_H
 
+#include "./InternalHeaderCheck.h"
+
 namespace Eigen {
 
 /** \class Stride
@@ -31,27 +33,31 @@ namespace Eigen {
   * arguments to the constructor.
   *
   * Indeed, this class takes two template parameters:
-  *  \tparam _OuterStrideAtCompileTime the outer stride, or Dynamic if you want to specify it at runtime.
-  *  \tparam _InnerStrideAtCompileTime the inner stride, or Dynamic if you want to specify it at runtime.
+  *  \tparam OuterStrideAtCompileTime_ the outer stride, or Dynamic if you want to specify it at runtime.
+  *  \tparam InnerStrideAtCompileTime_ the inner stride, or Dynamic if you want to specify it at runtime.
   *
   * Here is an example:
   * \include Map_general_stride.cpp
   * Output: \verbinclude Map_general_stride.out
   *
-  * Both strides can be negative, however, a negative stride of -1 cannot be specified at compiletime
+  * Both strides can be negative. However, a negative stride of -1 cannot be specified at compile time
   * because of the ambiguity with Dynamic which is defined to -1 (historically, negative strides were
   * not allowed).
   *
+  * Note that for compile-time vectors (ColsAtCompileTime==1 or RowsAtCompile==1),
+  * the inner stride is the pointer increment between two consecutive elements,
+  * regardless of storage layout.
+  *
   * \sa class InnerStride, class OuterStride, \ref TopicStorageOrders
   */
-template<int _OuterStrideAtCompileTime, int _InnerStrideAtCompileTime>
+template<int OuterStrideAtCompileTime_, int InnerStrideAtCompileTime_>
 class Stride
 {
   public:
     typedef Eigen::Index Index; ///< \deprecated since Eigen 3.3
     enum {
-      InnerStrideAtCompileTime = _InnerStrideAtCompileTime,
-      OuterStrideAtCompileTime = _OuterStrideAtCompileTime
+      InnerStrideAtCompileTime = InnerStrideAtCompileTime_,
+      OuterStrideAtCompileTime = OuterStrideAtCompileTime_
     };
 
     /** Default constructor, for use when strides are fixed at compile time */

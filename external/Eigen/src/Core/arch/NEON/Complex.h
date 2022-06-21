@@ -11,6 +11,8 @@
 #ifndef EIGEN_COMPLEX_NEON_H
 #define EIGEN_COMPLEX_NEON_H
 
+#include "../../InternalHeaderCheck.h"
+
 namespace Eigen {
 
 namespace internal {
@@ -347,27 +349,11 @@ EIGEN_MAKE_CONJ_HELPER_CPLX_REAL(Packet2cf,Packet4f)
 
 template<> EIGEN_STRONG_INLINE Packet1cf pdiv<Packet1cf>(const Packet1cf& a, const Packet1cf& b)
 {
-  // TODO optimize it for NEON
-  Packet1cf res = pmul(a, pconj(b));
-  Packet2f s, rev_s;
-
-  // this computes the norm
-  s = vmul_f32(b.v, b.v);
-  rev_s = vrev64_f32(s);
-
-  return Packet1cf(pdiv<Packet2f>(res.v, vadd_f32(s, rev_s)));
+  return pdiv_complex(a, b);
 }
 template<> EIGEN_STRONG_INLINE Packet2cf pdiv<Packet2cf>(const Packet2cf& a, const Packet2cf& b)
 {
-  // TODO optimize it for NEON
-  Packet2cf res = pmul(a,pconj(b));
-  Packet4f s, rev_s;
-
-  // this computes the norm
-  s = vmulq_f32(b.v, b.v);
-  rev_s = vrev64q_f32(s);
-
-  return Packet2cf(pdiv<Packet4f>(res.v, vaddq_f32(s, rev_s)));
+  return pdiv_complex(a, b);
 }
 
 EIGEN_DEVICE_FUNC inline void ptranspose(PacketBlock<Packet1cf, 1>& /*kernel*/) {}
@@ -390,7 +376,7 @@ template<> EIGEN_STRONG_INLINE Packet2cf psqrt<Packet2cf>(const Packet2cf& a) {
 #if EIGEN_ARCH_ARM64 && !EIGEN_APPLE_DOUBLE_NEON_BUG
 
 // See bug 1325, clang fails to call vld1q_u64.
-#if EIGEN_COMP_CLANG || EIGEN_COMP_CASTXML
+#if EIGEN_COMP_CLANG || EIGEN_COMP_CASTXML || EIGEN_COMP_CPE
   static uint64x2_t p2ul_CONJ_XOR = {0x0, 0x8000000000000000};
 #else
   const uint64_t  p2ul_conj_XOR_DATA[] = { 0x0, 0x8000000000000000 };
@@ -553,12 +539,7 @@ EIGEN_MAKE_CONJ_HELPER_CPLX_REAL(Packet1cd,Packet2d)
 
 template<> EIGEN_STRONG_INLINE Packet1cd pdiv<Packet1cd>(const Packet1cd& a, const Packet1cd& b)
 {
-  // TODO optimize it for NEON
-  Packet1cd res = pmul(a,pconj(b));
-  Packet2d s = pmul<Packet2d>(b.v, b.v);
-  Packet2d rev_s = preverse<Packet2d>(s);
-
-  return Packet1cd(pdiv(res.v, padd<Packet2d>(s,rev_s)));
+  return pdiv_complex(a, b);
 }
 
 EIGEN_STRONG_INLINE Packet1cd pcplxflip/*<Packet1cd>*/(const Packet1cd& x)

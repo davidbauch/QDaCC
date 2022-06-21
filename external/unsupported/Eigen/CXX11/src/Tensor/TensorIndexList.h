@@ -10,10 +10,7 @@
 #ifndef EIGEN_CXX11_TENSOR_TENSOR_INDEX_LIST_H
 #define EIGEN_CXX11_TENSOR_TENSOR_INDEX_LIST_H
 
-
-#if EIGEN_HAS_CONSTEXPR && EIGEN_HAS_VARIADIC_TEMPLATES
-
-#define EIGEN_HAS_INDEX_LIST
+#include "./InternalHeaderCheck.h"
 
 namespace Eigen {
 
@@ -308,6 +305,11 @@ struct IndexList : internal::IndexTuple<FirstType, OtherTypes...> {
     return internal::tuple_coeff<internal::array_size<internal::IndexTuple<FirstType, OtherTypes...> >::value-1, Index>::set(i, *this, value);
   }
 
+  EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC constexpr std::size_t size() const {
+    return 1 + sizeof...(OtherTypes);
+  };
+
+
   EIGEN_DEVICE_FUNC constexpr IndexList(const internal::IndexTuple<FirstType, OtherTypes...>& other) : internal::IndexTuple<FirstType, OtherTypes...>(other) { }
   EIGEN_DEVICE_FUNC constexpr IndexList(FirstType& first, OtherTypes... other) : internal::IndexTuple<FirstType, OtherTypes...>(first, other...) { }
   EIGEN_DEVICE_FUNC constexpr IndexList() : internal::IndexTuple<FirstType, OtherTypes...>() { }
@@ -379,10 +381,10 @@ template<typename FirstType, typename... OtherTypes> struct array_size<const Ind
 };
 
 template<typename FirstType, typename... OtherTypes> struct array_size<IndexPairList<FirstType, OtherTypes...> > {
-  static const size_t value = std::tuple_size<std::tuple<FirstType, OtherTypes...> >::value;
+  static const size_t value = 1 + sizeof...(OtherTypes);
 };
 template<typename FirstType, typename... OtherTypes> struct array_size<const IndexPairList<FirstType, OtherTypes...> > {
-  static const size_t value = std::tuple_size<std::tuple<FirstType, OtherTypes...> >::value;
+  static const size_t value = 1 + sizeof...(OtherTypes);
 };
 
 template<Index N, typename FirstType, typename... OtherTypes> EIGEN_DEVICE_FUNC constexpr Index array_get(IndexList<FirstType, OtherTypes...>& a) {
@@ -607,81 +609,6 @@ struct index_pair_second_statically_eq_impl<const IndexPairList<FirstType, Other
 
 }  // end namespace internal
 }  // end namespace Eigen
-
-#else
-
-namespace Eigen {
-namespace internal {
-
-template <typename T>
-struct index_known_statically_impl {
-  static EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE bool run(const Index) {
-    return false;
-  }
-};
-
-template <typename T>
-struct all_indices_known_statically_impl {
-  static EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE bool run() {
-    return false;
-  }
-};
-
-template <typename T>
-struct indices_statically_known_to_increase_impl {
-  static EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE bool run() {
-    return false;
-  }
-};
-
-template <typename T>
-struct index_statically_eq_impl {
-  static EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE bool run(Index, Index) {
-    return false;
-  }
-};
-
-template <typename T>
-struct index_statically_ne_impl {
-  static EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE bool run(Index, Index) {
-    return false;
-  }
-};
-
-template <typename T>
-struct index_statically_gt_impl {
-  static EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE bool run(Index, Index) {
-    return false;
-  }
-};
-
-template <typename T>
-struct index_statically_lt_impl {
-  static EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE bool run(Index, Index) {
-    return false;
-  }
-};
-
-template <typename Tx>
-struct index_pair_first_statically_eq_impl {
-  static EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE bool run(Index, Index) {
-    return false;
-  }
-};
-
-template <typename Tx>
-struct index_pair_second_statically_eq_impl {
-  static EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE bool run(Index, Index) {
-    return false;
-  }
-};
-
-
-
-}  // end namespace internal
-}  // end namespace Eigen
-
-#endif
 
 
 namespace Eigen {

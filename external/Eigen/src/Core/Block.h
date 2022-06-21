@@ -11,6 +11,8 @@
 #ifndef EIGEN_BLOCK_H
 #define EIGEN_BLOCK_H
 
+#include "./InternalHeaderCheck.h"
+
 namespace Eigen {
 
 namespace internal {
@@ -21,7 +23,7 @@ struct traits<Block<XprType, BlockRows, BlockCols, InnerPanel> > : traits<XprTyp
   typedef typename traits<XprType>::StorageKind StorageKind;
   typedef typename traits<XprType>::XprKind XprKind;
   typedef typename ref_selector<XprType>::type XprTypeNested;
-  typedef typename remove_reference<XprTypeNested>::type _XprTypeNested;
+  typedef std::remove_reference_t<XprTypeNested> XprTypeNested_;
   enum{
     MatrixRows = traits<XprType>::RowsAtCompileTime,
     MatrixCols = traits<XprType>::ColsAtCompileTime,
@@ -110,7 +112,7 @@ template<typename XprType, int BlockRows, int BlockCols, bool InnerPanel> class 
     EIGEN_GENERIC_PUBLIC_INTERFACE(Block)
     EIGEN_INHERIT_ASSIGNMENT_OPERATORS(Block)
 
-    typedef typename internal::remove_all<XprType>::type NestedExpression;
+    typedef internal::remove_all_t<XprType> NestedExpression;
 
     /** Column or Row constructor
       */
@@ -260,19 +262,19 @@ template<typename XprType, int BlockRows, int BlockCols, bool InnerPanel, bool H
     }
 
     template<int LoadMode>
-    inline PacketScalar packet(Index rowId, Index colId) const
+    EIGEN_DEVICE_FUNC inline PacketScalar packet(Index rowId, Index colId) const
     {
       return m_xpr.template packet<Unaligned>(rowId + m_startRow.value(), colId + m_startCol.value());
     }
 
     template<int LoadMode>
-    inline void writePacket(Index rowId, Index colId, const PacketScalar& val)
+    EIGEN_DEVICE_FUNC inline void writePacket(Index rowId, Index colId, const PacketScalar& val)
     {
       m_xpr.template writePacket<Unaligned>(rowId + m_startRow.value(), colId + m_startCol.value(), val);
     }
 
     template<int LoadMode>
-    inline PacketScalar packet(Index index) const
+    EIGEN_DEVICE_FUNC inline PacketScalar packet(Index index) const
     {
       return m_xpr.template packet<Unaligned>
               (m_startRow.value() + (RowsAtCompileTime == 1 ? 0 : index),
@@ -280,7 +282,7 @@ template<typename XprType, int BlockRows, int BlockCols, bool InnerPanel, bool H
     }
 
     template<int LoadMode>
-    inline void writePacket(Index index, const PacketScalar& val)
+    EIGEN_DEVICE_FUNC inline void writePacket(Index index, const PacketScalar& val)
     {
       m_xpr.template writePacket<Unaligned>
          (m_startRow.value() + (RowsAtCompileTime == 1 ? 0 : index),
@@ -295,7 +297,7 @@ template<typename XprType, int BlockRows, int BlockCols, bool InnerPanel, bool H
     #endif
 
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
-    const typename internal::remove_all<XprTypeNested>::type& nestedExpression() const
+    const internal::remove_all_t<XprTypeNested>& nestedExpression() const
     {
       return m_xpr;
     }
@@ -378,7 +380,7 @@ class BlockImpl_dense<XprType,BlockRows,BlockCols, InnerPanel,true>
     }
 
     EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
-    const typename internal::remove_all<XprTypeNested>::type& nestedExpression() const EIGEN_NOEXCEPT
+    const internal::remove_all_t<XprTypeNested>& nestedExpression() const EIGEN_NOEXCEPT
     {
       return m_xpr;
     }
