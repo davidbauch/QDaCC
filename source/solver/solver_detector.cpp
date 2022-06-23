@@ -3,11 +3,15 @@
 void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, const Dense &timemat, const std::string &purpose ) {
     if ( s.parameters.input_conf["Detector"].numerical_v["time_center"].size() > 0 ) {
         if ( detector_temporal_mask.rows() == 0 ) {
+            Log::L2( "[PhotonStatistics] Calculating Detector Temporal Mask... \n" );
             detector_temporal_mask = Dense( mat.rows(), mat.cols() );
             for ( int c = 0; c < s.parameters.input_conf["Detector"].numerical_v["time_center"].size(); c++ ) {
                 double detector_t_center = s.parameters.input_conf["Detector"].numerical_v["time_center"][c];
                 double detector_t_range = s.parameters.input_conf["Detector"].numerical_v["time_range"][c];
                 double detector_power = s.parameters.input_conf["Detector"].numerical_v["power_amplitude"][c];
+                Log::L2( "{}\n", detector_t_center );
+                Log::L2( "{}\n", detector_t_range );
+                Log::L2( "{}\n", detector_power );
                 for ( int i = 0; i < mat.rows(); i++ ) {
                     double time = std::real( timemat( i, 0 ) );
                     for ( int j = 0; j < mat.cols() - i; j++ ) {
@@ -17,6 +21,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
                 }
             }
         }
+        Log::L2( "[PhotonStatistics] Applying Detector Temporal Mask to {}... \n", purpose );
         mat = mat.cwiseProduct( detector_temporal_mask );
     }
     if ( s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size() > 0 ) {
@@ -44,13 +49,13 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
                 }
             }
             std::ranges::sort( detector_frequency_mask.begin(), detector_frequency_mask.end(), []( std::tuple<double, double, double> &first, std::tuple<double, double, double> &second ) { return std::get<0>( first ) < std::get<0>( second ); } );
-            // for ( int i = 0; i < detector_frequency_mask.size() - 1; i++ ) {
-            //     auto &[w1, a, dw1] = detector_frequency_mask[i];
-            //     auto &[w2, c, dw2] = detector_frequency_mask[i + 1];
-            //     double dw = w2 - w1;
-            //     dw1 = dw;
-            //     dw2 = dw;
-            // }
+            for ( int i = 0; i < detector_frequency_mask.size() - 1; i++ ) {
+                auto &[w1, a, dw1] = detector_frequency_mask[i];
+                auto &[w2, c, dw2] = detector_frequency_mask[i + 1];
+                double dw = w2 - w1;
+                dw1 = dw;
+                dw2 = dw;
+            }
             Log::L2( "[PhotonStatistics] Calculating Detector Spectral Mask done, Mask size is {} \n", detector_frequency_mask.size() );
         }
         Log::L2( "[PhotonStatistics] Applying Detector Mask for {}\n", purpose );
