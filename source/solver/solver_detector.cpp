@@ -8,10 +8,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
             for ( int c = 0; c < s.parameters.input_conf["Detector"].numerical_v["time_center"].size(); c++ ) {
                 double detector_t_center = s.parameters.input_conf["Detector"].numerical_v["time_center"][c];
                 double detector_t_range = s.parameters.input_conf["Detector"].numerical_v["time_range"][c];
-                double detector_power = s.parameters.input_conf["Detector"].numerical_v["power_amplitude"][c];
-                Log::L2( "{}\n", detector_t_center );
-                Log::L2( "{}\n", detector_t_range );
-                Log::L2( "{}\n", detector_power );
+                double detector_power = s.parameters.input_conf["Detector"].numerical_v["time_power_amplitude"][c];
                 for ( int i = 0; i < mat.rows(); i++ ) {
                     double time = std::real( timemat( i, 0 ) );
                     for ( int j = 0; j < mat.cols() - i; j++ ) {

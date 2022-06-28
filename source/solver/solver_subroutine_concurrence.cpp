@@ -31,6 +31,16 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     cache[s_g2_1212] = cache[s_g2_2121].conjugate();
     cache[s_g2_1212 + "_time"] = cache[s_g2_2121 + "_time"];
 
+    // Note: This will probably be either removed completely, or implemented correctly.
+    if ( s.parameters.input_correlation["Conc"].numerical_v["Center"].size() > 0 ) {
+        cache["concurrence_total_" + fout] = cache[s_g2_1111] + cache[s_g2_1122] + cache[s_g2_1212] + cache[s_g2_1221] + cache[s_g2_2121] + cache[s_g2_2112] + cache[s_g2_2211] + cache[s_g2_2222];
+        cache["concurrence_total_" + fout + "_time"] = cache[s_g2_1212 + "_time"];
+        calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].numerical_v["Center"].front(), s.parameters.input_correlation["Conc"].numerical_v["Range"].front(), s.parameters.input_correlation["Conc"].numerical_v["resW"].front(), 2, "False", "concurrence_total_" + fout );
+        for ( auto mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
+            calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].numerical_v["Center"].front(), s.parameters.input_correlation["Conc"].numerical_v["Range"].front(), s.parameters.input_correlation["Conc"].numerical_v["resW"].front(), 2, "False", mode );
+        }
+    }
+
     int pbsize = 2 * cache[s_g2_1212].rows();
 
     std::map<std::string, std::vector<Scalar>> rho;

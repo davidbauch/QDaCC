@@ -427,11 +427,12 @@ void Parameters::parse_system() {
     for ( const std::string &spectrum : QDLC::String::splitline( inputstring_spectrum, ';' ) ) {
         auto conf = QDLC::String::splitline( spectrum, ':' );
         input_s conf_s;
-        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                                                                                 // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
-        conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );                                                      // Center
-        conf_s.numerical_v["Range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );                                                       // Range
-        conf_s.numerical_v["resW"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );                                                        // Resolution for w
-        conf_s.string_v["Normalize"] = conf.size() > 4 ? QDLC::String::splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.numerical_v["Range"].size(), "False" ); // Normalize?
+        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                                                                                                               // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
+        conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );                                                                                    // Center
+        conf_s.numerical_v["Range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );                                                                                     // Range
+        conf_s.numerical_v["resW"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );                                                                                      // Resolution for w
+        conf_s.numerical_v["Order"] = conf.size() > 4 ? QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) ) : std::vector<Parameter>( conf_s.numerical_v["Range"].size(), 1 ); // Order (1 or 2)?
+        conf_s.string_v["Normalize"] = conf.size() > 5 ? QDLC::String::splitline( conf[5], ',' ) : std::vector<std::string>( conf_s.numerical_v["Range"].size(), "False" );                               // Normalize?
         input_correlation["Spectrum"] = conf_s;
     }
     for ( std::string &indist : QDLC::String::splitline( inputstring_indist, ';' ) ) {
@@ -444,6 +445,12 @@ void Parameters::parse_system() {
         auto conf = QDLC::String::splitline( conc, ':' );
         input_s conf_s;
         conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' ); // Modes to calculate Concurrence for
+        if ( conf.size() > 1 ) {
+            // Experimental: Calculate spectrum for all matrix entries. Also outputs the non-normalized matrices
+            conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) ); // Center
+            conf_s.numerical_v["Range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );  // Range
+            conf_s.numerical_v["resW"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );   // Resolution for w
+        }
         input_correlation["Conc"] = conf_s;
     }
     for ( std::string &g_func : QDLC::String::splitline( inputstring_gfunc, ';' ) ) {

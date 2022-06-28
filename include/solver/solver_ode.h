@@ -144,7 +144,7 @@ class ODESolver {
      * @brief Calculates the Spectrum for a given operator combination. This function requires the calculation of 1 G1 Function
      *
      */
-    bool calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution, bool normalize );
+    bool calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution, int order, bool normalize, std::string s_g = "" );
 
     /**
      * @brief Calculates the Indistinguishability and Visibility for a given operator combination. This function requires the calculation of 1 G1 and 1 G2 Function.

@@ -74,8 +74,7 @@ class Logger {
     static void wrapInBar( const std::string &msg, int size = Logger::BAR_SIZE_FULL, int level = Logger::LEVEL_1, int _barOut = Logger::BAR_0, int _barIn = -1 ) {
         return Get().Iwrapinbar( msg, size, level, _barOut, _barIn );
     }
-
-    static void debug( const std::string &msg = "" ) {
+    static void Debug( const std::string &msg = "" ) {
         return Get().Idebug( msg );
     }
     static void close() {

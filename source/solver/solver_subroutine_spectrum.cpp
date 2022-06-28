@@ -6,17 +6,22 @@
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
 
-bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution, bool normalize ) {
+bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution, int order, bool normalize, std::string s_g ) {
     // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading
     s.parameters.numerics_phonons_maximum_threads = 1;
-    // Calculate G1(t,tau) with given operator matrices
-    std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 );
-    auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
-    auto &akf_mat = cache[s_g1];
-    auto &akf_mat_time = cache[s_g1 + "_time"];
+    // Calculate G1/2(t,tau) with given operator matrices
+    if ( s_g.size() == 0 ) {
+        s_g = order == 1 ? get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 ) : get_operators_purpose( { s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator }, 2 );
+        if ( order == 1 )
+            calculate_g1( s, s_op_creator, s_op_annihilator, s_g );
+        else
+            calculate_g2( s, s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator, s_g );
+    }
+    auto &akf_mat = cache[s_g];
+    auto &akf_mat_time = cache[s_g + "_time"];
 
     // Create Timer and Progressbar for the spectrum loop
-    Timer &timer = Timers::create( "Spectrum (" + s_g1 + ")" );
+    Timer &timer = Timers::create( "Spectrum (" + s_g + ")" );
     int totalIterations = resolution;
     ProgressBar progressbar = ProgressBar();
     timer.start();
@@ -44,7 +49,7 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
                 out.at( spec_w ) += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * akf_mat( i, j ) * dtau * dt;
             }
         }
-        Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g1 + "): " );
+        Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g + "): " );
         out.at( spec_w ) = std::real( out.at( spec_w ) );
         timer.iterate();
     }
@@ -56,10 +61,10 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
     }
     // Final output and timer end
     timer.end();
-    Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g1 + ")", Timers::PROGRESS_FORCE_OUTPUT );
+    Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g + ")", Timers::PROGRESS_FORCE_OUTPUT );
     // Save output
-    to_output["Spectrum_frequency"][s_g1] = spectrum_frequency_w;
-    to_output["Spectrum"][s_g1] = out;
+    to_output["Spectrum_frequency"][s_g] = spectrum_frequency_w;
+    to_output["Spectrum"][s_g] = out;
 
     // Sucessfull
     return true;
