@@ -564,12 +564,12 @@ void Parameters::parse_system() {
     }
     // RK 45 Tolerance Vector
     {
-        if ( std::find( inputstring_rk45_config.begin(), inputstring_rk45_config.end(), ':' ) == inputstring_rk45_config.end() ) {
+        if ( std::ranges::find( inputstring_rk45_config.begin(), inputstring_rk45_config.end(), ':' ) == inputstring_rk45_config.end() ) {
             numerics_rk_tol.emplace_back( 1.0, QDLC::Misc::convertParam<double>( inputstring_rk45_config ) );
             Log::L2( "[System-Parameters] Set fixed RK45 Tolerance to {}.\n", std::get<1>( numerics_rk_tol.back() ) );
         } else {
             Log::L2( "[System-Parameters] Setting up multiple tolerances...\n" );
-            for ( auto partial : QDLC::String::splitline( inputstring_rk45_config, ';' ) ) {
+            for ( const auto &partial : QDLC::String::splitline( inputstring_rk45_config, ';' ) ) {
                 auto tuple = QDLC::String::splitline( partial, ':' );
                 numerics_rk_tol.emplace_back( std::make_tuple( QDLC::Misc::convertParam<double>( tuple.front() ), QDLC::Misc::convertParam<double>( tuple.back() ) ) );
                 Log::L2( "[System-Parameters] Set RK45 Tolerance to {} (from {}).\n", std::get<1>( numerics_rk_tol.back() ), partial );
