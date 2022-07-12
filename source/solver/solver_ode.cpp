@@ -13,10 +13,16 @@ QDLC::Numerics::ODESolver::ODESolver( System &s ) {
 }
 
 // TODO: interpolation für tau direction, dann wieder cachen in t wie mit phononen
-Sparse QDLC::Numerics::ODESolver::getHamilton( System &s, const double t, bool use_saved_hamiltons ) {
-    if ( s.parameters.numerics_use_saved_hamiltons ) {
-        if ( savedHamiltons.count( t ) == 0 ) {
-#pragma omp critical
+Sparse QDLC::Numerics::ODESolver::getHamilton( System &s, const double t ) {
+    // Don't use saved Hamiltons, instead just calculate new Operator
+    if ( not s.parameters.numerics_use_saved_hamiltons ) {
+        track_gethamilton_calc++;
+        return s.dgl_get_hamilton( t );
+    }
+    // Use saved Hamiltons
+    // If main direction is not done, calculate and cache Operator if it doesnt exist, then return Operator
+    if ( not s.parameters.numerics_main_direction_done ) {
+        if ( not savedHamiltons.contains( t ) ) {
             save_hamilton( s.dgl_get_hamilton( t ), t );
             track_gethamilton_write++;
             track_gethamilton_calc++;
@@ -24,8 +30,22 @@ Sparse QDLC::Numerics::ODESolver::getHamilton( System &s, const double t, bool u
         track_gethamilton_read++;
         return savedHamiltons[t];
     }
-    track_gethamilton_calc++;
-    return s.dgl_get_hamilton( t );
+    // Main direction is done, find operator or return interpolated operator
+    if ( savedHamiltons.contains( t ) ) {
+        track_gethamilton_read++;
+        return savedHamiltons[t];
+    }
+    // For the edge cases just calculate a new Operator.
+    if ( t <= s.parameters.t_start + s.parameters.t_step or t >= s.parameters.t_end - s.parameters.t_step ) {
+        track_gethamilton_calc++;
+        return s.dgl_get_hamilton( t );
+    }
+    // Hacky way to find [min,<t>,max].
+    const auto &greater_or_equal_than_t = savedHamiltons.lower_bound( t );
+    const auto &smaller_than_t = std::prev( greater_or_equal_than_t );
+    //  Interpolate
+    track_gethamilton_read++;
+    return QDLC::Math::lerp( smaller_than_t->second, greater_or_equal_than_t->second, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
 }
 
 void QDLC::Numerics::ODESolver::saveState( const Sparse &mat, const double t, std::vector<QDLC::SaveState> &savedStates ) {

@@ -296,6 +296,7 @@ std::vector<QDLC::SaveState> System::dgl_phonons_calculate_transformation( Spars
  * @param past_rhos All past Rhos. If the general Markov Approximation is disabled, this vector is used instead of the simple Rho
  * @return Sparse
  */
+
 Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDLC::SaveState> &past_rhos ) {
     track_getcoefficient_calcattempt++;
     // All Contributions will (finally) be reduced onto this return value matrix
@@ -332,29 +333,27 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             // std::pair<double, double> time_pair = std::make_pair( t, 0.0 );
 
             // Index was found, chi(t-tau) sum used from saved vector
-            auto map_index_to = savedCoefficients.begin();
-            if ( parameters.numerics_use_saved_coefficients and savedCoefficients.count( t ) > 0 ) {
+            if ( parameters.numerics_use_saved_coefficients and savedCoefficients.contains( t ) ) {
                 Log::L3( "[System-PME] Thread #{} - Found {}\n", omp_get_thread_num(), t );
-                auto &coeff = savedCoefficients[t][0.0];
+                const auto &coeff = savedCoefficients[t][0.0];
                 chi_tau_back_u = coeff.mat1;
                 chi_tau_back_g = coeff.mat2;
                 track_getcoefficient_read++;
-            } else if ( parameters.numerics_use_saved_coefficients and savedCoefficients.size() > 2 and savedCoefficients.rbegin()->first > t ) {
+            }
+            // Index wasn't found, try to interpolate
+            else if ( parameters.numerics_use_saved_coefficients and savedCoefficients.size() > 2 and savedCoefficients.rbegin()->first > t ) {
                 Log::L3( "[System-PME] Element {} should be in here as max is {}, trying to find it...\n", t, savedCoefficients.rbegin()->first );
-                QDLC::SaveStateTau *min;
-                QDLC::SaveStateTau *max;
-                for ( auto &[nt, other] : savedCoefficients ) {
-                    max = &other.begin()->second;
-                    if ( nt > t )
-                        break;
-                    min = max;
-                }
-
-                Log::L3( "[System-PME] Found Phonon index! Interpolating from {} - {} to {}\n", min->t, max->t, t );
-                chi_tau_back_u = min->mat1 + ( t - min->t ) / ( max->t - min->t ) * max->mat1;
-                chi_tau_back_g = min->mat2 + ( t - min->t ) / ( max->t - min->t ) * max->mat2;
+                // Hacky way to find [min,<t>,max].
+                const auto &greater_or_equal_than_t = savedCoefficients.lower_bound( t );
+                const auto &smaller_than_t = std::prev( greater_or_equal_than_t );
+                //  Interpolate
+                Log::L3( "[System-PME] Found Phonon index! Interpolating from {} - {} to {}\n", smaller_than_t->second.begin()->second.t, greater_or_equal_than_t->second.begin()->second.t, t );
+                chi_tau_back_u = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat1, greater_or_equal_than_t->second.begin()->second.mat1, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
+                chi_tau_back_g = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat2, greater_or_equal_than_t->second.begin()->second.mat2, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
                 track_getcoefficient_read_interpolated++;
-            } else {
+            }
+            // Not using saved_coefficients or index wasn't found and interpolation wasn't succesfull, recalculating.
+            else {
                 Log::L3( "[System-PME] {} (Re)Calculating {}\n", omp_get_thread_num(), t );
                 // Index was not found, (re)calculate chi(t-tau) sum
                 // Initialize temporary matrices to zero for threads to write to
@@ -387,12 +386,12 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                     threadmap_u[thread] += X_tau_back_u.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'u' ) ); // dgl_phonons_greenf( tau, 'u' ) * X_tau_back_u;
                     threadmap_g[thread] += X_tau_back_g.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'g' ) ); // dgl_phonons_greenf( tau, 'g' ) * X_tau_back_g;
                 }
-// Sum all contributions from threadmaps into one coefficient
-#pragma omp parallel sections
+                // Sum all contributions from threadmaps into one coefficient
+                //#pragma omp parallel sections
                 {
-#pragma omp section
+                    //#pragma omp section
                     chi_tau_back_u = std::accumulate( threadmap_u.begin(), threadmap_u.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
-#pragma omp section
+                    //#pragma omp section
                     chi_tau_back_g = std::accumulate( threadmap_g.begin(), threadmap_g.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
                 }
                 // Save coefficients

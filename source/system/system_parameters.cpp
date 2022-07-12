@@ -146,6 +146,8 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
     hbar = 1.0545718E-34; // J/s, scaling will be 1
 
+    numerics_main_direction_done = false;
+
     parse_system();
 
     working_directory = arguments.back();
@@ -205,8 +207,8 @@ void Parameters::adjust_input() {
         Timers::toggleHandler();
 
     // For threadsafety
-    if ( numerics_rk_order > 5 )
-        numerics_use_saved_hamiltons = false;
+    // if ( numerics_rk_order > 5 )
+    //    numerics_use_saved_hamiltons = false;
 
     // Calculate/Recalculate some parameters:
     // Adjust pulse data

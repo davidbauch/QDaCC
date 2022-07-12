@@ -92,7 +92,7 @@ class ODESolver {
      * @brief Gatheres the Hamiltonoperator for time t using a systems get_hamilton() function. This workaround enables the saving of already calculated matrices for dublicate uses.
      *
      */
-    Sparse getHamilton( System &s, const double t, bool use_saved_hamiltons = false );
+    Sparse getHamilton( System &s, const double t );
 
     /**
      * @brief Calculates the G1 Correlation Function

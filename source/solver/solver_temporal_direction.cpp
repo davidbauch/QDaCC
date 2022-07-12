@@ -52,5 +52,8 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     s.calculate_expectation_values( output_states, evalTimer );
     evalTimer.end();
 
+    // Switch main direction trigger
+    s.parameters.numerics_main_direction_done = true;
+
     return true;
 }

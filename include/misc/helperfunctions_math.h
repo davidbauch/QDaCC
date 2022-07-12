@@ -27,7 +27,6 @@ double rabiFrequency( double deltaE, double g, double n );
 
 template <typename T>
 T lerp( T a, T b, double c ) {
-    assert( c < 0 || c > 1 );
     return ( 1.0 - c ) * a + c * b;
 }
 

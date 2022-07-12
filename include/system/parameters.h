@@ -159,6 +159,9 @@ class Parameters {
     // Radiative Decay Rate
     Parameter p_omega_decay;
 
+    // Main Direction Trigger. Because some system and solver functions use e.g. cached variables, switching this trigger after the main t-direction is calculated enables those functions to adapt.
+    bool numerics_main_direction_done;
+
     // Constructor
     Parameters() = default;
     explicit Parameters( const std::vector<std::string> &arguments );

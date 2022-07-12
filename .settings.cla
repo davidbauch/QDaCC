@@ -211,7 +211,7 @@ CLA_ARGUMENT = {
 	}
 	CLA_PARAMETER = {
 		subkey = 'phononorder'
-		value = '4'
+		value = '1'
 		datatype = 'int'
 		description = 'Integer between 0 and 4 where 0 is full contribution, 1 is matrixtransformation, 2 is no backtransformation, 3 is analytical contribution, 4 is hybrid and 5 is path integral.'
 	}
@@ -719,7 +719,7 @@ CLA_ARGUMENT = {
 	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''
-		value = 'false'
+		value = 'true'
 		datatype = 'bool'
 		description = ''
 	}
