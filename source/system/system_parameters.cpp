@@ -120,7 +120,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     numerics_phonon_nork45 = !QDLC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );                  // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
     output_coefficients = QDLC::CommandlineArguments::get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
     output_path = QDLC::CommandlineArguments::get_parameter_passed( "-oPath" ) ? 1 : 0;
-    p_phonon_adjust = !QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
+    p_phonon_adjust = false; // not QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
     p_phonon_pure_dephasing = QDLC::Misc::convertParam<double>( "1mueV" );
 
     // Phonon Quantum Dot Paramters. These are used to overwrite the wcutoff and alpha values if needed.
