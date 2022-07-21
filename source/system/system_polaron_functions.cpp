@@ -39,7 +39,7 @@ void System::initialize_polaron_frame_functions() {
         // Output Phonon Functions
         FILE *fp_phonons = std::fopen( ( parameters.working_directory + "phonons.txt" ).c_str(), "w" );
         fmt::print( fp_phonons, "t\treal(phi(t))\timag(phi(t))\treal(g_u(t))\timag(g_u(t))\treal(g_g(t))\timag(g_g(t))\n" );
-        for ( double t = parameters.t_start; t <= parameters.p_phonon_tcutoff; t += parameters.t_step ) {
+        for ( double t = parameters.t_start; t <= parameters.p_phonon_tcutoff; t += parameters.numerics_subiterator_stepsize ) {
             auto greenu = dgl_phonons_greenf( t, 'u' );
             auto greeng = dgl_phonons_greenf( t, 'g' );
             fmt::print( fp_phonons, "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi_vector[t] ), std::imag( phi_vector[t] ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
@@ -75,16 +75,15 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
         explicit_time += ( param.energy + chirpcorrection ) * param.projector;
     }
     for ( auto &[mode, param] : parameters.input_photonic ) {
-        for ( auto transition : param.string_v["CoupledTo"] ) {
-            std::reverse( transition.begin(), transition.end() );
-            explicit_time += 1.0i * ( operatorMatrices.el_transitions[transition].energy + chirpcorrection - operatorMatrices.ph_states[mode].energy ) * operatorMatrices.el_transitions[transition].projector * operatorMatrices.ph_transitions[mode + "b"].projector;
+        for ( const auto &transition : param.string_v["CoupledTo"] ) {
+            auto transition_transposed = operatorMatrices.el_transitions[transition].name_transposed;
+            explicit_time += 1.0i * ( operatorMatrices.el_transitions[transition_transposed].energy + chirpcorrection - operatorMatrices.ph_states[mode].energy ) * operatorMatrices.el_transitions[transition_transposed].projector * operatorMatrices.ph_transitions[mode + "b"].projector;
         }
     }
     int p = 0;
     int pp = 0;
     for ( auto &[mode, param] : parameters.input_pulse ) {
-        for ( auto transition : param.string_v["CoupledTo"] ) {
-            std::reverse( transition.begin(), transition.end() );
+        for ( const auto &transition : param.string_v["CoupledTo"] ) {
             explicit_time += 1.0i * ( pulse[p].get( t ) + 1.0i * parameters.scaleVariable( pulse[p].derivative( t, parameters.t_step ), parameters.scale_value ) ) * operatorMatrices.polaron_pulse_factors_explicit_time[pp++];
         }
         p++;
@@ -139,10 +138,10 @@ Sparse System::dgl_phonons_chiToX( const Sparse &chi, const double t, const char
  * @param mode Either "g" or "u"
  * @return Scalar: G_u/g(t)
  */
-Scalar System::dgl_phonons_greenf( double t, const char mode ) {
-    if ( phi_vector.count( t ) == 0 )
-        phi_vector[t] = dgl_phonons_phi( t );
-    auto phi = phi_vector[t];
+Scalar System::dgl_phonons_greenf( double tau, const char mode ) {
+    if ( not phi_vector.contains( tau ) )
+        phi_vector[tau] = dgl_phonons_phi( tau );
+    auto phi = phi_vector[tau];
     if ( mode == 'g' ) {
         return parameters.p_phonon_b * parameters.p_phonon_b * ( std::cosh( phi ) - 1.0 );
     }
@@ -156,35 +155,36 @@ Scalar System::dgl_phonons_greenf( double t, const char mode ) {
  * @param mode Either "g" or "u"
  * @return Sparse&: Reference to cached G_u/g(t) in Matrix form
  */
-Sparse &System::dgl_phonons_greenf_matrix( double t, const char mode ) {
-    if ( not phi_vector.contains( t ) ) {
-        phi_vector[t] = dgl_phonons_phi( t ); // std::cout << "Time " << t << " is not in phi vecotr\n";
-    }
-    if ( operatorMatrices.phi_vector_matrix_cache_g.contains( t ) ) {
+Sparse &System::dgl_phonons_greenf_matrix( double tau, const char mode ) {
+    if ( operatorMatrices.phi_vector_matrix_cache_g.contains( tau ) ) {
         if ( mode == 'g' )
-            return operatorMatrices.phi_vector_matrix_cache_g[t];
-        return operatorMatrices.phi_vector_matrix_cache_u[t];
+            return operatorMatrices.phi_vector_matrix_cache_g[tau];
+        return operatorMatrices.phi_vector_matrix_cache_u[tau];
     } else {
-        operatorMatrices.phi_vector_matrix_cache_g[t] = Sparse( operatorMatrices.polaron_phonon_coupling_matrix.cols(), operatorMatrices.polaron_phonon_coupling_matrix.rows() );
-        operatorMatrices.phi_vector_matrix_cache_u[t] = Sparse( operatorMatrices.polaron_phonon_coupling_matrix.cols(), operatorMatrices.polaron_phonon_coupling_matrix.rows() );
+        operatorMatrices.phi_vector_matrix_cache_g[tau] = Sparse( operatorMatrices.polaron_phonon_coupling_matrix.cols(), operatorMatrices.polaron_phonon_coupling_matrix.rows() );
+        operatorMatrices.phi_vector_matrix_cache_u[tau] = Sparse( operatorMatrices.polaron_phonon_coupling_matrix.cols(), operatorMatrices.polaron_phonon_coupling_matrix.rows() );
     }
-    auto phi = dgl_phonons_phi( t ); // phi_vector[t];
-    auto &g = operatorMatrices.phi_vector_matrix_cache_g[t];
-    auto &u = operatorMatrices.phi_vector_matrix_cache_u[t];
+    if ( not phi_vector.contains( tau ) ) {
+        phi_vector[tau] = dgl_phonons_phi( tau ); // std::cout << "Time " << t << " is not in phi vecotr\n";
+    }
+    auto phi = phi_vector[tau];
+    auto &g = operatorMatrices.phi_vector_matrix_cache_g[tau];
+    auto &u = operatorMatrices.phi_vector_matrix_cache_u[tau];
     // IDK why coefficient wise (unaryExpr) doesnt work lol. EDIT: because im stoopid. This function doesnt get evaluated often tho so its fine.
     for ( int k = 0; k < operatorMatrices.polaron_phonon_coupling_matrix.outerSize(); ++k ) {
         for ( Sparse::InnerIterator it( operatorMatrices.polaron_phonon_coupling_matrix, k ); it; ++it ) {
             auto row = it.row();
             auto col = it.col();
             auto val = it.value();
-            g.coeffRef( row, col ) = ( std::cosh( phi * val ) - 1.0 );
-            u.coeffRef( row, col ) = std::sinh( phi * val );
+            // <B> Scaled Green functions. The <B> is the remained from the <B>^2 scaling.
+            g.coeffRef( row, col ) = ( std::cosh( phi * val ) - 1.0 ) * std::pow( parameters.p_phonon_b.get(), 1.0 * val );
+            u.coeffRef( row, col ) = std::sinh( phi * val ) * std::pow( parameters.p_phonon_b.get(), 1.0 * val );
         }
     }
-    Log::L3( "[System-PME] Calculated Phi Phonon Matrix cache for tau = {} -> Phi(tau) = {}\n", t, phi );
+    Log::L3( "[System-PME] Calculated Phi Phonon Matrix cache for tau = {} -> Phi(tau) = {}\n", tau, phi );
     if ( mode == 'g' )
-        return operatorMatrices.phi_vector_matrix_cache_g[t];
-    return operatorMatrices.phi_vector_matrix_cache_u[t];
+        return operatorMatrices.phi_vector_matrix_cache_g[tau];
+    return operatorMatrices.phi_vector_matrix_cache_u[tau];
 }
 
 /**
@@ -198,31 +198,39 @@ Sparse &System::dgl_phonons_greenf_matrix( double t, const char mode ) {
  * @param sign +1 or -1
  * @return double: L(t)
  */
-double System::dgl_phonons_lindblad_coefficients( double t, double energy, double coupling, Scalar pulse, const char mode, const double sign ) {
+double System::dgl_phonons_lindblad_coefficients( double t, double energy, double coupling, Scalar current_pulse, const char mode, const double scaling, const double sign ) {
+    Log::L3( "[System-PME]     Calculating Lindblad Rates for t = {}, integral border = {}, deltaE = {}, g = {}, Omega = {}, mode = {}, sign = {}, coupling scaling = {}, integral stepsize = {}\n", t, parameters.p_phonon_tcutoff, energy, coupling, current_pulse, mode, sign, scaling, parameters.numerics_subiterator_stepsize );
     if ( t == 0.0 )
-        t = parameters.t_step * 0.01;
-    if ( phi_vector.count( t ) == 0 ) // TODO: get function for phi?
-        phi_vector[t] = dgl_phonons_phi( t );
+        t = parameters.numerics_subiterator_stepsize * 0.01;
     double ret = 0;
     if ( mode == 'L' ) {
-        double bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * pulse ), 2.0 );
-
+        double bpulsesquared = std::pow( std::abs( parameters.p_phonon_b * scaling * current_pulse ), 2.0 );
         double nu = std::sqrt( bpulsesquared + energy * energy );
+        Log::L3( "[System-PME]         Nu = {}, Omega*<B>^2 = {}\n", nu, bpulsesquared );
         int i = 0;
-        for ( double tau = 0; tau < parameters.p_phonon_tcutoff; tau += parameters.t_step ) {
+        for ( double tau = 0; tau < parameters.p_phonon_tcutoff; tau += parameters.numerics_subiterator_stepsize ) {
+            if ( not phi_vector.contains( tau ) )
+                phi_vector[tau] = dgl_phonons_phi( tau );
+            auto phi = phi_vector[tau];
             Scalar f = ( energy * energy * std::cos( nu * tau ) + bpulsesquared ) / std::pow( nu, 2.0 );
-            ret += std::real( ( std::cosh( phi_vector[t] ) - 1.0 ) * f + std::sinh( phi_vector[t] ) * std::cos( nu * tau ) ) - sign * std::imag( ( std::exp( phi_vector[t] ) - 1.0 ) * energy * std::sin( nu * tau ) / nu );
+            ret += std::real( ( std::cosh( phi ) - 1.0 ) * f + std::sinh( phi ) * std::cos( nu * tau ) ) - sign * std::imag( ( std::exp( phi ) - 1.0 ) * energy * std::sin( nu * tau ) / nu );
             i++;
         }
-        ret *= 2.0 * bpulsesquared * parameters.t_step;
+        ret *= 2.0 * bpulsesquared * parameters.numerics_subiterator_stepsize;
     } else if ( mode == 'C' ) {
         int i = 0;
-        for ( double tau = 0; tau < parameters.p_phonon_tcutoff; tau += parameters.t_step ) {
-            ret += std::real( std::exp( 1.0i * sign * energy * tau ) * ( std::exp( phi_vector[t] ) - 1.0 ) );
+        for ( double tau = 0; tau < parameters.p_phonon_tcutoff; tau += parameters.numerics_subiterator_stepsize ) {
+            if ( not phi_vector.contains( tau ) )
+                phi_vector[tau] = dgl_phonons_phi( tau );
+            auto phi = phi_vector[tau];
+            ret += std::real( std::exp( 1.0i * sign * energy * tau ) * ( std::exp( phi ) - 1.0 ) );
             i++;
         }
-        ret *= parameters.p_phonon_b * parameters.p_phonon_b * coupling * coupling * parameters.t_step;
+        ret *= parameters.p_phonon_b * parameters.p_phonon_b * scaling * scaling * coupling * coupling * parameters.numerics_subiterator_stepsize;
     }
+    if ( std::isnan( ret ) )
+        ret = 0.0;
+    Log::L3( "[System-PME]         Return value: {}\n", ret );
     return ret;
 }
 
@@ -266,8 +274,8 @@ std::vector<QDLC::SaveState> System::dgl_phonons_calculate_transformation( Spars
             Sparse U = ( Dense( -1.0i * H * dtau ).exp() ).sparseView();
             // ret[i] = { dgl_timetrafo( ( U * chi_tau * U.adjoint() ).eval(), t - dtau ), t };
             ret[i] = { ( U * chi_tau * U.adjoint() ).eval(), dtau };
-            Log::L3( "Test: Difference for t = {}, tau = {}, i = {}, size(ret) = {}: {}\n", t, dtau, i, ret.size(), ( chi_tau - ret[i].mat ).cwiseAbs().sum() );
-            Log::L3( "Full Matrices: Argument: \n{}\nTrafo Mat: \n{}\nChi: \n{}\nret({}):\n{}\n", Dense( -1.0i * H * dtau ).format( operatorMatrices.output_format ), Dense( U ).format( operatorMatrices.output_format ), Dense( chi_tau ).format( operatorMatrices.output_format ), i, Dense( ret[i].mat ).format( operatorMatrices.output_format ) );
+            // Log::L3( "Test: Difference for t = {}, tau = {}, i = {}, size(ret) = {}: {}\n", t, dtau, i, ret.size(), ( chi_tau - ret[i].mat ).cwiseAbs().sum() );
+            // Log::L3( "Full Matrices: Argument: \n{}\nTrafo Mat: \n{}\nChi: \n{}\nret({}):\n{}\n", Dense( -1.0i * H * dtau ).format( operatorMatrices.output_format ), Dense( U ).format( operatorMatrices.output_format ), Dense( chi_tau ).format( operatorMatrices.output_format ), i, Dense( ret[i].mat ).format( operatorMatrices.output_format ) );
         }
         return ret;
     }
@@ -275,12 +283,12 @@ std::vector<QDLC::SaveState> System::dgl_phonons_calculate_transformation( Spars
     else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_MIXED ) {
         double threshold = 0;
         for ( auto &p : pulse )
-            threshold += std::abs( p.get( t ) / p.maximum );                                   // TODO: + photon zahl, wenn photon number > 0.1 oder so dann auch. für große kopplungen gibts sonst starke abweichungen. vil. number*g draufaddieren.
-        if ( threshold > 1E-4 || ( chirp.size() > 0 && chirp.back().derivative( t ) != 0 ) ) { // TODO: threshold als parameter
+            threshold += std::abs( p.get( t ) / p.maximum );                                     // TODO: + photon zahl, wenn photon number > 0.1 oder so dann auch. für große kopplungen gibts sonst starke abweichungen. vil. number*g draufaddieren.
+        if ( threshold > 1E-4 || ( not chirp.empty() and chirp.back().derivative( t ) != 0 ) ) { // TODO: threshold als parameter
             return QDLC::Numerics::calculate_definite_integral_vec( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.numerics_subiterator_stepsize, std::get<1>( parameters.numerics_rk_tol.front() ), parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() );
         }
     }
-    return { { chi_tau, t } };
+    return { { chi_tau, 0 } };
 }
 
 // TODO: im RK45 fall chis einfach aus t-richtung cachen, für tau richtung dann interpolieren. d.h. wenn ich t einsetze und t zwischen t0,t1 liegt _(t0,t1 schon gespeichert) dann interpoliere einfach linear zwischen den beiden. mal testen.
@@ -303,12 +311,13 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
     Sparse ret = Sparse( parameters.maxStates, parameters.maxStates );
     // Most precise approximation used. Calculate polaron fram Chi by integrating backwards from t to t-tau.
     if ( parameters.numerics_phonon_approximation_order != PHONON_APPROXIMATION_LINDBLAD_FULL ) {
-        // Calculate the initial Chi(t)
+        // Calculate the initial Chi(t) which is in the interaction frame.
         Sparse chi = dgl_phonons_chi( t );
         Sparse chi_adjoint = chi.adjoint();
         // Calculate generic X_u and X_g from the initial Chi(t)
         Sparse XGT = chi + chi_adjoint;            // dgl_phonons_chiToX( chi, t, 'u' );
         Sparse XUT = 1.0i * ( chi - chi_adjoint ); // dgl_phonons_chiToX( chi, t, 'g' );
+        Log::L3( "[System-PME] Calculating the PME contribution using the Polaron Transformation for t = {}. Initial Chi:\n{}\nXG(t):\n{}\nXU(t):\n{}\n", t, Dense( chi ).format( operatorMatrices.output_format ), Dense( XUT ).format( operatorMatrices.output_format ), Dense( XGT ).format( operatorMatrices.output_format ) );
         //// QD-Cavity
         // Sparse adj = operatorMatrices.polaron_factors[0].adjoint();
         // Sparse XGT = operatorMatrices.polaron_factors[0] + adj;
@@ -322,9 +331,10 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
         // }
         // XGT = dgl_timetrafo( XGT, t );
         // XUT = dgl_timetrafo( XUT, t );
-        int _taumax = (int)std::min( parameters.p_phonon_tcutoff / parameters.numerics_subiterator_stepsize, t / parameters.numerics_subiterator_stepsize ); // TODO: remove and replace with while (tau < tcutoff)
-        // Log::L2( "Tau max = {}, stepsize = {}\n", _taumax, parameters.numerics_subiterator_stepsize );
-        //  int _taumax = (int)std::floor( parameters.p_phonon_tcutoff / parameters.t_step ); // TODO: remove and replace with while (tau < tcutoff)
+        // TODO: remove subiterator stepsize from this and instead us N_PME indicating the number of points for this integral using tau_max/N as stepsize.
+        int tau_max = (int)std::min( parameters.p_phonon_tcutoff / parameters.numerics_subiterator_stepsize, t / parameters.numerics_subiterator_stepsize ); // TODO: remove and replace with while (tau < tcutoff)
+        // Log::L2( "Tau max = {}, stepsize = {}\n", tau_max, parameters.numerics_subiterator_stepsize );
+        //  int tau_max = (int)std::floor( parameters.p_phonon_tcutoff / parameters.t_step ); // TODO: remove and replace with while (tau < tcutoff)
         //   Use markov approximation
         if ( parameters.numerics_phonon_approximation_markov1 ) {
             // Temporary variables
@@ -334,7 +344,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
 
             // Index was found, chi(t-tau) sum used from saved vector
             if ( parameters.numerics_use_saved_coefficients and savedCoefficients.contains( t ) ) {
-                Log::L3( "[System-PME] Thread #{} - Found {}\n", omp_get_thread_num(), t );
+                Log::L3( "[System-PME]     Thread #{} - Found {}\n", omp_get_thread_num(), t );
                 const auto &coeff = savedCoefficients[t][0.0];
                 chi_tau_back_u = coeff.mat1;
                 chi_tau_back_g = coeff.mat2;
@@ -342,56 +352,57 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             }
             // Index wasn't found, try to interpolate
             else if ( parameters.numerics_use_saved_coefficients and savedCoefficients.size() > 2 and savedCoefficients.rbegin()->first > t ) {
-                Log::L3( "[System-PME] Element {} should be in here as max is {}, trying to find it...\n", t, savedCoefficients.rbegin()->first );
-                // Hacky way to find [min,<t>,max].
+                Log::L3( "[System-PME]     Element {} should be in here as max is {}, trying to find it...\n", t, savedCoefficients.rbegin()->first );
+                // Hacky way to find [min,<t>,max], should work because this is an ordered map.
                 const auto &greater_or_equal_than_t = savedCoefficients.lower_bound( t );
                 const auto &smaller_than_t = std::prev( greater_or_equal_than_t );
                 //  Interpolate
-                Log::L3( "[System-PME] Found Phonon index! Interpolating from {} - {} to {}\n", smaller_than_t->second.begin()->second.t, greater_or_equal_than_t->second.begin()->second.t, t );
+                Log::L3( "[System-PME]     Found Phonon index! Interpolating from {} - {} to {}\n", smaller_than_t->second.begin()->second.t, greater_or_equal_than_t->second.begin()->second.t, t );
                 chi_tau_back_u = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat1, greater_or_equal_than_t->second.begin()->second.mat1, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
                 chi_tau_back_g = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat2, greater_or_equal_than_t->second.begin()->second.mat2, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
                 track_getcoefficient_read_interpolated++;
             }
             // Not using saved_coefficients or index wasn't found and interpolation wasn't succesfull, recalculating.
             else {
-                Log::L3( "[System-PME] {} (Re)Calculating {}\n", omp_get_thread_num(), t );
+                Log::L3( "[System-PME]     Thread #{} - (Re)Calculating {} using {} steps in the PME integral\n", omp_get_thread_num(), t, tau_max );
                 // Index was not found, (re)calculate chi(t-tau) sum
                 // Initialize temporary matrices to zero for threads to write to
                 std::vector<Sparse> threadmap_u( parameters.numerics_phonons_maximum_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
                 std::vector<Sparse> threadmap_g( parameters.numerics_phonons_maximum_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
                 // Calculate backwards integral and sum it into threadmaps. Threadmaps will later be summed into one coefficient matrix.
                 // for ( int cur_thread = 0; cur_thread < parameters.numerics_phonons_maximum_threads; cur_thread++ ) {
-                //     for ( int cur = 0; cur < _taumax; cur += parameters.numerics_phonons_maximum_threads ) {
-                // auto X_transformed_g = dgl_phonons_calculate_transformation( XGT, t, _taumax * parameters.numerics_subiterator_stepsize );
-                // auto X_transformed_u = dgl_phonons_calculate_transformation( XUT, t, _taumax * parameters.numerics_subiterator_stepsize );
-                auto chis_transformed = dgl_phonons_calculate_transformation( chi, t, parameters.numerics_subiterator_stepsize * _taumax );
+                //     for ( int cur = 0; cur < tau_max; cur += parameters.numerics_phonons_maximum_threads ) {
+                // auto X_transformed_g = dgl_phonons_calculate_transformation( XGT, t, tau_max * parameters.numerics_subiterator_stepsize );
+                // auto X_transformed_u = dgl_phonons_calculate_transformation( XUT, t, tau_max * parameters.numerics_subiterator_stepsize );
+                auto chis_transformed = dgl_phonons_calculate_transformation( chi, t, parameters.numerics_subiterator_stepsize * tau_max );
                 //  std::cout << "Starting XUT for t =" << t << " \n"
                 //            << Dense( XUT ).format( operatorMatrices.output_format ) << std::endl;
 #pragma omp parallel for ordered schedule( dynamic ) shared( savedCoefficients ) num_threads( parameters.numerics_phonons_maximum_threads )
-                for ( int _tau = 0; _tau < _taumax; _tau++ ) {
-                    // double tau = ( 1.0 * _tau ) * parameters.numerics_subiterator_stepsize;
+                for ( int tau_index = 0; tau_index < tau_max; tau_index++ ) {
+                    // double tau = ( 1.0 * tau_index ) * parameters.numerics_subiterator_stepsize;
                     //   Sparse chi_tau = dgl_phonons_chi( t ); // dgl_phonons_chi( t - tau );
-                    //    Log::L3( "[System-PME] Thread #{} - _tau = {}, size of vec = {}, Chi Index = {}\n", omp_get_thread_num(), _tau, chis_transformed_u.size(), std::min<int>( chis_transformed_u.size() - 1, _tau ) );
-                    //    auto &X_tau_back_u = X_transformed_u.at( std::min<int>( X_transformed_u.size() - 1, _tau ) ).mat;
-                    //   auto &X_tau_back_g = X_transformed_g.at( std::min<int>( X_transformed_g.size() - 1, _tau ) ).mat;
-                    //   auto &chi_tau_back = chis_transformed.at( std::min<int>( chis_transformed.size() - 1, _tau ) ).mat;
-                    //   Sparse chi_tau_back = dgl_timetrafo( chis_transformed.at( std::min<int>( chis_transformed.size() - 1, _tau ) ).mat, t - tau );
-                    int index = std::min<int>( chis_transformed.size() - 1, _tau );
+                    //    Log::L3( "[System-PME] Thread #{} - tau_index = {}, size of vec = {}, Chi Index = {}\n", omp_get_thread_num(), tau_index, chis_transformed_u.size(), std::min<int>( chis_transformed_u.size() - 1, tau_index ) );
+                    //    auto &X_tau_back_u = X_transformed_u.at( std::min<int>( X_transformed_u.size() - 1, tau_index ) ).mat;
+                    //   auto &X_tau_back_g = X_transformed_g.at( std::min<int>( X_transformed_g.size() - 1, tau_index ) ).mat;
+                    //   auto &chi_tau_back = chis_transformed.at( std::min<int>( chis_transformed.size() - 1, tau_index ) ).mat;
+                    //   Sparse chi_tau_back = dgl_timetrafo( chis_transformed.at( std::min<int>( chis_transformed.size() - 1, tau_index ) ).mat, t - tau );
+                    int index = std::min<int>( tau_index, chis_transformed.size() - 1 );
                     Sparse chi_tau_back = chis_transformed.at( index ).mat;
-                    auto tau = chis_transformed.at( index ).t;
+                    auto tau = tau_index * parameters.numerics_subiterator_stepsize; // chis_transformed.at( index ).t;
                     Sparse chi_tau_back_adjoint = chi_tau_back.adjoint();
                     auto X_tau_back_g = chi_tau_back + chi_tau_back_adjoint;           // dgl_phonons_chiToX( chi_tau_back, 'g' );
                     auto X_tau_back_u = 1.i * ( chi_tau_back - chi_tau_back_adjoint ); // dgl_phonons_chiToX( chi_tau_back, 'u' );
                     auto thread = omp_get_thread_num();
                     threadmap_u[thread] += X_tau_back_u.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'u' ) ); // dgl_phonons_greenf( tau, 'u' ) * X_tau_back_u;
                     threadmap_g[thread] += X_tau_back_g.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'g' ) ); // dgl_phonons_greenf( tau, 'g' ) * X_tau_back_g;
+                    Log::L3( "[System-PME]         Added Contributions for tau = {} with Index(chi) = {}. The sum of the contributions is {}, the phi value is {}\n", tau, index, threadmap_u[thread].sum() + threadmap_g[thread].sum(), phi_vector[tau] );
                 }
-                // Sum all contributions from threadmaps into one coefficient
-                //#pragma omp parallel sections
+// Sum all contributions from threadmaps into one coefficient
+#pragma omp parallel sections
                 {
-                    //#pragma omp section
+#pragma omp section
                     chi_tau_back_u = std::accumulate( threadmap_u.begin(), threadmap_u.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
-                    //#pragma omp section
+#pragma omp section
                     chi_tau_back_g = std::accumulate( threadmap_g.begin(), threadmap_g.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
                 }
                 // Save coefficients
@@ -405,19 +416,18 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             // Calculate phonon contributions from (saved/calculated) coefficients and rho(t)
             Sparse integrant = parameters.numerics_subiterator_stepsize * ( dgl_kommutator( XUT, chi_tau_back_u * rho ) + dgl_kommutator( XGT, chi_tau_back_g * rho ) );
             Sparse adjoint = integrant.adjoint();
-            Log::L3( "[System-PME] Thread #{} - Adding ret value for {}\n", omp_get_thread_num(), t );
             ret -= integrant + adjoint;
         } else {
             std::vector<Sparse> threadmap_u( parameters.numerics_phonons_maximum_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
             // Dont use markov approximation; Full integral
-            auto chis_transformed = dgl_phonons_calculate_transformation( chi, t, parameters.t_step * _taumax );
+            auto chis_transformed = dgl_phonons_calculate_transformation( chi, t, parameters.t_step * tau_max );
 #pragma omp parallel for ordered schedule( dynamic ) shared( savedCoefficients ) num_threads( parameters.numerics_phonons_maximum_threads )
-            for ( int _tau = 0; _tau < _taumax; _tau++ ) {
-                int rho_index = std::max( 0, (int)past_rhos.size() - 1 - _tau ); // TODO: Das hier ist mit var timesteps der rhos auch grütze!
-                double tau = ( 1.0 * _tau ) * parameters.t_step;
+            for ( int tau_index = 0; tau_index < tau_max; tau_index++ ) {
+                int rho_index = std::max( 0, (int)past_rhos.size() - 1 - tau_index ); // TODO: Das hier ist mit var timesteps der rhos auch grütze!
+                double tau = ( 1.0 * tau_index ) * parameters.t_step;
 
                 // Index not found, or no saving is used. Recalculate chi(t-tau).
-                auto &chi_tau_back = chis_transformed.at( std::min<int>( chis_transformed.size() - 1, _tau ) ).mat;
+                auto &chi_tau_back = chis_transformed.at( std::min<int>( chis_transformed.size() - 1, tau_index ) ).mat;
                 Sparse chi_tau_back_adjoint = chi_tau_back.adjoint();
                 auto chi_tau_back_g = chi_tau_back + chi_tau_back_adjoint;           // dgl_phonons_chiToX( chi_tau_back, 'u' );
                 auto chi_tau_back_u = 1.i * ( chi_tau_back - chi_tau_back_adjoint ); // dgl_phonons_chiToX( chi_tau_back, 'g' );
@@ -432,38 +442,46 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 auto thread = omp_get_thread_num();
                 threadmap_u.at( thread ) += ( integrant + adjoint ) * parameters.t_step;
             }
-
             ret -= std::accumulate( threadmap_u.begin(), threadmap_u.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
         }
+        Log::L3( "[System-PME]     Thread #{} - Adding ret value for {}. Matrix is: \n{}\n", omp_get_thread_num(), t, Dense( ret ).format( operatorMatrices.output_format ) );
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_LINDBLAD_FULL ) {
+        Log::L3( "[System-PME] Calculating Lindblad-Type Phonon Rates for t = {}\n", t );
         double chirpcorrection = chirp.size() > 0 ? chirp.back().get( t ) : 0;
         for ( auto &[name, mat] : parameters.input_pulse ) {
-            for ( int p = 0; p < mat.string_v["CoupledTo"].size(); p++ ) {
-                auto &mode = mat.string_v["CoupledTo"][p];
-                auto &transition = operatorMatrices.el_transitions[mode].hilbert;
-                auto mode_transposed = mode;
-                std::reverse( mode_transposed.begin(), mode_transposed.end() );
-                auto &transition_transposed = operatorMatrices.el_transitions[mode_transposed].hilbert;
+            int p = 0;
+            for ( int m = 0; m < mat.string_v["CoupledTo"].size(); m++ ) {
+                const auto &mode = mat.string_v["CoupledTo"][m];
+                const auto &mode_transposed = operatorMatrices.el_transitions[mode].name_transposed;
+                const auto &transition = operatorMatrices.el_transitions[mode].hilbert;
+                const auto &transition_transposed = operatorMatrices.el_transitions[mode_transposed].hilbert;
                 // std::cout << p << " m1 = " << mode << ", m2 = " << mode_transposed << std::endl;
-                auto delta_E = operatorMatrices.el_transitions[mode].energy - mat.numerical_v["Frequency"][p] + chirpcorrection;
-                // std::cout << "Pulsed Transition " << mode << " -> coeeff = " << dgl_phonons_lindblad_coefficients( t, delta_E, 0.0, pulse[p].get( t ), 'L', operatorMatrices.el_transitions[mode].direction ) << std::endl;
-                ret += dgl_phonons_lindblad_coefficients( t, delta_E, 0.0, pulse[p].get( t ), 'L', -1 ) * dgl_lindblad( rho, transition, transition_transposed );
-                ret += dgl_phonons_lindblad_coefficients( t, delta_E, 0.0, pulse[p].get( t ), 'L', 1 ) * dgl_lindblad( rho, transition_transposed, transition );
+                auto delta_E = mat.numerical_v["Frequency"][m] - operatorMatrices.el_transitions[mode].energy + chirpcorrection;
+                auto r1 = dgl_phonons_lindblad_coefficients( t, delta_E, 0.0, pulse[p].get( t ), 'L', 1.0, -1 );
+                auto r2 = dgl_phonons_lindblad_coefficients( t, delta_E, 0.0, pulse[p].get( t ), 'L', 1.0, 1 );
+                Log::L3( "[System-PME]     Pulse induced Phonon Transition rates: {} ({}), {} ({}) for delta_E = {}\n", mode, r1, mode_transposed, r2, delta_E );
+                ret += r1 * dgl_lindblad( rho, transition, transition_transposed );
+                ret += r2 * dgl_lindblad( rho, transition_transposed, transition );
             }
+            p++;
         }
         for ( auto &[name, mat] : parameters.input_photonic ) {
             for ( auto &mode : mat.string_v["CoupledTo"] ) {
                 int c = 0;
-                auto &transition = operatorMatrices.el_transitions[mode].hilbert;
-                auto mode_transposed = mode;
-                std::reverse( mode_transposed.begin(), mode_transposed.end() );
-                auto &transition_transposed = operatorMatrices.el_transitions[mode_transposed].hilbert;
-                auto &optical_transition = operatorMatrices.ph_transitions[name + "b"].hilbert;
-                auto &optical_transition_transposed = operatorMatrices.ph_transitions[name + "bd"].hilbert;
-                auto delta_E = operatorMatrices.el_transitions[mode].energy - mat.numerical["Frequency"] + chirpcorrection;
-                // std::cout << "Transition " << mode << "-" << name + "bd (" << dgl_phonons_lindblad_coefficients( t, delta_E, mat.numerical_v["CouplingScaling"][c++] * parameters.p_omega_coupling, 0.0, 'C', -1 ) << "),   " << mode_transposed << "-" << name + "b (" << dgl_phonons_lindblad_coefficients( t, delta_E, mat.numerical_v["CouplingScaling"][c++] * parameters.p_omega_coupling, 0.0, 'C', 1 ) << ")" << std::endl;
-                ret += dgl_phonons_lindblad_coefficients( t, delta_E, mat.numerical_v["CouplingScaling"][c++] * parameters.p_omega_coupling, 0.0, 'C', -1 ) * dgl_lindblad( rho, transition * optical_transition_transposed, transition_transposed * optical_transition );
-                ret += dgl_phonons_lindblad_coefficients( t, delta_E, mat.numerical_v["CouplingScaling"][c++] * parameters.p_omega_coupling, 0.0, 'C', 1 ) * dgl_lindblad( rho, transition_transposed * optical_transition, transition * optical_transition_transposed );
+                const std::string upper_level = operatorMatrices.el_transitions[mode].to; // QDLC::String::split( mode, parameters.transition_delimiter ).back();
+                const double phonon_scaling = parameters.input_electronic[upper_level].numerical["PhononCoupling"];
+                const auto &mode_transposed = operatorMatrices.el_transitions[mode].name_transposed;
+                const auto &transition = operatorMatrices.el_transitions[mode].hilbert;
+                const auto &transition_transposed = operatorMatrices.el_transitions[mode_transposed].hilbert;
+                const auto &optical_transition = operatorMatrices.ph_transitions[name + "b"].hilbert;
+                const auto &optical_transition_transposed = operatorMatrices.ph_transitions[name + "bd"].hilbert;
+                auto delta_E = mat.numerical["Energy"] - operatorMatrices.el_transitions[mode].energy + chirpcorrection;
+                auto r1 = dgl_phonons_lindblad_coefficients( t, delta_E, mat.numerical_v["CouplingScaling"][c] * parameters.p_omega_coupling, 0.0, 'C', phonon_scaling, -1 );
+                auto r2 = dgl_phonons_lindblad_coefficients( t, delta_E, mat.numerical_v["CouplingScaling"][c] * parameters.p_omega_coupling, 0.0, 'C', phonon_scaling, 1 );
+                Log::L3( "[System-PME]     Cavity induced Phonon Transition rates: {}-{}bd ({}), {}-{}b ({})", mode, name, r1, mode_transposed, name, r2 );
+                ret += r1 * dgl_lindblad( rho, transition * optical_transition_transposed, transition_transposed * optical_transition );
+                ret += r2 * dgl_lindblad( rho, transition_transposed * optical_transition, transition * optical_transition_transposed );
+                c++;
             }
         }
     }

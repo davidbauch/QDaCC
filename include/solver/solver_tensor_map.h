@@ -109,7 +109,7 @@ class Tensor {
     }
 
    public:
-    Tensor(){};
+    Tensor() = default;
     Tensor( const std::vector<int> &dimensions, int type = TYPE_DENSE, T init_value = (T)0 ) : dimensions( dimensions ), tensor_type( type ) {
         zero = init_value;
         values = std::vector<TensorMap>( 2 );
@@ -124,20 +124,20 @@ class Tensor {
                 }
         }
     }
-    Tensor( const TensorMap &other ) : dimensions( other.dimensions ),
-                                       values( other.values ),
-                                       indices( other.indices ),
-                                       indices_single( other.indices_single ),
-                                       unique_indices( other.unique_indices ),
-                                       next_value_vector( other.next_value_vector ),
-                                       current_value_vector( other.current_value_vector ),
-                                       tensor_type( other.tensor_type ) {}
+    explicit Tensor( const TensorMap &other ) : dimensions( other.dimensions ),
+                                                values( other.values ),
+                                                indices( other.indices ),
+                                                indices_single( other.indices_single ),
+                                                unique_indices( other.unique_indices ),
+                                                next_value_vector( other.next_value_vector ),
+                                                current_value_vector( other.current_value_vector ),
+                                                tensor_type( other.tensor_type ) {}
 
     void addIndex( const QDLC::Type::iVector &x, const QDLC::Type::iVector &y ) {
-        indices.emplace_back( std::make_tuple( x, y ) );
+        indices.emplace_back( x, y );
     }
     void addUniqueIndex( const QDLC::Type::iVector &x, const QDLC::Type::iVector &y ) {
-        unique_indices.insert( std::make_tuple( x, y ) );
+        unique_indices.emplace( x, y );
     }
 
     void convertToSparse() {
@@ -195,7 +195,7 @@ class Tensor {
             }
             if ( not remove ) {
                 getCurrentValues()[x][y] = getNextValues()[x][y];
-                temp.emplace_back( std::make_tuple( x, y ) );
+                temp.emplace_back( x, y );
             }
         }
         getNextValues().clear();

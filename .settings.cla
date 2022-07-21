@@ -301,7 +301,7 @@ CLA_ARGUMENT = {
 	}
 	CLA_PARAMETER = {
 		subkey = 'iteratorStepsize'
-		value = '0.1ps'
+		value = '-1'
 		datatype = 'string'
 		description = 'Iterator stepsize for the intermediate Path Integral propagators'
 	}

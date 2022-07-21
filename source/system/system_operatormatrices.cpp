@@ -15,15 +15,10 @@ OperatorMatrices::OperatorMatrices( Parameters &p ) {
     Log::L2( "[System-OperatorMatrices] Generating operator matrices was successful. Elapsed time is {}ms\n", timer_operatormatrices.getWallTime( Timers::MILLISECONDS ) );
 }
 
-bool test( int a ) {
-    return a > 6;
-}
-
 bool OperatorMatrices::generate_operators( Parameters &p ) {
     output_format = Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" );
     // Zeroing Hamiltons (redundant at this point)
     Log::L2( "[System-OperatorMatrices] Creating operator matrices, dimension = {}, creating base matrices...\n", p.maxStates );
-    test( 4 );
     // Generate Electronic and Photonic Base States and Self-Hilbert Matrices
     // Electronic
     Log::L2( "[System-OperatorMatrices] Creating Self-Hilbert Electronic states...\n" );
@@ -415,7 +410,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         int new_index = 0;
         for ( const auto &current : base ) {
             auto state1 = QDLC::String::split( current.substr( 1 ), "|" ).front();
-            if (state1.back() == '>')
+            if ( state1.back() == '>' )
                 state1.pop_back();
             auto factor = (double)p.input_electronic[state1].numerical["PhononCoupling"].get();
             auto index = factor; // state1;
@@ -457,15 +452,19 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         Sparse b_matrix = polaron_phonon_coupling_matrix.unaryExpr( [&]( Scalar val ) { return std::pow( p.p_phonon_b.get(), 1.0 * val ); } );
         Log::L2( "[System-OperatorMatrices] Scaling H_I,Cavity and H_I,Pulse with <B> = {}\n", p.p_phonon_b );
         Log::L2( "[System-OperatorMatrices] <B>-Matrix:\n{}\n", Dense( b_matrix ).format( output_format ) );
+
+        // H_I Scaled once by <B>
         H_I_a = H_I_a.cwiseProduct( b_matrix );
         H_I_b = H_I_b.cwiseProduct( b_matrix );
-        // Scale Pulse Matrices for Pulse evaluations for the Hamilton Operators. Note: If the pulse matrix consists of cavity transitions, the <B>-scaling must not be applied there!
+        // Scale Pulse Matrices for Pulse evaluations for the Hamilton Operators. Note: If the pulse matrix consists of cavity transitions, the <B>-scaling must not be applied there! This is the <B> from the <B>*H_I scaling for the pulse.
         std::ranges::for_each( pulse_mat.begin(), pulse_mat.end(), [&]( auto &mat ) { mat = mat.cwiseProduct( b_matrix ); } );
-        // Scale Polaron Cache Matrices for Chi evaluations
+
+        // Scale Polaron Cache Matrices for Chi evaluations. This is the <B> from the <B>^2 Term in front of the polaron factors. The remaining <B> is added in the Green functions, becasue the pulse matrix is scaled only once too and used in H_I again.
         std::ranges::for_each( polaron_factors.begin(), polaron_factors.end(), [&]( auto &mat ) { mat = mat.cwiseProduct( b_matrix ); } );
+
+        // Add Cavity Pulse Transitions after scaling of the electronic transitions. Note that this way, the pure cavity driving is not influenced by the phonon coupling. IDK if this is correct.
+        std::ranges::for_each( pulse_mat.begin(), pulse_mat.end(), [&, indx = 0]( auto &mat ) mutable { mat += pulse_mat_cavity_cache[indx]; indx++; } );
     }
-    // Add Cavity Pulse Transitions after scaling of the electronic transitions. Note that this way, the pure cavity driving is not influenced by the phonon coupling. IDK if this is correct.
-    std::ranges::for_each( pulse_mat.begin(), pulse_mat.end(), [&, indx = 0]( auto &mat ) mutable { mat += pulse_mat_cavity_cache[indx]; indx++; } );
 
     for ( auto &a : phonon_group_index_to_hilbert_indices )
         Log::L2( "[System-OperatorMatrices] Phonon Group Index Vector: {}\n", a );

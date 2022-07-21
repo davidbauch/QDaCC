@@ -100,9 +100,9 @@ Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const dou
         }
 
     if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T >= 0.0 ) {
-        // Sparse phonons = dgl_phonons_pmeq( rho, t, past_rhos ).pruned( 1E-10 );
-        //  Log::L2( "Equation:\n{}\nPhonon Part:\n{}\n", Dense( ret ).format( operatorMatrices.output_format ), Dense( phonons ).format( operatorMatrices.output_format ) );
-        ret += dgl_phonons_pmeq( rho, t, past_rhos );
+        Sparse phonons = dgl_phonons_pmeq( rho, t, past_rhos );
+        Log::L3( "[System] Lindblad Equation:\n{}\nLosses:\n{}\nPhonon Part:\n{}\n", Dense( ret ).format( operatorMatrices.output_format ), Dense( loss ).format( operatorMatrices.output_format ), Dense( phonons ).format( operatorMatrices.output_format ) );
+        ret += phonons; // dgl_phonons_pmeq( rho, t, past_rhos );
     }
 
     return ret + loss;
@@ -183,9 +183,9 @@ void System::calculate_expectation_values( const std::vector<QDLC::SaveState> &r
             }
         }
         // Output
-        if ( operatorMatrices.ph_states.size() > 0 )
+        if ( not operatorMatrices.ph_states.empty() )
             FileOutput::get_file( "photonic" ) << fmt::format( "{:}\t{:}\n", ph_out, ph_em );
-        if ( operatorMatrices.el_states.size() > 0 )
+        if ( not operatorMatrices.el_states.empty() )
             FileOutput::get_file( "electronic" ) << fmt::format( "{:}\t{:}\n", el_out, el_em );
 
         if ( parameters.input_conf["DMconfig"].string["output_mode"] != "none" ) {

@@ -20,7 +20,7 @@ Sparse QDLC::Numerics::ODESolver::calculate_propagator_single( System &s, size_t
 }
 
 std::vector<std::vector<Sparse>> &QDLC::Numerics::ODESolver::calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<QDLC::SaveState> &output ) {
-    if ( pathint_propagator.count( t0 ) > 0 ) {
+    if ( pathint_propagator.contains( t0 ) ) {
         return pathint_propagator[t0];
     }
     Sparse one = Dense::Identity( tensor_dim, tensor_dim ).sparseView();

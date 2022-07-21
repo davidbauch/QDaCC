@@ -144,14 +144,14 @@ class System {
      *
      * @return Scalar valued Green Function
      */
-    Scalar dgl_phonons_greenf( double t, const char mode = 'u' );
+    Scalar dgl_phonons_greenf( double tau, const char mode = 'u' );
 
     /**
      * @brief Same but with phonon coupling scaling, returning a Sparse Matrix to do cwiseMultiplication with. This function will cache the matrices to avoid expensive recalculations.
      *
      * @return Sparse& Matrix Reference with Green Function per element.
      */
-    Sparse &dgl_phonons_greenf_matrix( double t, const char mode = 'u' );
+    Sparse &dgl_phonons_greenf_matrix( double tau, const char mode = 'u' );
 
     /**
      * @brief Calculates the Phonon Correlation Kerbal Phi(tau) = int_0^inf dw J(w) / w^2 * [coth(hbar w/(2 k_b T)) * cos(w t) - i*sin(w t)]
@@ -165,7 +165,7 @@ class System {
      *
      * @return double valued rate for the corresponding coefficient
      */
-    double dgl_phonons_lindblad_coefficients( double t, double energy, double coupling, Scalar pulse, const char mode = 'L', const double sign = 1.0 );
+    double dgl_phonons_lindblad_coefficients( double t, double energy, double coupling, Scalar pulse, const char mode = 'L', const double scaling = 1.0, const double sign = 1.0 );
 
     /**
      * @brief Initializes the Polaron Frame Functions by precalculating the Phi(tau) function and the corresponding Green functions

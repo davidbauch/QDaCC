@@ -17,6 +17,7 @@ class Logger {
    public:
     const static int LEVEL_1 = 1;
     const static int LEVEL_2 = 2;
+    const static int LEVEL_3 = 3;
     const static int BAR_SIZE_FULL = 75;
     const static int BAR_SIZE_HALF = 40;
     const static int BAR_0 = 0;
@@ -77,9 +78,15 @@ class Logger {
     static void Debug( const std::string &msg = "" ) {
         return Get().Idebug( msg );
     }
+    static int max_log_level() {
+        return Get().Iget_max_loglevel();
+    }
     static void close() {
         return Get().Iclose();
     }
+    static void Nothing(){
+        // This is a placeholder method for disabled logger levels.
+    };
 
    private:
     int max_loglevel;
@@ -202,6 +209,9 @@ class Logger {
         L1( "[END OF LOGFILE]" );
         std::fclose( file );
     }
+    int Iget_max_loglevel() {
+        return max_loglevel;
+    }
 };
 
 // TODO:
@@ -214,19 +224,19 @@ class Logger {
 //#define LOG_DISABLE_L3
 
 #ifdef LOG_DISABLE_L1
-#    define L1( fmt, ... )
+#    define L1( fmt, ... ) Logger::Nothing()
 #else
 #    define L1( fmt, ... ) Logger::L1( fmt, ##__VA_ARGS__ )
 #endif
 
 #ifdef LOG_DISABLE_L2
-#    define L2( fmt, ... )
+#    define L2( fmt, ... ) Logger::Nothing()
 #else
 #    define L2( fmt, ... ) Logger::L2( fmt, ##__VA_ARGS__ )
 #endif
 
 #ifdef LOG_DISABLE_L3
-#    define L3( fmt, ... )
+#    define L3( fmt, ... ) Logger::Nothing()
 #else
 #    define L3( fmt, ... ) Logger::L3( fmt, ##__VA_ARGS__ )
 #endif

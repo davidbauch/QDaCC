@@ -50,11 +50,13 @@ endif
 
 OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 
-CPPFLAGS := $(INC_FLAGS) $(LIB_FLAGS)
+# Compile with UFLAG="-DLOG_DISABLE_L3" to disable L3
+CPPFLAGS := $(INC_FLAGS) $(LIB_FLAGS) $(UFLAG)
 
 # The final build step.
 $(TARGET_DIR)/$(TARGET_EXEC): $(OBJS)
 	@echo Compiling Main Program into $@
+	@echo User Flags: $(UFLAG)
 	@$(COMPILER) main.cpp -o $@ $(OBJS) $(LIB_LINKS) $(CPPFLAGS)
 	ln -sf $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/QDLC
 

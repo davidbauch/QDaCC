@@ -360,6 +360,31 @@ void Parameters::adjust_input() {
         if ( numerics_rk_order >= 45 and numerics_use_saved_coefficients )
             numerics_force_caching = true;
     }
+    if ( numerics_subiterator_stepsize < 0 ) {
+        if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
+            numerics_subiterator_stepsize = t_step_pathint / 5.0;
+            Log::L2( "[System] Setting the subiterator stepsize to {}, according to a Path Integral stepsize of {}\n", numerics_subiterator_stepsize, t_step_pathint );
+        } else {
+            if ( p_phonon_T < 0 and t_step > 0 ) {
+                numerics_subiterator_stepsize = t_step / 5.0;
+                Log::L2( "[System] Setting the subiterator stepsize to {}, according to a stepsize of {}\n", numerics_subiterator_stepsize, t_step );
+            } else if ( p_phonon_T >= 0 and p_phonon_tcutoff > 0 ) {
+                numerics_subiterator_stepsize = p_phonon_tcutoff / 50.0;
+                Log::L2( "[System] Setting the subiterator stepsize to {}, according to a phonon cutoff time of {}\n", numerics_subiterator_stepsize, p_phonon_tcutoff );
+            }
+        }
+        if ( numerics_subiterator_stepsize == -1 ) {
+            numerics_subiterator_stepsize = 1E-13;
+            Log::L2( "[System] Setting the subiterator stepsize to a fixed value of {}\n", numerics_subiterator_stepsize );
+        }
+    }
+
+    // Set Threads to 1 if L3 logging is enabled
+    if ( Log::Logger::max_log_level() == Log::Logger::LEVEL_3 ) {
+        numerics_phonons_maximum_threads = 1;
+        numerics_maximum_threads = 1;
+        Log::L2( "[System] Set maximum threads to 1 for all calculations because deeplogging is enabled.\n" );
+    }
     // numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 * ( p_phonon_tcutoff / t_step ) ) + 10;
     trace.reserve( iterations_t_max + 5 );
 }
@@ -401,9 +426,6 @@ void Parameters::parse_system() {
         conf_s.numerical_v["Width"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) );     // Width
         conf_s.numerical_v["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) );    // Center
         conf_s.string_v["Type"] = QDLC::String::splitline( conf[6], ',' );                                                // Type
-        // Non-Mandatory values
-        // conf_s.numerical_v["Chirp"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[7], ',' ) );                                                                                           // TODO: move one down so it becomes optional                                                                                        // Chirp
-        // conf_s.numerical_v["SuperAmp"] = conf.size() > 8 ? QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[8], ',' ) ) : std::vector<Parameter>( conf_s.numerical_v["Center"].size(), 2.0 ); // Optional: SuperGaussian Amplitude
         // For counting purposes:
         conf_s.numerical["PulseIndex"] = pindex;
         pindex += 2;
@@ -486,7 +508,7 @@ void Parameters::parse_system() {
         input_correlation["Raman"] = conf_s;
     }
     // Correlation Grid
-    if ( std::find( inputstring_correlation_resolution.begin(), inputstring_correlation_resolution.end(), ':' ) != inputstring_correlation_resolution.end() ) {
+    if ( std::ranges::find( inputstring_correlation_resolution.begin(), inputstring_correlation_resolution.end(), ':' ) != inputstring_correlation_resolution.end() ) {
         auto single = QDLC::String::splitline( inputstring_correlation_resolution, ';' );
         input_s conf_s;
         std::vector<Parameter> times, dts;
@@ -512,14 +534,14 @@ void Parameters::parse_system() {
             conf_s.numerical["Center"] = conf_s.numerical_v["Center"][0];
             conf_s.numerical["Range"] = conf_s.numerical_v["Range"][0];
             conf_s.numerical["Res"] = conf_s.numerical_v["resW"][0];
-            conf_s.numerical["dt"] = numerics_subiterator_stepsize;
+            conf_s.numerical["dt"] = t_end / 200;
         } else if ( inputstring_SPconf.size() > 0 ) {
             Log::L2( "[System-Parameters] Generating Pulse Fourier Configuration from Parameters using {}.\n", inputstring_SPconf );
             auto conf = QDLC::String::splitline( inputstring_SPconf, ':' );
             conf_s.numerical["Center"] = conf.size() > 0 ? QDLC::Misc::convertParam<Parameter>( conf[0] ) : Parameter( 0.0 );
             conf_s.numerical["Range"] = conf.size() > 1 ? QDLC::Misc::convertParam<Parameter>( conf[1] ) : Parameter( 0.0 );
             conf_s.numerical["Res"] = conf.size() > 2 ? QDLC::Misc::convertParam<Parameter>( conf[2] ) : Parameter( 0.0 );
-            conf_s.numerical["dt"] = conf.size() > 3 ? QDLC::Misc::convertParam<Parameter>( conf[3] ) : Parameter( numerics_subiterator_stepsize );
+            conf_s.numerical["dt"] = conf.size() > 3 ? QDLC::Misc::convertParam<Parameter>( conf[3] ) : Parameter( t_end / 200 );
             input_conf["PulseConf"] = conf_s;
         }
     }
@@ -675,6 +697,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         Log::L1( "Temperature = {} k\n", p_phonon_T );
         Log::L1( "Cutoff energy = {} Hz - {} meV\n", p_phonon_wcutoff, p_phonon_wcutoff.getSI( Parameter::UNIT_ENERGY_MEV ) );
         Log::L1( "Cutoff Time = {} ps\n", p_phonon_tcutoff * 1E12 );
+        Log::L1( "Phonon Integral Iterator Stepsize = {} ps\n", numerics_subiterator_stepsize * 1E12 );
         if ( p_phonon_qd_ae == 0.0 ) {
             Log::L1( "Alpha = {}\n", p_phonon_alpha );
         } else {
