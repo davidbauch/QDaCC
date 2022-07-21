@@ -247,7 +247,7 @@ Sparse System::dgl_phonons_chi( const double t ) {
     for ( int p = 1; p < parameters.input_pulse.size() + 1; p++ ) {
         ret += operatorMatrices.polaron_factors[p] * pulse[p - 1].get( t );
     }
-    return dgl_timetrafo( ret, t );
+    return dgl_timetrafo( ret, t ).adjoint().eval();
 }
 
 /**
