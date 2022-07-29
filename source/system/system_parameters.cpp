@@ -98,7 +98,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     numerics_use_saved_coefficients = !QDLC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
     numerics_use_saved_hamiltons = !QDLC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
     numerics_use_function_caching = !QDLC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
-    numerics_force_caching = false; // If true, even if any saving was disabled internally (not by the user), the matrices will still be cached.
+    numerics_enable_saving_coefficients = false; // If true, even if any saving was disabled internally (not by the user), the matrices will still be cached.
     numerics_maximum_secondary_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_primary_threads : 1;
     logfilecounter = QDLC::Misc::convertParam<double>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
     numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
@@ -354,7 +354,7 @@ void Parameters::adjust_input() {
             p_omega_decay = p_omega_decay * p_phonon_b * p_phonon_b; // TODO: unterschiedliche gammas für unterschiedliche B. macht aber auch kaum was.
         }
         if ( numerics_rk_order >= 45 and numerics_use_saved_coefficients )
-            numerics_force_caching = true;
+            numerics_enable_saving_coefficients = true;
     }
     if ( numerics_subiterator_stepsize < 0 ) {
         if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
@@ -365,7 +365,7 @@ void Parameters::adjust_input() {
                 numerics_subiterator_stepsize = t_step / 5.0;
                 Log::L2( "[System] Setting the subiterator stepsize to {}, according to a stepsize of {}\n", numerics_subiterator_stepsize, t_step );
             } else if ( p_phonon_T >= 0 and p_phonon_tcutoff > 0 ) {
-                numerics_subiterator_stepsize = p_phonon_tcutoff / 50.0;
+                numerics_subiterator_stepsize = p_phonon_tcutoff / 200.0;
                 Log::L2( "[System] Setting the subiterator stepsize to {}, according to a phonon cutoff time of {}\n", numerics_subiterator_stepsize, p_phonon_tcutoff );
             }
         }

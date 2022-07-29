@@ -404,8 +404,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                     chi_tau_back_g = std::accumulate( threadmap_g.begin(), threadmap_g.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
                 }
                 // Save coefficients
-                if ( parameters.numerics_use_saved_coefficients or parameters.numerics_force_caching ) {
-#pragma omp master
+                if ( parameters.numerics_enable_saving_coefficients ) {
                     savedCoefficients[t][0.0] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, 0 );
                     track_getcoefficient_write++;
                 }
@@ -430,7 +429,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 auto chi_tau_back_g = chi_tau_back + chi_tau_back_adjoint;           // dgl_phonons_chiToX( chi_tau_back, 'u' );
                 auto chi_tau_back_u = 1.i * ( chi_tau_back - chi_tau_back_adjoint ); // dgl_phonons_chiToX( chi_tau_back, 'g' );
                 // If saving is used, save current chi(t-tau).
-                if ( parameters.numerics_use_saved_coefficients or parameters.numerics_force_caching ) {
+                if ( parameters.numerics_use_saved_coefficients or parameters.numerics_enable_saving_coefficients ) {
 #pragma omp critical
                     savedCoefficients[t][tau] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
                 }

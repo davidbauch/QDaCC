@@ -103,7 +103,7 @@ class Parameters {
     // Enables caching of the PME Coefficients
     bool numerics_use_saved_coefficients;
     // Force Caching of the PME Coefficients even if use_saved_coefficients is false.
-    bool numerics_force_caching;
+    bool numerics_enable_saving_coefficients;
     // Enables caching of the Hamilton Operators.
     bool numerics_use_saved_hamiltons;
     // Enables the caching of pulse- and chirp functions
