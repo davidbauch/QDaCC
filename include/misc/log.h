@@ -182,6 +182,10 @@ class Logger {
             L1( "{}{}\n", ret, ret );
         } else if ( level == LEVEL_2 ) {
             L2( "{}{}\n", ret, ret );
+        } else if ( level == LEVEL_3 ) {
+#ifndef LOG_DISABLE_L3
+            L3( "{}{}\n", ret, ret );
+#endif
         }
     }
     void Iinbar( const std::string &msg, int size, int level, int _bar ) {
@@ -194,6 +198,10 @@ class Logger {
             L1( "{}\n", ret );
         } else if ( level == LEVEL_2 ) {
             L2( "{}\n", ret );
+        } else if ( level == LEVEL_3 ) {
+#ifndef LOG_DISABLE_L3
+            L3( "{}\n", ret );
+#endif
         }
     }
     void Iwrapinbar( const std::string &msg, int size, int level, int _barOut, int _barIn ) {

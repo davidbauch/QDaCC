@@ -68,7 +68,7 @@ class OperatorMatrices {
     // Phonon coupling Matrix for the PME
     Sparse polaron_phonon_coupling_matrix;
     // Cached PME Rates
-    std::map<double, Sparse> phi_vector_matrix_cache_u, phi_vector_matrix_cache_g;
+    std::map<double, Sparse> pme_greenfunction_matrix_cache_u, pme_greenfunction_matrix_cache_g;
 
     // QDLC 3.0 New System Matrices. Since Version 3.0, the electronic and optical system is not hardcoded into the program anymore. Instead, the state- and transition matrices get generated on startup and stored in these maps.
     std::map<std::string, matrix_s> el_states, ph_states, el_transitions, ph_transitions, extra_transitions;

@@ -15,7 +15,6 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     numerics_order_timetrafo = TIMETRANSFORMATION_MATRIXEXPONENTIAL;
     output_advanced_log = 0;
     output_handlerstrings = 0;
-    output_operators = 0;
     iterations_t_skip = 1;
     scale_parameters = false;
     scale_value = 1E12;
@@ -90,24 +89,20 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     grid_resolution = QDLC::CommandlineArguments::get_parameter<int>( "--G", "gridres" );
     numerics_use_interactionpicture = not QDLC::CommandlineArguments::get_parameter_passed( "-noInteractionpic" );
     numerics_use_rwa = not QDLC::CommandlineArguments::get_parameter_passed( "-noRWA" );
-    numerics_maximum_threads = QDLC::CommandlineArguments::get_parameter<int>( "--Threads" );
-    if ( numerics_maximum_threads == -1 )
-        numerics_maximum_threads = omp_get_max_threads();
+    numerics_maximum_primary_threads = QDLC::CommandlineArguments::get_parameter<int>( "--Threads" );
+    if ( numerics_maximum_primary_threads == -1 )
+        numerics_maximum_primary_threads = omp_get_max_threads();
     output_handlerstrings = QDLC::CommandlineArguments::get_parameter_passed( "-handler" );
-    output_operators = QDLC::CommandlineArguments::get_parameter_passed( "-outputOp" ) ? 2 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputHamiltons" ) ? 1 : ( QDLC::CommandlineArguments::get_parameter_passed( "-outputOpStop" ) ? 3 : 0 ) );
-    output_eigenvalues = QDLC::CommandlineArguments::get_parameter_passed( "-outputEigs" );
     numerics_order_timetrafo = QDLC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
     scale_parameters = QDLC::CommandlineArguments::get_parameter_passed( "-scale" ); // MHMHMH
     numerics_use_saved_coefficients = !QDLC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
     numerics_use_saved_hamiltons = !QDLC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
     numerics_use_function_caching = !QDLC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
     numerics_force_caching = false; // If true, even if any saving was disabled internally (not by the user), the matrices will still be cached.
-    numerics_phonons_maximum_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_threads : 1;
+    numerics_maximum_secondary_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_primary_threads : 1;
     logfilecounter = QDLC::Misc::convertParam<double>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
     numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
     s_numerics_interpolate = QDLC::CommandlineArguments::get_parameter( "--interpolateOrder" );
-    numerics_output_rkerror = QDLC::CommandlineArguments::get_parameter_passed( "-error" );
-    output_detector_transformations = QDLC::CommandlineArguments::get_parameter_passed( "-outputDetector" );
 
     // Phonon Parameters
     p_phonon_alpha = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononalpha" );
@@ -118,8 +113,6 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     numerics_phonon_approximation_order = QDLC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
     numerics_phonon_approximation_markov1 = QDLC::CommandlineArguments::get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
     numerics_phonon_nork45 = !QDLC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );                  // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
-    output_coefficients = QDLC::CommandlineArguments::get_parameter_passed( "-phononcoeffs" ) ? 1 : 0;
-    output_path = QDLC::CommandlineArguments::get_parameter_passed( "-oPath" ) ? 1 : 0;
     p_phonon_adjust = not QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
     p_phonon_pure_dephasing = QDLC::Misc::convertParam<double>( "1mueV" );
 
@@ -142,6 +135,10 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     numerics_pathintegral_docutoff_propagator = QDLC::CommandlineArguments::get_parameter_passed( "-cutoffPropagator" );
     numerics_pathint_partially_summed = !QDLC::CommandlineArguments::get_parameter_passed( "-disablePSPath" );
     t_step_pathint = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "tstepPath" );
+
+    auto output_dict_vec = QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--output" ) );
+    // Move all elements into the set
+    output_dict = std::set<std::string>( std::make_move_iterator( output_dict_vec.begin() ), std::make_move_iterator( output_dict_vec.end() ) );
 
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
     hbar = 1.0545718E-34; // J/s, scaling will be 1
@@ -349,13 +346,12 @@ void Parameters::adjust_input() {
                 J = p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wcutoff / p_phonon_wcutoff );
             else
                 J = w * hbar * std::pow( p_phonon_qd_de * std::exp( -w * w * p_phonon_qd_ae * p_phonon_qd_ae / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ) - p_phonon_qd_dh * std::exp( -w * w * p_phonon_qd_ae / p_phonon_qd_ratio * p_phonon_qd_ae / p_phonon_qd_ratio / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * p_phonon_qd_rho * std::pow( p_phonon_qd_cs, 5. ) );
-
             integral += stepsize * ( J / std::tanh( hbar * w / 2.0 / kb / p_phonon_T ) );
         }
         p_phonon_b = std::exp( -0.5 * integral );
         if ( p_phonon_adjust ) {
             // p_omega_pure_dephasing = p_phonon_pure_dephasing * p_phonon_T;
-            p_omega_decay = p_omega_decay * p_phonon_b * p_phonon_b;
+            p_omega_decay = p_omega_decay * p_phonon_b * p_phonon_b; // TODO: unterschiedliche gammas für unterschiedliche B. macht aber auch kaum was.
         }
         if ( numerics_rk_order >= 45 and numerics_use_saved_coefficients )
             numerics_force_caching = true;
@@ -381,8 +377,8 @@ void Parameters::adjust_input() {
 
     // Set Threads to 1 if L3 logging is enabled
     if ( Log::Logger::max_log_level() == Log::Logger::LEVEL_3 ) {
-        numerics_phonons_maximum_threads = 1;
-        numerics_maximum_threads = 1;
+        numerics_maximum_secondary_threads = 1;
+        numerics_maximum_primary_threads = 1;
         Log::L2( "[System] Set maximum threads to 1 for all calculations because deeplogging is enabled.\n" );
     }
     // numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 * ( p_phonon_tcutoff / t_step ) ) + 10;
@@ -781,7 +777,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
     Log::L1( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture ) ? "YES" : "NO" ) );
     Log::L1( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) ? "Analytic" : "Matrix Exponential" ) );
-    Log::L1( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\nThreads used by Eigen: {}\n", numerics_phonons_maximum_threads, numerics_maximum_threads, Eigen::nbThreads() );
+    Log::L1( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\nThreads used by Eigen: {}\n", numerics_maximum_secondary_threads, numerics_maximum_primary_threads, Eigen::nbThreads() );
     Log::L1( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );
     if ( p_phonon_T )
         Log::L1( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? "Yes" : "No" ) );
@@ -792,6 +788,11 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     if ( !numerics_use_saved_hamiltons )
         Log::L1( "NOT using Hamilton caching.\n" );
     Log::L1( "\n" );
+    if ( not output_dict.empty() ) {
+        Log::L1( "Additional Outputs:\n" );
+        std::ranges::for_each( output_dict, []( const auto &el ) { Log::L1( " - {}\n", el ); } );
+    }
+
     for ( int i = 0; i < logfilecounter.size(); i++ ) {
         Log::L1( "Logfile ident number {}: {}\n", i, logfilecounter[i] );
     }

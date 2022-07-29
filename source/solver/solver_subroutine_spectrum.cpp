@@ -8,7 +8,7 @@
 
 bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution, int order, bool normalize, std::string s_g ) {
     // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading
-    s.parameters.numerics_phonons_maximum_threads = 1;
+    s.parameters.numerics_maximum_secondary_threads = 1;
     // Calculate G1/2(t,tau) with given operator matrices
     if ( s_g.size() == 0 ) {
         s_g = order == 1 ? get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 ) : get_operators_purpose( { s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator }, 2 );
@@ -38,7 +38,7 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
     double t_step = ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step );
     Log::L2( "Size = {} x {}, using dt = {}\n", akf_mat.rows(), akf_mat.cols(), t_step );
     // Calculate main fourier transform integral
-#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
         for ( long unsigned int i = 0; i < akf_mat.rows(); i++ ) {
             double dt = Numerics::get_tdelta( akf_mat_time, 0, i );

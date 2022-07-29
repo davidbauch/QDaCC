@@ -31,7 +31,7 @@ class Parameters {
     int numerics_order_timetrafo;
 
     // Advanced Output Settings for Debugging
-    int output_advanced_log, output_handlerstrings, output_operators, output_coefficients;
+    int output_advanced_log, output_handlerstrings, output_coefficients;
 
     // Number of Gridpoints for Tau-Calculations
     int grid_resolution;
@@ -55,21 +55,14 @@ class Parameters {
     std::vector<double> trace;
 
     // Output Switches
-    // Output RK45 Error
-    bool numerics_output_rkerror;
     // Interpolate Outputs
     bool numerics_interpolate_outputs;
-    // Output System Dynamical Paths
-    bool output_path;
-    // Output Hamilton Eigenvalues
-    bool output_eigenvalues;
-    // Output Detector Transformations
-    bool output_detector_transformations;
+    std::set<std::string> output_dict;
 
     // Maximum Threads for the Program to use in general
-    int numerics_maximum_threads;
-    // Maximum Threads for the Phonon Subroutines to use
-    int numerics_phonons_maximum_threads;
+    int numerics_maximum_primary_threads;
+    // Maximum Threads for the Phonon- and other Subroutines to use
+    int numerics_maximum_secondary_threads;
 
     // Phonon Parameters
     // Enables the first Markov Approximation

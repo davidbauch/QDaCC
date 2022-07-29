@@ -60,7 +60,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
         // Calculate main fourier transform integral with spectral amplitude in tau direction.
         // Transform Tau Direction for every t_i
         Dense mat_transformed = Dense::Zero( mat.rows(), detector_frequency_mask.size() );
-#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
         for ( int i = 0; i < mat.rows(); i++ ) {
             for ( int v = 0; v < detector_frequency_mask.size(); v++ ) {
                 auto &[frequency_v, frequency_amp, frequency_delta] = detector_frequency_mask[v];
@@ -74,13 +74,13 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
             timer.iterate();
         }
         // Output.
-        if ( s.parameters.output_detector_transformations ) {
+        if ( s.parameters.output_dict.contains( "detectortrafo" ) ) {
             Log::L2( "[PhotonStatistics] Outputting FT({})...\n", purpose );
             FILE *f_gfunc = std::fopen( ( s.parameters.working_directory + purpose + "_mFT.txt" ).c_str(), "w" );
             fmt::print( f_gfunc, "Time\tOmega_tau\tAbs\tReal\tImag\n" );
             for ( int k = 0; k < mat.rows(); k++ ) {
                 for ( int l = 0; l < detector_frequency_mask.size(); l++ ) {
-                    auto &[frequency_w_l, frequency_amp_l, frequency_delta_l] = detector_frequency_mask[l];
+                    const auto &[frequency_w_l, frequency_amp_l, frequency_delta_l] = detector_frequency_mask[l];
                     fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( timemat( k, 0 ) ), frequency_w_l, std::abs( mat_transformed( k, l ) ), std::real( mat_transformed( k, l ) ), std::imag( mat_transformed( k, l ) ) );
                 }
                 fmt::print( f_gfunc, "\n" );
@@ -90,7 +90,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
         // Transform Back
         Log::L2( "[PhotonStatistics] Calculating iFT({})...\n", purpose );
         mat = Dense::Zero( mat.rows(), mat.cols() );
-#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
         for ( int i = 0; i < mat.rows(); i++ ) {
             for ( int j = 0; j < mat.cols(); j++ ) {
                 double tau = std::imag( timemat( i, j ) ) - std::real( timemat( i, j ) );
@@ -106,7 +106,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
 
         // Tau summation
         /*  Dense mat_transformed_tau = Dense::Zero( mat.rows(), detector_frequency_mask.size() );
- #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+ #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
          for ( int i = 0; i < mat.rows(); i++ ) {
              for ( int v = 0; v < detector_frequency_mask.size(); v++ ) {
                  auto &[frequency_v, frequency_amp, frequency_delta] = detector_frequency_mask[v];
@@ -121,7 +121,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
          }
          // t summation
          Dense mat_transformed = Dense::Zero( detector_frequency_mask.size(), detector_frequency_mask.size() );
- #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+ #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
          for ( int v = 0; v < detector_frequency_mask.size(); v++ ) {
              for ( int w = 0; w < detector_frequency_mask.size(); w++ ) {
                  auto &[frequency_w, frequency_amp, frequency_delta] = detector_frequency_mask[w];
@@ -148,7 +148,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
          std::fclose( f_gfunc );
          // Transform Back in t direction.
          Dense mat_v = Dense::Zero( mat.cols(), detector_frequency_mask.size() );
- #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+ #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
          for ( int v = 0; v < detector_frequency_mask.size(); v++ ) {
              for ( int i = 0; i < timemat.rows(); i++ ) {
                  double t = std::real( timemat( i, 0 ) );
@@ -163,7 +163,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
          }
          // tau summation
          mat = Dense::Zero( mat.cols(), mat.rows() );
- #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+ #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
          for ( int i = 0; i < mat.cols(); i++ ) {
              for ( int j = 0; j < mat.rows(); j++ ) {
                  double tau = std::imag( timemat( i, j ) ) - std::real( timemat( i, j ) );
@@ -181,7 +181,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
         /*
         // Calculate main 2d fourier transform integral with spectral amplitude in tau direction.
         Dense mat_transformed = Dense::Zero( detector_frequency_mask.size(), detector_frequency_mask.size() );
-#pragma omp parallel for collapse( 2 ) schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for collapse( 2 ) schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
         for ( int w = 0; w < detector_frequency_mask.size(); w++ ) {
             for ( int v = 0; v < detector_frequency_mask.size(); v++ ) {
                 auto &[frequency_w, frequency_amp_w, frequency_delta_w] = detector_frequency_mask[w];
@@ -213,7 +213,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
         // Transform Back in tau direction.
         mat = Dense::Zero( mat.rows(), mat.cols() );
 
-#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
         for ( long unsigned int i = 0; i < mat.rows(); i++ ) {
             double t = std::real( timemat( i, 0 ) );
             double dt = Numerics::get_tdelta( timemat, i, 0 );

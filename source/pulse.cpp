@@ -184,7 +184,7 @@ Scalar Pulse::integral( double t, double t_step, bool force_evaluate ) {
 }
 
 void Pulse::log() {
-    Log::L2( "Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
+    Log::L2( "[System-Pulse] Pulse evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
 }
 
 void Pulse::fileOutput( std::string filepath, std::vector<Pulse> pulses, double t_start, double t_end, double t_step ) {

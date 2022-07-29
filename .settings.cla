@@ -434,9 +434,21 @@ CLA_ARGUMENT = {
 	}
 }
 CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'output'
+	description = 'Dictionary of stuff to output.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = ''
+		datatype = 'string'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'oPath'
-	description = 'Outputs the Path of the Pathintegral Propagator for a single timestep using the .dot format.'
+	description = 'DEPRECATED (will be replaced by --output path) Outputs the Path of the Pathintegral Propagator for a single timestep using the .dot format.'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''

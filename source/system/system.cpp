@@ -39,10 +39,10 @@ bool System::init_system() {
         pulse.push_back( { pulseinputs, parameters } );
     }
     // pulse_V = Pulse( pulseinputs_V );
-    if ( pulse.size() > 0 ) {
+    if ( not pulse.empty() ) {
         Pulse::fileOutput( parameters.working_directory + "pulse.txt", pulse, parameters.t_start, parameters.t_end, parameters.t_step );
     }
-    if ( chirp.size() > 0 ) {
+    if ( not chirp.empty() ) {
         chirp.back().fileOutput( parameters.working_directory + "chirp.txt" );
     }
 
@@ -60,56 +60,73 @@ bool System::init_system() {
     // Check time trafo
     Sparse ttrafo = ( Dense( 1.0i * operatorMatrices.H_0 * 505E-12 ).exp() * operatorMatrices.H_used * Dense( -1.0i * operatorMatrices.H_0 * 505E-12 ).exp() ).sparseView();
     Sparse temp = dgl_timetrafo( operatorMatrices.H_used, 505E-12 );
-    double error = std::abs( 1.0 - Dense( temp ).sum() / Dense( ttrafo ).sum() );
-    if ( error >= 1E-8 ) {
+    if ( double error = std::abs( 1.0 - Dense( temp ).sum() / Dense( ttrafo ).sum() ); error >= 1E-8 ) {
         Log::L1( "[System] Unitary timetransformation error is {:.3f}\%!\n", error * 100.0 );
     }
     return true;
 }
 
 Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos ) {
-    Sparse ret = -1.0i * dgl_kommutator( H, rho );
-    Sparse loss = Sparse( rho.rows(), rho.cols() );
-    // Photon Loss
-    if ( parameters.p_omega_cavity_loss != 0.0 )
-        for ( const auto &[transition, data] : operatorMatrices.ph_transitions ) {
-            if ( data.direction == 1 )
-                continue;
-            std::string mode = data.to;
-            auto &params = parameters.input_photonic[mode];
-            loss += 0.5 * parameters.p_omega_cavity_loss * params.numerical["DecayScaling"] * dgl_lindblad( rho, operatorMatrices.ph_transitions[mode + "b"].hilbert, operatorMatrices.ph_transitions[mode + "bd"].hilbert );
+    std::vector<Sparse> ret( 5, Sparse( rho.rows(), rho.cols() ) );
+#pragma omp parallel sections num_threads( parameters.numerics_maximum_secondary_threads )
+    {
+#pragma omp section
+        {
+            ret[0] = -1.0i * dgl_kommutator( H, rho );
+            Log::L3( "[System] Lindblad Equation:\n{}\n", Dense( ret[0] ).format( operatorMatrices.output_format ) );
         }
-    // Radiative Decay
-    if ( parameters.p_omega_decay != 0.0 )
-        for ( const auto &[transition, data] : operatorMatrices.el_transitions ) {
-            if ( data.direction == 1 )
-                continue;
-            const std::string &state = data.to;
-            auto &params = parameters.input_electronic[state];
-            const std::string &trans_transposed = data.name_transposed;
-            loss += 0.5 * parameters.p_omega_decay * params.numerical["DecayScaling"] * dgl_lindblad( rho, operatorMatrices.el_transitions[transition].hilbert, operatorMatrices.el_transitions[trans_transposed].hilbert );
-        }
-    // Electronic Dephasing
-    if ( parameters.p_omega_pure_dephasing != 0.0 )
-        for ( const auto &[name_a, data_a] : operatorMatrices.el_states ) {
-            for ( const auto &[name_b, data_b] : operatorMatrices.el_states ) { // TODO: dephasing über el transitions machen.
-                if ( name_a == name_b )
+        // Photon Loss
+#pragma omp section
+        if ( parameters.p_omega_cavity_loss != 0.0 ) {
+            auto loss = Sparse( rho.rows(), rho.cols() );
+            for ( const auto &[transition, data] : operatorMatrices.ph_transitions ) {
+                if ( data.direction == 1 )
                     continue;
-                loss -= 0.5 * parameters.input_electronic[name_b].numerical["DephasingScaling"] * parameters.input_electronic[name_a].numerical["DephasingScaling"] * parameters.p_omega_pure_dephasing * data_a.hilbert * rho * data_b.hilbert;
+                std::string mode = data.to;
+                auto &params = parameters.input_photonic[mode];
+                ret[1] += 0.5 * parameters.p_omega_cavity_loss * params.numerical["DecayScaling"] * dgl_lindblad( rho, operatorMatrices.ph_transitions[mode + "b"].hilbert, operatorMatrices.ph_transitions[mode + "bd"].hilbert );
             }
+            Log::L3( "[System] Cavity Loss:\n{}\n", Dense( ret[1] ).format( operatorMatrices.output_format ) );
         }
-
-    if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T >= 0.0 ) {
-        Sparse phonons = dgl_phonons_pmeq( rho, t, past_rhos );
-        Log::L3( "[System] Lindblad Equation:\n{}\nLosses:\n{}\nPhonon Part:\n{}\n", Dense( ret ).format( operatorMatrices.output_format ), Dense( loss ).format( operatorMatrices.output_format ), Dense( phonons ).format( operatorMatrices.output_format ) );
-        ret += phonons; // dgl_phonons_pmeq( rho, t, past_rhos );
+        // Radiative Decay
+#pragma omp section
+        if ( parameters.p_omega_decay != 0.0 ) {
+            auto loss = Sparse( rho.rows(), rho.cols() );
+            for ( const auto &[transition, data] : operatorMatrices.el_transitions ) {
+                if ( data.direction == 1 )
+                    continue;
+                const std::string &state = data.to;
+                auto &params = parameters.input_electronic[state];
+                const std::string &trans_transposed = data.name_transposed;
+                ret[2] += 0.5 * parameters.p_omega_decay * params.numerical["DecayScaling"] * dgl_lindblad( rho, operatorMatrices.el_transitions[transition].hilbert, operatorMatrices.el_transitions[trans_transposed].hilbert );
+            }
+            Log::L3( "[System] Radiative Decay:\n{}\n", Dense( ret[2] ).format( operatorMatrices.output_format ) );
+        }
+        // Electronic Dephasing
+#pragma omp section
+        if ( parameters.p_omega_pure_dephasing != 0.0 ) {
+            auto loss = Sparse( rho.rows(), rho.cols() );
+            for ( const auto &[name_a, data_a] : operatorMatrices.el_states ) {
+                for ( const auto &[name_b, data_b] : operatorMatrices.el_states ) { // TODO: dephasing über el transitions machen.
+                    if ( name_a == name_b )
+                        continue;
+                    ret[3] -= 0.5 * parameters.input_electronic[name_b].numerical["DephasingScaling"] * parameters.input_electronic[name_a].numerical["DephasingScaling"] * parameters.p_omega_pure_dephasing * data_a.hilbert * rho * data_b.hilbert;
+                }
+            }
+            Log::L3( "[System] Pure Dephasing:\n{}\n", Dense( ret[3] ).format( operatorMatrices.output_format ) );
+        }
+#pragma omp section
+        if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T >= 0.0 ) {
+            ret[4] = dgl_phonons_pmeq( rho, t, past_rhos );
+            Log::L3( "[System] Phonons PME:\n{}\n", Dense( ret[4] ).format( operatorMatrices.output_format ) );
+        }
     }
-
-    return ret + loss;
+    return std::accumulate( ret.begin(), ret.end(), Sparse( rho.rows(), rho.cols() ) );
 }
 
 Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
     if ( parameters.numerics_use_interactionpicture ) {
+        Log::L3( "[System] Time Transforming at t = {}, initial Matrix:\n{}\n", t, Dense( ret ).format( operatorMatrices.output_format ) );
         // TIMETRANSFORMATION_ANALYTICAL
         if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) {
             // std::vector<Eigen::Triplet<Scalar>> ret_v;
@@ -125,9 +142,10 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
         }
         // TIMETRANSFORMATION_MATRIXEXPONENTIAL
         else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL ) {
-            Sparse U = ( Dense( 1.0i * operatorMatrices.H_0 * t ).exp() ).sparseView();
-            return U * ret * U.adjoint();
+            Sparse U = ( Dense( 1.i * operatorMatrices.H_0 * t ).exp() ).sparseView();
+            ret = (U * ret * U.adjoint()).eval(); //aliasing?
         }
+        Log::L3( "[System] Time Transforming Result:\n{}\n", Dense( ret ).format( operatorMatrices.output_format ) );
     }
     return ret;
 }
@@ -140,15 +158,14 @@ Sparse System::dgl_chirp( const double t ) {
 
 Sparse System::dgl_pulse( const double t ) {
     Sparse ret = Sparse( parameters.maxStates, parameters.maxStates );
-    if ( pulse.empty() ) {
+    if ( pulse.empty() )
         return ret;
-    }
     for ( int i = 0; i < pulse.size(); i++ ) {
         auto p = pulse[i].get( t, not parameters.numerics_use_function_caching );
         if ( parameters.numerics_use_rwa )
             ret += operatorMatrices.pulse_mat[2 * i + 1] * p + operatorMatrices.pulse_mat[2 * i] * std::conj( p );
         else
-            ret += operatorMatrices.pulse_mat[2 * i + 1] * ( p + std::conj( p ) ) + operatorMatrices.pulse_mat[2 * i] * ( p + std::conj( p ) );
+            ret += operatorMatrices.pulse_mat[2 * i + 1] * ( p + std::conj( p ) ) + operatorMatrices.pulse_mat[2 * i] * ( p + std::conj( p ) ); // TODO: verifizieren! trafo selber ausrechnen (in overleaf packen)
     }
     return ret;
 }

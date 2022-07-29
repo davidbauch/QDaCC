@@ -83,6 +83,8 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
     // Calculate Remaining
     Sparse rho = rho0;
     for ( double t_t = t_start; t_t <= t_end; t_t += t_step_initial ) {
+        Log::Logger::Bar( Log::Logger::BAR_SIZE_FULL, Log::Logger::LEVEL_3 );
+        Log::L3("[RKSOLVER] Calculating Iteration for t = {}\n",t_t);
         // Runge-Kutta iteration
         rho = iterate( rho, s, t_t, t_step_initial, output );
         // Progress and time output
@@ -121,7 +123,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
     size_t t_index = std::min<size_t>( size_t( std::lower_bound( s.parameters.grid_values.begin(), s.parameters.grid_values.end(), t_start ) - s.parameters.grid_values.begin() ), s.parameters.grid_values.size() - 2 ); // s.parameters.grid_value_indices[t_start];
     double t_step_initial = s.parameters.numerics_subiterator_stepsize;                                                                                                                                                   // s.parameters.grid_steps[t_index];
     double t_step = 1E-15;                                                                                                                                                                                                // t_step_initial;
-
+    auto numerics_output_rkerror = s.parameters.output_dict.contains( "rkerror" );
     // Find local tolerance
     double tolerance;
     int i;
@@ -175,7 +177,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
             }
         }
         Log::L3( "[Solver-RK45{}] (t = {}) - Local error: {} - dh = {}, current timestep is: {}, new timestep will be: {}, accept current step = {}\n", omp_get_thread_num(), t_t, error, dh, t_step, t_step_new, accept );
-        if ( s.parameters.numerics_output_rkerror ) {
+        if ( numerics_output_rkerror ) {
             if ( accept )
                 rk_error_accepted.emplace_back( std::make_tuple( t_t, error ) );
             rk_error.emplace_back( std::make_tuple( t_t, error, t_step, tries ) );

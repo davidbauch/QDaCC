@@ -158,7 +158,15 @@ class System {
      *
      * @return Scalar value Phi(t)
      */
-    Scalar dgl_phonons_phi( const double t );
+    Scalar dgl_phonons_phi( const double tau );
+
+    /**
+     * @brief Calculates the Phonon Spectral Density
+     *
+     * @param w Input frequency
+     * @return J(w)
+     */
+    Scalar dgl_phonons_J( const double w );
 
     /**
      * @brief Calculates the Lindbladian coefficients for the analytical phonon contributions using the polaron frame

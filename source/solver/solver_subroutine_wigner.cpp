@@ -47,7 +47,7 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
         }
         return ( 1 / ( 2. * 3.1415 ) * std::exp( -2. * QDLC::Math::abs2( alpha ) ) * Wval );
     };
-#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( int i = 0; i < reduced_rho.size(); i++ ) {
         Dense W = Dense::Zero( A.rows(), A.cols() );
         for ( int k = 0; k < A.rows(); k++ ) {

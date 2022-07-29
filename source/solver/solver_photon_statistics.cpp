@@ -92,7 +92,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         int T = std::min<int>( gmat.cols(), savedStates.size() );
         std::vector<Scalar> topv( T, 0 );
         std::vector<Scalar> g2ofzero( T, 0 );
-#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
         for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
             for ( int i = 0; i <= upper_limit; i++ ) {
                 int j = upper_limit - i;

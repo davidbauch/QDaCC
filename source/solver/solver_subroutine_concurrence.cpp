@@ -5,7 +5,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     Log::L2( "[Concurrence] Conc for modes {} {} and {} {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2 );
 
     // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading
-    s.parameters.numerics_phonons_maximum_threads = 1;
+    s.parameters.numerics_maximum_secondary_threads = 1;
     // Progress
     ProgressBar progressbar = ProgressBar();
 
@@ -66,7 +66,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
             rho_g2zero[mode].emplace_back( 0 );
         }
     }
-#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( auto mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
         auto &gmat_time = cache[mode + "_time"];
         for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
@@ -106,7 +106,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     spinflip( 2, 1 ) = 1;
     spinflip( 3, 0 ) = -1;
     Log::L2( "[Concurrence] Spinflip Matrix: {}\n", spinflip );
-#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( size_t k = 0; k < T; k++ ) { // cache[s_g2_1111].rows() statt T?
         // Log::L3( "Creating 2 photon matrix\n" );
         Dense rho_2phot = Dense::Zero( 4, 4 );

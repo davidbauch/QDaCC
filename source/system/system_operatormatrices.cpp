@@ -92,11 +92,11 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
             if ( trans_to == "-" ) continue;
             std::string transition = name + p.transition_delimiter + trans_to;
             el_transitions[transition].self_hilbert = data.ket * el_states[trans_to].bra;
-            el_transitions[transition].direction = -1; // DOWN
+            el_transitions[transition].direction = -1; // DOWN / sigma_-
             el_transitions[transition].energy = std::abs( p.input_electronic[trans_to].numerical["Energy"] - p.input_electronic[name].numerical["Energy"] );
             std::string transition_transposed = trans_to + p.transition_delimiter + name;
             el_transitions[transition_transposed].self_hilbert = el_states[trans_to].ket * data.bra;
-            el_transitions[transition_transposed].direction = 1; // UP
+            el_transitions[transition_transposed].direction = 1; // UP / sigma_+
             el_transitions[transition_transposed].energy = std::abs( p.input_electronic[trans_to].numerical["Energy"] - p.input_electronic[name].numerical["Energy"] );
             // Names. Should be equal to the key.
             el_transitions[transition].name = transition;
@@ -146,8 +146,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         auto current = base_selfhilbert;
         current.front() = data.self_hilbert;
         data.hilbert = QDLC::Matrix::tensor( current ).sparseView();
-        Log::L3( "[System-OperatorMatrices] Electronic Transition Matrix for Transition {} in self-Hilbert space:\n{}\n", name, Dense( data.self_hilbert ).format( output_format ) );
-        Log::L3( "[System-OperatorMatrices] Electronic Transition Matrix for Transition {} in total-Hilbert space:\n{}\n", name, Dense( data.hilbert ).format( output_format ) );
+        Log::L2( "[System-OperatorMatrices] Electronic Transition Matrix for Transition {} in self-Hilbert space:\n{}\n", name, Dense( data.self_hilbert ).format( output_format ) );
+        Log::L2( "[System-OperatorMatrices] Electronic Transition Matrix for Transition {} in total-Hilbert space:\n{}\n", name, Dense( data.hilbert ).format( output_format ) );
         data.projector = QDLC::Matrix::sparse_projector( data.hilbert );
     }
     Log::L2( "[System-OperatorMatrices] Creating Photonic Projector Matrices...\n" );
@@ -155,8 +155,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         auto current = base_selfhilbert;
         current[data.base] = data.self_hilbert;
         data.hilbert = QDLC::Matrix::tensor( current ).sparseView();
-        Log::L3( "[System-OperatorMatrices] Cavity Transition Matrix for Transition {} in self-Hilbert space:\n{}\n", name, Dense( data.self_hilbert ).format( output_format ) );
-        Log::L3( "[System-OperatorMatrices] Cavity Transition Matrix for Transition {} in total-Hilbert space:\n{}\n", name, Dense( data.hilbert ).format( output_format ) );
+        Log::L2( "[System-OperatorMatrices] Cavity Transition Matrix for Transition {} in self-Hilbert space:\n{}\n", name, Dense( data.self_hilbert ).format( output_format ) );
+        Log::L2( "[System-OperatorMatrices] Cavity Transition Matrix for Transition {} in total-Hilbert space:\n{}\n", name, Dense( data.hilbert ).format( output_format ) );
         data.projector = QDLC::Matrix::sparse_projector( data.hilbert );
     }
 
@@ -182,13 +182,14 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         pulse_mat_cavity_cache.emplace_back( pulsemat );
         pulse_mat_cavity_cache.emplace_back( pulsemat_star );
         for ( int i = 0; i < pulse.second.string_v["CoupledTo"].size(); i++ ) {
-            std::string transition = pulse.second.string_v["CoupledTo"][i];
-            std::string transition_transposed = QDLC::String::split_and_reverse( transition, p.transition_delimiter );
+            std::string transition = pulse.second.string_v["CoupledTo"][i]; // sigma_-
+            std::string transition_transposed = el_transitions[transition].name_transposed;//QDLC::String::split_and_reverse( transition, p.transition_delimiter ); // sigma_+
             if ( el_transitions.contains( transition ) ) {
+                Log::L2( "[System-OperatorMatrices] Electronic Pulse transition {} added to pulse {}...\n", transition, i );
                 pulsemat += el_transitions[transition].hilbert;
                 pulsemat_star += el_transitions[transition_transposed].hilbert;
             } else if ( std::isupper( transition.front() ) ) { // This will require the electronic states to be capitalized and not start with a numerical.
-                Log::L2( "[System-OperatorMatrices] Electronic Pulse transition {} is not in the list of allowed electronic transitions, recreating transition matrices...\n", transition );
+                Log::L2( "[System-OperatorMatrices] Electronic Pulse transition {} is not in the list of allowed electronic transitions, recreating transition matrices and adding to pulse {}\n", transition, i );
                 auto [from, to] = QDLC::String::split_pair( transition, p.transition_delimiter );
                 auto ket1 = el_states[from].ket;
                 auto bra1 = el_states[from].bra;
@@ -235,17 +236,17 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
                 pulse_mat_cavity_cache[pulse_mat_cavity_cache.size() - 1] += ph_transitions[transition + "bd"].hilbert;
             }
         }
-        pulse_mat.emplace_back( pulsemat );
-        pulse_mat.emplace_back( pulsemat_star );
-        Log::L3( "[System-OperatorMatrices] Added Pulse Matrix for Pulse {} in total-Hilbert space (normal+transposed):\n{}\n", pulse.first, Dense( pulsemat + pulse_mat_cavity_cache[pulse_mat_cavity_cache.size() - 2] + pulsemat_star + pulse_mat_cavity_cache[pulse_mat_cavity_cache.size() - 1] ).format( output_format ) );
+        pulse_mat.emplace_back( pulsemat );      // sigma_-
+        pulse_mat.emplace_back( pulsemat_star ); // sigma_+
+        Log::L2( "[System-OperatorMatrices] Added Pulse Matrix for Pulse {} in total-Hilbert space (normal+transposed):\n{}\n", pulse.first, Dense( pulsemat + pulse_mat_cavity_cache[pulse_mat_cavity_cache.size() - 2] + pulsemat_star + pulse_mat_cavity_cache[pulse_mat_cavity_cache.size() - 1] ).format( output_format ) );
     }
 
     // TODO: chirp cavity
     Log::L2( "[System-OperatorMatrices] Creating Chirp Cache Matrices...\n" );
     // 1 matrix is generated per chirp
     for ( auto &chirp : p.input_chirp ) {
-        Sparse chirpmat = Sparse( base.size(), base.size() );
-        Sparse chirpmat_star = Sparse( base.size(), base.size() );
+        auto chirpmat = Sparse( base.size(), base.size() );
+        auto chirpmat_star = Sparse( base.size(), base.size() );
         for ( int i = 0; i < chirp.second.string_v["CoupledTo"].size(); i++ ) {
             std::string state = chirp.second.string_v["CoupledTo"][i];
             chirpmat += chirp.second.numerical_v["AmpFactor"][i] * el_states[state].hilbert; // TODO: chirp cavity similar to pulse
@@ -321,41 +322,47 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
             timetrafo_cachematrix( index_i, index_j ) = 1.0i * val;
         }
     }
+    Log::L2( "[System-OperatorMatrices] Timetrafo Cachematrix:\n{}\n", timetrafo_cachematrix.format( output_format ) );
 
     Log::L2( "[System-OperatorMatrices] Creating Polaron Cache Matrices...\n" );
     // Precalculate Polaron Matrices.
-    polaron_factors.emplace_back( Sparse( base.size(), base.size() ) );
+    polaron_factors.emplace_back( base.size(), base.size() );
     // Transition is always |0><1| (annihilator), hence reversed is |1><0| (creator)
     for ( auto &[mode, param] : p.input_photonic ) { // TODO: das hier auf input matritzen ändern kekw.
         int i = 0;
-        for ( auto transition : param.string_v["CoupledTo"] ) {
+        for ( const auto &transition : param.string_v["CoupledTo"] ) {
             Log::L2( "[System-PME] Adding Polaron Cavity Transition |{}><{}|b_{}\n", el_transitions[transition].to, el_transitions[transition].from, mode );
             auto transition_transposed = el_transitions[transition].name_transposed;
             polaron_factors[0] += el_transitions[transition_transposed].hilbert * p.p_omega_coupling * param.numerical_v["CouplingScaling"][i] * ph_transitions[mode + "b"].hilbert;
             i++;
         }
     }
-    for ( auto &[mode, param] : p.input_pulse ) {
-        Sparse temp = Sparse( base.size(), base.size() );
-        for ( auto transition : param.string_v["CoupledTo"] ) {
-            polaron_pulse_factors_explicit_time.emplace_back( Sparse( base.size(), base.size() ) );
-            if ( el_transitions.contains( transition ) ) {
-                Log::L2( "[System-PME] Adding Polaron Pulse Transition |{}><{}|Omega_{}\n", el_transitions[transition].to, el_transitions[transition].from, mode );
-                std::string transition_transposed = el_transitions[transition].name_transposed; // QDLC::String::split_and_reverse( transition, p.transition_delimiter );
-                temp += el_transitions[transition_transposed].hilbert;
-                polaron_pulse_factors_explicit_time.back() += el_transitions[transition_transposed].projector;
-            } else if ( extra_transitions.contains( transition ) ) {
-                Log::L2( "[System-PME] Adding Polaron Pulse Transition |{}><{}|Omega_{} which is a not-allowed electronic transition.\n", extra_transitions[transition].to, extra_transitions[transition].from, mode );
-                std::string transition_transposed = extra_transitions[transition].name_transposed; // QDLC::String::split_and_reverse( transition, p.transition_delimiter );
-                temp += extra_transitions[transition_transposed].hilbert;
-                polaron_pulse_factors_explicit_time.back() += QDLC::Matrix::sparse_projector( extra_transitions[transition_transposed].hilbert );
-            } else {
-                Log::L2( "[System-OperatorMatrices] Pulse transition {} is cavity...\n", transition );
-                temp += ph_transitions[transition + "bd"].hilbert;
-                polaron_pulse_factors_explicit_time.back() += ph_transitions[transition + "bd"].projector;
-            }
-        }
-        polaron_factors.emplace_back( temp );
+    for ( int current = 0; auto const &[mode, param] : p.input_pulse ) {
+        // auto temp = Sparse( base.size(), base.size() );
+        // for ( const auto &transition : param.string_v["CoupledTo"] ) {
+        //     polaron_pulse_factors_explicit_time.emplace_back( base.size(), base.size() );
+        //     if ( el_transitions.contains( transition ) ) {
+        //         Log::L2( "[System-PME] Adding Polaron Pulse Transition |{}><{}|Omega_{}\n", el_transitions[transition].to, el_transitions[transition].from, mode );
+        //         std::string transition_transposed = el_transitions[transition].name_transposed; // QDLC::String::split_and_reverse( transition, p.transition_delimiter );
+        //         temp += el_transitions[transition_transposed].hilbert;
+        //         polaron_pulse_factors_explicit_time.back() += el_transitions[transition_transposed].projector;
+        //         Log::L2( "[System-PME] Transition Matrix:\n{}\n", Dense( el_transitions[transition_transposed].hilbert ).format( output_format ) );
+        //     } else if ( extra_transitions.contains( transition ) ) {
+        //         Log::L2( "[System-PME] Adding Polaron Pulse Transition |{}><{}|Omega_{} which is a not-allowed electronic transition.\n", extra_transitions[transition].to, extra_transitions[transition].from, mode );
+        //         std::string transition_transposed = extra_transitions[transition].name_transposed; // QDLC::String::split_and_reverse( transition, p.transition_delimiter );
+        //         temp += extra_transitions[transition_transposed].hilbert;
+        //         polaron_pulse_factors_explicit_time.back() += QDLC::Matrix::sparse_projector( extra_transitions[transition_transposed].hilbert );
+        //         Log::L2( "[System-PME] Transition Matrix:\n{}\n", Dense( extra_transitions[transition_transposed].hilbert ).format( output_format ) );
+        //     } else {
+        //         Log::L2( "[System-OperatorMatrices] Pulse transition {} is cavity...\n", transition );
+        //         temp += ph_transitions[transition + "bd"].hilbert;
+        //         polaron_pulse_factors_explicit_time.back() += ph_transitions[transition + "bd"].projector;
+        //         Log::L2( "[System-PME] Transition Matrix:\n{}\n", Dense( ph_transitions[transition + "bd"].hilbert ).format( output_format ) );
+        //     }
+        // }
+        // Log::L2( "[System-PME] Total Polaron Factor:\n{}\n", Dense( temp ).format( output_format ) );
+        polaron_factors.emplace_back( pulse_mat[2 * current + 1] ); // TODO: doppeltes kopieren vermeiden
+        current++;
     }
 
     Log::L2( "[System-OperatorMatrices] Creating Hamiltonoperator...\n" );
@@ -457,13 +464,16 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         H_I_a = H_I_a.cwiseProduct( b_matrix );
         H_I_b = H_I_b.cwiseProduct( b_matrix );
         // Scale Pulse Matrices for Pulse evaluations for the Hamilton Operators. Note: If the pulse matrix consists of cavity transitions, the <B>-scaling must not be applied there! This is the <B> from the <B>*H_I scaling for the pulse.
-        std::ranges::for_each( pulse_mat.begin(), pulse_mat.end(), [&]( auto &mat ) { mat = mat.cwiseProduct( b_matrix ); } );
+        Log::L2( "[System-PME] Scaled Pulse Transition Matrices to:\n" );
+        std::ranges::for_each( pulse_mat, [&, indx = 0]( auto &mat ) mutable { mat = mat.cwiseProduct( b_matrix ); Log::L2("[System-PME]Matrix {}:\n{}\n",indx,Dense(mat).format(output_format)); indx++; } );
 
-        // Scale Polaron Cache Matrices for Chi evaluations. This is the <B> from the <B>^2 Term in front of the polaron factors. The remaining <B> is added in the Green functions, becasue the pulse matrix is scaled only once too and used in H_I again.
-        std::ranges::for_each( polaron_factors.begin(), polaron_factors.end(), [&]( auto &mat ) { mat = mat.cwiseProduct( b_matrix ); } );
+        // Scale Polaron Cache Matrices for Chi evaluations. This is the <B> from the <B>^2 Term in front of the polaron green functions. The <B>^2 term in front of the green functions is the result from the commutator multiplication [<B>A,<B>B]=<B>^2[A,B]
+        Log::L2( "[System-PME] Scaled Polaron Factor Matrices to:\n" );
+        std::ranges::for_each( polaron_factors, [&, indx = 0]( auto &mat ) mutable { mat = mat.cwiseProduct( b_matrix ); Log::L2("[System-PME] Matrix {}:\n{}\n",indx,Dense(mat).format(output_format)); indx++; } );
 
         // Add Cavity Pulse Transitions after scaling of the electronic transitions. Note that this way, the pure cavity driving is not influenced by the phonon coupling. IDK if this is correct.
-        std::ranges::for_each( pulse_mat.begin(), pulse_mat.end(), [&, indx = 0]( auto &mat ) mutable { mat += pulse_mat_cavity_cache[indx]; indx++; } );
+        Log::L2( "[System-PME] Modified Pulse Transition Matrices to include cavity driving to:\n" );
+        std::ranges::for_each( pulse_mat, [&, indx = 0]( auto &mat ) mutable { mat += pulse_mat_cavity_cache[indx]; indx++; Log::L2("[System-PME]Matrix {}:\n{}\n",indx,Dense(mat).format(output_format)); } );
     }
 
     for ( auto &a : phonon_group_index_to_hilbert_indices )
@@ -552,7 +562,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
 }
 
 void OperatorMatrices::output_operators( Parameters &p ) {
-    if ( p.output_operators > 0 ) {
+    if ( p.output_dict.contains( "operators" ) ) {
         std::ostringstream out;
         Eigen::IOFormat CleanFmt( 4, 0, ", ", "\n", "[", "]" );
         out << "[System-OperatorMatrices] Hamilton and Rho:\n";
@@ -569,7 +579,7 @@ void OperatorMatrices::output_operators( Parameters &p ) {
         // Log::L2( "[System-OperatorMatrices] Outputting String Matrices...\n" );
         //  OperatorMatricesText test = OperatorMatricesText();
         //  test.generate_operators( p );
-        if ( p.output_operators == 3 )
-            exit( 0 );
+        // if ( p.output_dict_operators == 3 )
+        //    exit( 0 );
     }
 }

@@ -28,7 +28,7 @@ void QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( System &s ) {
 
 bool QDLC::Numerics::ODESolver::output_numerical_data( System &s ) {
     // Output Numerical RK Error
-    if ( s.parameters.numerics_output_rkerror ) { // Chain...
+    if ( s.parameters.output_dict.contains( "rkerror" ) ) { // Chain...
         Log::L2( "[Solver] Outputting Numerical RK45 error...\n" );
         auto &file = FileOutput::add_file( "numerical" );
         // Header
@@ -46,7 +46,8 @@ bool QDLC::Numerics::ODESolver::output_numerical_data( System &s ) {
             file << fmt::format( "{}\t{}\t{}\t{}\n", t_t, error, t_step, tries );
         }
     }
-    if ( s.parameters.output_eigenvalues ) {
+    // TODO: putput list als dict, dann if "eigenvalues" in outputdict
+    if ( s.parameters.output_dict.contains( "eigenvalues" ) ) {
         QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( s );
     }
     return true;

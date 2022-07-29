@@ -28,7 +28,7 @@ std::vector<std::vector<Sparse>> &QDLC::Numerics::ODESolver::calculate_propagato
     // Calculate first by hand to ensure the Hamilton gets calculated correclty
     ret[0][0] = calculate_propagator_single( s, tensor_dim, t0, t_step, 0, 0, output, one ); // pathint_propagator[-1][0][0] );
 // Calculate the remaining propagators
-#pragma omp parallel for num_threads( s.parameters.numerics_phonons_maximum_threads )
+#pragma omp parallel for num_threads( s.parameters.numerics_maximum_secondary_threads )
     for ( int i = 0; i < tensor_dim; i++ ) {
         for ( int j = 0; j < tensor_dim; j++ ) {
             if ( i == 0 && j == 0 ) continue;
@@ -148,7 +148,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     Log::L2( "[PathIntegral] ADM Tensor dimensions will reach: [{}]\n", adm_tensor_dimensions.str() );
 
     Log::L2( "[PathIntegral] Tensor Type is {}\n", s.parameters.numerics_pathintegral_force_dense ? "Dense" : "Sparse" );
-    Log::L2( "[PathIntegral] Using a maximum of #{} cpu cores for the ADM propagation.\n", s.parameters.numerics_phonons_maximum_threads );
+    Log::L2( "[PathIntegral] Using a maximum of #{} cpu cores for the ADM propagation.\n", s.parameters.numerics_maximum_secondary_threads );
     Log::L2( "[PathIntegral] Anticipated Tensor size will be {} MB (elements) and {} MB (indices).\n", std::pow( tensor_dim, 2.0 ) * std::pow( different_dimensions.size(), 2 * s.parameters.p_phonon_nc - 2 ) * 16 / 1024. / 1024., std::pow( tensor_dim, 2.0 ) * std::pow( different_dimensions.size(), 2 * s.parameters.p_phonon_nc - 2 ) * 4 * pathint_tensor_dimensions.size() / 1024. / 1024. );
 
     // Tensor Class
@@ -197,19 +197,19 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     // ############ Temp: Simple Profiling #############
     // #################################################
     std::map<std::string, std::vector<double>> profiler_time_per_thread;
-    profiler_time_per_thread["PI_propagator"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_main_iteration"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_sparse_iteration"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_dense_index_gathering"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_dense_group_summation_and_correlation_function"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_dense_value_setting"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_sparse_index_gathering"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_sparse_group_summation"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_sparse_correlation_function"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_adm_reduction"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_tensor_swap"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_tensor_prune"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
-    profiler_time_per_thread["PI_total"] = std::vector<double>( s.parameters.numerics_phonons_maximum_threads, 0 );
+    profiler_time_per_thread["PI_propagator"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_main_iteration"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_sparse_iteration"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_dense_index_gathering"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_dense_group_summation_and_correlation_function"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_dense_value_setting"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_sparse_index_gathering"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_sparse_group_summation"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_sparse_correlation_function"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_adm_reduction"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_tensor_swap"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_tensor_prune"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
+    profiler_time_per_thread["PI_total"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
 
     // Iterate Path integral for further time steps
     for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
@@ -225,7 +225,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
                 auto &gmat = cache[purpose];
                 auto &timemat = cache[purpose + "_time"];
                 Log::L3( "[PathIntegral] Calculating Path Integral Correlation from t_0 = {} to t_1 = {}, initial tensor is {}...\n", t_t, t_end, adm_tensor.isSparse() ? "Sparse" : "Dense" );
-                calculate_path_integral_correlation( adm_tensor, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, total_progressbar_iterations, purpose, s, temp, do_output, matrices, s.parameters.numerics_phonons_maximum_threads );
+                calculate_path_integral_correlation( adm_tensor, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, total_progressbar_iterations, purpose, s, temp, do_output, matrices, s.parameters.numerics_maximum_secondary_threads );
                 // Log::L3( "[PathIntegral] Interpolating Results...\n" );
                 // if ( temp.size() > 1 )
                 //     temp = Numerics::interpolate_curve( temp, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
@@ -272,7 +272,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         /* PROFILER */ profiler_time = omp_get_wtime();
         // Dense Tensor Iteration
         if ( adm_tensor.isDense() ) {
-#pragma omp parallel for num_threads( s.parameters.numerics_phonons_maximum_threads ) schedule( guided ) shared( nonzero )
+#pragma omp parallel for num_threads( s.parameters.numerics_maximum_secondary_threads ) schedule( guided ) shared( nonzero )
             for ( auto &index : adm_tensor.getIndices() ) {
                 /* PROFILER */ double profiler_d = omp_get_wtime();
                 auto [sparse_index_x, sparse_index_y] = index;
@@ -554,7 +554,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor<Scal
             //  if ( adm_correlation.isSparseTensor() ) {
             //      use_dense_tensor = true;
             //      adm_correlation.convertToDense();
-            //      adm_multithreading_cores = s.parameters.numerics_phonons_maximum_threads;
+            //      adm_multithreading_cores = s.parameters.numerics_maximum_secondary_threads;
             //  }
         }
 
@@ -691,7 +691,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor<Scal
                 if ( numerics_dynamic_densitychange_counter >= s.parameters.numerics_dynamic_densitychange_limit and t_t / s.parameters.t_step_pathint > s.parameters.p_phonon_nc ) {
                     Log::L2( "[PathIntegralCorrelation] Switching to Dense Tensor with {} elements\n", adm_correlation.nonZeros() );
                     adm_correlation.convertToDense();
-                    adm_multithreading_cores = s.parameters.numerics_phonons_maximum_threads;
+                    adm_multithreading_cores = s.parameters.numerics_maximum_secondary_threads;
                 }
             } else {
                 numerics_dynamic_densitychange_counter = 0;

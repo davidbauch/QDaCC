@@ -2,7 +2,7 @@
 
 bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
     // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading
-    s.parameters.numerics_phonons_maximum_threads = 1;
+    s.parameters.numerics_maximum_secondary_threads = 1;
     // Progress
     ProgressBar progressbar = ProgressBar();
 
@@ -39,7 +39,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
         time.emplace_back( std::real( akf_mat_g1_time( i, 0 ) ) );
     }
 
-#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_threads )
+#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
         for ( int i = 0; i <= upper_limit; i++ ) {
             double t_t = std::real( akf_mat_g1_time( i, 0 ) );

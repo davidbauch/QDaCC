@@ -15,7 +15,7 @@ INC_DIRS := include/ external/ #$(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 LIB_DIRS :=  #$(shell find $(SRC_DIRS) -type d)
-LIB_FLAGS := $(addprefix -L,$(LIB_DIRS)) -O3 -DFMT_HEADER_ONLY
+LIB_FLAGS := $(addprefix -L,$(LIB_DIRS)) -O3 -DFMT_HEADER_ONLY -D_GLIBCXX_PARALLEL
 LIB_LINKS := 
 
 ifneq ($(COMPILER), /opt/intel/oneapi/compiler/latest/mac/bin/intel64/icpc)
@@ -37,7 +37,7 @@ else
 		TARGET_EXEC = QDLC-$(VERSION).out
 		TARGET_DIR = /Users/davidbauch/bin
 		BUILD_DIR = ./build/darwin
-		COMPILER = g++-10
+		COMPILER = g++-12
 	endif
 	ifeq ($(UNAME_S),Linux)
 		LIB_FLAGS += -std=c++2a

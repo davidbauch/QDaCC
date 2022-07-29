@@ -21,8 +21,9 @@ std::ofstream &FileOutput::Iget_file( const std::string &name ) {
 }
 
 std::ofstream &FileOutput::Iadd_file( const std::string &name ) {
-    if ( not files.contains( name ) )
-        files[name].open( path + name + ".txt" );
+    if ( files.contains( name ) )
+        return get_file( name );
+    files[name].open( path + name + ".txt" );
     if ( get_file( name ).is_open() )
         Log::L2( "[System-Fileoutput] Added file '{}'\n", name );
     else

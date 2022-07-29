@@ -77,7 +77,7 @@ int main( int argc, char* argv[] ) {
         // Do Parameter Optimization here and edit system parameters accordingly.
 
         // Path Integral Visual Output
-        if ( system.parameters.output_path )
+        if ( system.parameters.output_dict.contains( "path" ) )
             solver.visualize_path( system.operatorMatrices.rho, system );
 
         // Normal Time direction
