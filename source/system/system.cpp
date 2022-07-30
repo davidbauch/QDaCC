@@ -115,11 +115,10 @@ Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const dou
             }
             Log::L3( "[System] Pure Dephasing:\n{}\n", Dense( ret[3] ).format( operatorMatrices.output_format ) );
         }
-#pragma omp section
-        if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T >= 0.0 ) {
-            ret[4] = dgl_phonons_pmeq( rho, t, past_rhos );
-            Log::L3( "[System] Phonons PME:\n{}\n", Dense( ret[4] ).format( operatorMatrices.output_format ) );
-        }
+    }
+    if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T >= 0.0 ) {
+        ret[4] = dgl_phonons_pmeq( rho, t, past_rhos );
+        Log::L3( "[System] Phonons PME:\n{}\n", Dense( ret[4] ).format( operatorMatrices.output_format ) );
     }
     return std::accumulate( ret.begin(), ret.end(), Sparse( rho.rows(), rho.cols() ) );
 }
@@ -143,7 +142,7 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
         // TIMETRANSFORMATION_MATRIXEXPONENTIAL
         else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL ) {
             Sparse U = ( Dense( 1.i * operatorMatrices.H_0 * t ).exp() ).sparseView();
-            ret = (U * ret * U.adjoint()).eval(); //aliasing?
+            ret = ( U * ret * U.adjoint() ).eval(); // aliasing?
         }
         Log::L3( "[System] Time Transforming Result:\n{}\n", Dense( ret ).format( operatorMatrices.output_format ) );
     }

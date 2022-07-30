@@ -191,9 +191,9 @@ class System {
     /**
      * @brief Calculates Chi(t,tau > 0) after Chi(t,0) was calculated with dgl_phonons_chi.
      *
-     * @return Vector of SavedStates
+     * @return Sparse Transformed chi
      */
-    std::vector<QDLC::SaveState> dgl_phonons_calculate_transformation( Sparse &chi_tau, double t, double tau );
+    Sparse dgl_phonons_calculate_transformation( double t, double tau );
 
     /**
      * @brief Calculates the Polaron Master Equation Contribution L_phonons(t)
