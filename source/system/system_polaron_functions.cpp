@@ -357,13 +357,13 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             }
             // Not using saved_coefficients or index wasn't found and interpolation wasn't succesfull, recalculating.
             else {
-                Log::L3( "[System-PME]     Thread #{} - (Re)Calculating {} using {} steps in the PME integral\n", omp_get_thread_num(), t, tau_max );
                 // Index was not found, (re)calculate chi(t-tau) sum
                 // Initialize temporary matrices to zero for threads to write to
                 std::vector<Sparse> threadmap_u( parameters.numerics_maximum_secondary_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
                 std::vector<Sparse> threadmap_g( parameters.numerics_maximum_secondary_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
                 // Calculate backwards integral and sum it into threadmaps. Threadmaps will later be summed into one coefficient matrix.
                 int tau_max = std::min<int>( parameters.p_phonon_tcutoff/parameters.numerics_subiterator_stepsize, t/parameters.numerics_subiterator_stepsize );
+                Log::L3( "[System-PME]     Thread #{} - (Re)Calculating {} using {} steps in the PME integral\n", omp_get_thread_num(), t, tau_max );
 #pragma omp parallel for schedule( dynamic ) num_threads( parameters.numerics_maximum_secondary_threads )
                 for ( int tau_index = 0; tau_index < tau_max; tau_index++ ) {
                     double tau = parameters.numerics_subiterator_stepsize * tau_index;
