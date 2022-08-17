@@ -18,6 +18,8 @@
 // V 1.3 - Singleton class
 // V 1.4 Markup for filter, Markup for "DEPRECATED" and "NOTIMPLEMENTED"
 
+// TODO: Parameter Subclass wegmachen, nur eine Datastructure Class, die dann subdatastructures vom selben typ kennt.
+
 namespace QDLC {
 
 class CommandlineArguments {
@@ -25,7 +27,7 @@ class CommandlineArguments {
     std::vector<std::string> configfile;
     std::vector<std::string> commandlinearguments;
     char cla_splitter = '=';
-    int cla_width = 50;
+    int cla_width = 35;
     std::string cla_add_param = "add";
     std::string cla_remove_param = "rem"; // TODO
     std::string cla_edit_param = "mod";   // TODO
@@ -35,7 +37,7 @@ class CommandlineArguments {
        public:
         std::string subkey;
         std::string value;
-        std::string datatype; // muss beim einlesen auf jeden fall gecheckt werden ob eingabe dem richtigen dt entspricht
+        std::string datatype;
         std::string description;
         Parameter(){};
         Parameter( std::string _subkey, std::string _value, std::string _datatype, std::string _description ) : subkey( _subkey ), value( _value ), datatype( _datatype ), description( _description ) {}
@@ -125,7 +127,6 @@ class CommandlineArguments {
             }
             return false;
         }
-
         void identify() const { std::cout << "Parameterclass for " << subkey << ", value = " << value << ", datatype = " << datatype << ", description = " << description << std::endl; }
     };
 
@@ -164,10 +165,11 @@ class CommandlineArguments {
                 word = QDLC::String::to_lower( word );
                 if ( word.compare( filter ) == 0 || word.find( filter ) != std::string::npos ) return true;
             }
+            if ( QDLC::String::to_lower( description ).find( filter ) != std::string::npos ) return true;
             for ( const auto& param : parameter ) {
                 if ( param.validkey( filter ) || param.subkey.find( filter ) != std::string::npos ) return true;
                 if ( param.datatype.compare( filter ) == 0 || param.datatype.find( filter ) != std::string::npos ) return true;
-                for ( const auto& word : String::split( param.description ) ) {
+                for ( const auto& word : String::split( QDLC::String::to_lower( param.description ) ) ) {
                     if ( word.compare( filter ) == 0 || word.find( filter ) != std::string::npos ) return true;
                 }
             }

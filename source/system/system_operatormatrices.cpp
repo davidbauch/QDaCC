@@ -182,8 +182,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         pulse_mat_cavity_cache.emplace_back( pulsemat );
         pulse_mat_cavity_cache.emplace_back( pulsemat_star );
         for ( int i = 0; i < pulse.second.string_v["CoupledTo"].size(); i++ ) {
-            std::string transition = pulse.second.string_v["CoupledTo"][i]; // sigma_-
-            std::string transition_transposed = el_transitions[transition].name_transposed;//QDLC::String::split_and_reverse( transition, p.transition_delimiter ); // sigma_+
+            std::string transition = pulse.second.string_v["CoupledTo"][i];                 // sigma_-
+            std::string transition_transposed = el_transitions[transition].name_transposed; // QDLC::String::split_and_reverse( transition, p.transition_delimiter ); // sigma_+
             if ( el_transitions.contains( transition ) ) {
                 Log::L2( "[System-OperatorMatrices] Electronic Pulse transition {} added to pulse {}...\n", transition, i );
                 pulsemat += el_transitions[transition].hilbert;
@@ -361,7 +361,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         //     }
         // }
         // Log::L2( "[System-PME] Total Polaron Factor:\n{}\n", Dense( temp ).format( output_format ) );
-        polaron_factors.emplace_back( pulse_mat[2 * current + 1] ); // TODO: doppeltes kopieren vermeiden
+        polaron_factors.emplace_back( pulse_mat[2 * current + 1] );
+        polaron_pulse_factors_explicit_time.emplace_back( QDLC::Matrix::sparse_projector( pulse_mat[2 * current + 1] ) );
         current++;
     }
 

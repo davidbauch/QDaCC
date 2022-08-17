@@ -34,260 +34,127 @@ namespace Numerics {
 // Rechnungen auf cluster meddeln
 
 // https://wjngkoh.wordpress.com/2015/03/04/c-hash-function-for-eigen-matrix-and-vector/
-struct vector_hash {
-    static std::hash<QDLC::Type::iVector::Scalar> hasher;
-    std::size_t operator()( QDLC::Type::iVector const &vec ) const {
-        size_t seed = 0;
-        for ( size_t i = 0; i < vec.size(); ++i ) {
-            auto elem = *( vec.data() + i );
-            seed ^= hasher( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-        }
-        return seed;
-    }
-};
-struct vector_compare {
-    bool operator()( const QDLC::Type::iVector &A, const QDLC::Type::iVector &B ) const {
-        return vector_hash()( A ) < vector_hash()( B );
-    }
-};
-struct tuple_vector_hash {
-    static std::hash<QDLC::Type::iVector::Scalar> hasher;
-    std::size_t operator()( std::tuple<QDLC::Type::iVector, QDLC::Type::iVector> const &tup ) const {
-        size_t seed = 0;
-        auto &[vec1, vec2] = tup;
-        for ( size_t i = 0; i < vec1.size(); ++i ) {
-            auto elem = *( vec1.data() + i );
-            seed ^= hasher( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-        }
-        for ( size_t i = 0; i < vec2.size(); ++i ) {
-            auto elem = *( vec2.data() + i );
-            seed ^= hasher( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-        }
-        return seed;
-    }
-};
-struct tuple_vector_compare {
-    bool operator()( const std::tuple<QDLC::Type::iVector, QDLC::Type::iVector> &A, const std::tuple<QDLC::Type::iVector, QDLC::Type::iVector> &B ) const {
-        return tuple_vector_hash()( A ) < tuple_vector_hash()( B );
-    }
-};
-
 template <typename T>
+struct vector_hash {
+    static std::hash<T> hasher;
+    std::size_t operator()( std::vector<T> const &vec ) const {
+        size_t seed = 0;
+        for ( const auto &el : vec ) {
+            seed ^= hasher( el ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+        }
+        return seed;
+    }
+};
+template <typename T>
+struct vector_compare {
+    bool operator()( const std::vector<T> &A, const std::vector<T> &B ) const {
+        return vector_hash<T>()( A ) < vector_hash<T>()( B );
+    }
+};
+// struct tuple_vector_hash {
+//     static std::hash<QDLC::Type::iVector::QDLC::Type::Scalar> hasher;
+//     std::size_t operator()( std::tuple<QDLC::Type::iVector, QDLC::Type::iVector> const &tup ) const {
+//         size_t seed = 0;
+//         auto &[vec1, vec2] = tup;
+//         for ( size_t i = 0; i < vec1.size(); ++i ) {
+//             auto elem = *( vec1.data() + i );
+//             seed ^= hasher( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+//         }
+//         for ( size_t i = 0; i < vec2.size(); ++i ) {
+//             auto elem = *( vec2.data() + i );
+//             seed ^= hasher( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
+//         }
+//         return seed;
+//     }
+// };
+// struct tuple_vector_compare {
+//     bool operator()( const std::tuple<QDLC::Type::iVector, QDLC::Type::iVector> &A, const std::tuple<QDLC::Type::iVector, QDLC::Type::iVector> &B ) const {
+//         return tuple_vector_hash()( A ) < tuple_vector_hash()( B );
+//     }
+// };
+
+// TODO: Implementation in .cpp file
+
 class Tensor {
    public:
-    const static int TYPE_DENSE = 0;
-    const static int TYPE_SPARSE = 1;
-
-   public:
-    typedef std::unordered_map<QDLC::Type::iVector, std::unordered_map<QDLC::Type::iVector, T, vector_hash>, vector_hash> TensorMap;
+    using IndexFlat = uint64_t;
+    using Index = uint16_t;
+    // Tensor Rank indices (N0,N1,...,NN,M0,M1,...,MM)
+    using IndexVector = std::vector<Index>;
+    // QDLC::Type::Scalar QDLC::Type::Scalar type
+    using ValueVector = std::vector<QDLC::Type::Scalar>;
+    using IndexMap = std::map<IndexVector, IndexFlat, vector_compare<Index>>;
+    using IndexRefVector = std::vector<IndexVector>;
 
    private:
-    T zero = (T)0.0;
-    std::vector<int> dimensions;
-    // Ordered map including SparseIndex;Value pairs.
-    std::vector<TensorMap> values;
-    // Indices
-    std::vector<QDLC::Type::iVector> indices_single;
-    std::vector<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>> indices;
-    std::unordered_set<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>, tuple_vector_hash> unique_indices;
+    // Current Tensor Values. Creating a new Tensor will allocate this as new
+    ValueVector values;
+    // Index Maps can be static because we only need them once in memory.
+    // Save IndexVector - to - IndexFlat map
+    static IndexMap index_vector_to_index_flat_struct;
+    // Save References of the keys in vector to allow for fast acces / conversion of IndexFlat - to - IndexVector
+    // using IndexRefVector = std::vector<std::reference_wrapper<IndexVector>>;
+    static IndexRefVector index_flat_to_index_vector_struct;
 
-    // Counter for which indices/values vector is active
-    int current_value_vector = 0;
-    int next_value_vector = 1;
-    int tensor_type;
-
-    void permute( QDLC::Type::iVector current, const std::vector<int> &dimensions, int index, T value ) {
+    void permute( IndexVector current, const IndexVector &dimensions, int index = 0 ) {
         if ( index >= dimensions.size() ) {
-            indices_single.emplace_back( current );
-            values[0][QDLC::Type::iVector::Zero( dimensions.size() )][current] = value;
+            index_vector_to_index_flat_struct[current] = index_vector_to_index_flat_struct.size();
         } else {
-            for ( int c = 0; c < dimensions[index]; c++ ) {
-                current( index ) = c;
-                permute( current, dimensions, index + 1, value );
+            for ( Index c = 0; c < dimensions[index]; c++ ) {
+                current[index] = c;
+                permute( current, dimensions, index + 1 );
             }
         }
     }
 
    public:
     Tensor() = default;
-    Tensor( const std::vector<int> &dimensions, int type = TYPE_DENSE, T init_value = (T)0 ) : dimensions( dimensions ), tensor_type( type ) {
-        zero = init_value;
-        values = std::vector<TensorMap>( 2 );
-        if ( type == TYPE_DENSE ) {
-            permute( QDLC::Type::iVector::Zero( dimensions.size() ), dimensions, 0, init_value );
-            for ( const auto &indx : indices_single )
-                for ( const auto &indy : indices_single ) {
-                    values[0][indx][indy] = init_value;
-                    values[1][indx][indy] = init_value;
-                    // indices.emplace_back( std::make_tuple( indx, indy ) );
-                    addIndex( indx, indy );
-                }
-        }
+    Tensor( const IndexFlat num, const QDLC::Type::Scalar &init_value = 0 ) {
+        values = ValueVector( num, init_value );
     }
-    explicit Tensor( const TensorMap &other ) : dimensions( other.dimensions ),
-                                                values( other.values ),
-                                                indices( other.indices ),
-                                                indices_single( other.indices_single ),
-                                                unique_indices( other.unique_indices ),
-                                                next_value_vector( other.next_value_vector ),
-                                                current_value_vector( other.current_value_vector ),
-                                                tensor_type( other.tensor_type ) {}
+    Tensor( const IndexVector &dimensions, QDLC::Type::Scalar init_value = 0 ) {
+        // Reserve Memory and initialize value vector
+        auto max_elements = 1;
+        index_vector_to_index_flat_struct.clear();
+        index_flat_to_index_vector_struct.clear();
+        std::ranges::for_each( dimensions, [&]( const auto &el ) { max_elements *= el; } );
+        index_flat_to_index_vector_struct = IndexRefVector( max_elements );
+        values = ValueVector( max_elements, init_value );
+        // Calculate and Save all possible index permutations
+        permute( IndexVector( dimensions.size(), 0 ), dimensions );
+        // Save References to map keys in vector for fast lookup
+        std::ranges::for_each( index_vector_to_index_flat_struct, []( const auto &el ) { index_flat_to_index_vector_struct[el.second] = el.first; } );
+        Log::L2( "[PathIntegral] Added {} elements to the dimension vector ({} elements to the inverse map).\n", index_vector_to_index_flat_struct.size(), index_flat_to_index_vector_struct.size() );
+    }
+    explicit Tensor( const Tensor &other ) = default; //: values( other.values ){};
 
-    void addIndex( const QDLC::Type::iVector &x, const QDLC::Type::iVector &y ) {
-        indices.emplace_back( x, y );
+    // Access Operator
+    inline QDLC::Type::Scalar &operator()( const IndexVector &index ) {
+        return values[to_flat( index )];
     }
-    void addUniqueIndex( const QDLC::Type::iVector &x, const QDLC::Type::iVector &y ) {
-        unique_indices.emplace( x, y );
+    inline QDLC::Type::Scalar &operator()( const IndexFlat &index ) {
+        return values[index];
     }
 
-    void convertToSparse() {
-        unique_indices.clear();
-        indices.clear();
-        tensor_type = TYPE_SPARSE;
+    // Converts the indexvector into a flat index using the precalculated map.
+    inline IndexFlat &to_flat( const IndexVector &index ) {
+        return index_vector_to_index_flat_struct[index];
     }
-    void convertToDense() {
-        indices.clear();
-        for ( auto &[indx, map] : getCurrentValues() )
-            for ( auto &[indy, v] : map )
-                indices.emplace_back( std::make_tuple( indx, indy ) );
-        // indices = std::vector<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>>( unique_indices.begin(), unique_indices.end() );
-        for ( auto &[x, y] : indices ) {
-            if ( not getCurrentValues().contains( x ) or not getCurrentValues()[x].contains( y ) )
-                getCurrentValues()[x][y] = 0.0;
-            if ( not getNextValues().contains( x ) or not getNextValues()[x].contains( y ) )
-                getNextValues()[x][y] = 0.0;
-        }
-
-        tensor_type = TYPE_DENSE;
+    // Converts the flat intex into an indexvector using the precalculated map
+    inline IndexVector &to_index( const IndexFlat &index ) {
+        return index_flat_to_index_vector_struct[index];
     }
 
-    /**
-     * @brief Prunes the zero indices, leaving only index combinations with non-zero (> threshold) coefficients
-     *
-     */
-    void prune( double threshold = 0 ) {
-        getCurrentValues().clear();
-        int total_removed_noexist = 0;
-        int total_removed_zero = 0;
-        int total_removed = 0;
-        bool has_x = false;
-        std::vector<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>> temp;
-        for ( int i = 0; i < indices.size(); i++ ) {
-            auto &[x, y] = indices[i];
-            bool remove = false;
-            if ( not( has_x = getNextValues().contains( x ) ) or not getNextValues()[x].contains( y ) ) {
-                remove = true;
-                total_removed_noexist++;
-            } else if ( QDLC::Math::abs2( getNextValues()[x][y] ) < threshold ) {
-                remove = true;
-                total_removed_zero++;
-            }
-            if ( remove ) {
-                // Check for diagonal element
-                if ( not( x - y ).cwiseAbs2().sum() == 0 ) {
-                    // Remove
-                    // indices.erase( indices.begin() + i );
-                    total_removed++;
-                } else {
-                    remove = false;
-                    total_removed_zero--;
-                }
-            }
-            if ( not remove ) {
-                getCurrentValues()[x][y] = getNextValues()[x][y];
-                temp.emplace_back( x, y );
-            }
-        }
-        getNextValues().clear();
-        getNextValues() = getCurrentValues();
-        indices.clear();
-        indices = temp;
-        Log::L2( "[PathIntegral-TensorMap] Removed {} zero-coefficient indices ({} didn't exist and {} are zero.\n", total_removed, total_removed_noexist, total_removed_zero );
+    inline IndexRefVector &get_indices() {
+        return index_flat_to_index_vector_struct;
     }
 
-    void switchType() {
-        if ( tensor_type == TYPE_DENSE ) {
-            convertToSparse();
-        } else {
-            convertToDense();
-        }
+    inline size_t nonZeros() const {
+        return values.size();
     }
 
-    inline bool isDense() {
-        return tensor_type == TYPE_DENSE;
-    }
-    inline bool isSparse() {
-        return tensor_type == TYPE_SPARSE;
-    }
-
-    inline TensorMap &getCurrentValues() {
-        return values[current_value_vector];
-    }
-    inline TensorMap &getNextValues() {
-        return values[next_value_vector];
-    }
-    inline std::vector<std::tuple<QDLC::Type::iVector, QDLC::Type::iVector>> &getIndices() {
-        return indices;
-    }
-
-    inline void setTriplet( const QDLC::Type::iVector &indicesX, const QDLC::Type::iVector &indicesY, const T &value ) {
-        getNextValues()[indicesX][indicesY] = value;
-    }
-
-    void addToTriplet( QDLC::Type::iVector indicesX, QDLC::Type::iVector indicesY, const T &value, const int i_n = -1, const int j_n = -1, const int gi_n = -1, const int gj_n = -1 ) {
-        if ( i_n != -1 && j_n != -1 ) {
-            for ( int i = indicesX.size() - 1; i > 0; i-- ) {
-                indicesX( i ) = indicesX( i - 1 );
-                indicesY( i ) = indicesY( i - 1 );
-            }
-            indicesX( 0 ) = i_n;
-            indicesY( 0 ) = j_n;
-        }
-        if ( gi_n != -1 && gj_n != -1 ) {
-            indicesX( 1 ) = gi_n;
-            indicesY( 1 ) = gj_n;
-        }
-        auto &X = values[next_value_vector][indicesX];
-        if ( X.contains( indicesY ) ) {
-            X[indicesY] += value;
-        } else {
-            X[indicesY] = value;
-        }
-        if ( indicesX.size() == dimensions.size() )
-            addUniqueIndex( indicesX, indicesY );
-    }
-
-    inline T &getTriplet( const QDLC::Type::iVector &indicesX, const QDLC::Type::iVector &indicesY ) {
-        if ( not getCurrentValues().contains( indicesX ) or not getCurrentValues()[indicesX].contains( indicesY ) )
-            return zero;
-        return getCurrentValues()[indicesX][indicesY];
-    }
-
-    inline T &getNextTriplet( const QDLC::Type::iVector &indicesX, const QDLC::Type::iVector &indicesY ) {
-        return values[next_value_vector][indicesX][indicesY];
-    }
-
-    u_int64_t nonZeros() {
-        u_int64_t s = 0;
-        for ( auto &[xIndices, map] : getCurrentValues() ) {
-            s += map.size();
-        }
-        return s;
-    }
-
-    void swap() {
-        // next_value_vector = current_value_vector;
-        // current_value_vector = ( current_value_vector + 1 ) % 2;
-        std::swap( next_value_vector, current_value_vector );
-        if ( tensor_type == TYPE_SPARSE ) {
-            for ( auto &[indx, map] : values[next_value_vector] ) {
-                map.clear(); // Could also just set to zero i guess
-            }
-        }
-    }
-
-    int size() {
-        return nonZeros() * sizeof( T );
+    inline size_t size() const {
+        return values.size() * ( sizeof( QDLC::Type::Scalar ) + sizeof( Index ) * index_flat_to_index_vector_struct.front().size() ); // / 1024. / 1024;
     }
 };
 

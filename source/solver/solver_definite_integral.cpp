@@ -20,13 +20,12 @@ std::pair<Sparse, double> QDLC::Numerics::iterate_definite_integral( const Spars
 
     Sparse drho = RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6;
     Sparse ret = rho + t_step * drho;
-    if ( order == 5 )
+    if ( order != 45 )
         return std::make_pair( ret, 0 );
     // Error
     Sparse k7 = rungefunction( ret, t + t_step );
     dSparse errmat = ( drho - ( k1 * RKCoefficients::e1 + k3 * RKCoefficients::e3 + k4 * RKCoefficients::e4 + k5 * RKCoefficients::e5 + k6 * RKCoefficients::e6 + k7 * RKCoefficients::e7 ) ).cwiseAbs2();
     double err = errmat.sum() / drho.cwiseAbs2().sum();
-
     // Dichtematrix
     return std::make_pair( ret, err );
 }
@@ -80,11 +79,10 @@ std::vector<QDLC::SaveState> QDLC::Numerics::calculate_definite_integral_vec( co
 QDLC::SaveState QDLC::Numerics::calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
     double t_step = step;
     double t_t = t0;
-    int iterations = 0;
-    double maxerror = 0;
+
     // Log::L3( "Calculating Definite Integral from t0 = {} to t1 = {} at initial step = {}\n", t0, t1, step );
     // Log::L3( "Beginning Rho:\n{}\n", Dense( rho ) );
-    while ( t0 < t1 ? t_t < t1 : t_t > t1 ) {
+    while ( t0 < t1 ? t_t <= t1 : t_t >= t1 ) {
         bool accept = false;
         // Hit endpoint exactly
         if ( t0 < t1 ? t_t + t_step > t1 : t_t + t_step < t1 ) {
@@ -120,14 +118,12 @@ QDLC::SaveState QDLC::Numerics::calculate_definite_integral( Sparse rho, std::fu
             // Log::L3( " - [t = {}] - Accepdet step - Local error: {} - current timestep: {}, dh = {}\n", t_t, error, t_step, dh );
             t_t += t0 < t1 ? t_step : -t_step;
             rho = rkret.first;
-            maxerror = std::max( maxerror, error );
         }
         if ( order == 45 )
             t_step = t_step_new; // FIXME: wenn t_step*dh = 0 oder wenn t_t + t_step*dh = t_t wäre, dann failt das hier! am besten auch die diskreten timesteps übernehmen, warum nicht...
-        iterations++;
     }
     // Log::L3( "Calculating Definite Integral from t0 = {} to t1 = {} at initial step = {} -- Done.\n", t0, t1, step );
     // Log::L3( "Done Chi integrating, (t0 = {}) t1 was supposted to be {} and ended up {}, maxerror was {}, did {}/{} iterations (var/const dt) \n", t0, t1, t_t, maxerror, iterations, std::floor( t1 - t0 / step ) );
     // Log::L3( "End Rho:\n{}\n", Dense( rho ) );
-    return QDLC::SaveState( rho, t1 );
+    return { rho, t1 };
 }

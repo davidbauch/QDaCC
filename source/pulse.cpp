@@ -20,17 +20,17 @@ Pulse::Pulse( Parameters::input_s &inputs, Parameters &p ) : inputs( inputs ) {
 Scalar Pulse::evaluate( double t ) {
     Scalar ret = 0;
     for ( int i = 0; i < (int)inputs.numerical_v["Amplitude"].size(); i++ ) {
+        // SUPER modulation
+        double main_freq = inputs.numerical_v["Frequency"][i] * ( t - inputs.numerical_v["Center"][i] );
+        if ( inputs.numerical_v["SUPERFreq"][i] != 0.0 )
+            main_freq += inputs.numerical_v["SUPERDelta"][i] / inputs.numerical_v["SUPERFreq"][i] * std::cos( inputs.numerical_v["SUPERFreq"][i] * ( t - inputs.numerical_v["Center"][i] ) );
         if ( inputs.string_v["Type"][i].compare( "cw" ) == 0 && t >= inputs.numerical_v["Center"][i] ) {
-            ret += inputs.numerical_v["Amplitude"][i] * std::exp( -1.0i * ( inputs.numerical_v["Frequency"][i] * ( t - inputs.numerical_v["Center"][i] ) + inputs.numerical_v["ChirpRate"][i] * std::pow( ( t - inputs.numerical_v["Center"][i] ), 2.0 ) ) );
+            ret += inputs.numerical_v["Amplitude"][i] * std::exp( -1.0i * ( main_freq + inputs.numerical_v["ChirpRate"][i] * std::pow( ( t - inputs.numerical_v["Center"][i] ), 2.0 ) ) );
         } else if ( inputs.string_v["Type"][i].compare( "gauss" ) == 0 ) {
             double amp = std::sqrt( std::pow( inputs.numerical_v["ChirpRate"][i] / inputs.numerical_v["Width"][i], 2.0 ) + std::pow( inputs.numerical_v["Width"][i], 2.0 ) );
             // Chirped frequency
             // FIXME: ?? chirp is doch so falsch??
             double freq = inputs.numerical_v["ChirpRate"][i] / ( std::pow( inputs.numerical_v["ChirpRate"][i], 2.0 ) + std::pow( inputs.numerical_v["Width"][i], 4.0 ) );
-            // SUPER modulation
-            double main_freq = inputs.numerical_v["Frequency"][i] * ( t - inputs.numerical_v["Center"][i] );
-            if ( inputs.numerical_v["SUPERFreq"][i] != 0.0 )
-                main_freq += inputs.numerical_v["SUPERDelta"][i] / inputs.numerical_v["SUPERFreq"][i] * std::cos( inputs.numerical_v["SUPERFreq"][i] * ( t - inputs.numerical_v["Center"][i] ) );
             if ( inputs.numerical_v["CutoffDelta"][i] != 0 ) {
                 ret += inputs.numerical_v["Amplitude"][i] * std::exp( -0.5 * std::pow( ( t - inputs.numerical_v["Center"][i] ) / amp, inputs.numerical_v["GaussAmp"][i] ) - 1.0i * ( main_freq - inputs.numerical_v["CutoffDelta"][i] * ( t - inputs.numerical_v["Center"][i] ) + 0.5 * freq * std::pow( ( t - inputs.numerical_v["Center"][i] ), 2.0 ) ) );
                 ret += inputs.numerical_v["Amplitude"][i] * std::exp( -0.5 * std::pow( ( t - inputs.numerical_v["Center"][i] ) / amp, inputs.numerical_v["GaussAmp"][i] ) - 1.0i * ( main_freq + inputs.numerical_v["CutoffDelta"][i] * ( t - inputs.numerical_v["Center"][i] ) + 0.5 * freq * std::pow( ( t - inputs.numerical_v["Center"][i] ), 2.0 ) ) );

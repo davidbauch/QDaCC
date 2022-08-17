@@ -112,7 +112,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     p_phonon_T = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "temperature" );
     numerics_phonon_approximation_order = QDLC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
     numerics_phonon_approximation_markov1 = QDLC::CommandlineArguments::get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
-    numerics_phonon_nork45 = !QDLC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );                  // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
+    numerics_phonon_nork45 = not QDLC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );               // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
     p_phonon_adjust = not QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
     p_phonon_pure_dephasing = QDLC::Misc::convertParam<double>( "1mueV" );
 
@@ -427,7 +427,6 @@ void Parameters::parse_system() {
         pindex += 2;
         input_pulse[conf[0]] = conf_s;
     }
-    // TODO: hier auch erst Type übergeben, dann kann man verschiedene chirps (z.b. die modulation) besser implementieren.
     for ( auto chirps = QDLC::String::splitline( inputstring_chirp, ';' ); const std::string &chirp : chirps ) {
         auto conf = QDLC::String::splitline( chirp, ':' );
         input_s conf_s;

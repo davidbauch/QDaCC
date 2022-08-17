@@ -53,12 +53,19 @@ class Logger {
     template <typename T>
     static void L2( const std::string &msg, const std::vector<T> &vec ) {
         std::stringstream kekw;
-        std::for_each( vec.begin(), vec.end(), [&kekw]( const auto &el ) { kekw << el << ","; } );
+        std::ranges::for_each( vec.begin(), vec.end(), [&kekw]( const auto &el ) { kekw << el << ","; } );
         return Get().Ilevel2_log( msg, true, true, fmt::make_format_args( kekw.str() ) );
     }
     template <typename... Args>
     static void L3( const std::string &msg, const Args &...args ) {
         return Get().Ilevel3_log( msg, true, true, fmt::make_format_args( args... ) );
+    }
+    // ?????
+    template <typename T>
+    static void L3( const std::string &msg, const std::vector<T> &vec ) {
+        std::stringstream kekw;
+        std::ranges::for_each( vec.begin(), vec.end(), [&kekw]( const auto &el ) { kekw << el << ","; } );
+        return Get().Ilevel3_log( msg, true, true, fmt::make_format_args( kekw.str() ) );
     }
 
     template <typename... Args>

@@ -98,10 +98,9 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
         }
         p++;
     }
-    explicit_time = parameters.scaleVariable( explicit_time, 1.0 / parameters.scale_value );
+    // explicit_time = parameters.scaleVariable( explicit_time, 1.0 / parameters.scale_value ); // Deprecated
 
     Sparse hamilton = dgl_get_hamilton( t );
-
     return -1.0i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( QDLC::Matrix::sparse_projector( chi ) );
 }
 
@@ -181,7 +180,6 @@ Sparse &System::dgl_phonons_greenf_matrix( double tau, const char mode ) {
     auto phi = phi_vector[tau];
     auto &g = operatorMatrices.pme_greenfunction_matrix_cache_g[tau];
     auto &u = operatorMatrices.pme_greenfunction_matrix_cache_u[tau];
-    // IDK why coefficient wise (unaryExpr) doesnt work lol. EDIT: because im stoopid. This function doesnt get evaluated often tho so its fine.
     for ( int k = 0; k < operatorMatrices.polaron_phonon_coupling_matrix.outerSize(); ++k ) {
         for ( Sparse::InnerIterator it( operatorMatrices.polaron_phonon_coupling_matrix, k ); it; ++it ) {
             auto row = it.row();
@@ -280,10 +278,12 @@ Sparse System::dgl_phonons_calculate_transformation( double t, double tau ) {
     if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_BACKWARDS_INTEGRAL ) {
         // TODO
         // return QDLC::Numerics::calculate_definite_integral_vec( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.numerics_subiterator_stepsize, std::get<1>( parameters.numerics_rk_tol.front() ), parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() );
+        auto chi_tau = dgl_phonons_chi( t - tau );
+        return QDLC::Numerics::calculate_definite_integral( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.numerics_subiterator_stepsize, std::get<1>( parameters.numerics_rk_tol.front() ), parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
     }
     // Matrix Exponential
     else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_TRANSFORMATION_MATRIX ) {
-        auto chi_tau = dgl_phonons_chi( t - tau ); //TODO maybe cache these.
+        auto chi_tau = dgl_phonons_chi( t - tau ); // TODO maybe cache these.
         Sparse U = ( Dense( -1.0i * dgl_get_hamilton( t ) * tau ).exp() ).sparseView();
         return ( U * chi_tau * U.adjoint() );
     }
@@ -362,12 +362,12 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                 std::vector<Sparse> threadmap_u( parameters.numerics_maximum_secondary_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
                 std::vector<Sparse> threadmap_g( parameters.numerics_maximum_secondary_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
                 // Calculate backwards integral and sum it into threadmaps. Threadmaps will later be summed into one coefficient matrix.
-                int tau_max = std::min<int>( parameters.p_phonon_tcutoff/parameters.numerics_subiterator_stepsize, t/parameters.numerics_subiterator_stepsize );
+                int tau_max = std::min<int>( parameters.p_phonon_tcutoff / parameters.numerics_subiterator_stepsize, t / parameters.numerics_subiterator_stepsize );
                 Log::L3( "[System-PME]     Thread #{} - (Re)Calculating {} using {} steps in the PME integral\n", omp_get_thread_num(), t, tau_max );
 #pragma omp parallel for schedule( dynamic ) num_threads( parameters.numerics_maximum_secondary_threads )
                 for ( int tau_index = 0; tau_index < tau_max; tau_index++ ) {
                     double tau = parameters.numerics_subiterator_stepsize * tau_index;
-                    Sparse chi_tau_back = dgl_phonons_calculate_transformation(t,tau);
+                    Sparse chi_tau_back = dgl_phonons_calculate_transformation( t, tau );
                     Sparse chi_tau_back_adjoint = chi_tau_back.adjoint();
                     auto X_tau_back_g = chi_tau_back + chi_tau_back_adjoint;           // dgl_phonons_chiToX( chi_tau_back, 'g' );
                     auto X_tau_back_u = 1.i * ( chi_tau_back - chi_tau_back_adjoint ); // dgl_phonons_chiToX( chi_tau_back, 'u' );
@@ -380,9 +380,13 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
 #pragma omp parallel sections
                 {
 #pragma omp section
-                    {std::cout << omp_get_thread_num() << std::endl; chi_tau_back_u = std::accumulate( threadmap_u.begin(), threadmap_u.end(), Sparse( parameters.maxStates, parameters.maxStates ) ); }
+                    {
+                        chi_tau_back_u = std::accumulate( threadmap_u.begin(), threadmap_u.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
+                    }
 #pragma omp section
-                    {std::cout << omp_get_thread_num() << std::endl; chi_tau_back_g = std::accumulate( threadmap_g.begin(), threadmap_g.end(), Sparse( parameters.maxStates, parameters.maxStates ) ); }
+                    {
+                        chi_tau_back_g = std::accumulate( threadmap_g.begin(), threadmap_g.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
+                    }
                 }
                 // Save coefficients
                 if ( parameters.numerics_enable_saving_coefficients ) {
@@ -396,15 +400,15 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             Sparse adjoint = integrant.adjoint();
             ret -= integrant + adjoint;
         } else {
-            //TODO: FIXME
-            //std::vector<Sparse> threadmap_u( parameters.numerics_maximum_secondary_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
+            // TODO: FIXME
+            // std::vector<Sparse> threadmap_u( parameters.numerics_maximum_secondary_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
             //// Dont use markov approximation; Full integral
-            //auto chis_transformed = dgl_phonons_calculate_transformation( chi, t, parameters.t_step * tau_max );
+            // auto chis_transformed = dgl_phonons_calculate_transformation( chi, t, parameters.t_step * tau_max );
             //#pragma omp parallel for ordered schedule( dynamic ) shared( savedCoefficients ) num_threads( parameters.numerics_maximum_secondary_threads )
-            //for ( int tau_index = 0; tau_index < tau_max; tau_index++ ) {
-            //    int rho_index = std::max( 0, (int)past_rhos.size() - 1 - tau_index ); // TODO: Das hier ist mit var timesteps der rhos auch grütze!
-            //    double tau = ( 1.0 * tau_index ) * parameters.t_step;
-//
+            // for ( int tau_index = 0; tau_index < tau_max; tau_index++ ) {
+            //     int rho_index = std::max( 0, (int)past_rhos.size() - 1 - tau_index ); // TODO: Das hier ist mit var timesteps der rhos auch grütze!
+            //     double tau = ( 1.0 * tau_index ) * parameters.t_step;
+            //
             //    // Index not found, or no saving is used. Recalculate chi(t-tau).
             //    auto &chi_tau_back = chis_transformed.at( std::min<int>( chis_transformed.size() - 1, tau_index ) ).mat;
             //    Sparse chi_tau_back_adjoint = chi_tau_back.adjoint();
@@ -421,7 +425,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
             //    auto thread = omp_get_thread_num();
             //    threadmap_u[thread] += ( integrant + adjoint ) * parameters.t_step;
             //}
-            //ret -= std::accumulate( threadmap_u.begin(), threadmap_u.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
+            // ret -= std::accumulate( threadmap_u.begin(), threadmap_u.end(), Sparse( parameters.maxStates, parameters.maxStates ) );
         }
         Log::L3( "[System-PME]     Thread #{} - Adding ret value for {}. Matrix is: \n{}\n", omp_get_thread_num(), t, Dense( ret ).format( operatorMatrices.output_format ) );
     } else if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_LINDBLAD_FULL ) {

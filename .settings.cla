@@ -1,8 +1,8 @@
-# Sections or 'splitts' the commandline argument from its designated value
-CLA_SPLIT = '='
+# Sections or 'splitts' the commandline argument from its designated value. NOT IMPLEMENTED
+CLA_SPLIT = ' '
 
 # Width of helper function in characters
-CLA_WIDTH = '230'
+CLA_WIDTH = '200'
 
 # Single or dual hyphen reserved commands
 CLA_ADD_PARAMETER = 'add'
@@ -68,7 +68,7 @@ CLA_ARGUMENT = {
 		subkey = 'SP'
 		value = ''
 		datatype = 'string'
-		description = 'Pulse Configuration. Syntax: [N:CoupledToTransition:Amp:Freq:Width:Center:Type] ,Example: p:GH,HZ:6pi:1.3645eV:4ps:30ps:0:gauss'
+		description = 'Pulse Configuration. Syntax: [N:CoupledToTransition:Amp:Freq:Width:Center:Type] ,Example: p:GH,HZ:6pi:1.3645eV:4ps:30ps:0:gauss. Type may include several of cw,gauss,super(amp_freq),exponent(val),chirped(val)cutoff(val), chained via the + operator.'
 	}
 	CLA_PARAMETER = {
 		subkey = 'SC'
@@ -877,7 +877,7 @@ CLA_ARGUMENT = {
 	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''
-		value = 'monotone,linear'
+		value = 'linear,linear'
 		datatype = 'string'
 		description = ''
 	}
