@@ -1,7 +1,7 @@
 #include "system/fileoutput.h"
 
-std::ofstream &FileOutput::add_file( const std::string &name ) {
-    return Get().Iadd_file( name );
+std::ofstream &FileOutput::add_file( const std::string &name, const std::string &file_ending ) {
+    return Get().Iadd_file( name, file_ending );
 }
 std::ofstream &FileOutput::get_file( const std::string &name ) {
     return Get().Iget_file( name );
@@ -20,10 +20,10 @@ std::ofstream &FileOutput::Iget_file( const std::string &name ) {
     return files[name];
 }
 
-std::ofstream &FileOutput::Iadd_file( const std::string &name ) {
+std::ofstream &FileOutput::Iadd_file( const std::string &name, const std::string &file_ending ) {
     if ( files.contains( name ) )
         return get_file( name );
-    files[name].open( path + name + ".txt" );
+    files[name].open( path + name + "." + file_ending );
     if ( get_file( name ).is_open() )
         Log::L2( "[System-Fileoutput] Added file '{}'\n", name );
     else

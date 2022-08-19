@@ -2,9 +2,8 @@
 
 bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
     std::vector<QDLC::SaveState> dummy{ { rho0, 0.0 } };
-    FILE *fp_dot;
-    fp_dot = std::fopen( ( s.parameters.working_directory + "pathintegral.dot" ).c_str(), "w" );
-    fmt::print( fp_dot, "digraph G{{\ngraph [pad=\"0.5\", nodesep=\"0.1\", ranksep=\"3\", rankdir=\"TB\"]\n" );
+    auto &fp_dot = FileOutput::add_file( "pathintegral", "dot" );
+    fp_dot << "digraph G{{\ngraph [pad=\"0.5\", nodesep=\"0.1\", ranksep=\"3\", rankdir=\"TB\"]\n";
 
     // Cache Parameters
     auto omega_cavity_loss = s.parameters.p_omega_cavity_loss;
@@ -88,13 +87,13 @@ bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
     }
     // Output Propagator Mappings
     for ( size_t k = 0; k < propagators.size(); k++ ) {
-        fmt::print( fp_dot, "\n{} [pos=\"0,{}!\", color=\"{}\"]\n", names[k], 5 - k, colors[k] );
+        fp_dot << fmt::format( "\n{} [pos=\"0,{}!\", color=\"{}\"]\n", names[k], 5 - k, colors[k] );
         auto &propagator = propagators[k];
         auto &color = colors[k];
         for ( auto i = 0; i < propagator.size(); i++ ) {
             for ( auto j = 0; j < propagator.size(); j++ ) {
                 if ( !labels.contains( fmt::format( "{}_0,{}_0", i, j ) ) ) {
-                    fmt::print( fp_dot, "\"{1}_{0},{2}_{0}\" [label=\"|{3}><{4}|\" pos=\"{5},{6}!\"];\n", 0, i, j, s.operatorMatrices.base.at( i ).substr( 1, s.operatorMatrices.base.at( i ).size() - 2 ), s.operatorMatrices.base.at( j ).substr( 1, s.operatorMatrices.base.at( j ).size() - 2 ), i * propagator.size() * 2 + j * 2 + 3, 5 );
+                    fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\" [label=\"|{3}><{4}|\" pos=\"{5},{6}!\"];\n", 0, i, j, s.operatorMatrices.base.at( i ).substr( 1, s.operatorMatrices.base.at( i ).size() - 2 ), s.operatorMatrices.base.at( j ).substr( 1, s.operatorMatrices.base.at( j ).size() - 2 ), i * propagator.size() * 2 + j * 2 + 3, 5 );
                     labels.emplace( fmt::format( "{}_0,{}_0", i, j ) );
                 }
                 for ( int l = 0; l < propagator[i][j].outerSize(); ++l )
@@ -102,19 +101,19 @@ bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
                         int i_n = M.row();
                         int j_n = M.col();
                         if ( !labels.contains( fmt::format( "{}_1,{}_1", i_n, j_n ) ) ) {
-                            fmt::print( fp_dot, "\"{1}_{0},{2}_{0}\" [label=\"|{3}><{4}|\" pos=\"{5},{6}!\"];\n", 1, i_n, j_n, s.operatorMatrices.base.at( i_n ).substr( 1, s.operatorMatrices.base.at( i_n ).size() - 2 ), s.operatorMatrices.base.at( j_n ).substr( 1, s.operatorMatrices.base.at( j_n ).size() - 2 ), i_n * propagator.size() * 2 + j_n * 2 + 3, 0 );
+                            fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\" [label=\"|{3}><{4}|\" pos=\"{5},{6}!\"];\n", 1, i_n, j_n, s.operatorMatrices.base.at( i_n ).substr( 1, s.operatorMatrices.base.at( i_n ).size() - 2 ), s.operatorMatrices.base.at( j_n ).substr( 1, s.operatorMatrices.base.at( j_n ).size() - 2 ), i_n * propagator.size() * 2 + j_n * 2 + 3, 0 );
                             labels.emplace( fmt::format( "{}_1,{}_1", i_n, j_n ) );
                         }
                         double stroke = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.2 : 2.0; // std::min( 2.0, std::max( 0.2, std::abs( M.value() ) / total_weights[fmt::format( "{},{}->{},{}", i, j, i_n, j_n )] ) );
                         double arrowsize = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.05 : 0.1;
-                        fmt::print( fp_dot, "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( M.value() ), std::imag( M.value() ), color, stroke, arrowsize, names[k] );
+                        fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( M.value() ), std::imag( M.value() ), color, stroke, arrowsize, names[k] );
                     }
             }
         }
     }
 
     // Path Integral Mappings
-    fmt::print( fp_dot, "\n\"Phonon Kernel\" [pos=\"0,-1!\", color=\"dodgerblue2\"]\n" );
+    fp_dot << fmt::format( "\n\"Phonon Kernel\" [pos=\"0,-1!\", color=\"dodgerblue2\"]\n" );
     // Phonon correlation function:
     if ( s.phi_vector_int.size() == 0 )
         s.initialize_path_integral_functions();
@@ -129,13 +128,13 @@ bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
                         else
                             val += s.dgl_phonon_S_function( tau, i, j, i_n, j_n );
                     if ( std::abs( val ) > 1E-15 )
-                        fmt::print( fp_dot, "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( val ), std::imag( val ), "dodgerblue2", 1.0, 0.1, "Phonon Kernel" );
+                        fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( val ), std::imag( val ), "dodgerblue2", 1.0, 0.1, "Phonon Kernel" );
                     // fmt::print( "i = {}, j = {}, id = {}, jd = {} --> converted i = {}, j = {}, id = {}, jd = {} --> {}\n", i, j, i_n, j_n, s.operatorMatrices.phonon_hilbert_index_to_group_index[i], s.operatorMatrices.phonon_hilbert_index_to_group_index[j], s.operatorMatrices.phonon_hilbert_index_to_group_index[i_n], s.operatorMatrices.phonon_hilbert_index_to_group_index[j_n], val );
                 }
 
     // Polaron Frame Mapping
     s.initialize_polaron_frame_functions();
-    fmt::print( fp_dot, "\n\"Polaron Mapping\" [pos=\"3,-1!\", color=\"firebrick4\"]\n" );
+    fp_dot << fmt::format( "\n\"Polaron Mapping\" [pos=\"3,-1!\", color=\"firebrick4\"]\n" );
     std::vector<std::vector<Sparse>> polaron( (size_t)rho0.rows(), { (size_t)rho0.rows(), Sparse( rho0.rows(), rho0.rows() ) } );
     // Calculate the remaining propagators
     for ( int i = 0; i < rho0.rows(); i++ ) {
@@ -153,11 +152,11 @@ bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
                     int j_n = M.col();
                     double stroke = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.2 : 1.0; // std::min( 2.0, std::max( 0.2, std::abs( M.value() ) / total_weights[fmt::format( "{},{}->{},{}", i, j, i_n, j_n )] ) );
                     double arrowsize = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.05 : 0.1;
-                    fmt::print( fp_dot, "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( M.value() ), std::imag( M.value() ), "firebrick4", stroke, arrowsize, "Polaron Mapping" );
+                    fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( M.value() ), std::imag( M.value() ), "firebrick4", stroke, arrowsize, "Polaron Mapping" );
                 }
 
-    fmt::print( fp_dot, "}}" );
-    std::fclose( fp_dot );
+    fp_dot << "}}";
+    // RIP
     std::system( fmt::format( "dot -Kneato -Tsvg '{0}pathintegral.dot' -o '{0}pathintegral.svg'", s.parameters.working_directory ).c_str() );
     std::system( fmt::format( "dot -Tsvg '{0}pathintegral.dot' -o '{0}pathintegral_unordered.svg'", s.parameters.working_directory ).c_str() );
     return true;

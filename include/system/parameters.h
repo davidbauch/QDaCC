@@ -241,10 +241,12 @@ class Parameters {
     void parse_input( const std::vector<std::string> &arguments );
 
     /**
-     * @brief Adjusts input.
+     * @brief Adjusts input before and after the main RK loop
      *
      */
-    void adjust_input();
+    void pre_adjust_input();
+    void post_adjust_input();
+    void post_adjust_grids();
 
     /**
      * @brief Scale inputs. Has to be called before anything else is calculated

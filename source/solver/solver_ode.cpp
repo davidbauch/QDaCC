@@ -53,6 +53,7 @@ void QDLC::Numerics::ODESolver::saveState( const Sparse &mat, const double t, st
 }
 
 void QDLC::Numerics::ODESolver::save_hamilton( const Sparse &mat, const double t ) {
+#pragma omp critical
     savedHamiltons[t] = mat;
 }
 

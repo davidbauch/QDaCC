@@ -53,7 +53,7 @@ void System::initialize_path_integral_functions() {
             last = current;
             tau += parameters.numerics_subiterator_stepsize;
         }
-        parameters.adjust_input();
+        parameters.post_adjust_grids();
     }
 
     // Precalculate Phi

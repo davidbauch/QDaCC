@@ -126,7 +126,7 @@ class Tensor {
         std::ranges::for_each( index_vector_to_index_flat_struct, []( const auto &el ) { index_flat_to_index_vector_struct[el.second] = el.first; } );
         Log::L2( "[PathIntegral] Added {} elements to the dimension vector ({} elements to the inverse map).\n", index_vector_to_index_flat_struct.size(), index_flat_to_index_vector_struct.size() );
     }
-    explicit Tensor( const Tensor &other ) = default; //: values( other.values ){};
+    Tensor( const Tensor &other ) = default; //: values( other.values ){};
 
     // Access Operator
     inline QDLC::Type::Scalar &operator()( const IndexVector &index ) {

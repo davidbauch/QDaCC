@@ -731,7 +731,7 @@ CLA_ARGUMENT = {
 	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''
-		value = 'true'
+		value = 'false'
 		datatype = 'bool'
 		description = ''
 	}

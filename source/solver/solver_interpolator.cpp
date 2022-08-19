@@ -23,7 +23,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         while ( t_values.at( current_index ) <= t_end ) {
             double t_t = t_values.at( current_index );
             while ( i < input.size() - 1 and t_t > input[i].t ) {
-                i++;
+                i = std::min<size_t>( i + 1, input.size() - 1 );
             }
             double first = input[i - 1].t;
             double second = input[i].t;
@@ -33,7 +33,9 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
             // current_index = std::min<size_t>( current_index + 1, t_values.size() - 2 );
             // if ( current_index < max_index )
             //    current_index++;
-            current_index++;
+            if ( current_index == t_values.size() - 1 )
+                break;
+            current_index = std::min<size_t>( current_index + 1, t_values.size() - 1 );
         }
     } else {
         // // Cubic monotone with library

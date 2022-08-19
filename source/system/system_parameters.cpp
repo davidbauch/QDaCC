@@ -18,7 +18,7 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     iterations_t_skip = 1;
     scale_parameters = false;
     scale_value = 1E12;
-    iterations_t_max = 1;
+    iterations_t_max = -1;
     maxStates = 0;
     numerics_calculate_till_converged = false;
 
@@ -44,7 +44,7 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     Log::L2( "[System] Adjusting input variables...\n" );
 
     timer_adjustInput.start();
-    adjust_input();
+    pre_adjust_input();
     timer_adjustInput.end();
     Log::L2( "[System] Successful. Elapsed time is {}ms\n", timer_adjustInput.getWallTime( Timers::MILLISECONDS ) );
 }
@@ -95,9 +95,9 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     output_handlerstrings = QDLC::CommandlineArguments::get_parameter_passed( "-handler" );
     numerics_order_timetrafo = QDLC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
     scale_parameters = QDLC::CommandlineArguments::get_parameter_passed( "-scale" ); // MHMHMH
-    numerics_use_saved_coefficients = !QDLC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
-    numerics_use_saved_hamiltons = !QDLC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
-    numerics_use_function_caching = !QDLC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
+    numerics_use_saved_coefficients = not QDLC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
+    numerics_use_saved_hamiltons = not QDLC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
+    numerics_use_function_caching = not QDLC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
     numerics_enable_saving_coefficients = false; // If true, even if any saving was disabled internally (not by the user), the matrices will still be cached.
     numerics_maximum_secondary_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_primary_threads : 1;
     logfilecounter = QDLC::Misc::convertParam<double>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
@@ -197,15 +197,11 @@ void Parameters::scale_inputs( const double scaling ) {
     kb.setScale( scaling, Parameter::SCALE_ENERGY );
 }
 
-void Parameters::adjust_input() {
-    Log::L2( "[System] Adjusting Inputs...\n" );
+void Parameters::pre_adjust_input() {
+    Log::L2( "[System] Adjusting Pre-Mainloop Inputs...\n" );
 
     if ( output_handlerstrings )
         Timers::toggleHandler();
-
-    // For threadsafety
-    // if ( numerics_rk_order > 5 )
-    //    numerics_use_saved_hamiltons = false;
 
     // Calculate/Recalculate some parameters:
     // Adjust pulse data
@@ -249,12 +245,49 @@ void Parameters::adjust_input() {
         }
     }
 
+    // Adjust Chirp
     for ( auto &[name, mat] : input_chirp ) {
         if ( mat.string["Type"].compare( "sine" ) != 0 ) {
             for ( long unsigned i = 0; i < mat.numerical_v["ddt"].size(); i++ )
                 mat.numerical_v["ddt"][i] = mat.numerical_v["ddt"][i] * 1E12;
         }
     }
+
+    // Set interpolation order:
+    auto orders = QDLC::String::splitline( s_numerics_interpolate, ',' );
+    std::map<std::string, int> methods = { { "monotone", 3 }, { "linear", 0 } };
+    std::string method_time = orders.front();
+    std::string method_tau = orders.size() > 1 ? orders.back() : "linear";
+    numerics_interpolate_method_time = methods[method_time];
+    numerics_interpolate_method_tau = methods[method_tau];
+
+    // No phonon adjust if pathintegral is chosen
+    if ( numerics_phonon_approximation_order == 5 ) {
+        p_phonon_adjust = false;
+    }
+
+    // Calculate phonon stuff
+    p_phonon_b = 1.0;
+    if ( p_phonon_T >= 0 ) {
+        double integral = 0;
+        double stepsize = 0.01 * p_phonon_wcutoff;
+        for ( double w = stepsize; w < 10 * p_phonon_wcutoff; w += stepsize ) {
+            double J;
+            if ( p_phonon_qd_ae == 0.0 )
+                J = p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wcutoff / p_phonon_wcutoff );
+            else
+                J = w * hbar * std::pow( p_phonon_qd_de * std::exp( -w * w * p_phonon_qd_ae * p_phonon_qd_ae / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ) - p_phonon_qd_dh * std::exp( -w * w * p_phonon_qd_ae / p_phonon_qd_ratio * p_phonon_qd_ae / p_phonon_qd_ratio / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * p_phonon_qd_rho * std::pow( p_phonon_qd_cs, 5. ) );
+            integral += stepsize * ( J / std::tanh( hbar * w / 2.0 / kb / p_phonon_T ) );
+        }
+        p_phonon_b = std::exp( -0.5 * integral );
+        if ( p_phonon_adjust ) {
+            // p_omega_pure_dephasing = p_phonon_pure_dephasing * p_phonon_T;
+            p_omega_decay = p_omega_decay * p_phonon_b * p_phonon_b; // TODO: unterschiedliche gammas für unterschiedliche B. macht aber auch kaum was.
+        }
+        if ( numerics_rk_order >= 45 and numerics_use_saved_coefficients )
+            numerics_enable_saving_coefficients = true;
+    }
+
     // Calculate minimum step necessary to resolve Rabi-oscillation if step=-1
     if ( t_step < 0 ) {
         t_step = 1E-13; // std::min( scaleVariable( 1E-13, scale_value ), getIdealTimestep() );
@@ -262,12 +295,7 @@ void Parameters::adjust_input() {
         Log::L2( "[System] Delta t was set to {}\n", t_step );
     }
 
-    if ( t_end >= 0 and ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) ) {
-        iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
-        if ( grid_resolution < 1 and t_end >= 0 )
-            grid_resolution = iterations_t_max + 1;
-    }
-
+    // Calculate till converged
     if ( t_end < 0 ) {
         // If this is given, we calculate the t-direction until 99% ground state poulation is reached after any pulses.
         numerics_calculate_till_converged = true;
@@ -281,11 +309,66 @@ void Parameters::adjust_input() {
         Log::L2( "[System] Calculate till at least {} and adjust accordingly to guarantee convergence. The matrix index used is {}\n", t_end, numerics_groundstate );
     }
 
+    // Disable Hamilton Caching and RK45 for PI
     if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
-        numerics_use_saved_hamiltons = false;
+        // numerics_use_saved_hamiltons = false;
+        // Log::L2( "[System] Disabled Caching of Hamilton matrices" );
+        if ( numerics_rk_order > 5 ) {
+            numerics_rk_order = 4;
+            Log::L2( "[System] Adjusted RK order to {}\n", numerics_rk_order );
+        }
     }
 
-    // Calculate stuff for RK
+    // Automatically determin subiterator stepsize
+    if ( numerics_subiterator_stepsize < 0 ) {
+        if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
+            numerics_subiterator_stepsize = t_step_pathint / 5.0;
+            Log::L2( "[System] Setting the subiterator stepsize to {}, according to a Path Integral stepsize of {}\n", numerics_subiterator_stepsize, t_step_pathint );
+        } else {
+            if ( p_phonon_T < 0 and t_step > 0 ) {
+                numerics_subiterator_stepsize = t_step / 5.0;
+                Log::L2( "[System] Setting the subiterator stepsize to {}, according to a stepsize of {}\n", numerics_subiterator_stepsize, t_step );
+            } else if ( p_phonon_T >= 0 and p_phonon_tcutoff > 0 ) {
+                numerics_subiterator_stepsize = p_phonon_tcutoff / 200.0;
+                Log::L2( "[System] Setting the subiterator stepsize to {}, according to a phonon cutoff time of {}\n", numerics_subiterator_stepsize, p_phonon_tcutoff );
+            }
+        }
+        if ( numerics_subiterator_stepsize == -1 ) {
+            numerics_subiterator_stepsize = 1E-13;
+            Log::L2( "[System] Setting the subiterator stepsize to a fixed value of {}\n", numerics_subiterator_stepsize );
+        }
+    }
+
+    // Set Threads to 1 if L3 logging is enabled
+    if ( Log::Logger::max_log_level() == Log::Logger::LEVEL_3 ) {
+        numerics_maximum_secondary_threads = 1;
+        numerics_maximum_primary_threads = 1;
+        Log::L2( "[System] Set maximum threads to 1 for all calculations because deeplogging is enabled.\n" );
+    }
+
+    // Reserve Trace Vector
+    trace.reserve( iterations_t_max + 5 );
+}
+
+void Parameters::post_adjust_input() {
+    Log::L2( "[System] Adjusting Post-Mainloop Inputs...\n" );
+
+    // Grid Resolution
+    if ( t_end >= 0 and ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) ) {
+        iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
+        Log::L2( "[System] Set iterations_t_max to {}\n", iterations_t_max );
+        if ( grid_resolution < 1 and iterations_t_max > 0 ) {
+            grid_resolution = iterations_t_max; // was +1
+        }
+        Log::L2( "[System] Set grid_resolution to {}\n", grid_resolution );
+    }
+
+    // adjust grids
+    post_adjust_grids();
+}
+
+void Parameters::post_adjust_grids() {
+    Log::L2( "[System] Adjusting Post-Mainloop Grids...\n" );
 
     Log::L2( "[System] Maximum t-value for temporal calculations is {}\n", t_end );
     iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / grid_resolution ) );
@@ -293,7 +376,8 @@ void Parameters::adjust_input() {
     // Build dt vector. Use standard if not specified otherwise for all calculations. Path integral cannot use other timestep than the original.
     if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) {
         input_correlation_resolution["Standard"].numerical_v["Time"] = { t_end };
-        input_correlation_resolution["Standard"].numerical_v["Delta"] = { numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step };
+        input_correlation_resolution["Standard"].numerical_v["Delta"] = { numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : Parameter( t_end / ( 1. * grid_resolution ) ) };
+        Log::L2( "[System] Initial Grid Timestep is {}.\n", input_correlation_resolution["Standard"].numerical_v["Delta"].front() );
         auto &settings = input_correlation_resolution.contains( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
         double skip = input_correlation_resolution.contains( "Modified" ) ? 1.0 : 1.0 * iterations_t_skip;
         Log::L2( "[System] Iteration Skip for Grid is {}.\n", skip );
@@ -320,69 +404,6 @@ void Parameters::adjust_input() {
     } else {
         Log::L2( "[System] Not setting time vector because timestep is negative!\n" );
     }
-
-    // Set interpolation order:
-    {
-        auto orders = QDLC::String::splitline( s_numerics_interpolate, ',' );
-        std::map<std::string, int> methods = { { "monotone", 3 }, { "linear", 0 } };
-        std::string method_time = orders.front();
-        std::string method_tau = orders.size() > 1 ? orders.back() : "linear";
-        numerics_interpolate_method_time = methods[method_time];
-        numerics_interpolate_method_tau = methods[method_tau];
-    }
-
-    // No phonon adjust if pathintegral is chosen
-    if ( numerics_phonon_approximation_order == 5 ) {
-        p_phonon_adjust = false;
-    }
-    // Calculate phonon stuff
-    p_phonon_b = 1.0;
-    if ( p_phonon_T >= 0 ) {
-        double integral = 0;
-        double stepsize = 0.01 * p_phonon_wcutoff;
-        for ( double w = stepsize; w < 10 * p_phonon_wcutoff; w += stepsize ) {
-            double J;
-            if ( p_phonon_qd_ae == 0.0 )
-                J = p_phonon_alpha * w * std::exp( -w * w / 2.0 / p_phonon_wcutoff / p_phonon_wcutoff );
-            else
-                J = w * hbar * std::pow( p_phonon_qd_de * std::exp( -w * w * p_phonon_qd_ae * p_phonon_qd_ae / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ) - p_phonon_qd_dh * std::exp( -w * w * p_phonon_qd_ae / p_phonon_qd_ratio * p_phonon_qd_ae / p_phonon_qd_ratio / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ), 2. ) / ( 4. * 3.1415 * 3.1415 * p_phonon_qd_rho * std::pow( p_phonon_qd_cs, 5. ) );
-            integral += stepsize * ( J / std::tanh( hbar * w / 2.0 / kb / p_phonon_T ) );
-        }
-        p_phonon_b = std::exp( -0.5 * integral );
-        if ( p_phonon_adjust ) {
-            // p_omega_pure_dephasing = p_phonon_pure_dephasing * p_phonon_T;
-            p_omega_decay = p_omega_decay * p_phonon_b * p_phonon_b; // TODO: unterschiedliche gammas für unterschiedliche B. macht aber auch kaum was.
-        }
-        if ( numerics_rk_order >= 45 and numerics_use_saved_coefficients )
-            numerics_enable_saving_coefficients = true;
-    }
-    if ( numerics_subiterator_stepsize < 0 ) {
-        if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
-            numerics_subiterator_stepsize = t_step_pathint / 5.0;
-            Log::L2( "[System] Setting the subiterator stepsize to {}, according to a Path Integral stepsize of {}\n", numerics_subiterator_stepsize, t_step_pathint );
-        } else {
-            if ( p_phonon_T < 0 and t_step > 0 ) {
-                numerics_subiterator_stepsize = t_step / 5.0;
-                Log::L2( "[System] Setting the subiterator stepsize to {}, according to a stepsize of {}\n", numerics_subiterator_stepsize, t_step );
-            } else if ( p_phonon_T >= 0 and p_phonon_tcutoff > 0 ) {
-                numerics_subiterator_stepsize = p_phonon_tcutoff / 200.0;
-                Log::L2( "[System] Setting the subiterator stepsize to {}, according to a phonon cutoff time of {}\n", numerics_subiterator_stepsize, p_phonon_tcutoff );
-            }
-        }
-        if ( numerics_subiterator_stepsize == -1 ) {
-            numerics_subiterator_stepsize = 1E-13;
-            Log::L2( "[System] Setting the subiterator stepsize to a fixed value of {}\n", numerics_subiterator_stepsize );
-        }
-    }
-
-    // Set Threads to 1 if L3 logging is enabled
-    if ( Log::Logger::max_log_level() == Log::Logger::LEVEL_3 ) {
-        numerics_maximum_secondary_threads = 1;
-        numerics_maximum_primary_threads = 1;
-        Log::L2( "[System] Set maximum threads to 1 for all calculations because deeplogging is enabled.\n" );
-    }
-    // numerics_saved_coefficients_max_size = (int)( ( t_end - t_start ) / t_step * 2.0 * ( p_phonon_tcutoff / t_step ) ) + 10;
-    trace.reserve( iterations_t_max + 5 );
 }
 
 void Parameters::parse_system() {
@@ -782,9 +803,9 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         Log::L1( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? "Yes" : "No" ) );
     if ( numerics_interpolate_outputs )
         Log::L1( "WARNING: Temporal outputs are interpolated!\n" );
-    if ( !numerics_use_function_caching )
+    if ( not numerics_use_function_caching )
         Log::L1( "NOT using function caching.\n" );
-    if ( !numerics_use_saved_hamiltons )
+    if ( not numerics_use_saved_hamiltons )
         Log::L1( "NOT using Hamilton caching.\n" );
     Log::L1( "\n" );
     if ( not output_dict.empty() ) {

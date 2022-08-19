@@ -26,7 +26,8 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
     Timer &timer = Timers::create( "Indistinguishability " + fout );
     timer.start();
 
-    size_t T = std::min<size_t>( akf_mat_g1.rows(), savedStates.size() );
+    size_t T = std::min<size_t>( pbsize, savedStates.size() );
+    Log::L2( "{} {}\n", pbsize, T );
 
     std::vector<Scalar> top, bottom, topv, outp, outpv, time;
 

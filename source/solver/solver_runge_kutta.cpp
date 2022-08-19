@@ -84,7 +84,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
     Sparse rho = rho0;
     for ( double t_t = t_start; t_t <= t_end; t_t += t_step_initial ) {
         Log::Logger::Bar( Log::Logger::BAR_SIZE_FULL, Log::Logger::LEVEL_3 );
-        Log::L3("[RKSOLVER] Calculating Iteration for t = {}\n",t_t);
+        Log::L3( "[RKSOLVER] Calculating Iteration for t = {}\n", t_t );
         // Runge-Kutta iteration
         rho = iterate( rho, s, t_t, t_step_initial, output );
         // Progress and time output
@@ -111,9 +111,6 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
     if ( s.parameters.numerics_calculate_till_converged ) {
         s.parameters.numerics_calculate_till_converged = false;
         s.parameters.t_end = t_end;
-        s.parameters.iterations_t_max = output.size();
-        s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.grid_resolution ) );
-        s.parameters.adjust_input();
         Log::L1( "[RKSOLVER] Adjusted t_end to {}.\n", s.parameters.t_end );
     }
     return true;
@@ -176,7 +173,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
         Log::L3( "[Solver-RK45{}] (t = {}) - Local error: {} - dh = {}, current timestep is: {}, new timestep will be: {}, accept current step = {}\n", omp_get_thread_num(), t_t, error, dh, t_step, t_step_new, accept );
         if ( numerics_output_rkerror ) {
             if ( accept )
-                rk_error_accepted.emplace_back( t_t, error  );
+                rk_error_accepted.emplace_back( t_t, error );
             rk_error.emplace_back( t_t, error, t_step, tries );
         }
         if ( accept ) {
@@ -202,9 +199,6 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
     if ( s.parameters.numerics_calculate_till_converged ) {
         s.parameters.numerics_calculate_till_converged = false;
         s.parameters.t_end = t_end;
-        s.parameters.iterations_t_max = output.size();
-        s.parameters.iterations_t_skip = std::max( 1.0, std::ceil( 1.0 * s.parameters.iterations_t_max / s.parameters.grid_resolution ) );
-        s.parameters.adjust_input();
         Log::L1( "[Solver-RK45] Adjusted t_end to {}.\n", s.parameters.t_end );
     }
     if ( do_output )
