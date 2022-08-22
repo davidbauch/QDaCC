@@ -52,7 +52,7 @@ std::vector<std::vector<Sparse>> &QDLC::Numerics::ODESolver::calculate_propagato
 
 bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output ) {
     // Generate list of needed G1 and G2 functions. To save on the excessive RAM usage by caching the ADM for every timestep, we calculate the tau-direction for every t step here.
-    std::map<std::string, std::vector<Sparse>> g12_settings;
+    std::map<std::string, std::vector<Sparse>> g12_settings_map;
     int g12_counter = 0;
     {
         // Order of Matrices is op1,op3,op2,op4 for g2, 1,1,op1,op2 for g1
@@ -62,8 +62,8 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
             const auto &[s_creator, s_annihilator] = get_operator_strings( s, spectrum_s.string_v["Modes"][i] );
             std::string g1 = get_operators_purpose( { s_creator, s_annihilator }, 1 );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
-            if ( g12_settings.count( g1 ) == 0 )
-                g12_settings[g1] = { ident, ident, creator, annihilator };
+            if ( g12_settings_map.count( g1 ) == 0 )
+                g12_settings_map[g1] = { ident, ident, creator, annihilator };
         }
         // Calculate Indist
         auto &indist_s = s.parameters.input_correlation["Indist"];
@@ -72,10 +72,10 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
             std::string g1 = get_operators_purpose( { s_creator, s_annihilator }, 1 );
             std::string g2 = get_operators_purpose( { s_creator, s_annihilator, s_creator, s_annihilator }, 2 );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
-            if ( g12_settings.count( g1 ) == 0 )
-                g12_settings[g1] = { ident, ident, creator, annihilator };
-            if ( g12_settings.count( g2 ) == 0 )
-                g12_settings[g2] = { creator, annihilator, creator, annihilator };
+            if ( g12_settings_map.count( g1 ) == 0 )
+                g12_settings_map[g1] = { ident, ident, creator, annihilator };
+            if ( g12_settings_map.count( g2 ) == 0 )
+                g12_settings_map[g2] = { creator, annihilator, creator, annihilator };
         }
         // Calculate Conc
         auto &conc_s = s.parameters.input_correlation["Conc"];
@@ -95,18 +95,18 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
 
             auto [creator_1, annihilator_1] = get_operators_matrices( s, s_creator_1, s_annihilator_1 );
             auto [creator_2, annihilator_2] = get_operators_matrices( s, s_creator_2, s_annihilator_2 );
-            if ( g12_settings.count( g2_1111 ) == 0 )
-                g12_settings[g2_1111] = { creator_1, annihilator_1, creator_1, annihilator_1 };
-            if ( g12_settings.count( g2_2121 ) == 0 )
-                g12_settings[g2_2121] = { creator_2, annihilator_2, creator_1, annihilator_1 };
-            if ( g12_settings.count( g2_1221 ) == 0 )
-                g12_settings[g2_1221] = { creator_1, annihilator_2, creator_2, annihilator_1 };
-            if ( g12_settings.count( g2_2112 ) == 0 )
-                g12_settings[g2_2112] = { creator_2, annihilator_1, creator_1, annihilator_2 };
-            if ( g12_settings.count( g2_1122 ) == 0 )
-                g12_settings[g2_1122] = { creator_1, annihilator_2, creator_1, annihilator_2 };
-            if ( g12_settings.count( g2_2222 ) == 0 )
-                g12_settings[g2_2222] = { creator_2, annihilator_2, creator_2, annihilator_2 };
+            if ( g12_settings_map.count( g2_1111 ) == 0 )
+                g12_settings_map[g2_1111] = { creator_1, annihilator_1, creator_1, annihilator_1 };
+            if ( g12_settings_map.count( g2_2121 ) == 0 )
+                g12_settings_map[g2_2121] = { creator_2, annihilator_2, creator_1, annihilator_1 };
+            if ( g12_settings_map.count( g2_1221 ) == 0 )
+                g12_settings_map[g2_1221] = { creator_1, annihilator_2, creator_2, annihilator_1 };
+            if ( g12_settings_map.count( g2_2112 ) == 0 )
+                g12_settings_map[g2_2112] = { creator_2, annihilator_1, creator_1, annihilator_2 };
+            if ( g12_settings_map.count( g2_1122 ) == 0 )
+                g12_settings_map[g2_1122] = { creator_1, annihilator_2, creator_1, annihilator_2 };
+            if ( g12_settings_map.count( g2_2222 ) == 0 )
+                g12_settings_map[g2_2222] = { creator_2, annihilator_2, creator_2, annihilator_2 };
         }
         // Calculate G1/G2 functions
         auto &gs_s = s.parameters.input_correlation["GFunc"];
@@ -115,21 +115,22 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
             const auto &[s_creator, s_annihilator] = get_operator_strings( s, gs_s.string_v["Modes"][i] );
             std::string g = order == 1 ? get_operators_purpose( { s_creator, s_annihilator }, 1 ) : get_operators_purpose( { s_creator, s_annihilator, s_creator, s_annihilator }, 2 );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
-            if ( g12_settings.count( g ) == 0 )
+            if ( g12_settings_map.count( g ) == 0 )
                 if ( order == 1 )
-                    g12_settings[g] = { ident, ident, creator, annihilator };
+                    g12_settings_map[g] = { ident, ident, creator, annihilator };
                 else
-                    g12_settings[g] = { creator, annihilator, creator, annihilator };
+                    g12_settings_map[g] = { creator, annihilator, creator, annihilator };
         }
         // int matdim = std::min( int( std::floor( ( t_end - t_start ) / s.parameters.t_step_pathint ) / s.parameters.iterations_t_skip ) + 1, s.parameters.grid_resolution ) + 1;
         int matdim = std::floor( ( t_end - t_start ) / s.parameters.t_step_pathint ) / s.parameters.iterations_t_skip + 1;
         // int matdim = std::min( int( std::floor( ( t_end - t_start ) / s.parameters.t_step ) / s.parameters.iterations_t_skip ) + 1, s.parameters.grid_resolution ) + 1;
-        for ( auto &[purpose, matrices] : g12_settings ) {
+        for ( auto &[purpose, matrices] : g12_settings_map ) {
             Log::L2( "[PathIntegral] Calculating G-Function with purpose {} in place with path integral.\n", purpose );
             cache[purpose] = Dense::Zero( matdim, matdim );
             cache[purpose + "_time"] = Dense::Zero( matdim, matdim );
         }
     }
+    std::vector<std::pair<std::string, std::vector<Sparse>>> g12_settings( g12_settings_map.begin(), g12_settings_map.end() );
 
     Log::L2( "[PathIntegral] Setting up Path-Integral Solver...\n" );
     output.reserve( s.parameters.iterations_t_max + 1 );
@@ -192,17 +193,25 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     profiler_time_per_thread["PI_reduction"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
     profiler_time_per_thread["PI_new_tensor"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
 
+    // We Use a X:Y Ratio of Threads-Per-PI:G1/2s-Per-Iteration
+    // TODO: use queue or something
+    // std::vector<Tensor<Scalar>> tensors;
+    // size_t thread_ratio = 1;
+
     // Iterate Path integral for further time steps
     for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
         // Calculate Correlation functions:
         if ( g12_settings.size() > 0 and g12_counter % s.parameters.iterations_t_skip == 0 ) {
-            for ( auto &[purpose, matrices] : g12_settings ) {
-                Log::L3( "[PathIntegral] Calculating sub-rk for {}\n", purpose );
+            omp_set_nested( 2 );
+            int cores = t_t == t_start ? 1 : s.parameters.numerics_maximum_secondary_threads;
+#pragma omp parallel for num_threads( cores ) schedule( static )
+            for ( const auto &[purpose, matrices] : g12_settings ) {
+                Log::L2( "[PathIntegral] Calculating sub-rk for {} with {} ({}) nested calls\n", purpose, omp_get_nested(), cores );
                 std::vector<QDLC::SaveState> temp;
                 auto &gmat = cache[purpose];
                 auto &timemat = cache[purpose + "_time"];
                 calculate_path_integral_correlation( adm_tensor, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, total_progressbar_iterations, purpose, s, temp, do_output, matrices, s.parameters.numerics_maximum_secondary_threads, different_dimensions );
-                Log::L3( "[PathIntegral] Writing {} values to G matrix...\n", temp.size() );
+                Log::L2( "[PathIntegral] Writing {} values to G matrix...\n", temp.size() );
                 for ( int32_t j = 0; j < std::min<int32_t>( temp.size(), gmat.rows() * s.parameters.iterations_t_skip ); j += s.parameters.iterations_t_skip ) {
                     double t_tau = temp.at( j ).t;
                     gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[2] * matrices[1], t_tau );
@@ -239,7 +248,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         Tensor adm_tensor_next( adm_tensor.nonZeros() );
         /* PROFILER */ profiler_time_per_thread["PI_new_tensor"][omp_get_thread_num()] += omp_get_wtime() - profiler_time;
         /* PROFILER */ profiler_time = omp_get_wtime();
-#pragma omp parallel for num_threads( s.parameters.numerics_maximum_secondary_threads ) schedule( static, 1000 )
+#pragma omp parallel for num_threads( s.parameters.numerics_maximum_secondary_threads ) schedule( static )
         for ( const Tensor::IndexVector &index : adm_tensor.get_indices() ) {
             Scalar new_value = 0.0;
             // Extract N0,M0 indices
@@ -389,7 +398,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
         Tensor adm_correlation_next( adm_correlation.nonZeros() );
         /* PROFILER */ profiler_time_per_thread["PI_new_tensor"][omp_get_thread_num()] += omp_get_wtime() - profiler_time;
         /* PROFILER */ profiler_time = omp_get_wtime();
-#pragma omp parallel for num_threads( s.parameters.numerics_maximum_secondary_threads ) schedule( static, 1000 )
+#pragma omp parallel for num_threads( s.parameters.numerics_maximum_secondary_threads ) schedule( static )
         for ( const Tensor::IndexVector &index : adm_correlation.get_indices() ) {
             Scalar new_value = 0.0;
             // Extract N0,M0 indices
@@ -421,16 +430,6 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
                     index_old[0] = i_n_m1;
                     index_old[1] = j_n_m1;
                     // Propagator value
-                    if ( not modified ) {
-                        modified = true;
-                        for ( int i = 0; i < propagator.size(); i++ ) {
-                            for ( int j = 0; j < propagator[i].size(); j++ ) {
-                                // if ( order == 2 )
-                                propagator[i][j] = s.dgl_timetrafo( matrices[3] * propagator[i][j] * matrices[0], t_start );
-                                // propagator[i][j] = matrices[3] * ( propagator[i][j] * matrices[0] );
-                            }
-                        }
-                    }
                     Scalar propagator_value;
                     if ( not modified ) {
                         propagator_value = s.dgl_timetrafo( matrices[3] * propagator[i_n_m1][j_n_m1] * matrices[0], t_start ).coeff( i_n, j_n );
@@ -473,6 +472,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
                 adm_correlation_next( index_new ) = new_value;
             }
         }
+        modified = true;
         Log::L3( "[PathIntegral] Non-Zeros: {}\n", new_nonzero );
         nonzero = new_nonzero;
         /* PROFILER */ profiler_time_per_thread["PI_iteration"][omp_get_thread_num()] += omp_get_wtime() - profiler_time;
