@@ -97,8 +97,11 @@ class Tensor {
     static IndexRefVector index_flat_to_index_vector_struct;
 
     void permute( IndexVector current, const IndexVector &dimensions, int index = 0 ) {
-        if ( index >= dimensions.size() ) {
-            index_vector_to_index_flat_struct[current] = index_vector_to_index_flat_struct.size();
+        if ( index == dimensions.size() ) {
+            const auto index = index_vector_to_index_flat_struct.size();
+            index_vector_to_index_flat_struct[current] = index;
+            if ( current.size() > 0 )
+                index_flat_to_index_vector_struct[index] = current;
         } else {
             for ( Index c = 0; c < dimensions[index]; c++ ) {
                 current[index] = c;
@@ -118,12 +121,16 @@ class Tensor {
         index_vector_to_index_flat_struct.clear();
         index_flat_to_index_vector_struct.clear();
         std::ranges::for_each( dimensions, [&]( const auto &el ) { max_elements *= el; } );
-        index_flat_to_index_vector_struct = IndexRefVector( max_elements );
+        index_flat_to_index_vector_struct = IndexRefVector( max_elements ); // FIXME: max_elements ist für Biex nicht gleich der hinzugefügten elemente?????????????
         values = ValueVector( max_elements, init_value );
         // Calculate and Save all possible index permutations
         permute( IndexVector( dimensions.size(), 0 ), dimensions );
         // Save References to map keys in vector for fast lookup
-        std::ranges::for_each( index_vector_to_index_flat_struct, []( const auto &el ) { index_flat_to_index_vector_struct[el.second] = el.first; } );
+        // std::ranges::for_each( index_vector_to_index_flat_struct, []( const auto &el ) { index_flat_to_index_vector_struct[el.second] = el.first; } );
+        // Lazy fix for upper fixme:
+        for ( int i = index_flat_to_index_vector_struct.size() - 1; i > 0; i-- )
+            if ( index_flat_to_index_vector_struct[i].size() == 0 )
+                index_flat_to_index_vector_struct.erase( index_flat_to_index_vector_struct.begin() + i );
         Log::L2( "[PathIntegral] Added {} elements to the dimension vector ({} elements to the inverse map).\n", index_vector_to_index_flat_struct.size(), index_flat_to_index_vector_struct.size() );
     }
     Tensor( const Tensor &other ) = default; //: values( other.values ){};

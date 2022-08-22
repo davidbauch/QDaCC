@@ -193,25 +193,31 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     profiler_time_per_thread["PI_reduction"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
     profiler_time_per_thread["PI_new_tensor"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
 
-    // We Use a X:Y Ratio of Threads-Per-PI:G1/2s-Per-Iteration
-    // TODO: use queue or something
-    // std::vector<Tensor<Scalar>> tensors;
-    // size_t thread_ratio = 1;
+    // Precalculate and cache all propagators if G-functions are evaluated to allow for easy multithreading
+    if ( not g12_settings.empty() ) {
+        Log::L2( "[PathIntegral] Precalculating all Propagator Vectors\n" );
+        for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
+            calculate_propagator_vector( s, tensor_dim, t_t, s.parameters.numerics_subiterator_stepsize, output );
+        }
+    }
 
     // Iterate Path integral for further time steps
     for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
         // Calculate Correlation functions:
         if ( g12_settings.size() > 0 and g12_counter % s.parameters.iterations_t_skip == 0 ) {
-            omp_set_nested( 2 );
-            int cores = t_t == t_start ? 1 : s.parameters.numerics_maximum_secondary_threads;
-#pragma omp parallel for num_threads( cores ) schedule( static )
+            // Allow nesting of parallel sections
+            omp_set_nested( 1 );
+            // Only parallize sections if all Hamiltons have been cached: NOT NEEDED
+            // int cores = t_t == t_start ? 1 : s.parameters.numerics_maximum_secondary_threads; //num_threads( cores )
+            // Parallel evaluation of G1/2 functions
+#pragma omp parallel for schedule( static )
             for ( const auto &[purpose, matrices] : g12_settings ) {
-                Log::L2( "[PathIntegral] Calculating sub-rk for {} with {} ({}) nested calls\n", purpose, omp_get_nested(), cores );
+                Log::L3( "[PathIntegral] Calculating sub-rk for {} with {} ({}) nested calls\n", purpose, omp_get_nested(), cores );
                 std::vector<QDLC::SaveState> temp;
                 auto &gmat = cache[purpose];
                 auto &timemat = cache[purpose + "_time"];
                 calculate_path_integral_correlation( adm_tensor, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, total_progressbar_iterations, purpose, s, temp, do_output, matrices, s.parameters.numerics_maximum_secondary_threads, different_dimensions );
-                Log::L2( "[PathIntegral] Writing {} values to G matrix...\n", temp.size() );
+                Log::L3( "[PathIntegral] Writing {} values to G matrix...\n", temp.size() );
                 for ( int32_t j = 0; j < std::min<int32_t>( temp.size(), gmat.rows() * s.parameters.iterations_t_skip ); j += s.parameters.iterations_t_skip ) {
                     double t_tau = temp.at( j ).t;
                     gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[2] * matrices[1], t_tau );
@@ -345,13 +351,13 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         }
 
         // Output Profiler Information
-        Log::L2( "[PathIntegral-Profiler] Time Profile for t = {}, #Nonzeros: {}\n", t_t, nonzero );
+        Log::L3( "[PathIntegral-Profiler] Time Profile for t = {}, #Nonzeros: {}\n", t_t, nonzero );
         /* PROFILER */ profiler_time_per_thread["PI_total"][omp_get_thread_num()] += omp_get_wtime() - profiler_total;
         double total_time = std::accumulate( profiler_time_per_thread["PI_total"].begin(), profiler_time_per_thread["PI_total"].end(), 0.0 );
         for ( auto &[name, vec] : profiler_time_per_thread ) {
             double cur_time = 0;
             std::ranges::for_each( vec, [&]( double &num ) { cur_time+=num; num = 0; } );
-            Log::L2( "[PathIntegral-Profiler]     Name: {} - Time taken: {}s - {}\% of total time\n", name, cur_time, 100.0 * cur_time / total_time );
+            Log::L3( "[PathIntegral-Profiler]     Name: {} - Time taken: {}s - {}\% of total time\n", name, cur_time, 100.0 * cur_time / total_time );
         }
 
         g12_counter++;
@@ -375,6 +381,11 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
     profiler_time_per_thread["PI_reduction"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
     profiler_time_per_thread["PI_new_tensor"] = std::vector<double>( s.parameters.numerics_maximum_secondary_threads, 0 );
 
+    std::vector<std::vector<Sparse>> initial_propagator = calculate_propagator_vector( s, tensor_dim, t_start, s.parameters.numerics_subiterator_stepsize, output );
+    for ( auto &vec : initial_propagator )
+        for ( auto &el : vec )
+            el = s.dgl_timetrafo( matrices[3] * el * matrices[0], t_start );
+
     // Main Iteration loop
     // Iterate Path integral for further time steps
     for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
@@ -391,7 +402,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
         int max_index = 2 + std::min<int>( s.parameters.p_phonon_nc - 2, std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) );
         if ( max_index < s.parameters.p_phonon_nc )
             Log::L3( "[PathIntegral] max_index = {}, nc = {}\n", max_index, s.parameters.p_phonon_nc );
-        // Iterate the tensor
+        // Initial Propagator
 
         // Dense Tensor Iteration
         /* PROFILER */ profiler_time = omp_get_wtime();
@@ -432,7 +443,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
                     // Propagator value
                     Scalar propagator_value;
                     if ( not modified ) {
-                        propagator_value = s.dgl_timetrafo( matrices[3] * propagator[i_n_m1][j_n_m1] * matrices[0], t_start ).coeff( i_n, j_n );
+                        propagator_value = initial_propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
                     } else {
                         propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
                     }
@@ -499,7 +510,6 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
         if ( do_output ) {
             Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );
         }
-
         // Output Profiler Information
         Log::L3( "[PathIntegralG12-Profiler] Time Profile for G1/2 t = {}, #Nonzeros: {}\n", t_t, nonzero );
         /* PROFILER */ profiler_time_per_thread["PI_total"][omp_get_thread_num()] += omp_get_wtime() - profiler_total;
