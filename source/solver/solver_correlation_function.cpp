@@ -60,7 +60,7 @@ std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_g1( System &s, c
         // Interpolate saved states to equidistant timestep
         savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
         size_t j;
-        for ( j = 0; j < savedRhos.size() and i + j < matdim; j++ ) {
+        for ( j = 0; j < savedRhos.size() and i + j < std::min<size_t>( matdim, savedRhos.size() ); j++ ) {
             double t_tau = savedRhos.at( j ).t;
             gmat( i, j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, op_creator, t_tau );
             // gmat_time( i, j ) = Scalar( t_t, t_tau );
@@ -91,7 +91,7 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
         return { op_creator_1, op_annihilator_1, op_creator_2, op_annihilator_2 };
     }
 
-    int matdim = s.parameters.grid_values.size(); // int( savedStates.size() / s.parameters.iterations_t_skip );
+    size_t matdim = s.parameters.grid_values.size(); // int( savedStates.size() / s.parameters.iterations_t_skip );
 
     // Create Timer and Progresbar
     Timer &timer = Timers::create( "RungeKutta-G2-Loop (" + purpose + ")" );
@@ -126,7 +126,7 @@ std::tuple<Sparse, Sparse, Sparse, Sparse> QDLC::Numerics::ODESolver::calculate_
         calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, progressstring, s, savedRhos, false );
         // Interpolate saved states to equidistant timestep
         savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
-        for ( size_t j = 0; j < savedRhos.size() and i + j < matdim; j++ ) {
+        for ( size_t j = 0; j < savedRhos.size() and i + j < std::min<size_t>( matdim, savedRhos.size() ); j++ ) {
             double t_tau = savedRhos.at( j ).t;
             gmat( i, j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, evalOperator, t_tau );
         }

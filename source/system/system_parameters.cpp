@@ -355,8 +355,10 @@ void Parameters::post_adjust_input() {
 
     // Grid Resolution
     if ( t_end >= 0 and ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) ) {
-        iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
-        Log::L2( "[System] Set iterations_t_max to {}\n", iterations_t_max );
+        if ( iterations_t_max < 1 ) {
+            iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
+            Log::L2( "[System] Set iterations_t_max to {}\n", iterations_t_max );
+        }
         if ( grid_resolution < 1 and iterations_t_max > 0 ) {
             grid_resolution = iterations_t_max; // was +1
         }
@@ -368,18 +370,23 @@ void Parameters::post_adjust_input() {
 }
 
 void Parameters::post_adjust_grids() {
-    Log::L2( "[System] Adjusting Post-Mainloop Grids...\n" );
+    Log::L2( "[System] Adjusting Grids...\n" );
 
-    Log::L2( "[System] Maximum t-value for temporal calculations is {}\n", t_end );
-    iterations_t_skip = std::max( 1.0, std::ceil( iterations_t_max / grid_resolution ) );
+    iterations_t_skip = grid_resolution > 0 ? std::max( 1.0, std::ceil( iterations_t_max / grid_resolution ) ) : 1;
+    Log::L2( "[System] Maximum t-value for temporal calculations is {}, skip will be {}\n", t_end, iterations_t_skip );
 
     // Build dt vector. Use standard if not specified otherwise for all calculations. Path integral cannot use other timestep than the original.
     if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) {
         input_correlation_resolution["Standard"].numerical_v["Time"] = { t_end };
-        input_correlation_resolution["Standard"].numerical_v["Delta"] = { numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : Parameter( t_end / ( 1. * grid_resolution ) ) };
-        Log::L2( "[System] Initial Grid Timestep is {}.\n", input_correlation_resolution["Standard"].numerical_v["Delta"].front() );
+        // if ( grid_resolution < 0 ) {
+        //     grid_resolution = 500;
+        //     Log::L2( "[System] No grid_resolution was set! Set gird_resolution to {}\n", grid_resolution );
+        // }
+        double time_delta = numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : Parameter( ( t_end - t_start ) / ( 1. * grid_resolution ) );
+        input_correlation_resolution["Standard"].numerical_v["Delta"] = { time_delta };
+        Log::L2( "[System] Initial Grid Timestep is {}.\n", time_delta );
         auto &settings = input_correlation_resolution.contains( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
-        double skip = input_correlation_resolution.contains( "Modified" ) ? 1.0 : 1.0 * iterations_t_skip;
+        double skip = 1.0; // input_correlation_resolution.contains( "Modified" ) ? 1.0 : 1.0 * iterations_t_skip; //FIXME: skip braucht man doch eh nicht mehr, da immer das grid erstellt wird und das grid immer entscheidet
         Log::L2( "[System] Iteration Skip for Grid is {}.\n", skip );
         double t_t = 0;
         int current = 0;

@@ -391,6 +391,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
             H_I_b += data.numerical_v["CouplingScaling"][i] * el_transitions[transition].hilbert * ph_transitions[name + "b"].hilbert;
         }
     }
+    Log::L2( "[System-OperatorMatrices] Used Hamilton:\n{}\n", Dense( H_I_a ) );
 
     Log::L2( "[System-OperatorMatrices] Creating Path Integral Sorting Vectors...\n" );
     // The Path Integral can be partially summed by either: the electronic state index; or the electronic state coupling factor.

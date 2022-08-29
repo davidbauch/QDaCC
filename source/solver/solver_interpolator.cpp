@@ -13,15 +13,21 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
     ret.reserve( num_of_points );
     if ( order == 0 ) {
         size_t max_index = t_values.size() - 2;
-        // Log::L2("Interpolating from {} to {} to vector of size {} with timevector of size {}, anticipaed return suize is {}\n",t_start,t_end,input.size(), t_values.size(), t_values.size() - current_index);
+        Log::L3( "Interpolating from {} to {} to vector of size {} with timevector of size {}, anticipaed return suize is {}\n", t_start, t_end, input.size(), t_values.size(), t_values.size() - current_index );
         //  Do a very simple linear interpolation. Linear and monotone interpolation should be changed by paramter
         size_t i = 1;
-        if ( t_values.at( current_index ) != t_start ) {
-            Log::L2( "Error: t_values.at({}) != start = {}\n", t_values.at( current_index ), t_start );
+        while ( current_index > 0 and t_values[current_index] > t_start ) {
+            current_index--;
         }
-        // for ( double t_t = t_start; t_t <= t_end; t_t += t_steps[current_index] ) {
-        while ( t_values.at( current_index ) <= t_end ) {
-            double t_t = t_values.at( current_index );
+        while ( current_index < t_values.size() - 1 and t_values[current_index] < t_start ) {
+            current_index++;
+        }
+        if ( QDLC::Math::abs2( t_values[current_index] - t_start ) > 0.01 * t_values[current_index] )
+            Log::L2( "Error: t_values.at({}) = {} != start = {}. Previous value would be {}\n", current_index, t_values.at( current_index ), t_start, current_index > 0 ? t_values.at( current_index - 1 ) : -1 );
+
+        double current_time = t_values.at( current_index );
+        while ( current_time <= t_end ) {
+            double t_t = current_time;
             while ( i < input.size() - 1 and t_t > input[i].t ) {
                 i = std::min<size_t>( i + 1, input.size() - 1 );
             }
@@ -36,6 +42,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
             if ( current_index == t_values.size() - 1 )
                 break;
             current_index = std::min<size_t>( current_index + 1, t_values.size() - 1 );
+            current_time = t_values.at( current_index );
         }
     } else {
         // // Cubic monotone with library

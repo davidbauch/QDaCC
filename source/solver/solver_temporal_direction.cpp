@@ -14,10 +14,13 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
         calculate_path_integral( rho, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step_pathint, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
     } else {
         // If using RK45 and calculating correlation functions, disable USING cached functions while enabling caching them, then reenable using the cached matrices for Tau direction
-        if ( s.parameters.input_correlation.empty() and s.parameters.numerics_use_saved_coefficients ) {
+        if ( s.parameters.numerics_rk_order == 45 and not s.parameters.input_correlation.empty() and s.parameters.numerics_use_saved_coefficients ) {
             s.parameters.numerics_enable_saving_coefficients = true;
             s.parameters.numerics_use_saved_coefficients = false;
             Log::L2( "[Solver] Disabling usage of saved phonon matrix coefficients while forcing matrix caching.\n" );
+        } else if ( s.parameters.numerics_rk_order != 45 ) {
+            // Adjust Temporal Stuff and Grid if no RK45 is used:
+            s.parameters.post_adjust_input();
         }
         calculate_runge_kutta( rho, s.parameters.t_start, s.parameters.t_end, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
         // Reenabling if caching was disabled.

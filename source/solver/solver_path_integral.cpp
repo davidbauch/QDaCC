@@ -20,6 +20,7 @@ Sparse QDLC::Numerics::ODESolver::calculate_propagator_single( System &s, size_t
     return M.pruned( s.parameters.numerics_pathintegral_sparse_prune_threshold );
 }
 
+// TODO: maybe we can only evaluate the oupper triangle matrix, then write a getter function that checks if j>i, return mat[i,j].dagger(). Test with samples if (i,j) = (j,i).dagger()!!
 std::vector<std::vector<Sparse>> &QDLC::Numerics::ODESolver::calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<QDLC::SaveState> &output ) {
     if ( pathint_propagator.contains( t0 ) ) {
         return pathint_propagator[t0];
@@ -31,14 +32,15 @@ std::vector<std::vector<Sparse>> &QDLC::Numerics::ODESolver::calculate_propagato
 // Calculate the remaining propagators
 #pragma omp parallel for collapse( 2 ) num_threads( s.parameters.numerics_maximum_secondary_threads )
     for ( int i = 0; i < tensor_dim; i++ ) {
-        for ( int j = 0; j < tensor_dim; j++ ) {
+        for ( int j = 0; j < tensor_dim; j++ ) { // <= i
             if ( i == 0 && j == 0 ) continue;
             ret[i][j] = calculate_propagator_single( s, tensor_dim, t0, t_step, i, j, output, one ); // pathint_propagator[-1][i][j] );
         }
     }
     // Only save propagator vector if correlation functions are calculated.
-    if ( cache.size() > 0 ) {
+    if ( not cache.empty() ) {
         Log::L3( "[PathIntegral] Caching propagator vector for t = {}\n", t0 );
+#pragma omp critical
         pathint_propagator[t0] = ret;
         return pathint_propagator[t0];
     } else {
@@ -196,7 +198,9 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     // Precalculate and cache all propagators if G-functions are evaluated to allow for easy multithreading
     if ( not g12_settings.empty() ) {
         Log::L2( "[PathIntegral] Precalculating all Propagator Vectors\n" );
+        //#pragma omp parallel for schedule( static )
         for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
+            std::cout << "Current: " << 100. * t_t / t_end << "\r";
             calculate_propagator_vector( s, tensor_dim, t_t, s.parameters.numerics_subiterator_stepsize, output );
         }
     }
@@ -207,10 +211,11 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         if ( g12_settings.size() > 0 and g12_counter % s.parameters.iterations_t_skip == 0 ) {
             // Allow nesting of parallel sections
             omp_set_nested( 1 );
+            omp_set_max_active_levels( 3 );
             // Only parallize sections if all Hamiltons have been cached: NOT NEEDED
-            // int cores = t_t == t_start ? 1 : s.parameters.numerics_maximum_secondary_threads; //num_threads( cores )
+            int cores = t_t == t_start ? 1 : s.parameters.numerics_maximum_secondary_threads;
             // Parallel evaluation of G1/2 functions
-#pragma omp parallel for schedule( static )
+#pragma omp parallel for schedule( static ) // num_threads( cores )
             for ( const auto &[purpose, matrices] : g12_settings ) {
                 Log::L3( "[PathIntegral] Calculating sub-rk for {} with {} ({}) nested calls\n", purpose, omp_get_nested(), cores );
                 std::vector<QDLC::SaveState> temp;
@@ -286,7 +291,11 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
                     index_old[0] = i_n_m1;
                     index_old[1] = j_n_m1;
                     // Propagator value
-                    Scalar propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
+                    Scalar propagator_value;
+                    // if ( j_n_m1 > i_n_m1 )
+                    //     propagator_value = std::conj( propagator[j_n_m1][i_n_m1].coeff( i_n, j_n ) );
+                    // else
+                    propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
                     // If this propagation is not allowed, continue
                     if ( QDLC::Math::abs2( propagator_value ) == 0.0 )
                         continue;
@@ -443,9 +452,15 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
                     // Propagator value
                     Scalar propagator_value;
                     if ( not modified ) {
-                        propagator_value = initial_propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
+                        if ( j_n_m1 > i_n_m1 )
+                            propagator_value = std::conj( initial_propagator[j_n_m1][i_n_m1].coeff( i_n, j_n ) );
+                        else
+                            propagator_value = initial_propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
                     } else {
-                        propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
+                        if ( j_n_m1 > i_n_m1 )
+                            propagator_value = std::conj( propagator[j_n_m1][i_n_m1].coeff( i_n, j_n ) );
+                        else
+                            propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
                     }
                     // If this propagation is not allowed, continue
                     if ( QDLC::Math::abs2( propagator_value ) == 0.0 )
