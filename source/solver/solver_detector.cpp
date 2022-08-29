@@ -9,6 +9,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
                 double detector_t_center = s.parameters.input_conf["Detector"].numerical_v["time_center"][c];
                 double detector_t_range = s.parameters.input_conf["Detector"].numerical_v["time_range"][c];
                 double detector_power = s.parameters.input_conf["Detector"].numerical_v["time_power_amplitude"][c];
+                Log::L2( "[PhotonStatistics] Adding Temporal Mask for t_0 = {}, delta = {}, amp = {}\n", detector_t_center, detector_t_range, detector_power );
                 for ( int i = 0; i < mat.rows(); i++ ) {
                     double time = std::real( timemat( i, 0 ) );
                     for ( int j = 0; j < mat.cols() - i; j++ ) {
@@ -16,6 +17,15 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
                         detector_temporal_mask( i, j ) += std::exp( -std::pow( ( time - detector_t_center ) / detector_t_range, detector_power ) ) * std::exp( -std::pow( ( tau - detector_t_center ) / detector_t_range, detector_power ) );
                     }
                 }
+            }
+            Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask.txt...\n" );
+            auto &f_detector = FileOutput::add_file( "detector_temporal_mask" );
+            f_detector << "Time_index\ttau_index\tD(t)*D(t+tau)\n";
+            for ( int k = 0; k < detector_temporal_mask.rows(); k++ ) {
+                for ( int l = 0; l < detector_temporal_mask.cols(); l++ ) {
+                    f_detector << fmt::format( "{}\t{}\t{:.8e}\n", k, l, std::real( detector_temporal_mask( k, l ) ) );
+                }
+                f_detector << "\n";
             }
         }
         Log::L2( "[PhotonStatistics] Applying Detector Temporal Mask to {}... \n", purpose );

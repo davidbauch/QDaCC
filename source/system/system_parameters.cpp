@@ -576,8 +576,8 @@ void Parameters::parse_system() {
             auto conf_sep = QDLC::String::splitline( inputstring_detector, ';' );
             if ( conf_sep[0] != "none" ) {
                 auto conf = QDLC::String::splitline( conf_sep[0], ':' );
-                conf_s.numerical_v["time_center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );
                 conf_s.numerical_v["time_range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[0], ',' ) );
+                conf_s.numerical_v["time_center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );
                 conf_s.numerical_v["time_power_amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );
                 Log::L2( "[System-Parameters] Adding Temporal Detector mask using center = {}, range = {} and power_amp = {}.\n", conf_s.numerical_v["time_center"], conf_s.numerical_v["time_range"], conf_s.numerical_v["time_power_amplitude"] );
             } else {

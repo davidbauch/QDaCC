@@ -32,18 +32,18 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     for ( int i = 0; i < raman_s.string_v["ElMode1"].size(); i++ ) {
         calculate_raman_population( s, raman_s.string_v["ElMode1"][i], raman_s.string_v["ElMode2"][i], raman_s.string_v["OpMode"][i], raman_s.string_v["PMode"][i] );
     }
-    // Detector Matrix
-    if ( s.parameters.input_conf["Detector"].numerical_v["time_center"].size() > 0 ) {
-        Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask.txt...\n" );
-        auto &f_detector = FileOutput::add_file( "detector_temporal_mask" );
-        f_detector << "Time_index\ttau_index\tD(t)*D(t+tau)\n";
-        for ( int k = 0; k < detector_temporal_mask.rows(); k++ ) {
-            for ( int l = 0; l < detector_temporal_mask.cols(); l++ ) {
-                f_detector << fmt::format( "{}\t{}\t{:.8e}\n", k, l, std::real( detector_temporal_mask( k, l ) ) );
-            }
-            f_detector << "\n";
-        }
-    }
+    // Detector Matrix // Moved directly to where its calculated.
+    // if ( s.parameters.input_conf["Detector"].numerical_v["time_center"].size() > 0 ) {
+    //    Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask.txt...\n" );
+    //    auto &f_detector = FileOutput::add_file( "detector_temporal_mask" );
+    //    f_detector << "Time_index\ttau_index\tD(t)*D(t+tau)\n";
+    //    for ( int k = 0; k < detector_temporal_mask.rows(); k++ ) {
+    //        for ( int l = 0; l < detector_temporal_mask.cols(); l++ ) {
+    //            f_detector << fmt::format( "{}\t{}\t{:.8e}\n", k, l, std::real( detector_temporal_mask( k, l ) ) );
+    //        }
+    //        f_detector << "\n";
+    //    }
+    //}
     if ( s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size() > 0 ) {
         Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_spectral_mask.txt...\n" );
         auto &f_detector = FileOutput::add_file( "detector_spectral_mask" );
