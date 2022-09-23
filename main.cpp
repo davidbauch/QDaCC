@@ -1,6 +1,6 @@
 #include "global.h"
-#include "chirp.h"
-#include "pulse.h"
+#include "system/evaluable/chirp.h"
+#include "system/evaluable/pulse.h"
 #include "system/system.h"
 #include "solver/solver_ode.h"
 
@@ -96,7 +96,7 @@ int main( int argc, char* argv[] ) {
         Log::L1( "\nStartcommand: " );
         for ( auto& ii : inputs )
             Log::L1( "{} ", ii );
-        Log::L1( "\n\n" + system.terminate_message + "\n" );
+        Log::L1( "\n\nTerminate.\n" );
 
         if ( system.parameters.output_handlerstrings ) {
             Log::L1( "\n{0} {1:.1f}\n", QDLC::Message::Prefix::PERCENT_TIME_FINAL, finalTime );

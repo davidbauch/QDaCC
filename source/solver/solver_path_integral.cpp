@@ -306,11 +306,11 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
                             index_old[index_old.size() - 2] = lambda_i;
                             index_old[index_old.size() - 1] = lambda_j;
                             // Calculate S:
-                            Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
+                            Scalar phonon_s = s.dgl_phonon_memory_function( 0, gi_n, gj_n, gi_n, gj_n );
                             for ( int tau = 0; tau < max_index; tau++ ) {
                                 int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phonon_hilbert_index_to_group_index[index_old[0]] : index_old[0] ) : index_old[2 * tau] );
                                 int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phonon_hilbert_index_to_group_index[index_old[1]] : index_old[1] ) : index_old[2 * tau + 1] );
-                                phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
+                                phonon_s += s.dgl_phonon_memory_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
                             }
                             new_value += propagator_value * adm_tensor( index_old ) * std::exp( phonon_s );
                         }
@@ -472,11 +472,11 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Tensor adm_
                             index_old[index_old.size() - 2] = lambda_i;
                             index_old[index_old.size() - 1] = lambda_j;
                             // Calculate S:
-                            Scalar phonon_s = s.dgl_phonon_S_function( 0, gi_n, gj_n, gi_n, gj_n );
+                            Scalar phonon_s = s.dgl_phonon_memory_function( 0, gi_n, gj_n, gi_n, gj_n );
                             for ( int tau = 0; tau < max_index; tau++ ) {
                                 int gi_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phonon_hilbert_index_to_group_index[index_old[0]] : index_old[0] ) : index_old[2 * tau] );
                                 int gj_nd = ( tau == 0 ? ( s.parameters.numerics_pathint_partially_summed ? s.operatorMatrices.phonon_hilbert_index_to_group_index[index_old[1]] : index_old[1] ) : index_old[2 * tau + 1] );
-                                phonon_s += s.dgl_phonon_S_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
+                                phonon_s += s.dgl_phonon_memory_function( tau + 1, gi_n, gj_n, gi_nd, gj_nd );
                             }
                             new_value += propagator_value * adm_correlation( index_old ) * std::exp( phonon_s );
                         }

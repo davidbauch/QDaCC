@@ -2,8 +2,10 @@
 #include "global.h"
 #include "misc/interpolant.h"
 #include "system/parameter.h"
+//#include "system/evaluable/evaluable.h"
 
-class Chirp {
+// TODO: make inherit Evaluable. Move chirp specific stuff to the virtual functions
+class Chirp { //: Evaluable {
    public:
     class Inputs {
        public:

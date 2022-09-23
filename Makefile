@@ -9,7 +9,7 @@ COMPILER = $(CXX)
 
 VERSION := 3.4.0
 
-SRCS := $(shell find $(SRC_DIRS) -name '*.cpp')
+SRCS := $(shell find $(SRC_DIRS) -name "*.cpp")
 
 INC_DIRS := include/ external/ #$(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))

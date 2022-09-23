@@ -23,7 +23,7 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, Dense &mat, 
             f_detector << "Time_index\ttau_index\tD(t)*D(t+tau)\n";
             for ( int k = 0; k < detector_temporal_mask.rows(); k++ ) {
                 for ( int l = 0; l < detector_temporal_mask.cols(); l++ ) {
-                    f_detector << fmt::format( "{}\t{}\t{:.8e}\n", k, l, std::real( detector_temporal_mask( k, l ) ) );
+                    f_detector << fmt::format( "{}\t{}\t{:.8e}\n", std::real( timemat( k, 0 ) ), std::imag( timemat( k, l ) ) - std::real( timemat( k, l ) ), std::real( detector_temporal_mask( k, l ) ) );
                 }
                 f_detector << "\n";
             }

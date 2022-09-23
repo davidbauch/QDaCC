@@ -4,16 +4,14 @@
 #include "system/parameters.h"
 #include "system/fileoutput.h"
 #include "system/operatormatrices.h"
-#include "chirp.h"
-#include "pulse.h"
+#include "system/evaluable/chirp.h"
+#include "system/evaluable/pulse.h"
 #include "solver/solver.h"
 
 class System {
    public:
     // Class Name
     std::string name;
-    // Final Terminate Message
-    std::string terminate_message;
 
     // Vector of input arguments. The argv elements will get pushed into this vector
     std::vector<std::string> arguments;
@@ -126,23 +124,21 @@ class System {
     // ##### Phonon Functions and Helperfunctions #####
 
     /**
-     * @brief Calculates the differential for the phonon matrix. Uses the dgl_get_hamilton function.
+     * @brief The Polaron Transformed Operators are calculated by evaluating the Time Transformed X_g and X_u. This Runge Function is used to calculate this time transformation using the von-Neumann euqation instead of
+     * numerically evaluating the tim transformation by e.g. using the numerical matrix exponential. The noteworthy difference here is to also include the explicit time dependency of the transformed operators.
      *
-     * @return Sparse Matrix Runge Function
+     * @param chi Current Chi(t)
+     * @param t Current Time
+     * @return Sparse: Applied Runge function
      */
     Sparse dgl_phonons_rungefunc( const Sparse &chi, const double t );
 
     /**
-     * @brief Calculates the phonon X Matrix from a given Chi
+     * @brief Calculates the Polaron Green Function. This function is currently not cached.
      *
-     * @return Sparse Matrix X
-     */
-    Sparse dgl_phonons_chiToX( const Sparse &chi, const double t = 0.0, const char mode = 'u' );
-
-    /**
-     * @brief Either calculates or returns the polaron green function from cache
-     *
-     * @return Scalar valued Green Function
+     * @param t Current Time
+     * @param mode Either "g" or "u"
+     * @return Scalar: G_u/g(t)
      */
     Scalar dgl_phonons_greenf( double tau, const char mode = 'u' );
 
@@ -166,14 +162,21 @@ class System {
      * @param w Input frequency
      * @return J(w)
      */
-    Scalar dgl_phonons_J( const double w );
+    double dgl_phonons_spectral_density( const double w );
 
     /**
-     * @brief Calculates the Lindbladian coefficients for the analytical phonon contributions using the polaron frame
+     * @brief Calculates to Lindblad Coefficients for the analytical solution of the Polaron Contributions.
      *
-     * @return double valued rate for the corresponding coefficient
+     * @param energy Transition Energy
+     * @param coupling Cavity Coupling
+     * @param pulse Current Pulse values
+     * @param mode Mode
+     * @param sign +1 or -1
+     * @return double: L(t)
      */
-    double dgl_phonons_lindblad_coefficients( double t, double energy, double coupling, Scalar pulse, const char mode = 'L', const double scaling = 1.0, const double sign = 1.0 );
+    double dgl_phonons_lindblad_coefficients( const double energy, const double coupling, const Scalar pulse, const char mode = 'L', const double scaling = 1.0, const double sign = 1.0 );
+
+    Sparse dgl_phonons_lindblad_contribution( const double t, const Sparse &rho );
 
     /**
      * @brief Initializes the Polaron Frame Functions by precalculating the Phi(tau) function and the corresponding Green functions
@@ -189,10 +192,14 @@ class System {
     Sparse dgl_phonons_chi( const double t );
 
     /**
-     * @brief Calculates Chi(t,tau > 0) after Chi(t,0) was calculated with dgl_phonons_chi.
+     * @brief Evaluates the Transformation U(t,tau) Chi(t) U(t,tau)^+ = Chi(t,tau) from tau' = 0 to tau' = tau
      *
-     * @return Sparse Transformed chi
+     * @param chi_tau Current Chi(t)
+     * @param t Current Time
+     * @param tau Current Delay
+     * @return Sparse: Transformed Chi(t) = Chi(t,tau)
      */
+
     Sparse dgl_phonons_calculate_transformation( double t, double tau );
 
     /**
@@ -220,7 +227,7 @@ class System {
      *
      * @return Scalar valued S(i,j,id,jd)
      */
-    Scalar dgl_phonon_S_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd );
+    Scalar dgl_phonon_memory_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd );
 
     /**
      * @brief Calculates the expectation values for a given operator

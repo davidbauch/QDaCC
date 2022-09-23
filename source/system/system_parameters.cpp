@@ -376,18 +376,16 @@ void Parameters::post_adjust_grids() {
     Log::L2( "[System] Maximum t-value for temporal calculations is {}, skip will be {}\n", t_end, iterations_t_skip );
 
     // Build dt vector. Use standard if not specified otherwise for all calculations. Path integral cannot use other timestep than the original.
+    if ( input_correlation_resolution.contains( "Modified" ) and grid_values.size() > 1 ) {
+        Log::L2( "[System-Prameters] Grid was not again modified because the gridinput is fixed by the user.\n" );
+        return;
+    }
     if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) {
         input_correlation_resolution["Standard"].numerical_v["Time"] = { t_end };
-        // if ( grid_resolution < 0 ) {
-        //     grid_resolution = 500;
-        //     Log::L2( "[System] No grid_resolution was set! Set gird_resolution to {}\n", grid_resolution );
-        // }
         double time_delta = numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : Parameter( ( t_end - t_start ) / ( 1. * grid_resolution ) );
         input_correlation_resolution["Standard"].numerical_v["Delta"] = { time_delta };
-        Log::L2( "[System] Initial Grid Timestep is {}.\n", time_delta );
         auto &settings = input_correlation_resolution.contains( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
-        double skip = 1.0; // input_correlation_resolution.contains( "Modified" ) ? 1.0 : 1.0 * iterations_t_skip; //FIXME: skip braucht man doch eh nicht mehr, da immer das grid erstellt wird und das grid immer entscheidet
-        Log::L2( "[System] Iteration Skip for Grid is {}.\n", skip );
+        Log::L2( "[System] Initial Grid Timestep is {}.\n", settings.numerical_v["Delta"].front() );
         double t_t = 0;
         int current = 0;
         grid_values.clear();
@@ -395,19 +393,18 @@ void Parameters::post_adjust_grids() {
         grid_value_indices.clear();
         grid_values.emplace_back( t_start );
         grid_value_indices[t_start] = 0;
-        Log::L2( "[System] Initial Timestep Limit is {} at a timestep of {}.\n", settings.numerical_v["Time"][current], settings.numerical_v["Delta"][current] * skip );
+        Log::L2( "[System] Initial Timestep Limit is {} at a timestep of {}.\n", settings.numerical_v["Time"][current], settings.numerical_v["Delta"][current] );
         while ( t_t < t_end ) {
             if ( t_t > settings.numerical_v["Time"][current] and current < settings.numerical_v["Time"].size() ) {
                 current++;
-                Log::L2( "[System] New Timestep Limit is {} at a timestep of {}.\n", settings.numerical_v["Time"][current], settings.numerical_v["Delta"][current] * skip );
+                Log::L2( "[System] New Timestep Limit is {} at a timestep of {}.\n", settings.numerical_v["Time"][current], settings.numerical_v["Delta"][current] );
             }
-            grid_steps.emplace_back( settings.numerical_v["Delta"][current] * skip );
+            grid_steps.emplace_back( settings.numerical_v["Delta"][current] );
             t_t += grid_steps.back();
             grid_values.emplace_back( t_t );
             grid_value_indices[t_t] = grid_values.size() - 1;
         }
-        // std::cout << "Values for "<<mode<<": " << t_values[mode] << std::endl;
-        Log::L2( "[System] Setting correlation grid resolution to {0}x{0} for a t_end = {1}\n", grid_values.size(), t_end );
+        Log::L2( "[System] Setting correlation grid resolution to {0}x{0} for a t_end = {1}{2}\n", grid_values.size(), t_end, input_correlation_resolution.contains( "Modified" ) ? " using a modified grid." : "" );
     } else {
         Log::L2( "[System] Not setting time vector because timestep is negative!\n" );
     }
@@ -535,8 +532,9 @@ void Parameters::parse_system() {
         auto single = QDLC::String::splitline( inputstring_correlation_resolution, ';' );
         input_s conf_s;
         std::vector<Parameter> times, dts;
-        for ( int i = 0; i < single.size(); i++ ) {
-            auto cur = QDLC::String::splitline( single[i], ':' );
+        for ( const auto &el : single ) {
+            Log::L2( "[System-Parameters] Adding Grid Subspace {}\n", el );
+            auto cur = QDLC::String::splitline( el, ':' );
             times.emplace_back( QDLC::Misc::convertParam<Parameter>( cur[0] ) );
             dts.emplace_back( QDLC::Misc::convertParam<Parameter>( cur[1] ) );
         }

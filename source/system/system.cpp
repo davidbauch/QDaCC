@@ -11,7 +11,6 @@ System::System( const std::vector<std::string> &input ) {
     // Initialize FileOutput with the current system
     FileOutput::init( parameters, operatorMatrices );
     // Initialize / Adjust the remaining system class
-    terminate_message = QDLC::Message::global_normaltermination;
     Timer &timer_systeminit = Timers::create( "System Initialization", true, false );
     Log::L2( "[System] Initialization...\n" );
     timer_systeminit.start();
@@ -247,8 +246,7 @@ bool System::trace_valid( Sparse &rho, double t_hit, bool force ) {
     parameters.trace.emplace_back( trace );
     if ( trace < 0.99 || trace > 1.01 || force ) {
         if ( force )
-            fmt::print( "[System] {} {} -> trace check failed at t = {} with trace(rho) = {}\n", QDLC::Message::Prefix::PERROR, QDLC::Message::global_error_divergent, t_hit, trace );
-        terminate_message = QDLC::Message::global_error_divergent;
+            fmt::print( "[System] {} Error -> trace check failed at t = {} with trace(rho) = {}\n", QDLC::Message::Prefix::PERROR, t_hit, trace );
         auto &fp_trace = FileOutput::add_file( "trace" );
         for ( int i = 0; i < (int)parameters.trace.size() && parameters.t_step * 1.0 * i < t_hit; i++ ) {
             fp_trace << fmt::format( "{:.10e} {:.15e}\n", parameters.t_step * 1.0 * ( i + 1 ), parameters.trace.at( i ) );

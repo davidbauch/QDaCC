@@ -9,24 +9,23 @@ namespace QDLC {
 
 namespace Type {
 
-typedef std::complex<double> Scalar;
-typedef Eigen::MatrixXcd Dense;
-typedef Eigen::MatrixXd dDense;
-typedef Eigen::SparseMatrix<Scalar> Sparse;
-typedef Eigen::SparseMatrix<double> dSparse;
-typedef Eigen::VectorXi iVector;
-typedef Eigen::VectorXd dVector;
-typedef Eigen::VectorXcd Vector;
-typedef Eigen::Triplet<double> dTriplet;
-typedef Eigen::Triplet<Scalar> Triplet;
-typedef uint64_t Index;
+using Scalar = std::complex<double>;
+using Dense = Eigen::MatrixXcd;
+using dDense = Eigen::MatrixXd;
+using Sparse = Eigen::SparseMatrix<Scalar>;
+using dSparse = Eigen::SparseMatrix<double>;
+using iVector = Eigen::VectorXi;
+using dVector = Eigen::VectorXd;
+using Vector = Eigen::VectorXcd;
+using dTriplet = Eigen::Triplet<double>;
+using Triplet = Eigen::Triplet<Scalar>;
+using Index = uint64_t;
 
 } // namespace Type
 
-namespace Message {
+namespace Message::Prefix {
 
-namespace Prefix {
-
+//TODO: remove handler output, deprecated!
 const std::string PERCENT = "@#PERCENT#@";
 const std::string PERCENT_TIME = "@#PERCENTTIME#@";
 const std::string PERCENT_TIME_FINAL = "@#PERCENTTIMEFINAL#@";
@@ -36,12 +35,7 @@ const std::string DEBUG = "@#DEBUG#@";
 const std::string OUTPUT = "@#OUTPUT#@";
 const std::string SUFFIX = "@#SUFFIX#@";
 
-} // namespace Prefix
 
-const std::string global_normaltermination = "[Programm Terminated normally]";
-const std::string global_error_divergent = "[FATAL ERROR: PROCESS DIVERGED, PROGRAM TERMINATED]";
-const std::string global_error_wrong_number_input = "[FATAL ERROR: WRONG NUMBER OF INPUT PARAMETERS, PROGRAM TERMINATED]";
-
-} // namespace Message
+} // namespace Message::Prefix
 
 } // namespace QDLC
