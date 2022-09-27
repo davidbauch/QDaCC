@@ -6,8 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "3.4.0"
-#define GLOBAL_PROGRAM_LASTCHANGE "Oops Transitions have changed?"
+#define GLOBAL_PROGRAM_VERSION "3.5.0"
+#define GLOBAL_PROGRAM_LASTCHANGE "Optimization City"
 
 class Parameters {
    public:

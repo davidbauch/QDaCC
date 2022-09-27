@@ -10,7 +10,11 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
     std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 );
     std::string s_g2 = get_operators_purpose( { s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator }, 2 );
 
-    auto [op_creator, op_annihilator] = calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
+    // Get Sparse Operator Matrices
+    const auto &[op_creator, op_annihilator] = get_operators_matrices( s, s_op_creator, s_op_annihilator );
+
+    // Calculate G-Functions if neccessary
+    calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
     calculate_g2( s, s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator, s_g2 );
 
     auto &akf_mat_g1 = cache[s_g1];

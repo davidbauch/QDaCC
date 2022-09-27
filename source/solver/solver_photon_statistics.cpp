@@ -61,15 +61,11 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         int order = std::abs( gs_s.numerical_v["Order"][i] );
         const auto &[s_creator, s_annihilator] = get_operator_strings( s, modes );
         std::string purpose = order == 1 ? get_operators_purpose( { s_creator, s_annihilator }, 1 ) : get_operators_purpose( { s_creator, s_annihilator, s_creator, s_annihilator }, 2 );
-        Sparse creator, annihilator;
+        const auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
         if ( order == 1 ) {
-            auto [a, b] = calculate_g1( s, s_creator, s_annihilator, purpose );
-            creator = std::move( a );
-            annihilator = std::move( b );
+            calculate_g1( s, s_creator, s_annihilator, purpose );
         } else {
-            auto [a, b, _discard1, _discard2] = calculate_g2( s, s_creator, s_annihilator, s_creator, s_annihilator, purpose );
-            creator = std::move( a );
-            annihilator = std::move( b );
+            calculate_g2( s, s_creator, s_annihilator, s_creator, s_annihilator, purpose );
         }
         // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
         auto &gmat = cache[purpose];

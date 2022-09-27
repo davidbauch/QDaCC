@@ -90,7 +90,8 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
         // Progress and time output
         rkTimer.iterate();
         if ( do_output ) {
-            Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), s.parameters.iterations_t_max, progressbar_name );
+            const auto state = s.parameters.numerics_calculate_till_converged ? Timers::WAITING : Timers::RUNNING;
+            Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), s.parameters.iterations_t_max, progressbar_name, state );
         }
         // Adjust t_end until ground state is reached. we assume the ground state is the first entry of the DM
         if ( s.parameters.numerics_calculate_till_converged and t_t + t_step_initial > t_end and std::real( rho.coeff( s.parameters.numerics_groundstate, s.parameters.numerics_groundstate ) ) < 0.999 ) {
@@ -183,7 +184,8 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
             // Progress and time output
             rkTimer.iterate();
             if ( do_output ) {
-                Timers::outputProgress( rkTimer, progressbar, 1000. * t_t / t_end, 1000., progressbar_name );
+                const auto state = s.parameters.numerics_calculate_till_converged ? Timers::WAITING : Timers::RUNNING;
+                Timers::outputProgress( rkTimer, progressbar, 1000. * t_t / t_end, 1000., progressbar_name, state );
             }
             // Adjust t_end until ground state is reached.we assume the ground state is the first entry of the DM
             if ( s.parameters.numerics_calculate_till_converged and t_t + t_step > t_end and std::real( output.back().mat.coeff( s.parameters.numerics_groundstate, s.parameters.numerics_groundstate ) ) < 0.999 ) {

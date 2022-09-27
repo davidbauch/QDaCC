@@ -91,13 +91,15 @@ std::string QDLC::Numerics::ODESolver::get_operators_purpose( const std::vector<
     return ret;
 }
 
+Sparse QDLC::Numerics::ODESolver::get_operators_matrix( System &s, const std::string &s_op ) {
+    Sparse ret( s.parameters.maxStates, s.parameters.maxStates );
+    for ( auto &split_s_op : QDLC::String::splitline( s_op, '+' ) )
+        ret += s.operatorMatrices.el_transitions.contains( split_s_op ) ? s.operatorMatrices.el_transitions[split_s_op].hilbert : s.operatorMatrices.ph_transitions[split_s_op].hilbert;
+    return ret;
+}
 std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::get_operators_matrices( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
-    Sparse op_creator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    Sparse op_annihilator = Sparse( s.parameters.maxStates, s.parameters.maxStates );
-    for ( auto &split_s_op_creator : QDLC::String::splitline( s_op_creator, '+' ) )
-        op_creator += s.operatorMatrices.el_transitions.count( split_s_op_creator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_creator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_creator].hilbert;
-    for ( auto &split_s_op_annihilator : QDLC::String::splitline( s_op_annihilator, '+' ) )
-        op_annihilator += s.operatorMatrices.el_transitions.count( split_s_op_annihilator ) != 0 ? s.operatorMatrices.el_transitions[split_s_op_annihilator].hilbert : s.operatorMatrices.ph_transitions[split_s_op_annihilator].hilbert;
+    const auto op_creator = get_operators_matrix( s, s_op_creator );
+    const auto op_annihilator = get_operators_matrix( s, s_op_annihilator );
     return std::make_tuple( op_creator, op_annihilator );
     // return std::make_tuple( op_creator, op_creator.adjoint() );
 }

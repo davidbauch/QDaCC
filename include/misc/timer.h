@@ -52,6 +52,8 @@ class Timers {
     static constexpr double SECONDS = 1.0;
     static constexpr double MILLISECONDS = 1E3;
     static constexpr double MICROSECONDS = 1E6;
+    static constexpr int RUNNING = 2;
+    static constexpr int WAITING = 3;
 
     Timers( Timers & ) = delete;
     static Timers &Get() {
@@ -67,11 +69,11 @@ class Timers {
     static void outputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
         return Get().IoutputTimeStrings( t, currentIt, maxItTotal, suffix, final );
     }
-    static void outputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
-        return Get().IoutputProgressBar( t, p, currentIt, maxItTotal, suffix, final );
+    static void outputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", int state = RUNNING ) {
+        return Get().IoutputProgressBar( t, p, currentIt, maxItTotal, suffix, state );
     }
-    static void outputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
-        return Get().IoutputProgress( t, p, currentIt, maxItTotal, suffix, final );
+    static void outputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", int state = RUNNING ) {
+        return Get().IoutputProgress( t, p, currentIt, maxItTotal, suffix, state );
     }
     static void reset() {
         return Get().Ireset();
@@ -100,8 +102,8 @@ class Timers {
         return timers.back();
     }
     void IoutputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
-    void IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
-    void IoutputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
+    void IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, int state );
+    void IoutputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, int state );
     void Ireset() {
         timers.clear();
     }

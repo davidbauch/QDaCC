@@ -12,6 +12,7 @@
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <vector>
+#include <numeric> // accumulate
 
 #define BAR_HORIZONTAL 0
 #define BAR_VERTICAL 1
@@ -28,11 +29,12 @@ const std::vector<std::string> sym6 = { " ", "\033[38;2;25;25;25m═\033[0m", "\
 class ProgressBar {
    private:
     double currentPercent;
+    std::string symstr;
     int num0, num1, num2;
     bool half;
-    int c;
-    double lastSpin;
-    std::string addstr( int num, std::string str ) {
+    int c = 0;
+    double lastSpin = 0;
+    std::string addstr( int num, const std::string& str ) {
         std::string ret = "";
         for ( int i = 0; i < num; i++ ) {
             ret += str;
@@ -45,28 +47,23 @@ class ProgressBar {
     std::string barEnd;
     std::vector<std::string> spin;
     std::vector<std::string> sym;
-    std::string strBarStart;
-    std::string strBarEnd;
+    std::string strBarStart = "[";
+    std::string strBarEnd = "]";
     bool isSpinning;
     double spinPS;
-    int maxSize;
+    int maxSize = 0;
     int type;
 
-    ProgressBar( int _barLength = 60, int _decimalPoints = 0, int _type = BAR_VERTICAL, bool _isSpinning = true, double _spinPS = 0.1, const std::vector<std::string>& _sym = ProgressBarSetting::sym6, const std::vector<std::string>& _spin = { "|", "/", "-", "\\" }, std::string _barEnd = "Done" ) {
-        barLength = _barLength;
-        decimalPoints = _decimalPoints;
-        isSpinning = _isSpinning;
-        spinPS = _spinPS;
-        lastSpin = 0;
-        sym = _sym;
-        barEnd = _barEnd;
-        spin = _spin;
-        c = 0;
-        maxSize = 0;
-        type = _type;
-        strBarStart = " [";
-        strBarEnd = "]";
-    }
+    ProgressBar( int _barLength = 60, int _decimalPoints = 0, int _type = BAR_VERTICAL, bool _isSpinning = true, double _spinPS = 0.1, const std::vector<std::string>& _sym = ProgressBarSetting::sym6, const std::vector<std::string>& _spin = { "|", "/", "-", "\\" }, const std::string& _barEnd = "Done" ) : barLength( _barLength ),
+                                                                                                                                                                                                                                                                                                                 decimalPoints( _decimalPoints ),
+                                                                                                                                                                                                                                                                                                                 barEnd( _barEnd ),
+                                                                                                                                                                                                                                                                                                                 spin( _spin ),
+                                                                                                                                                                                                                                                                                                                 sym( _sym ),
+                                                                                                                                                                                                                                                                                                                 isSpinning( _isSpinning ),
+                                                                                                                                                                                                                                                                                                                 spinPS( _spinPS ),
+                                                                                                                                                                                                                                                                                                                 type( _type ) {
+        symstr = std::accumulate( sym.begin(), sym.end(), std::string( "" ) );
+    };
     void calculate( int currentIterations, int maximumIterations ) {
         currentPercent = std::min( ( 1.0 * currentIterations ) / maximumIterations, 0.9999 );
         int size = (int)sym.size() - 1;
@@ -81,7 +78,7 @@ class ProgressBar {
             // num2 = std::max(0,barLength-1-num0); // Redundant
         }
     }
-    std::string print( int currentIterations, int maximumIterations, std::string barSuffix = "", std::string barPrefix = "", bool bold = true ) {
+    std::string print( int currentIterations, int maximumIterations, const std::string& barSuffix = "", const std::string& barPrefix = "", bool bold = true ) {
         calculate( currentIterations, maximumIterations );
         std::string ret = "";
         if ( type == 0 )
@@ -94,6 +91,24 @@ class ProgressBar {
             c++;
         }
         ret = "\033[2K\033[38;2;255;255;255m" + strBarStart + "\033[0m" + ret + "\033[38;2;255;255;255m" + strBarEnd + ( decimalPoints >= 0 ? fmt::format( " {:.{}f}\%", 1.0 * currentIterations / maximumIterations * 100, decimalPoints ) : "" ) + ( ( isSpinning && currentIterations < maximumIterations ) ? fmt::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + ( currentIterations < maximumIterations ? barSuffix : barSuffix + " - " + barEnd ) + " - " + barPrefix + "\033[0m";
+        maxSize = ( (int)ret.size() > maxSize ) ? (int)ret.size() : maxSize;
+        // fmt::print( "{:<{}}\r", ret, maxSize );
+        if ( bold )
+            ret = "\033[1m" + ret + "\033[0m";
+        fmt::print( "{}\r", ret );
+        return ret;
+    }
+    // Uses the "spin" component to animate a waiting position
+    std::string wait( const std::string& barSuffix = "", const std::string& barPrefix = "", bool bold = true ) {
+        if ( omp_get_wtime() - lastSpin >= spinPS ) {
+            lastSpin = omp_get_wtime();
+            c++;
+        }
+        int position = ( c % ( 2 * sym.size() - 1 ) ) - sym.size() + 1;
+        if ( position < 0 )
+            position = -position;
+        std::string ret = addstr( barLength, sym.at( position ) );
+        ret = "\033[2K\033[38;2;255;255;255m" + strBarStart + "\033[0m" + ret + "\033[38;2;255;255;255m" + strBarEnd + " Waiting" + ( isSpinning ? fmt::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + barSuffix + " - " + barPrefix + "\033[0m";
         maxSize = ( (int)ret.size() > maxSize ) ? (int)ret.size() : maxSize;
         // fmt::print( "{:<{}}\r", ret, maxSize );
         if ( bold )

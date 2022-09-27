@@ -134,15 +134,17 @@ double Timers::Isummary( bool output ) {
     return totalWallTime;
 }
 
-void Timers::IoutputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
+void Timers::IoutputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, int state ) {
     if ( output_handler )
-        outputTimeStrings( t, currentIt, maxItTotal, suffix, final );
+        outputTimeStrings( t, currentIt, maxItTotal, suffix, state );
     else
-        outputProgressBar( t, p, currentIt, maxItTotal, suffix, final );
+        outputProgressBar( t, p, currentIt, maxItTotal, suffix, state );
 }
-void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
-    if ( t.doOutput() || final ) {
-        if ( !final )
+void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, int state ) {
+    if ( t.doOutput() || state == PROGRESS_FORCE_OUTPUT ) {
+        if ( state == WAITING ) {
+            p.wait( "", suffix );
+        } else if ( state != PROGRESS_FORCE_OUTPUT )
             p.print( currentIt, maxItTotal, fmt::format( "T - {}", Timer::format( ( maxItTotal - currentIt ) * t.getAverageIterationTime() ) ), suffix );
         else {
             p.print( maxItTotal, maxItTotal, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );

@@ -95,16 +95,19 @@ class ODESolver {
     Sparse getHamilton( System &s, const double t );
 
     /**
-     * @brief Calculates the G1 Correlation Function
+     * @brief Calculates the G1(tau) function. Calculates <b^+(t) * b(t+tau)> via quantum regression theorem. Logs and outputs progress.
      *
      */
-    std::tuple<Sparse, Sparse> calculate_g1( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, std::string purpose = "unknown" ); // std::vector<std::vector<QDLC::SaveScalar>>
+    void calculate_g1( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, const std::string &purpose = "unknown" );
+    void calculate_g1( System &s, const std::vector<std::string> &s_op_creator, const std::string &s_op_annihilator, const std::vector<std::string> &purposes );
 
     /**
      * @brief Calculates the G2 Correlation Function
+     * The G2 function will be evaluated in time only once, but the expectation value loop can be evaulated multiple times.
      *
      */
-    std::tuple<Sparse, Sparse, Sparse, Sparse> calculate_g2( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, std::string purpose = "unknown" );
+    void calculate_g2( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const std::string &purpose = "unknown" );
+    void calculate_g2( System &s, const std::string &s_op_creator_1, const std::vector<std::string> &s_op_annihilator_1, const std::vector<std::string> &s_op_creator_2, const std::string &s_op_annihilator_2, const std::vector<std::string> &purposes );
 
    public:
     ODESolver(){};
@@ -138,6 +141,7 @@ class ODESolver {
      * @brief Returns a tuple of [creator, annihilator] Sparse Operator Matrices from a given Operator String
      *
      */
+    Sparse get_operators_matrix( System &s, const std::string &s_op );
     std::tuple<Sparse, Sparse> get_operators_matrices( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator );
 
     /**

@@ -20,16 +20,26 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     std::string s_g2_2211 = get_operators_purpose( { s_op_creator_2, s_op_annihilator_1, s_op_creator_2, s_op_annihilator_1 }, 2 );
     std::string s_g2_2222 = get_operators_purpose( { s_op_creator_2, s_op_annihilator_2, s_op_creator_2, s_op_annihilator_2 }, 2 );
 
-    calculate_g2( s, s_op_creator_1, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_1, s_g2_1111 );
-    calculate_g2( s, s_op_creator_1, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_2, s_g2_1122 );
-    calculate_g2( s, s_op_creator_2, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_1, s_g2_2121 );
-    auto [op_creator_2, op_annihilator_1, op_creator_1, op_annihilator_2] = calculate_g2( s, s_op_creator_2, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_2, s_g2_2112 );
-    calculate_g2( s, s_op_creator_1, s_op_annihilator_2, s_op_creator_2, s_op_annihilator_1, s_g2_1221 );
-    calculate_g2( s, s_op_creator_2, s_op_annihilator_2, s_op_creator_2, s_op_annihilator_2, s_g2_2222 );
-    cache[s_g2_2211] = cache[s_g2_1122].conjugate();
-    cache[s_g2_2211 + "_time"] = cache[s_g2_1122 + "_time"];
-    cache[s_g2_1212] = cache[s_g2_2121].conjugate();
-    cache[s_g2_1212 + "_time"] = cache[s_g2_2121 + "_time"];
+    // Get Sparse Operator Matrices
+    const auto &[op_creator_1, op_annihilator_1] = get_operators_matrices( s, s_op_creator_1, s_op_annihilator_1 );
+    const auto &[op_creator_2, op_annihilator_2] = get_operators_matrices( s, s_op_creator_2, s_op_annihilator_2 );
+
+    // Calculate G2's if neccessary
+    // calculate_g2( s, s_op_creator_1, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_1, s_g2_1111 );
+    // calculate_g2( s, s_op_creator_1, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_2, s_g2_1122 );
+    // calculate_g2( s, s_op_creator_2, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_1, s_g2_2121 );
+    // calculate_g2( s, s_op_creator_2, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_2, s_g2_2112 );
+    // calculate_g2( s, s_op_creator_1, s_op_annihilator_2, s_op_creator_2, s_op_annihilator_1, s_g2_1221 );
+    // calculate_g2( s, s_op_creator_2, s_op_annihilator_2, s_op_creator_2, s_op_annihilator_2, s_g2_2222 );
+    // Make sure to only evaluate the tau-direction when absolutely neccessary
+    calculate_g2( s, s_op_creator_1, { s_op_annihilator_1, s_op_annihilator_2 }, { s_op_creator_1, s_op_creator_2 }, s_op_annihilator_1, { s_g2_1111, s_g2_1221 } );
+    calculate_g2( s, s_op_creator_2, { s_op_annihilator_1, s_op_annihilator_2 }, { s_op_creator_1, s_op_creator_2 }, s_op_annihilator_2, { s_g2_2112, s_g2_2222 } );
+    calculate_g2( s, s_op_creator_1, { s_op_annihilator_2, s_op_annihilator_1 }, { s_op_creator_1, s_op_creator_2 }, s_op_annihilator_2, { s_g2_1122, s_g2_1212 } );
+    calculate_g2( s, s_op_creator_2, { s_op_annihilator_2, s_op_annihilator_1 }, { s_op_creator_1, s_op_creator_2 }, s_op_annihilator_1, { s_g2_2121, s_g2_2211 } );
+    // cache[s_g2_2211] = cache[s_g2_1122].conjugate();
+    // cache[s_g2_2211 + "_time"] = cache[s_g2_1122 + "_time"];
+    // cache[s_g2_1212] = cache[s_g2_2121].conjugate();
+    // cache[s_g2_1212 + "_time"] = cache[s_g2_2121 + "_time"];
 
     // Note: This will probably be either removed completely, or implemented correctly.
     if ( s.parameters.input_correlation["Conc"].numerical_v["Center"].size() > 0 ) {
