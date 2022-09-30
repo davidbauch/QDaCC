@@ -32,12 +32,6 @@ void QDLC::Numerics::ODESolver::calculate_g1( System &s, const std::vector<std::
     // Generator super-purpose
     std::string super_purpose = std::accumulate( std::next( purposes.begin() ), purposes.end(), purposes.front(), []( const std::string &a, const std::string &b ) { return a + " and " + b; } );
 
-    // Create Timer and Progressbar
-    std::string progressstring = "G1(" + super_purpose + "): ";
-    Timer &timer = Timers::create( "RungeKutta-G1-Loop (" + super_purpose + ")" );
-    ProgressBar progressbar = ProgressBar();
-    timer.start();
-
     std::vector<std::pair<Sparse, std::string>> eval_operators;
 
     // Preconstruct
@@ -56,7 +50,7 @@ void QDLC::Numerics::ODESolver::calculate_g1( System &s, const std::vector<std::
         cache[purpose + "_time"] = Dense::Zero( matdim, matdim );
         auto &gmat_time = cache[purpose + "_time"];
 // Fill Time Matrix
-#pragma omp parallel for collapse( 2 ) schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
+#pragma omp parallel for collapse( 2 ) schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
         for ( size_t i = 0; i < matdim; i++ ) {
             for ( size_t j = 0; j < matdim; j++ ) {
                 double tau = i + j < matdim ? s.parameters.grid_values[i + j] : s.parameters.grid_values.back() + s.parameters.grid_steps.back() * ( i + j - matdim + 1 );
@@ -64,6 +58,14 @@ void QDLC::Numerics::ODESolver::calculate_g1( System &s, const std::vector<std::
             }
         }
     }
+    // Create Timer and Progressbar
+    std::string progressstring = "G1(" + super_purpose + "): ";
+    Timer &timer = Timers::create( "RungeKutta-G1-Loop (" + super_purpose + ")" );
+    ProgressBar progressbar = ProgressBar();
+    timer.start();
+
+    if ( eval_operators.empty() )
+        return;
     // Calculate G1 Function
     Log::L2( "[G1Correlation] Calculating G1(tau)... purpose: {}, saving to matrix of size {}x{}, iterating over {} saved states...\n", super_purpose, matdim, matdim, savedStates.size() );
     // Main G1 Loop
@@ -121,12 +123,6 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
     // Generator super-purpose
     std::string super_purpose = std::accumulate( std::next( purposes.begin() ), purposes.end(), purposes.front(), []( const std::string &a, const std::string &b ) { return a + " and " + b; } );
 
-    // Create Timer and Progresbar
-    std::string progressstring = "G2(" + super_purpose + "): ";
-    Timer &timer = Timers::create( "RungeKutta-G2-Loop (" + super_purpose + ")" );
-    auto progressbar = ProgressBar();
-    timer.start();
-
     std::vector<std::pair<Sparse, std::string>> eval_operators;
 
     // Preconstruct
@@ -147,7 +143,7 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
         cache[purpose + "_time"] = Dense::Zero( matdim, matdim );
         auto &gmat_time = cache[purpose + "_time"];
         // Fill Time Matrix
-#pragma omp parallel for collapse( 2 ) schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
+#pragma omp parallel for collapse( 2 ) schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
         for ( size_t i = 0; i < matdim; i++ ) {
             for ( size_t j = 0; j < matdim; j++ ) {
                 double tau = i + j < matdim ? s.parameters.grid_values[i + j] : s.parameters.grid_values.back() + s.parameters.grid_steps.back() * ( i + j - matdim + 1 );
@@ -155,6 +151,14 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
             }
         }
     }
+    if ( eval_operators.empty() )
+        return;
+    // Create Timer and Progresbar
+    std::string progressstring = "G2(" + super_purpose + "): ";
+    Timer &timer = Timers::create( "RungeKutta-G2-Loop (" + super_purpose + ")" );
+    auto progressbar = ProgressBar();
+    timer.start();
+
     // Calculate G2 Function
     Log::L2( "[G2Correlation] Calculating G2(tau)... purpose: {}, saving to matrix of size {}x{},  iterating over {} saved states...\n", super_purpose, matdim, matdim, std::min<size_t>( matdim, savedStates.size() ) );
     // Main G2 Loop
