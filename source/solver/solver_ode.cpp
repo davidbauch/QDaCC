@@ -84,7 +84,8 @@ std::tuple<std::string, std::string> QDLC::Numerics::ODESolver::get_operator_str
     return std::make_tuple( s_creator, s_annihilator );
 }
 
-std::string QDLC::Numerics::ODESolver::get_operators_purpose( const std::vector<std::string> &operators, int order ) {
+std::string QDLC::Numerics::ODESolver::get_operators_purpose( const std::vector<std::string> &operators ) {
+    const int order = operators.size() / 2;
     std::string ret = "G" + std::to_string( order );
     for ( auto &el : operators )
         ret += "-" + el;

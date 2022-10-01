@@ -7,8 +7,8 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
     ProgressBar progressbar = ProgressBar();
 
     // Calculate G2(t,tau) with given operator matrices
-    std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 );
-    std::string s_g2 = get_operators_purpose( { s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator }, 2 );
+    std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator } );
+    std::string s_g2 = get_operators_purpose( { s_op_creator, s_op_creator, s_op_annihilator, s_op_annihilator } );
 
     // Get Sparse Operator Matrices
     const auto &[op_creator, op_annihilator] = get_operators_matrices( s, s_op_creator, s_op_annihilator );

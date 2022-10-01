@@ -62,7 +62,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
         for ( int i = 0; i < spectrum_s.string_v["Modes"].size(); i++ ) {
             const auto &[s_creator, s_annihilator] = get_operator_strings( s, spectrum_s.string_v["Modes"][i] );
-            std::string g1 = get_operators_purpose( { s_creator, s_annihilator }, 1 );
+            std::string g1 = get_operators_purpose( { s_creator, s_annihilator } );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
             if ( g12_settings_map.count( g1 ) == 0 )
                 g12_settings_map[g1] = { ident, ident, creator, annihilator };
@@ -71,8 +71,8 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         auto &indist_s = s.parameters.input_correlation["Indist"];
         for ( int i = 0; i < indist_s.string_v["Modes"].size(); i++ ) {
             const auto &[s_creator, s_annihilator] = get_operator_strings( s, indist_s.string_v["Modes"][i] );
-            std::string g1 = get_operators_purpose( { s_creator, s_annihilator }, 1 );
-            std::string g2 = get_operators_purpose( { s_creator, s_annihilator, s_creator, s_annihilator }, 2 );
+            std::string g1 = get_operators_purpose( { s_creator, s_annihilator } );
+            std::string g2 = get_operators_purpose( { s_creator, s_creator, s_annihilator, s_annihilator } );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
             if ( g12_settings_map.count( g1 ) == 0 )
                 g12_settings_map[g1] = { ident, ident, creator, annihilator };
@@ -86,12 +86,12 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
             const auto &[s_creator_1, s_annihilator_1] = get_operator_strings( s, mode[0] );
             const auto &[s_creator_2, s_annihilator_2] = get_operator_strings( s, mode[1] );
 
-            std::string g2_1111 = get_operators_purpose( { s_creator_1, s_annihilator_1, s_creator_1, s_annihilator_1 }, 2 );
-            std::string g2_1122 = get_operators_purpose( { s_creator_1, s_annihilator_2, s_creator_1, s_annihilator_2 }, 2 );
-            std::string g2_2121 = get_operators_purpose( { s_creator_2, s_annihilator_2, s_creator_1, s_annihilator_1 }, 2 );
-            std::string g2_1221 = get_operators_purpose( { s_creator_1, s_annihilator_2, s_creator_2, s_annihilator_1 }, 2 );
-            std::string g2_2112 = get_operators_purpose( { s_creator_2, s_annihilator_1, s_creator_1, s_annihilator_2 }, 2 );
-            std::string g2_2222 = get_operators_purpose( { s_creator_2, s_annihilator_2, s_creator_2, s_annihilator_2 }, 2 );
+            std::string g2_1111 = get_operators_purpose( { s_creator_1, s_creator_1, s_annihilator_1, s_annihilator_1 } );
+            std::string g2_1122 = get_operators_purpose( { s_creator_1, s_creator_1, s_annihilator_2, s_annihilator_2 } );
+            std::string g2_2121 = get_operators_purpose( { s_creator_2, s_creator_1, s_annihilator_2, s_annihilator_1 } );
+            std::string g2_1221 = get_operators_purpose( { s_creator_1, s_creator_2, s_annihilator_2, s_annihilator_1 } );
+            std::string g2_2112 = get_operators_purpose( { s_creator_2, s_creator_1, s_annihilator_1, s_annihilator_2 } );
+            std::string g2_2222 = get_operators_purpose( { s_creator_2, s_creator_2, s_annihilator_2, s_annihilator_2 } );
             // std::string g2_1212 = get_operators_purpose( { s_creator_1, s_annihilator_1, s_creator_2, s_annihilator_2 }, 2 );
             // std::string g2_2211 = get_operators_purpose( { s_creator_2, s_annihilator_1, s_creator_2, s_annihilator_1 }, 2 );
 
@@ -115,7 +115,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
             int order = std::abs( gs_s.numerical_v["Order"][i] );
             const auto &[s_creator, s_annihilator] = get_operator_strings( s, gs_s.string_v["Modes"][i] );
-            std::string g = order == 1 ? get_operators_purpose( { s_creator, s_annihilator }, 1 ) : get_operators_purpose( { s_creator, s_annihilator, s_creator, s_annihilator }, 2 );
+            std::string g = order == 1 ? get_operators_purpose( { s_creator, s_annihilator } ) : get_operators_purpose( { s_creator, s_creator, s_annihilator, s_annihilator } );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
             if ( g12_settings_map.count( g ) == 0 )
                 if ( order == 1 )

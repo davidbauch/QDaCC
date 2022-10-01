@@ -11,7 +11,7 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
     s.parameters.numerics_maximum_secondary_threads = 1;
     // Calculate G1/2(t,tau) with given operator matrices
     if ( s_g.size() == 0 ) {
-        s_g = order == 1 ? get_operators_purpose( { s_op_creator, s_op_annihilator }, 1 ) : get_operators_purpose( { s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator }, 2 );
+        s_g = order == 1 ? get_operators_purpose( { s_op_creator, s_op_annihilator } ) : get_operators_purpose( { s_op_creator, s_op_creator, s_op_annihilator, s_op_annihilator } );
         if ( order == 1 )
             calculate_g1( s, s_op_creator, s_op_annihilator, s_g );
         else

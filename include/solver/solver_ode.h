@@ -135,7 +135,7 @@ class ODESolver {
      * @brief Returns an intentifier string for a combination of G-function order and a superposition of operators
      *
      */
-    std::string get_operators_purpose( const std::vector<std::string> &operators, int order );
+    std::string get_operators_purpose( const std::vector<std::string> &operators );
 
     /**
      * @brief Returns a tuple of [creator, annihilator] Sparse Operator Matrices from a given Operator String

@@ -60,7 +60,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         auto modes = gs_s.string_v["Modes"][i];
         int order = std::abs( gs_s.numerical_v["Order"][i] );
         const auto &[s_creator, s_annihilator] = get_operator_strings( s, modes );
-        std::string purpose = order == 1 ? get_operators_purpose( { s_creator, s_annihilator }, 1 ) : get_operators_purpose( { s_creator, s_annihilator, s_creator, s_annihilator }, 2 );
+        std::string purpose = order == 1 ? get_operators_purpose( { s_creator, s_annihilator } ) : get_operators_purpose( { s_creator, s_creator, s_annihilator, s_annihilator } );
         const auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
         if ( order == 1 ) {
             calculate_g1( s, s_creator, s_annihilator, purpose );
