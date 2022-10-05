@@ -151,10 +151,10 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             continue;
         Log::L2( "[PhotonStatistics] Saving Concurrence to conc_" + mode + ".txt...\n" );
         auto &f_conc = FileOutput::add_file( "conc_" + mode );
-        f_conc << fmt::format( "Time\t{0}\t{0}_simple\t\t{0}_fidelity\t{0}(g2(0))\t{0}_simple(g2(0))\t{0}_fidelity(g2(0))\n", mode );
+        f_conc << fmt::format( "Time\t{0}\t{0}_simple\t{0}_analytical\t{0}_fidelity\t{0}(g2(0))\t{0}_simple(g2(0))\t{0}_fidelity(g2(0))\n", mode );
         // fmt::print( f_indist, "Time\t{0}\t{0}(g2(0))\n", mode );
         for ( int i = 0; i < to_output["Conc"][mode].size(); i++ ) {
-            f_conc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ), std::real( to_output["Conc_fidelity"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ), std::real( to_output["Conc_g2zero_fidelity"][mode][i] ) );
+            f_conc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ), std::real( to_output["Conc_analytical"][mode][i] ), std::real( to_output["Conc_fidelity"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ), std::real( to_output["Conc_g2zero_fidelity"][mode][i] ) );
         }
     }
     for ( auto &[mode, data] : to_output["Raman"] ) {

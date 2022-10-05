@@ -1,5 +1,5 @@
 #include "solver/solver_ode.h"
-
+#include "solver/solver_analytical_eigenvalues.h"
 // Description: Calculates Concurrence
 bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2 ) {
     Log::L2( "[Concurrence] Conc for modes {} {} and {} {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2 );
@@ -100,16 +100,28 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
             }
         }
     }
-    // Calculate EigenValues
-    std::vector<Scalar> output( T, 0 );
-    std::vector<Scalar> output_g2zero( T, 0 );
-    std::vector<Scalar> output_simple( T, 0 );
-    std::vector<Scalar> output_g2zero_simple( T, 0 );
-    std::vector<Scalar> output_fidelity( T, 0 );
-    std::vector<Scalar> output_fidelity_g2zero( T, 0 );
-    std::vector<Scalar> time( T, 0 );
-    std::vector<Dense> twophotonmatrix( T, Dense::Zero( 4, 4 ) );
-    std::vector<Dense> twophotonmatrix_g2zero( T, Dense::Zero( 4, 4 ) );
+    // Calculate EigenValues.
+    to_output["Conc"]["Time"] = std::vector<Scalar>( T, 0 );
+    to_output["Conc"][fout] = std::vector<Scalar>( T, 0 );
+    to_output["Conc_simple"][fout] = std::vector<Scalar>( T, 0 );
+    to_output["Conc_analytical"][fout] = std::vector<Scalar>( T, 0 );
+    to_output["Conc_fidelity"][fout] = std::vector<Scalar>( T, 0 );
+    to_output["Conc_g2zero"][fout] = std::vector<Scalar>( T, 0 );
+    to_output["Conc_g2zero_simple"][fout] = std::vector<Scalar>( T, 0 );
+    to_output["Conc_g2zero_fidelity"][fout] = std::vector<Scalar>( T, 0 );
+    to_output_m["TwoPMat"][fout] = std::vector<Dense>( T, Dense::Zero( 4, 4 ) );
+    to_output_m["TwoPMat"][fout + "_g2zero"] = std::vector<Dense>( T, Dense::Zero( 4, 4 ) );
+
+    auto &output = to_output["Conc"]["Time"];
+    auto &output_g2zero = to_output["Conc"][fout];
+    auto &output_simple = to_output["Conc_simple"][fout];
+    auto &output_analytical = to_output["Conc_analytical"][fout];
+    auto &output_g2zero_simple = to_output["Conc_fidelity"][fout];
+    auto &output_fidelity = to_output["Conc_g2zero"][fout];
+    auto &output_fidelity_g2zero = to_output["Conc_g2zero_simple"][fout];
+    auto &time = to_output["Conc_g2zero_fidelity"][fout];
+    auto &twophotonmatrix = to_output_m["TwoPMat"][fout];
+    auto &twophotonmatrix_g2zero = to_output_m["TwoPMat"][fout + "_g2zero"];
 
     Dense spinflip = Dense::Zero( 4, 4 );
     spinflip( 0, 3 ) = -1;
@@ -189,6 +201,9 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         output_g2zero_simple.at( k ) = 2.0 * std::abs( rho_2phot_g2zero( 3, 0 ) / rho_2phot_g2zero.trace() );
         output_fidelity_g2zero.at( k ) = fidelity_g2zero;
         time.at( k ) = std::real( mat_time( k, 0 ) );
+        const auto eigenvalues_analytical = analytical_eigenvalues( rho_2phot / rho_2phot.trace() );
+        output_analytical.at( k ) = eigenvalues_analytical( 3 ) - eigenvalues_analytical( 2 ) - eigenvalues_analytical( 1 ) - eigenvalues_analytical( 0 );
+        std::cout << "Eigenvalues: " << eigenvalues_analytical.format( Eigen::IOFormat( 4, 0, ", ", " ", "[", "]" ) ) << std::endl;
         // std::cout << "Rho(3,0) = "<<rho_2phot( 3, 0 )<<", rho.trace() = "<<rho_2phot.trace()<<", Rho before saving :\n" << rho_2phot.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
         // std::cout << "Rho_g20(3,0) = "<<rho_2phot_g2zero( 3, 0 )<<", rho_g20.trace() = "<<rho_2phot_g2zero.trace()<<", Rho_g20 before saving :\n" << rho_2phot_g2zero.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
         twophotonmatrix.at( k ) = rho_2phot;
@@ -198,17 +213,6 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     // Final output and timer end
     timer_c.end();
     Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + ")", Timers::PROGRESS_FORCE_OUTPUT );
-    // Add to Fileoutput:
-    if ( to_output["Conc"].size() == 0 )
-        to_output["Conc"]["Time"] = time;
-    to_output["Conc"][fout] = output;
-    to_output["Conc_simple"][fout] = output_simple;
-    to_output["Conc_fidelity"][fout] = output_fidelity;
-    to_output["Conc_g2zero"][fout] = output_g2zero;
-    to_output["Conc_g2zero_simple"][fout] = output_g2zero_simple;
-    to_output["Conc_g2zero_fidelity"][fout] = output_fidelity_g2zero;
-    to_output_m["TwoPMat"][fout] = twophotonmatrix;
-    to_output_m["TwoPMat"][fout + "_g2zero"] = twophotonmatrix_g2zero;
     Log::L1( "Final Concurrence: {:.10f} ({:.10f} simple) {}\n", std::real( output.back() ), std::real( output_simple.back() ), fout );
     Log::L1( "Final Concurrence with g2(0): {:.10f} ({:.10f} simple) {}\n", std::real( output_g2zero.back() ), std::real( output_g2zero_simple.back() ), fout );
     return true;
