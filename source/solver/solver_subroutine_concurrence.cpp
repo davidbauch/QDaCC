@@ -112,14 +112,14 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     to_output_m["TwoPMat"][fout] = std::vector<Dense>( T, Dense::Zero( 4, 4 ) );
     to_output_m["TwoPMat"][fout + "_g2zero"] = std::vector<Dense>( T, Dense::Zero( 4, 4 ) );
 
-    auto &output = to_output["Conc"]["Time"];
-    auto &output_g2zero = to_output["Conc"][fout];
+    auto &time = to_output["Conc"]["Time"];
+    auto &output = to_output["Conc"][fout];
     auto &output_simple = to_output["Conc_simple"][fout];
     auto &output_analytical = to_output["Conc_analytical"][fout];
-    auto &output_g2zero_simple = to_output["Conc_fidelity"][fout];
-    auto &output_fidelity = to_output["Conc_g2zero"][fout];
+    auto &output_fidelity = to_output["Conc_fidelity"][fout];
+    auto &output_g2zero = to_output["Conc_g2zero"][fout];
+    auto &output_g2zero_simple = to_output["Conc_g2zero_simple"][fout];
     auto &output_fidelity_g2zero = to_output["Conc_g2zero_simple"][fout];
-    auto &time = to_output["Conc_g2zero_fidelity"][fout];
     auto &twophotonmatrix = to_output_m["TwoPMat"][fout];
     auto &twophotonmatrix_g2zero = to_output_m["TwoPMat"][fout + "_g2zero"];
 
