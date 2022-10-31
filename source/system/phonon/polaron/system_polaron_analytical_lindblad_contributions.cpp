@@ -1,5 +1,7 @@
 #include "system/system.h"
 
+using namespace QDLC;
+
 double System::dgl_phonons_lindblad_coefficients( const double energy, const double coupling, const Scalar current_pulse, const char mode, const double scaling, const double sign ) {
     Log::L3( "[System-PME]     Calculating Lindblad Rates for integral border = {}, deltaE = {}, g = {}, Omega = {}, mode = {}, sign = {}, coupling scaling = {}, integral stepsize = {}\n", parameters.p_phonon_tcutoff, energy, coupling, current_pulse, mode, sign, scaling, parameters.numerics_subiterator_stepsize );
     double ret = 0;
@@ -43,7 +45,7 @@ double System::dgl_phonons_lindblad_coefficients( const double energy, const dou
 Sparse System::dgl_phonons_lindblad_contribution( const double t, const Sparse &rho ) {
     Sparse ret( rho.rows(), rho.cols() );
     Log::L3( "[System-PME] Calculating Lindblad-Type Phonon Rates for t = {}\n", t );
-    const double chirpcorrection = chirp.empty() ? 0.0 : chirp.back().get( t );
+    const double chirpcorrection = chirp.empty() ? 0.0 : std::real( chirp.back().get( t ) );
     for ( auto &[name, mat] : parameters.input_pulse ) {
         int p = 0;
         for ( int m = 0; m < mat.string_v["CoupledTo"].size(); m++ ) {

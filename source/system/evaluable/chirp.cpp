@@ -2,130 +2,57 @@
 #include "solver/solver.h"
 #include "system/fileoutput.h"
 
-Chirp::Chirp( Chirp::Inputs &_inputs ) : inputs( _inputs ) {
-    counter_evaluated = 0;
-    counter_returned = 0;
-    Log::L2( "Creating Chirp with {} points of type {}...\n", inputs.t.size(), inputs.type );
-    int n = (int)( ( inputs.t_end - inputs.t_start ) / inputs.t_step * 2.0 + 5 );
-    if ( inputs.order > 5 )
-        steps = { QDLC::Numerics::RKCoefficients::a1 * inputs.t_step, QDLC::Numerics::RKCoefficients::a2 * inputs.t_step, QDLC::Numerics::RKCoefficients::a3 * inputs.t_step, QDLC::Numerics::RKCoefficients::a4 * inputs.t_step, QDLC::Numerics::RKCoefficients::a5 * inputs.t_step };
-    else
-        steps = { 0, 0.5 * inputs.t_step };
-    if ( inputs.type.compare( "sine" ) != 0 ) {
-        Log::L2( "Done initializing class, creating interpolant...\n" );
-        interpolant = Interpolant( inputs.t, inputs.y, inputs.ddt, inputs.type );
-        Log::L2( "Done creating interpolant, generating chirp...\n" );
+using namespace QDLC;
+
+Chirp::Chirp( Parameters::input_s &config, Parameters &p ) : Evaluable( config ) {
+    const std::string type = config.string.at( "Type" );
+    Log::L2( "[System-Chirp] Creating Chirp with {} points of type {}...\n", config.numerical_v.at( "Times" ).size(), type );
+    if ( type != "sine" ) {
+        Log::L2( "[System-Chirp] Done initializing class, creating interpolant...\n" );
+        interpolant = Interpolant( config.numerical_v.at( "Times" ), config.numerical_v.at( "Amplitude" ), config.numerical_v.at( "ddt" ), config.string.at( "Type" ) );
+        Log::L2( "[System-Chirp] Done creating interpolant, generating chirp...\n" );
     } else {
-        Log::L2( "No interpolant class used, using sine chirp instead." );
-        inputs.isSineChirp = true;
+        Log::L2( "[System-Chirp] No interpolant class used, using sine chirp instead.\n" );
+        isSineChirp = true;
     }
-    generate();
+    generate( p );
+    Log::L2( "[System-Chirp] Done!\n" );
 }
 
-double Chirp::evaluate( double t ) {
-    if ( inputs.isSineChirp ) {
-        double ret = 0;
-        for ( long unsigned int i = 0; i < inputs.y.size(); i++ ) {
-            ret += inputs.y.at( i ) * std::sin( 6.283 * t * inputs.ddt.at( i ) + 6.283 * inputs.t.at( i ) );
+Scalar Chirp::evaluate( double t ) {
+    if ( isSineChirp ) {
+        Scalar ret = 0;
+        const auto &config = get_inputs();
+        for ( long unsigned int i = 0; i < config.numerical_v.at( "Times" ).size(); i++ ) {
+            ret += config.numerical_v.at( "Amplitude" ).at( i ) * std::sin( 6.283 * t * config.numerical_v.at( "ddt" ).at( i ) + 6.283 * config.numerical_v.at( "Times" ).at( i ) );
         }
         return ret;
     }
     return interpolant.evaluate( t );
 }
-double Chirp::evaluate_derivative( double t ) {
-    return ( evaluate( t ) - evaluate( t - inputs.t_step ) ) / inputs.t_step;
-}
-double Chirp::evaluate_integral( double t ) {
-    if ( chirparray_integral.size() == 0 || t == 0.0 )
-        return evaluate( t ) * inputs.t_step;
-    return integral( t - inputs.t_step ) + evaluate( t ) * inputs.t_step;
-}
 
-void Chirp::generate() {
-    for ( double t1 = inputs.t_start; t1 < inputs.t_end + inputs.t_step * steps.size(); t1 += inputs.t_step ) {
-        for ( int i = 0; i < (int)steps.size(); i++ ) {
-            double t = t1 + steps[i];
-            chirparray[t] = get( t );
+// TODO
+Scalar Chirp::evaluate_derivative( double t, double dt ) {
+    if ( isSineChirp ) {
+        Scalar ret = 0;
+        const auto &config = get_inputs();
+        for ( long unsigned int i = 0; i < config.numerical_v.at( "Times" ).size(); i++ ) {
+            const auto inner_derivative = 6.283 * config.numerical_v.at( "ddt" ).at( i );
+            ret += config.numerical_v.at( "Amplitude" ).at( i ) * inner_derivative * std::cos( 6.283 * t * config.numerical_v.at( "ddt" ).at( i ) + 6.283 * config.numerical_v.at( "Times" ).at( i ) );
         }
-        chirparray_derivative[t1] = derivative( t1 );
-        chirparray_integral[t1] = 0.0; // integral( t1 ); // FIXME: segmentation fault, just integrade properly.
+        return ret;
     }
-    size = chirparray.size();
-    Log::L2( "chirparray.size() = {}... ", size );
+    return ( evaluate( t ) - evaluate( t - dt ) ) / dt;
 }
-
-void Chirp::fileOutput( std::string filepath ) {
-    auto &chirpfile = FileOutput::add_file( "chirp" );
-    chirpfile << "Time\tChirp\tDerivative\tIntegral\n";
-    for ( double t = inputs.t_start; t < inputs.t_end + inputs.t_step * steps.size(); t += inputs.t_step ) {
-        chirpfile << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t, chirparray[t], chirparray_derivative[t], chirparray_integral[t] );
-    }
-}
-
-void Chirp::Inputs::add( double _t, double _y, double _ddt ) {
-    t.emplace_back( _t );
-    y.emplace_back( _y );
-    ddt.emplace_back( _ddt );
-}
-
-void Chirp::Inputs::add( std::vector<Parameter> &_t, std::vector<Parameter> &_y, std::vector<Parameter> &_ddt ) {
-    if ( !( _t.size() == _y.size() && _t.size() == _ddt.size() ) ) {
-        Log::L2( "Input arrays don't have the same length! No Vectors are created, initializing interpolant will fail!\n" );
-        return;
-    }
-    for ( int i = 0; i < (int)_t.size(); i++ ) {
-        t.emplace_back( _t.at( i ) );
-        y.emplace_back( _y.at( i ) );
-        ddt.emplace_back( _ddt.at( i ) );
-    }
-}
-
-double Chirp::get( double t, bool force_evaluate ) {
-    if ( force_evaluate ) {
-        counter_evaluated++;
-        return evaluate( t );
-    }
-    if ( chirparray.count( t ) == 0 ) {
-        counter_evaluated++;
-        double val = evaluate( t );
-#pragma omp critical
-        chirparray[t] = val;
-        return val;
-    }
-    counter_returned++;
-    return chirparray[t];
-}
-double Chirp::derivative( double t, bool force_evaluate ) {
-    if ( force_evaluate ) {
-        counter_evaluated++;
-        return evaluate_derivative( t );
-    }
-    if ( chirparray_derivative.count( t ) == 0 ) {
-        counter_evaluated++;
-        double val = evaluate_derivative( t );
-#pragma omp critical
-        chirparray_derivative[t] = val;
-        return val;
-    }
-    counter_returned++;
-    return chirparray_derivative[t];
-}
-double Chirp::integral( double t, bool force_evaluate ) {
-    if ( force_evaluate ) {
-        counter_evaluated++;
-        return evaluate_integral( t );
-    }
-    if ( chirparray_integral.count( t ) == 0 ) {
-        counter_evaluated++;
-        double val = evaluate_integral( t );
-#pragma omp critical
-        chirparray_integral[t] = val;
-        return val;
-    }
-    counter_returned++;
-    return chirparray_integral[t];
+Scalar Chirp::evaluate_integral( double t, double dt ) {
+    // if ( chirparray_integral.size() == 0 || t == 0.0 )
+    //     return evaluate( t ) * inputs.t_step;
+    // return integral( t - inputs.t_step ) + evaluate( t ) * inputs.t_step;
+    return 0;
 }
 
 void Chirp::log() {
-    Log::L2( "Chirp evaluations/returns: {}/{}\n", counter_evaluated, counter_returned );
+    Evaluable::log( "Chirp" );
 }
+
+void Chirp::calculate_fourier( Parameters &p ){};

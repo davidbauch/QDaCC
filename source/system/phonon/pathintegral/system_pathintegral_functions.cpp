@@ -1,5 +1,7 @@
 #include "system/system.h"
 
+using namespace QDLC;
+
 void System::initialize_path_integral_functions() {
     Log::L2( "[System-Path-Integral] Initializing Path-Integral functions...\n" );
     // kernel in phi-vector schreiben

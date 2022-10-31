@@ -1,10 +1,12 @@
 #include "system/system.h"
 
+using namespace QDLC;
+
 Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
     // TODO Maybe? Cache explicit times?
-    double chirpcorrection = not chirp.empty() ? ( chirp.back().get( t ) + t * ( chirp.back().get( t ) - parameters.scaleVariable( chirp.back().derivative( t ), parameters.scale_value ) ) ) : 0;
+    Scalar chirpcorrection = not chirp.empty() ? ( chirp.back().get( t ) + t * ( chirp.back().get( t ) - parameters.scaleVariable( chirp.back().derivative( t ), parameters.scale_value ) ) ) : 0;
     auto explicit_time = Sparse( chi.rows(), chi.cols() );
-    
+
     // Electronic Transitions
     for ( const auto &[mode, param] : operatorMatrices.el_transitions ) {
         if ( param.direction == -1 )

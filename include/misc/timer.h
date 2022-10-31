@@ -30,10 +30,10 @@ class Timer {
     bool printToSummary;
     Timer();
     Timer( const std::string &_name, bool _addtoTotalStatistic, bool _printToSummary );
-    void start();
-    void end();
-    void iterate( int num = 1 );
-    void add( time_t cpu, double wall );
+    Timer &start();
+    Timer &end();
+    Timer &iterate( int num = 1 );
+    Timer &add( time_t cpu, double wall );
     double getWallTime( double scale = 1.0 );
     double getWallTimeOnce( double scale = 1.0 );
     double getCPUTime( double scale = 1.0 );

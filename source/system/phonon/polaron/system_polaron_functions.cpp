@@ -1,5 +1,7 @@
 #include "system/system.h"
 
+using namespace QDLC;
+
 void System::initialize_polaron_frame_functions() {
     if ( parameters.p_phonon_T >= 0 ) {
         Log::L2( "[System-PME] Initializing Polaron Frame Functions.\n" );
@@ -71,7 +73,7 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
     // All Contributions will (finally) be reduced onto this return value matrix
     Sparse ret( rho.rows(), rho.cols() );
     // Most precise approximation used. Calculate polaron fram Chi by integrating backwards from t to t-tau.
-    if ( parameters.numerics_phonon_approximation_order == PHONON_APPROXIMATION_LINDBLAD_RATES ) {
+    if ( parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::LindbladRates ) {
         return dgl_phonons_lindblad_contribution( t, rho );
     } else {
         // Calculate the initial Chi(t) which is in the interaction frame.

@@ -1,5 +1,7 @@
 #include "system/system.h"
 
+using namespace QDLC;
+
 System::System( const std::vector<std::string> &input ) {
     // Set Name of this system.
     name = "Generic Electronic System";
@@ -11,9 +13,8 @@ System::System( const std::vector<std::string> &input ) {
     // Initialize FileOutput with the current system
     FileOutput::init( parameters, operatorMatrices );
     // Initialize / Adjust the remaining system class
-    Timer &timer_systeminit = Timers::create( "System Initialization", true, false );
+    Timer &timer_systeminit = Timers::create( "System Initialization", true, false ).start();
     Log::L2( "[System] Initialization...\n" );
-    timer_systeminit.start();
     if ( !init_system() ) {
         Log::L2( "[System] Initialization failed! Exitting program...\n" );
         Log::Logger::close();
@@ -27,29 +28,22 @@ System::System( const std::vector<std::string> &input ) {
 
 bool System::init_system() {
     // Single chirp for single atomic level
-    for ( auto &[mode, p] : parameters.input_chirp ) {
-        Chirp::Inputs chirpinputs( parameters.t_start, parameters.t_end, parameters.t_step, p.string["Type"], parameters.numerics_rk_order );
-        chirpinputs.add( p.numerical_v["Times"], p.numerical_v["Amplitude"], p.numerical_v["ddt"] );
-        chirp.push_back( { chirpinputs } );
+    for ( auto &[name, chirpinputs] : parameters.input_chirp ) {
+        chirp.push_back( { chirpinputs, parameters } );
+        chirp.back().to_file( "chirp_" + name, false /*complex*/, false /*spectrum*/ );
     }
 
     // Arbitrary number of pulses onto single atomic level.
     for ( auto &[name, pulseinputs] : parameters.input_pulse ) {
         pulse.push_back( { pulseinputs, parameters } );
-    }
-    // pulse_V = Pulse( pulseinputs_V );
-    if ( not pulse.empty() ) {
-        Pulse::fileOutput( parameters.working_directory + "pulse.txt", pulse, parameters.t_start, parameters.t_end, parameters.t_step );
-    }
-    if ( not chirp.empty() ) {
-        chirp.back().fileOutput( parameters.working_directory + "chirp.txt" );
+        pulse.back().to_file( "pulse_" + name, true /*complex*/, true /*spectrum*/ );
     }
 
     // if ( parameters.numerics_use_saved_coefficients )
     //     savedCoefficients.reserve( parameters.numerics_saved_coefficients_max_size );
 
     // Output Phonon functions if phonons are active
-    if ( parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
+    if ( parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
         initialize_path_integral_functions();
     } else {
         initialize_polaron_frame_functions();
@@ -115,7 +109,7 @@ Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const dou
             Log::L3( "[System] Pure Dephasing:\n{}\n", Dense( ret[3] ).format( operatorMatrices.output_format ) );
         }
     }
-    if ( parameters.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL && parameters.p_phonon_T >= 0.0 ) {
+    if ( parameters.numerics_phonon_approximation_order != QDLC::PhononApproximation::PathIntegral && parameters.p_phonon_T >= 0.0 ) {
         ret[4] = dgl_phonons_pmeq( rho, t, past_rhos );
         Log::L3( "[System] Phonons PME:\n{}\n", Dense( ret[4] ).format( operatorMatrices.output_format ) );
     }
@@ -126,7 +120,7 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
     if ( parameters.numerics_use_interactionpicture ) {
         Log::L3( "[System] Time Transforming at t = {}, initial Matrix:\n{}\n", t, Dense( ret ).format( operatorMatrices.output_format ) );
         // TIMETRANSFORMATION_ANALYTICAL
-        if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) {
+        if ( parameters.numerics_order_timetrafo == QDLC::TransformationOrder::Analytical ) {
             // std::vector<Eigen::Triplet<Scalar>> ret_v;
             for ( int k = 0; k < ret.outerSize(); ++k ) {
                 for ( Sparse::InnerIterator it( ret, k ); it; ++it ) {
@@ -138,8 +132,8 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
                 }
             }
         }
-        // TIMETRANSFORMATION_MATRIXEXPONENTIAL
-        else if ( parameters.numerics_order_timetrafo == TIMETRANSFORMATION_MATRIXEXPONENTIAL ) {
+        // QDLC::TransformationOrder::MatrixExponential
+        else if ( parameters.numerics_order_timetrafo == QDLC::TransformationOrder::MatrixExponential ) {
             Sparse U = ( Dense( 1.i * operatorMatrices.H_0 * t ).exp() ).sparseView();
             ret = ( U * ret * U.adjoint() ).eval(); // aliasing?
         }

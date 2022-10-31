@@ -5,9 +5,7 @@
 
 using namespace std::complex_literals;
 
-namespace QDLC {
-
-namespace Type {
+namespace QDLC::Type {
 
 using Scalar = std::complex<double>;
 using Dense = Eigen::MatrixXcd;
@@ -21,11 +19,13 @@ using dTriplet = Eigen::Triplet<double>;
 using Triplet = Eigen::Triplet<Scalar>;
 using Index = uint64_t;
 
-} // namespace Type
+template <typename T>
+using NestedVector = std::vector<std::vector<T>>;
+} // namespace QDLC::Type
 
-namespace Message::Prefix {
+namespace QDLC::Message::Prefix {
 
-//TODO: remove handler output, deprecated!
+// TODO: remove handler output, deprecated!
 const std::string PERCENT = "@#PERCENT#@";
 const std::string PERCENT_TIME = "@#PERCENTTIME#@";
 const std::string PERCENT_TIME_FINAL = "@#PERCENTTIMEFINAL#@";
@@ -35,7 +35,6 @@ const std::string DEBUG = "@#DEBUG#@";
 const std::string OUTPUT = "@#OUTPUT#@";
 const std::string SUFFIX = "@#SUFFIX#@";
 
+} // namespace QDLC::Message::Prefix
 
-} // namespace Message::Prefix
-
-} // namespace QDLC
+// namespace QDLC

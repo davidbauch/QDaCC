@@ -3,6 +3,8 @@
 #include "system/operatormatrices.h"
 #include "system/parameters.h"
 
+namespace QDLC {
+
 class FileOutput {
    private:
     std::unordered_map<std::string, std::ofstream> files;
@@ -26,3 +28,5 @@ class FileOutput {
     static bool close_all();
     static void init( Parameters &p, OperatorMatrices &op );
 };
+
+} // namespace QDLC

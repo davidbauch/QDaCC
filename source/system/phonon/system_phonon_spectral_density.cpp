@@ -1,5 +1,7 @@
 #include "system/system.h"
 
+using namespace QDLC;
+
 double System::dgl_phonons_spectral_density( const double w ) {
     if ( parameters.p_phonon_qd_ae == 0.0 ) {
         const double gaussian_shape = std::exp( -w * w / 2.0 / parameters.p_phonon_wcutoff / parameters.p_phonon_wcutoff );

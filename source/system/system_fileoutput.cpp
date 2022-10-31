@@ -1,5 +1,7 @@
 #include "system/fileoutput.h"
 
+using namespace QDLC;
+
 std::ofstream &FileOutput::add_file( const std::string &name, const std::string &file_ending ) {
     return Get().Iadd_file( name, file_ending );
 }
@@ -25,9 +27,9 @@ std::ofstream &FileOutput::Iadd_file( const std::string &name, const std::string
         return get_file( name );
     files[name].open( path + name + "." + file_ending );
     if ( get_file( name ).is_open() )
-        Log::L2( "[System-Fileoutput] Added file '{}'\n", name );
+        Log::L2( "[System-Fileoutput] Added file '{}.{}'\n", name, file_ending );
     else
-        Log::Error( "[System-Fileoutput] Could not add file '{}'!\n", name );
+        Log::Error( "[System-Fileoutput] Could not add file '{}.{}'!\n", name, file_ending );
     return get_file( name );
 }
 

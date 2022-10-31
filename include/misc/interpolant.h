@@ -15,8 +15,17 @@ class Interpolant {
 
    public:
     Interpolant() {}
-    Interpolant( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::string t );
-    Interpolant( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::vector<double> &interpolationPointsZ, std::string t );
+    Interpolant( const std::vector<double> &interpolationPointsX, const std::vector<double> &interpolationPointsY, const std::string t = "linear" );
+    template <typename T>
+    Interpolant( const std::vector<T> &interpolationPointsX, const std::vector<T> &interpolationPointsY, const std::string t = "linear" ) : Interpolant( std::vector<double>( interpolationPointsX.begin(), interpolationPointsX.end() ),
+                                                                                                                                                         std::vector<double>( interpolationPointsY.begin(), interpolationPointsY.end() ),
+                                                                                                                                                         t ){};
+    Interpolant( const std::vector<double> &interpolationPointsX, const std::vector<double> &interpolationPointsY, const std::vector<double> &interpolationPointsZ, const std::string t = "linear" );
+    template <typename T>
+    Interpolant( const std::vector<T> &interpolationPointsX, const std::vector<T> &interpolationPointsY, const std::vector<T> &interpolationPointsZ, const std::string t = "linear" ) : Interpolant( std::vector<double>( interpolationPointsX.begin(), interpolationPointsX.end() ),
+                                                                                                                                                                                                     std::vector<double>( interpolationPointsY.begin(), interpolationPointsY.end() ),
+                                                                                                                                                                                                     std::vector<double>( interpolationPointsZ.begin(), interpolationPointsZ.end() ),
+                                                                                                                                                                                                     t ){};
     void generate( std::string t );
     double evaluate( double x ) const;
     std::vector<double> evaluate( std::vector<double> &xar );

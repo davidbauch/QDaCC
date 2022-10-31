@@ -25,34 +25,28 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     const auto &[op_creator_2, op_annihilator_2] = get_operators_matrices( s, s_op_creator_2, s_op_annihilator_2 );
 
     // Calculate G2's if neccessary
-    // calculate_g2( s, s_op_creator_1, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_1, s_g2_1111 );
-    // calculate_g2( s, s_op_creator_1, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_2, s_g2_1122 );
-    // calculate_g2( s, s_op_creator_2, s_op_annihilator_2, s_op_creator_1, s_op_annihilator_1, s_g2_2121 );
-    // calculate_g2( s, s_op_creator_2, s_op_annihilator_1, s_op_creator_1, s_op_annihilator_2, s_g2_2112 );
-    // calculate_g2( s, s_op_creator_1, s_op_annihilator_2, s_op_creator_2, s_op_annihilator_1, s_g2_1221 );
-    // calculate_g2( s, s_op_creator_2, s_op_annihilator_2, s_op_creator_2, s_op_annihilator_2, s_g2_2222 );
     // Make sure to only evaluate the tau-direction when absolutely neccessary
     calculate_g2( s, s_op_creator_1, { s_op_annihilator_1, s_op_annihilator_2 }, { s_op_creator_1, s_op_creator_2 }, s_op_annihilator_1, { s_g2_1111, s_g2_1221 } );
     calculate_g2( s, s_op_creator_2, { s_op_annihilator_1, s_op_annihilator_2 }, { s_op_creator_1, s_op_creator_2 }, s_op_annihilator_2, { s_g2_2112, s_g2_2222 } );
     calculate_g2( s, s_op_creator_1, { s_op_annihilator_2 }, { s_op_creator_1 }, s_op_annihilator_2, { s_g2_1122 } );
     calculate_g2( s, s_op_creator_2, { s_op_annihilator_2 }, { s_op_creator_1 }, s_op_annihilator_1, { s_g2_2121 } );
-    // TODO: Make this triggerable with user flag. Assuming 2211 = 1122* is correct, but when evaluating it numerically, integration errors contribute to a significant degree.
-    cache[s_g2_2211] = cache[s_g2_1122].conjugate();
-    cache[s_g2_2211 + "_time"] = cache[s_g2_1122 + "_time"];
-    cache[s_g2_1212] = cache[s_g2_2121].conjugate();
-    cache[s_g2_1212 + "_time"] = cache[s_g2_2121 + "_time"];
+    // TODONEXT: das hier triggerable --concFullEval, eigenvalues ausgeben triggerable via --output.
+    //  TODO: Make this triggerable with user flag. Assuming 2211 = 1122* is correct, but when evaluating it numerically, integration errors contribute to a significant degree.
+    cache[s_g2_2211] = cache[s_g2_1122].conjugate( s_g2_2211 );
+    cache[s_g2_1212] = cache[s_g2_2121].conjugate( s_g2_1212 );
 
     // Note: This will probably be either removed completely, or implemented correctly.
     if ( s.parameters.input_correlation["Conc"].numerical_v["Center"].size() > 0 ) {
-        cache["concurrence_total_" + fout] = cache[s_g2_1111] + cache[s_g2_1122] + cache[s_g2_1212] + cache[s_g2_1221] + cache[s_g2_2121] + cache[s_g2_2112] + cache[s_g2_2211] + cache[s_g2_2222];
-        cache["concurrence_total_" + fout + "_time"] = cache[s_g2_1212 + "_time"];
-        calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].numerical_v["Center"].front(), s.parameters.input_correlation["Conc"].numerical_v["Range"].front(), s.parameters.input_correlation["Conc"].numerical_v["resW"].front(), 2, false, "concurrence_total_" + fout );
-        for ( auto mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
-            calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].numerical_v["Center"].front(), s.parameters.input_correlation["Conc"].numerical_v["Range"].front(), s.parameters.input_correlation["Conc"].numerical_v["resW"].front(), 2, false, mode );
+        const Dense combined = cache[s_g2_1111].get() + cache[s_g2_1122].get() + cache[s_g2_1212].get() + cache[s_g2_1221].get() + cache[s_g2_2121].get() + cache[s_g2_2112].get() + cache[s_g2_2211].get() + cache[s_g2_2222].get();
+        const std::string combined_name = "concurrence_total_" + fout;
+        cache[combined_name] = CacheMatrix( combined, cache[s_g2_1111].get_time(), combined_name );
+        calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].numerical_v["Center"].front(), s.parameters.input_correlation["Conc"].numerical_v["Range"].front(), (int)s.parameters.input_correlation["Conc"].numerical_v["resW"].front(), 2, false, combined_name );
+        for ( const auto &mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
+            calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].numerical_v["Center"].front(), s.parameters.input_correlation["Conc"].numerical_v["Range"].front(), (int)s.parameters.input_correlation["Conc"].numerical_v["resW"].front(), 2, false, mode );
         }
     }
 
-    int pbsize = 2 * cache[s_g2_1212].rows();
+    int pbsize = 2 * cache[s_g2_1212].dim();
 
     std::map<std::string, std::vector<Scalar>> rho;
     std::map<std::string, std::vector<Scalar>> rho_g2zero;
@@ -65,11 +59,9 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
                                                     { s_g2_2211, op_creator_2 * op_creator_2 * op_annihilator_1 * op_annihilator_1 },
                                                     { s_g2_2222, op_creator_2 * op_creator_2 * op_annihilator_2 * op_annihilator_2 } };
 
-    Timer &timer_c = Timers::create( "Concurrence (" + fout + ")" );
-    timer_c.start();
+    Timer &timer_c = Timers::create( "Concurrence (" + fout + ")" ).start();
 
-    auto T = std::min<size_t>( cache[s_g2_1111].rows(), savedStates.size() );
-    auto &mat_time = cache[s_g2_1111 + "_time"];
+    auto T = std::min<size_t>( cache[s_g2_1111].dim(), savedStates.size() );
 
     for ( size_t t = 0; t < T; t++ ) {
         for ( auto mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
@@ -79,20 +71,20 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     }
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( auto mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
-        auto &gmat_time = cache[mode + "_time"];
+        auto &gmat = cache[mode];
         for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
             // G2(t,tau)
             rho[mode][upper_limit] = upper_limit > 0 ? rho[mode][upper_limit - 1] : 0.0;
             for ( int i = 0; i <= upper_limit; i++ ) {
-                double dt = Numerics::get_tdelta( gmat_time, 0, i );
+                double dt = gmat.dt( i );
                 int tau = upper_limit - i;
                 // for ( int tau = 0; tau < T - i; tau++ ) {
-                double dtau = Numerics::get_taudelta( gmat_time, i, tau ); // Numerics::get_tdelta( gmat_time, 0, i + tau );
+                double dtau = gmat.dt( tau, i );
                 rho[mode][upper_limit] += cache[mode]( i, tau ) * dt * dtau;
             }
             // G2(t,0)
-            double dt = Numerics::get_tdelta( gmat_time, 0, upper_limit );
-            double t_t = std::real( gmat_time( upper_limit, 0 ) ); // Note: all correlation functions have to have the same times. cache[mode+"_time"] else.
+            double dt = gmat.dt( upper_limit ); // Numerics::get_tdelta( gmat_time, 0, upper_limit );
+            double t_t = gmat.t( upper_limit ); // std::real( gmat_time( upper_limit, 0 ) ); // Note: all correlation functions have to have the same times. cache[mode+"_time"] else.
             rho_g2zero[mode][upper_limit] = upper_limit > 0 ? rho_g2zero[mode][upper_limit - 1] + s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( rho_index_map[t_t] ), matmap_g2zero[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( 0 ), matmap_g2zero[mode], get_time_at( 0 ) ) * dt;
             if ( mode == s_g2_1111 ) {
                 timer_c.iterate();
@@ -111,6 +103,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     to_output["Conc_g2zero_fidelity"][fout] = std::vector<Scalar>( T, 0 );
     to_output_m["TwoPMat"][fout] = std::vector<Dense>( T, Dense::Zero( 4, 4 ) );
     to_output_m["TwoPMat"][fout + "_g2zero"] = std::vector<Dense>( T, Dense::Zero( 4, 4 ) );
+    to_output_m["ConcEV"][fout + "_EV"] = std::vector<Dense>( T, Vector::Zero( 4 ) );
 
     auto &time = to_output["Conc"]["Time"];
     auto &output = to_output["Conc"][fout];
@@ -122,6 +115,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     auto &output_fidelity_g2zero = to_output["Conc_g2zero_simple"][fout];
     auto &twophotonmatrix = to_output_m["TwoPMat"][fout];
     auto &twophotonmatrix_g2zero = to_output_m["TwoPMat"][fout + "_g2zero"];
+    auto &oeigenvalues = to_output_m["ConcEV"][fout + "_EV"];
 
     Dense spinflip = Dense::Zero( 4, 4 );
     spinflip( 0, 3 ) = -1;
@@ -172,6 +166,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         // auto eigenvalues_g2zero = R5_g2zero.eigenvalues();
         Eigen::SelfAdjointEigenSolver<Dense> eigensolver( R5 );
         auto eigenvalues = eigensolver.eigenvalues();
+        oeigenvalues.at( k ) = eigenvalues;
         Eigen::SelfAdjointEigenSolver<Dense> eigensolver_g2zero( R5_g2zero );
         auto eigenvalues_g2zero = eigensolver_g2zero.eigenvalues();
 
@@ -200,12 +195,12 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         output_g2zero.at( k ) = conc_g2zero;
         output_g2zero_simple.at( k ) = 2.0 * std::abs( rho_2phot_g2zero( 3, 0 ) / rho_2phot_g2zero.trace() );
         output_fidelity_g2zero.at( k ) = fidelity_g2zero;
-        time.at( k ) = std::real( mat_time( k, 0 ) );
+        time.at( k ) = cache[s_g2_1111].t( k );
         const auto eigenvalues_analytical = analytical_eigenvalues( rho_2phot / rho_2phot.trace() );
         output_analytical.at( k ) = eigenvalues_analytical( 3 ) - eigenvalues_analytical( 2 ) - eigenvalues_analytical( 1 ) - eigenvalues_analytical( 0 );
-        std::cout << "Eigenvalues: " << eigenvalues_analytical.format( Eigen::IOFormat( 4, 0, ", ", " ", "[", "]" ) ) << std::endl;
-        // std::cout << "Rho(3,0) = "<<rho_2phot( 3, 0 )<<", rho.trace() = "<<rho_2phot.trace()<<", Rho before saving :\n" << rho_2phot.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
-        // std::cout << "Rho_g20(3,0) = "<<rho_2phot_g2zero( 3, 0 )<<", rho_g20.trace() = "<<rho_2phot_g2zero.trace()<<", Rho_g20 before saving :\n" << rho_2phot_g2zero.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
+        // std::cout << "Eigenvalues: " << eigenvalues_analytical.format( Eigen::IOFormat( 4, 0, ", ", " ", "[", "]" ) ) << std::endl;
+        //  std::cout << "Rho(3,0) = "<<rho_2phot( 3, 0 )<<", rho.trace() = "<<rho_2phot.trace()<<", Rho before saving :\n" << rho_2phot.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
+        //  std::cout << "Rho_g20(3,0) = "<<rho_2phot_g2zero( 3, 0 )<<", rho_g20.trace() = "<<rho_2phot_g2zero.trace()<<", Rho_g20 before saving :\n" << rho_2phot_g2zero.format(Eigen::IOFormat( 4, 0, ", ", "\n", "[", "]" )) << std::endl;
         twophotonmatrix.at( k ) = rho_2phot;
         twophotonmatrix_g2zero.at( k ) = rho_2phot_g2zero;
         timer_c.iterate();

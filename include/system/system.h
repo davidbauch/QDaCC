@@ -8,6 +8,8 @@
 #include "system/evaluable/pulse.h"
 #include "solver/solver.h"
 
+namespace QDLC {
+
 class System {
    public:
     // Class Name
@@ -246,7 +248,7 @@ class System {
      */
     template <typename T>
     inline T dgl_calc_rhotau( const T &rho, const T &op, const double t ) {
-        return dgl_timetrafo( op, t ) * rho;
+        return op * rho; // dgl_timetrafo( op, t ) * rho;
     }
 
     /**
@@ -256,6 +258,7 @@ class System {
      */
     template <typename T>
     inline T dgl_calc_rhotau_2( const T &rho, const T &op1, const T &op2, const double t ) {
+        // return op1 * rho * op2; // dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
         return dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
     }
 
@@ -309,12 +312,23 @@ class System {
     }
 
     /**
+     * @brief Alias for the commutator return type, which is specified explicitely using Eigen's reference objects.
+     *
+     * @tparam T1
+     * @tparam T2
+     */
+    template <typename T1, typename T2>
+    using commutator_return_type = Eigen::CwiseBinaryOp<Eigen::internal::scalar_difference_op<typename T1::Scalar, typename T1::Scalar>, const Eigen::Product<T1, T2, 2>, const Eigen::Product<T2, T1, 2>>;
+    template <typename T1, typename T2>
+    using anticommutator_return_type = Eigen::CwiseBinaryOp<Eigen::internal::scalar_sum_op<typename T1::Scalar, typename T1::Scalar>, const Eigen::Product<T1, T2, 2>, const Eigen::Product<T2, T1, 2>>;
+
+    /**
      * @brief Calculates the Kommutator [A,B] of two matrices A and B of identical type
      *
      * @return Eigen Reference for A*B-B*A
      */
     template <typename T1, typename T2>
-    inline Eigen::CwiseBinaryOp<Eigen::internal::scalar_difference_op<typename T1::Scalar, typename T1::Scalar>, const Eigen::Product<T1, T2, 2>, const Eigen::Product<T2, T1, 2>> dgl_kommutator( const T1 &A, const T2 &B ) {
+    inline commutator_return_type<T1, T2> dgl_kommutator( const T1 &A, const T2 &B ) {
         return A * B - B * A;
     }
 
@@ -324,7 +338,7 @@ class System {
      * @return Eigen Reference for A*B+B*A
      */
     template <typename T1, typename T2>
-    inline Eigen::CwiseBinaryOp<Eigen::internal::scalar_sum_op<typename T1::Scalar, typename T1::Scalar>, const Eigen::Product<T1, T2, 2>, const Eigen::Product<T2, T1, 2>> dgl_antikommutator( const T1 &A, const T2 &B ) {
+    inline anticommutator_return_type<T1, T2> dgl_antikommutator( const T1 &A, const T2 &B ) {
         return A * B + B * A;
     }
 
@@ -338,3 +352,5 @@ class System {
         return 2.0 * op * rho * opd - opd * op * rho - rho * opd * op;
     }
 };
+
+} // namespace QDLC

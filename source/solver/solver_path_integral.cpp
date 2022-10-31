@@ -128,8 +128,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         // int matdim = std::min( int( std::floor( ( t_end - t_start ) / s.parameters.t_step ) / s.parameters.iterations_t_skip ) + 1, s.parameters.grid_resolution ) + 1;
         for ( auto &[purpose, matrices] : g12_settings_map ) {
             Log::L2( "[PathIntegral] Calculating G-Function with purpose {} in place with path integral.\n", purpose );
-            cache[purpose] = Dense::Zero( matdim, matdim );
-            cache[purpose + "_time"] = Dense::Zero( matdim, matdim );
+            cache[purpose] = CacheMatrix( matdim, purpose );
         }
     }
     std::vector<std::pair<std::string, std::vector<Sparse>>> g12_settings( g12_settings_map.begin(), g12_settings_map.end() );
@@ -220,19 +219,18 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
                 Log::L3( "[PathIntegral] Calculating sub-rk for {} with {} ({}) nested calls\n", purpose, omp_get_nested(), cores );
                 std::vector<QDLC::SaveState> temp;
                 auto &gmat = cache[purpose];
-                auto &timemat = cache[purpose + "_time"];
                 calculate_path_integral_correlation( adm_tensor, rho, t_t, t_end, t_step_initial, rkTimer, progressbar, total_progressbar_iterations, purpose, s, temp, do_output, matrices, s.parameters.numerics_maximum_secondary_threads, different_dimensions );
                 Log::L3( "[PathIntegral] Writing {} values to G matrix...\n", temp.size() );
-                for ( int32_t j = 0; j < std::min<int32_t>( temp.size(), gmat.rows() * s.parameters.iterations_t_skip ); j += s.parameters.iterations_t_skip ) {
+                for ( int32_t j = 0; j < std::min<int32_t>( temp.size(), gmat.dim() * s.parameters.iterations_t_skip ); j += s.parameters.iterations_t_skip ) {
                     double t_tau = temp.at( j ).t;
                     gmat( g12_counter / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = s.dgl_expectationvalue<Sparse, Scalar>( temp.at( j ).mat, matrices[2] * matrices[1], t_tau );
                 }
                 if ( not filled_time )
-                    for ( int32_t i = 0; i < gmat.rows() * s.parameters.iterations_t_skip; i += s.parameters.iterations_t_skip ) {
+                    for ( int32_t i = 0; i < gmat.dim() * s.parameters.iterations_t_skip; i += s.parameters.iterations_t_skip ) {
                         double t1 = i < temp.size() ? temp[i].t : temp.back().t + ( 1. + i - temp.size() ) * s.parameters.t_step_pathint;
-                        for ( int32_t j = 0; j < gmat.rows() * s.parameters.iterations_t_skip; j += s.parameters.iterations_t_skip ) {
+                        for ( int32_t j = 0; j < gmat.dim() * s.parameters.iterations_t_skip; j += s.parameters.iterations_t_skip ) {
                             double t2 = j < temp.size() ? temp[j].t : temp.back().t + ( 1. + j - temp.size() ) * s.parameters.t_step_pathint;
-                            timemat( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = Scalar( t1, t1 + t2 );
+                            gmat.get_time( i / s.parameters.iterations_t_skip, j / s.parameters.iterations_t_skip ) = Scalar( t1, t1 + t2 );
                         }
                     }
             }

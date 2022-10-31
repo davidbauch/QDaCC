@@ -4,10 +4,9 @@
 #include "system/system.h"
 #include "misc/interpolant.h"
 #include "solver/solver_tensor_map.h"
+#include "types/cache_matrix.h"
 
-namespace QDLC {
-
-namespace Numerics {
+namespace QDLC::Numerics {
 
 // Description: ODESolver class provides both Runge-Kutta functions of different orders and functions for different numerical operations
 class ODESolver {
@@ -17,7 +16,7 @@ class ODESolver {
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
 
     // Matrix Cache Map
-    std::map<std::string, Dense> cache;
+    std::map<std::string, CacheMatrix> cache;
     // Vector Cache Map which are output to file
     std::map<std::string, std::map<std::string, std::vector<Scalar>>> to_output;
     // Matrix Cache Map which are output to file
@@ -117,7 +116,7 @@ class ODESolver {
      * @brief Iterates Runge-Kutta with given order depending on the systems settings.
      *
      */
-    Sparse iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates, const int dir = DIR_T );
+    Sparse iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates );
 
     /**
      * @brief Calculates the normal t-direction via solving the von-Neumann equation for rho. May save some of the density matrices for later uses. Logs the calculation and outputs progress.
@@ -232,7 +231,7 @@ class ODESolver {
      * @brief Applies the detector mapping function to a G1 or G2 correlation function.
      *
      */
-    void apply_detector_function( System &s, Dense &mat, const Dense &timemat, const std::string &purpose );
+    void apply_detector_function( System &s, CacheMatrix &mat );
 
     /**
      * @brief Calculates the Eigenvalues of the Hamilton operators H_0, H_I and H_0+H_I and outputs them to "hamilton_eigenvalues.txt"
@@ -241,6 +240,4 @@ class ODESolver {
     void calculate_hamilton_eigenvalues( System &s );
 };
 
-} // namespace Numerics
-
-} // namespace QDLC
+} // namespace QDLC::Numerics

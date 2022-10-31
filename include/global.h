@@ -59,20 +59,30 @@ using namespace QDLC::Type;
 
 #include "system/savestate.h"
 
-#define DIR_T 1
-#define DIR_TAU 2
-#define DIR_W 3
+// Global Enums
+namespace QDLC {
 
-#define TIMETRANSFORMATION_ANALYTICAL 0
-#define TIMETRANSFORMATION_MATRIXEXPONENTIAL 1
+// Time Transformation order including analytical and matrix exponential
+enum class TransformationOrder {
+    // The time transformation will be carried out analytically
+    Analytical,
+    // The time transformation will be carried out by using Eigen's matrix exponential exp(-i*H_0)
+    MatrixExponential
+};
 
-#define OPERATOR_PHOTONIC_CREATE 0
-#define OPERATOR_PHOTONIC_ANNIHILATE 1
-#define OPERATOR_PHOTONIC_STATE 2
+enum class PhotonicOperator {
+    Create,
+    Annihilate,
+    State
+};
 
-#define PHONON_APPROXIMATION_BACKWARDS_INTEGRAL 0
-#define PHONON_APPROXIMATION_TRANSFORMATION_MATRIX 1
-#define PHONON_APPROXIMATION_TIMETRANSFORMATION 2
-#define PHONON_APPROXIMATION_LINDBLAD_RATES 3
-#define PHONON_APPROXIMATION_MIXED 4
-#define PHONON_PATH_INTEGRAL 5
+enum class PhononApproximation {
+    BackwardsIntegral,
+    TransformationMatrix,
+    Timetransformation,
+    LindbladRates,
+    Mixed,
+    PathIntegral
+};
+
+} // namespace QDLC

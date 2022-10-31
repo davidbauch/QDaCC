@@ -3,14 +3,13 @@
 bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Sparse rho = s.operatorMatrices.rho;
 
-    Timer &rkTimer = Timers::create( "RungeKutta-Main-Loop" );
+    Timer &rkTimer = Timers::create( "RungeKutta-Main-Loop" ).start();
     ProgressBar progressbar = ProgressBar();
-    rkTimer.start();
 
     Log::L2( "[Solver] Calculating t-direction from {} to {} at stepsize {}...\n", s.parameters.t_start, s.parameters.t_end, s.parameters.t_step );
 
     // Calculate Time evolution on time vector timestamps.
-    if ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
+    if ( s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
         calculate_path_integral( rho, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step_pathint, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
     } else {
         // If using RK45 and calculating correlation functions, disable USING cached functions while enabling caching them, then reenable using the cached matrices for Tau direction

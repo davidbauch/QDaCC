@@ -107,19 +107,19 @@ class OperatorMatrices {
 
     /**
      * @brief Creates a bosonic creation or annihilation operator matrix
-     * The Type can be either OPERATOR_PHOTONIC_CREATE or OPERATOR_PHOTONIC_ANNIHILATE
+     * The Type can be either PhotonicOperator::Create or PhotonicOperator::Annihilate
      * The maximum number of photons is given by maxPhotons; The resulting matrix will have dimension (maxPhotons+1)*(maxPhotons+1)
      * @return Either creation or annihilation matrix of type M
      */
     template <class M>
-    static M create_photonic_operator( const int &type, const int &maxPhotons ) {
+    static M create_photonic_operator( const QDLC::PhotonicOperator &type, const int &maxPhotons ) {
         M ret = M::Zero( maxPhotons + 1, maxPhotons + 1 );
         for ( int i = 0; i < maxPhotons; i++ ) {
-            if ( type == OPERATOR_PHOTONIC_CREATE )
+            if ( type == QDLC::PhotonicOperator::Create )
                 ret( i + 1, i ) = sqrt( i + 1 );
-            else if ( type == OPERATOR_PHOTONIC_ANNIHILATE )
+            else if ( type == QDLC::PhotonicOperator::Annihilate )
                 ret( i, i + 1 ) = sqrt( i + 1 );
-            else if ( type == OPERATOR_PHOTONIC_STATE )
+            else if ( type == QDLC::PhotonicOperator::State )
                 ret( i + 1, i + 1 ) = i + 1;
         }
         return ret;

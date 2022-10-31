@@ -62,7 +62,7 @@ std::pair<Sparse, double> QDLC::Numerics::ODESolver::iterateRungeKutta45( const 
     return std::make_pair( ret, err );
 }
 
-Sparse QDLC::Numerics::ODESolver::iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates, const int dir ) {
+Sparse QDLC::Numerics::ODESolver::iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates ) {
     if ( s.parameters.numerics_rk_order == 4 )
         return iterateRungeKutta4( rho, s, t, t_step, savedStates );
     return iterateRungeKutta5( rho, s, t, t_step, savedStates );

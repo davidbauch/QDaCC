@@ -3,8 +3,7 @@
 //#include "system/operatormatrices_text.h"
 
 OperatorMatrices::OperatorMatrices( Parameters &p ) {
-    Timer &timer_operatormatrices = Timers::create( "Operator Matrices", true, false );
-    timer_operatormatrices.start();
+    Timer &timer_operatormatrices = Timers::create( "Operator Matrices", true, false ).start();
     Log::L2( "[System-OperatorMatrices] Generating operator matrices...\n" );
     if ( !generate_operators( p ) ) {
         Log::L2( "[System-OperatorMatrices] Generating operator matrices failed! Exitting program...\n" );
@@ -51,7 +50,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         for ( int n = 0; n <= max_photons; n++ )
             base_photonic[curcav].emplace_back( std::to_string( n ) + name );
         auto &state = ph_states[name];
-        state.self_hilbert = create_photonic_operator<Dense>( OPERATOR_PHOTONIC_STATE, max_photons );
+        state.self_hilbert = create_photonic_operator<Dense>( QDLC::PhotonicOperator::State, max_photons );
         state.energy = data.numerical["Energy"];
         state.name = name;
         // Increase Cavity Index
@@ -67,7 +66,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     base = QDLC::Matrix::tensor( subb );
 
     // Create Universal Identity Matrix
-    identity = Sparse( base.size(), base.size() );
+    identity = Dense::Identity( base.size(), base.size() ).sparseView();
 
     Log::L2( "[System-OperatorMatrices] Evaluating Kronecker Delta for the electronic states...\n" );
     // Sparse total Hilbert tensors
@@ -118,12 +117,12 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     for ( auto &[name, data] : p.input_photonic ) {
         auto max_photons = int( data.numerical["MaxPhotons"] );
         auto &state_b = ph_transitions[name + "b"];
-        state_b.self_hilbert = create_photonic_operator<Dense>( OPERATOR_PHOTONIC_ANNIHILATE, max_photons );
+        state_b.self_hilbert = create_photonic_operator<Dense>( QDLC::PhotonicOperator::Annihilate, max_photons );
         state_b.base = curcav;
         state_b.direction = -1;
         state_b.energy = data.numerical["Energy"];
         auto &state_bd = ph_transitions[name + "bd"];
-        state_bd.self_hilbert = create_photonic_operator<Dense>( OPERATOR_PHOTONIC_CREATE, max_photons );
+        state_bd.self_hilbert = create_photonic_operator<Dense>( QDLC::PhotonicOperator::Create, max_photons );
         state_bd.base = curcav++;
         state_bd.direction = 1;
         state_bd.energy = data.numerical["Energy"];
@@ -457,7 +456,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     // polaron_phonon_coupling_matrix = polaron_phonon_coupling_matrix.cwiseProduct( projector + projector_adjoint );
     // Scale Interaction Hamilton Operator and Pulse matrices with <B> if PME is used. Note that because K = exp(-0.5*integral J), the scaling has to be exponential in B, e.g. local_b^factor
     // The Scaling for the Polaron Frame is squared, because the coupling factor n_Level is applied twice in the PI and otherwise only once in the PME.
-    if ( p.numerics_phonon_approximation_order != PHONON_PATH_INTEGRAL ) {
+    if ( p.numerics_phonon_approximation_order != QDLC::PhononApproximation::PathIntegral ) {
         Sparse b_matrix = polaron_phonon_coupling_matrix.unaryExpr( [&]( Scalar val ) { return std::pow( p.p_phonon_b.get(), 1.0 * val ); } );
         Log::L2( "[System-OperatorMatrices] Scaling H_I,Cavity and H_I,Pulse with <B> = {}\n", p.p_phonon_b );
         Log::L2( "[System-OperatorMatrices] <B>-Matrix:\n{}\n", Dense( b_matrix ).format( output_format ) );

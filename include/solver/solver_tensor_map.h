@@ -17,9 +17,7 @@
 #    define u_int64_t uint64_t
 #endif
 
-namespace QDLC {
-
-namespace Numerics {
+namespace QDLC::Numerics {
 
 // TODO:
 //  Switch iVector index to plain c++ vector
@@ -165,6 +163,4 @@ class Tensor {
     }
 };
 
-} // namespace Numerics
-
-} // namespace QDLC
+} // namespace QDLC::Numerics

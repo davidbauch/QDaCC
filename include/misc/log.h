@@ -178,7 +178,7 @@ class Logger {
     }
     template <class Args>
     void Ierror_log( const std::string &in_file, const std::string &function, int line, const std::string &msg, const Args &args ) {
-        std::string error_message = fmt::format( "On line {} in function {} in file {} -- ", in_file, function, line );
+        std::string error_message = fmt::format( "On line {} in function {} in file {} -- ", line, function, in_file );
         fmt::vprint( "\033[31m[ERROR]\033[93m " + error_message + msg + "\033[0m", args );
         fmt::vprint( file, "[ERROR] " + error_message + msg, args );
     }

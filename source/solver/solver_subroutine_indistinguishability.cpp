@@ -19,16 +19,13 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
 
     auto &akf_mat_g1 = cache[s_g1];
     auto &akf_mat_g2 = cache[s_g2];
-    auto &akf_mat_g1_time = cache[s_g1 + "_time"];
-    auto &akf_mat_g2_time = cache[s_g2 + "_time"];
 
-    int pbsize = akf_mat_g1.rows();
+    int pbsize = akf_mat_g1.dim();
 
     Sparse M1 = op_creator * op_annihilator;
 
     std::string fout = s_op_creator + "-" + s_op_annihilator;
-    Timer &timer = Timers::create( "Indistinguishability " + fout );
-    timer.start();
+    Timer &timer = Timers::create( "Indistinguishability " + fout ).start();
 
     size_t T = std::min<size_t>( pbsize, savedStates.size() );
     Log::L2( "{} {}\n", pbsize, T );
@@ -41,21 +38,21 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
         top.emplace_back( 0 );
         bottom.emplace_back( 0 );
         topv.emplace_back( 0 );
-        time.emplace_back( std::real( akf_mat_g1_time( i, 0 ) ) );
+        time.emplace_back( akf_mat_g1.t( i ) );
     }
 
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
         for ( int i = 0; i <= upper_limit; i++ ) {
-            double t_t = std::real( akf_mat_g1_time( i, 0 ) );
+            double t_t = akf_mat_g1.t( i );
             auto rho = get_rho_at( rho_index_map[t_t] );
             int j = upper_limit - i;
-            double t_tau = std::real( akf_mat_g1_time( i + j, 0 ) ); // Important: t+tau (i+j)!
+            double t_tau = akf_mat_g1.t( i + j );
             auto rho_tau = get_rho_at( rho_index_map[t_tau] );
             Scalar gpop = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
             Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t_t );
-            double dt = Numerics::get_tdelta( akf_mat_g1_time, 0, i );
-            double dtau = Numerics::get_taudelta( akf_mat_g1_time, i, j ); // Numerics::get_tdelta( akf_mat_g1_time, 0, i + j );
+            double dt = akf_mat_g1.dt( i );
+            double dtau = akf_mat_g1.dtau( j, i );
             top[upper_limit] += ( gpop + akf_mat_g2( i, j ) - akf_mat_g1( i, j ) * std::conj( akf_mat_g1( i, j ) ) ) * dt * dtau;
             bottom[upper_limit] += ( 2.0 * gpop - gbot * std::conj( gbot ) ) * dt * dtau;
             topv[upper_limit] += std::pow( std::abs( akf_mat_g1( i, j ) ), 2.0 ) * dt * dtau;
@@ -69,8 +66,8 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
     Scalar topsumv = 0;
     Scalar bottomsumv = 0;
     for ( int i = 0; i < top.size(); i++ ) {
-        double dt = Numerics::get_tdelta( akf_mat_g1_time, 0, i );
-        double t_t = std::real( akf_mat_g1_time( i, 0 ) );
+        double dt = akf_mat_g1.dt( i );
+        double t_t = akf_mat_g1.t( i );
         topsum += top[i];
         bottomsum += bottom[i];
         topsumv += topv[i];

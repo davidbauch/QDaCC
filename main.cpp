@@ -69,7 +69,7 @@ int main( int argc, char* argv[] ) {
         Log::Logger::init( std::string( inputs.back() ) + "logfile.log", loglevel );
 
         // System
-        System system = System( inputs );
+        auto system = QDLC::System( inputs );
         // Solver
         auto solver = QDLC::Numerics::ODESolver( system );
 

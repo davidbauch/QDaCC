@@ -180,9 +180,8 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         // Cubic monotone with library
         // Generate N^2 vectors from the initial density matrices
         Log::L2( "[Interpolator] Using Monotone Hermite Interpolation\n" );
-        Timer &interpolateTimer = Timers::create( "Monotone Spline Interpolation" );
+        Timer &interpolateTimer = Timers::create( "Monotone Spline Interpolation" ).start();
         ProgressBar progressbar = ProgressBar();
-        interpolateTimer.start();
 
         Log::L2( "[Interpolator] Copying DM Elements into single Vector\n" );
         size_t matrix_dimension = input.front().mat.rows();

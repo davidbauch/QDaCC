@@ -55,7 +55,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     // Calculate G1/G2 functions
     auto &gs_s = s.parameters.input_correlation["GFunc"];
     for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
-        double t_step = ( s.parameters.numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? s.parameters.t_step_pathint : s.parameters.t_step );
+        double t_step = ( s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? s.parameters.t_step_pathint : s.parameters.t_step );
         /// TODO : in funktion
         auto modes = gs_s.string_v["Modes"][i];
         int order = std::abs( gs_s.numerical_v["Order"][i] );
@@ -69,23 +69,24 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         }
         // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
         auto &gmat = cache[purpose];
-        auto &gmat_time = cache[purpose + "_time"];
+        const auto dim = gmat.dim();
         // G2(t,tau)
         if ( gs_s.numerical_v["Integrated"][i] == 0 || gs_s.numerical_v["Integrated"][i] == 2 ) {
             Log::L2( "[PhotonStatistics] Saving G{} function matrix to {}_m.txt...\n", order, purpose );
             auto &f_gfunc = FileOutput::add_file( purpose + "_m" );
             f_gfunc << "Time\tTau\tAbs\tReal\tImag\n";
-            for ( int k = 0; k < gmat.rows(); k++ ) {
-                double t_t = std::real( gmat_time( k, 0 ) );
-                for ( int l = 0; l < gmat.cols(); l++ ) {
-                    double t_tau = std::imag( gmat_time( k, l ) ) - std::real( gmat_time( k, l ) );
-                    f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_t, t_tau, std::abs( gmat( k, l ) ), std::real( gmat( k, l ) ), std::imag( gmat( k, l ) ) );
+            for ( int k = 0; k < dim; k++ ) {
+                double t_t = gmat.t( k );
+                for ( int l = 0; l < dim; l++ ) {
+                    double t_tau = gmat.tau( l, k );
+                    const auto el = gmat( k, l );
+                    f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_t, t_tau, std::abs( el ), std::real( el ), std::imag( el ) );
                 }
                 f_gfunc << "\n";
             }
         }
         // G2(0)
-        int T = std::min<int>( gmat.cols(), savedStates.size() );
+        int T = std::min<int>( dim, savedStates.size() );
         std::vector<Scalar> topv( T, 0 );
         std::vector<Scalar> g2ofzero( T, 0 );
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
@@ -98,7 +99,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         Scalar topsumv = 0;
         Scalar bottomsumv = 0;
         for ( int k = 0; k < topv.size(); k++ ) {
-            double t_t = std::real( gmat_time( k, 0 ) );
+            double t_t = gmat.t( k );
             int t = rho_index_map[t_t];
             topsumv += topv[k];
             bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( t ), creator * annihilator, t_t );
@@ -109,13 +110,14 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             Log::L2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
             auto &f_gfunc = FileOutput::add_file( purpose );
             f_gfunc << fmt::format( "Time\tAbs(g{0}(tau))\tReal(g{0}(tau))\tImag(g{0}(tau))\tAbs(g{0}(t,0))\tReal(g{0}(t,0))\tImag(g{0}(t,0))\tAbs(g{0}(0))\tReal(g{0}(0))\tImag(g{0}(0))\n", order );
-            for ( int l = 0; l < topv.size(); l++ ) { // gmat.cols()
+            for ( int l = 0; l < topv.size(); l++ ) {
                 Scalar g2oftau = 0;
-                for ( int k = 0; k < gmat.rows(); k++ ) {
-                    g2oftau += gmat( k, l ) * Numerics::get_tdelta( gmat_time, l, k );
+                for ( int k = 0; k < gmat.dim(); k++ ) {
+                    const auto dt = gmat.dt( l, k );
+                    g2oftau += gmat( k, l ) * dt;
                 }
-                double t_tau = std::imag( gmat_time( 0, l ) );
-                size_t tau_index = rho_index_map[t_tau];
+                const double t_tau = gmat.tau( l );
+                const auto tau_index = rho_index_map[t_tau];
                 Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * creator * annihilator * annihilator, t_tau ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( l ), creator * annihilator, get_time_at( l ) ), 2.0 );
                 f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_tau, std::abs( g2oftau ), std::real( g2oftau ), std::imag( g2oftau ), std::abs( g2oft ), std::real( g2oft ), std::imag( g2oft ), std::abs( g2ofzero[l] ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ) );
             }
@@ -152,9 +154,14 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         Log::L2( "[PhotonStatistics] Saving Concurrence to conc_" + mode + ".txt...\n" );
         auto &f_conc = FileOutput::add_file( "conc_" + mode );
         f_conc << fmt::format( "Time\t{0}\t{0}_simple\t{0}_analytical\t{0}_fidelity\t{0}(g2(0))\t{0}_simple(g2(0))\t{0}_fidelity(g2(0))\n", mode );
-        // fmt::print( f_indist, "Time\t{0}\t{0}(g2(0))\n", mode );
         for ( int i = 0; i < to_output["Conc"][mode].size(); i++ ) {
             f_conc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ), std::real( to_output["Conc_analytical"][mode][i] ), std::real( to_output["Conc_fidelity"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ), std::real( to_output["Conc_g2zero_fidelity"][mode][i] ) );
+        }
+        // To be removed/Triggered with flag: Eigenvalues of TPM:
+        auto &f_ev = FileOutput::add_file( "conc_eigenvalues_" + mode );
+        f_ev << fmt::format( "Time\tRe({0})_0\tRe({0})_1\tRe({0})_2\tRe({0})_3\tIm({0})_0\tIm({0})_1\tIm({0})_2\tIm({0})_3\n", mode );
+        for ( int i = 0; i < to_output["Conc"][mode].size(); i++ ) {
+            f_ev << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 0 ) ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 1 ) ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 2 ) ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 3 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 0 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 1 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 2 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 3 ) ) );
         }
     }
     for ( auto &[mode, data] : to_output["Raman"] ) {

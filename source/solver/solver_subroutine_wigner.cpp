@@ -26,8 +26,7 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
     Log::L2( "[Wigner] First Matrix for Wigner:\n{}\n", reduced_rho.front() );
 
     ProgressBar progressbar = ProgressBar();
-    Timer &timer_w = Timers::create( "Wigner (" + s_mode + ")" );
-    timer_w.start();
+    Timer &timer_w = Timers::create( "Wigner (" + s_mode + ")" ).start();
     // Iterate
     // Calculates the Wigner function at coordinate alpha
     auto Wigner = [&]( Dense &DM, Scalar alpha ) {

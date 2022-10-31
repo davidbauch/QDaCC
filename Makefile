@@ -33,7 +33,7 @@ ifeq ($(OS),Windows_NT)
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
-		LIB_FLAGS += -std=c++20
+		LIB_FLAGS += -std=c++2b
 		TARGET_EXEC = QDLC-$(VERSION).out
 		TARGET_DIR = /Users/davidbauch/bin
 		BUILD_DIR = ./build/darwin
@@ -55,7 +55,7 @@ CPPFLAGS := $(INC_FLAGS) $(LIB_FLAGS) $(UFLAG)
 
 # The final build step.
 $(TARGET_DIR)/$(TARGET_EXEC): $(OBJS)
-	@echo Compiling Main Program into $@
+	@echo Compiling Main Program into $@, compiler is $(COMPILER), libs are $(LIB_FLAGS)
 	@echo User Flags: $(UFLAG)
 	@$(COMPILER) main.cpp -o $@ $(OBJS) $(LIB_LINKS) $(CPPFLAGS)
 	ln -sf $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/QDLC

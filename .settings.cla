@@ -87,7 +87,7 @@ CLA_ARGUMENT = {
 		subkey = 'GS'
 		value = ''
 		datatype = 'string'
-		description = 'Spectrum. Syntax: [Mode:center:range:resW]'
+		description = 'Spectrum. Syntax: [Mode:center:range:resW[:order:normalize]]'
 	}
 	CLA_PARAMETER = {
 		subkey = 'GI'

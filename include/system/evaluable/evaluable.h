@@ -1,27 +1,45 @@
 #pragma once
-#include "global.h"
+#include "typedef.h"
+#include "system/fileoutput.h"
+#include "misc/log.h"
+
+namespace QDLC {
 
 class Evaluable {
    private:
-    std::map<double, Scalar> value_array;
-    std::map<double, Scalar> derivative_array;
-    std::map<double, Scalar> integral_array;
-    std::map<double, Scalar> fourier_value_array;
+    using storage_type = std::map<double, Scalar>;
+    storage_type value_array;
+    storage_type derivative_array;
+    storage_type integral_array;
+    storage_type fourier_value_array;
+    Parameters::input_s inputs;
     Scalar total_maximum = 0;
     Scalar total_minimum = 0;
-    size_t size = 0;
     size_t counter_evaluated = 0;
     size_t counter_returned = 0;
 
    public:
     Evaluable() = default;
-    Evaluable( Parameters::input_s &inputs, Parameters &p ) = default;
+    Evaluable( Parameters::input_s &inputs ) : inputs( inputs ){};
+    // Dont generate Evaluate Objects directly using inputs, because those inputs cannot be used.
+    Evaluable( Parameters::input_s &inputs, Parameters &p ) = delete;
 
     virtual Scalar evaluate( double t ) = 0;
-    virtual Scalar evaluate_derivative( double t, double dt ) = 0;
-    virtual Scalar evaluate_integral( double t, double dt ) = 0;
-    virtual Scalar get( double t, bool force_evaluate ) = 0;
-    virtual void precalculate() = 0;
+    virtual Scalar evaluate_derivative( double t, double dt = 0 ) = 0;
+    virtual Scalar evaluate_integral( double t, double dt = 0 ) = 0;
+    /**
+     * @brief This function needs to precalculate f(t) for the desired time interval. generate() will then calculate
+     * the integral, derivative and fourier transform accordingly.
+     *
+     */
+    virtual ~Evaluable() = default;
+    virtual void log() = 0;
+    // Calculates the Fourier transformation of the input
+    virtual void calculate_fourier( Parameters &p ) = 0;
+
+    void log( const std::string &name ) const {
+        Log::L2( "[System-{0}] {0} evaluations/returns: {1}/{2}\n", name, counter_evaluated, counter_returned );
+    }
 
     /**
      * @brief Output this evaluable function to a file
@@ -31,64 +49,90 @@ class Evaluable {
      * @param complex If true, both the real and the imaginary part will be output to file
      * @param spectrum If true, the spectrum will be evaluated and output
      */
-    void to_file( const std::string &path, const std::string &name, bool complex = false, bool spectrum = false ) {
+    void to_file( const std::string &name = "Evaluable", bool complex = false, bool spectrum = false ) {
         // Output Temporal
-        auto &file = FileOutput::add_file( path + name );
+        auto &file = FileOutput::add_file( name );
         if ( complex )
             file << "Time\tReal\tImag\tRealDerivative\tImagDerivative\tRealIntegral\tImagIntegral\n";
         else
             file << "Time\tValue\tDerivative\tIntegral\n";
+        // This should work since the value array is an ordered map
+        const auto dt_approx = std::get<1>( *std::next( value_array.begin() ) ) - std::get<1>( *value_array.begin() );
         for ( const auto &[t, value] : value_array ) {
-            const auto deriv = derivative( t );
-            const auto integ = integral( t );
+            const auto deriv = derivative( t, dt_approx );
+            const auto integ = integral( t, dt_approx );
             if ( complex )
                 file << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t, std::real( value ), std::imag( value ), std::real( deriv ), std::imag( deriv ), std::real( integ ), std::imag( integ ) );
             else
-                file << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t, std::real( value ), std::real( deriv ), std::imag( integ ) );
+                file << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t, std::real( value ), std::real( deriv ), std::real( integ ) );
         }
         file.close();
         if ( not spectrum )
             return;
         // Output Spectral
-        auto &sfile = FileOutput::add_file( path + "fourier_" + name );
-        calculate_fourier();
+        auto &sfile = FileOutput::add_file( name + "_fourier" );
         for ( const auto &[w, value] : fourier_value_array ) {
-            file << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", w, std::real( value ), std::imag( value ) );
+            sfile << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", w, std::real( value ), std::imag( value ) );
         }
     }
 
-    // Calculate Derivative
-    Scalar derivative( double t, bool force_evaluate = false ) {
-        if ( force_evaluate or not derivative_array.contains( t ) )
-            return evaluate_derivative( t );
+    /**
+     * @brief Returns f(t), which is defined by the evaluate(t) function.
+     *
+     * @param t Current Time
+     * @param force_evaluate If true, the function f(t) will be calculated instead of returned from cache.
+     * @return Scalar
+     */
+    Scalar get( double t, bool force_evaluate = false ) {
+        if ( force_evaluate or not value_array.contains( t ) ) {
+            counter_evaluated++;
+#pragma omp critical
+            value_array[t] = evaluate( t );
+        }
+        counter_returned++;
+        return value_array[t];
+    }
+    // Return Derivative
+    Scalar derivative( const double t, const bool force_evaluate = false ) {
+        if ( force_evaluate or not derivative_array.contains( t ) ) {
+#pragma omp critical
+            derivative_array[t] = evaluate_derivative( t );
+        }
         return derivative_array[t];
     }
-    // Calculate Integral
-    Scalar integral( double t, bool force_evaluate ) {
-        if ( force_evaluate or not integral_array.contains( t ) )
-            return evaluate_integral( t );
+    // Return Integral
+    Scalar integral( const double t, const bool force_evaluate = false ) {
+        if ( force_evaluate or not integral_array.contains( t ) ) {
+#pragma omp critical
+            integral_array[t] = evaluate_integral( t );
+        }
         return integral_array[t];
     };
 
-    void generate() {
-        // Precalculate Values. Can be fixed size or centered oround inputs.
-        precalculate();
+    void generate( Parameters &p ) {
+        // Precalculate time direction
+        double t;
+        const std::vector<double> steps = { 0, 0.5 * p.t_step };
+        for ( double t1 = p.t_start; t1 <= p.t_end; t1 += p.t_step ) {
+            for ( size_t i = 0; i < steps.size(); i++ ) {
+                t = t1 + steps[i];
+                Scalar val = get( t );
+            }
+        }
         // Calculate Maxima/Minima
         std::ranges::for_each( value_array, [&]( const std::pair<double, Scalar> &el ) {
-            total_maximum = std::max<double>( total_maximum, std::abs( el.second ) );
-            total_minimum = std::min<double>( total_minimum, std::abs( el.second ) );
+            total_maximum = std::max<double>( std::abs( total_maximum ), std::abs( el.second ) );
+            total_minimum = std::min<double>( std::abs( total_minimum ), std::abs( el.second ) );
         } );
         std::ranges::for_each( value_array, [&]( const std::pair<double, Scalar> &el ) {
+            const auto t = std::get<0>( el );
             // Calculate Derivative at fixed timestep
             derivative( t );
             // Calculate Integral at fixed timestep
             integral( t );
         } );
-    }
-
-    // Calculates the Fourier transformation of the input
-    void calculate_fourier() {
-        // Calculate FourierTransform
+        // Fourier Transform
+        calculate_fourier( p );
     }
 
     // (Absolute) Minima and Maxima
@@ -99,12 +143,34 @@ class Evaluable {
         return total_minimum;
     }
 
+    size_t size() const {
+        return value_array.size();
+    }
+
+    /**
+     * @brief Acces the fourier value array
+     *
+     * @param w
+     * @param value
+     */
+    void set_fourier_value( const double w, const Scalar value ) {
+        fourier_value_array[w] = value;
+    }
+    size_t get_fourier_size() const {
+        return fourier_value_array.size();
+    }
+
+    const Parameters::input_s &get_inputs() const {
+        return inputs;
+    }
+
     /**
      * @brief Returns the number of evaluated and returned values
      *
      * @return std::pair<size_t ,size_t> Evaluated, Returned
      */
-    std::pair<size_t, size_t> stats() {
-        return { counter_evaluated, counter_returned }
+    std::pair<size_t, size_t> stats() const {
+        return { counter_evaluated, counter_returned };
     }
-}
+};
+} // namespace QDLC

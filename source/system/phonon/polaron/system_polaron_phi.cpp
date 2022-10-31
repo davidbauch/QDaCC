@@ -1,5 +1,7 @@
 #include "system/system.h"
 
+using namespace QDLC;
+
 Scalar System::dgl_phonons_phi( const double tau ) {
     Scalar integral = 0;
     for ( double w = parameters.p_phonon_wcutoffdelta; w < 10.0 * parameters.p_phonon_wcutoff; w += parameters.p_phonon_wcutoffdelta ) {

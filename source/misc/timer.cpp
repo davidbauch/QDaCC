@@ -18,33 +18,35 @@ Timer::Timer( const std::string &_name, bool _addtoTotalStatistic, bool _printTo
     printToSummary = _printToSummary;
 }
 // Iterate Timer, can be used instead of using start/stop if the range of the timer includes the whole mainloop.
-void Timer::iterate( int num ) {
+Timer &Timer::iterate( int num ) {
     totalIterationNum += num;
+    return *this;
 }
 // Start Timer
-void Timer::start() {
+Timer &Timer::start() {
     // Log::L2("Starting timer '{}'... ",name);
     wallTimeStarted = omp_get_wtime();
     cpuTimeStarted = clock();
     running = true;
+    return *this;
     // Log::L2("Done!\n");
 }
 // End Timer
-void Timer::end() {
+Timer &Timer::end() {
     // Log::L2("Ending timer '{}'... ",name);
     wallTimeEnded = omp_get_wtime();
     cpuTimeEnded = clock();
     running = false;
     totalCPUTime = getCPUTimeOnce();
     totalWallTime = getWallTimeOnce();
-    iterate();
+    return iterate();
     // Log::L2("Done!\n");
 }
 // Add time
-void Timer::add( time_t cpu, double wall ) {
+Timer &Timer::add( time_t cpu, double wall ) {
     totalWallTime += wall;
     totalCPUTime += cpu;
-    iterate();
+    return iterate();
 }
 // Elapsed Wall Time between all start,end and between last start/end
 double Timer::getWallTime( double scale ) {

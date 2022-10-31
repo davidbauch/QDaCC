@@ -12,7 +12,7 @@ double min( const Parameter &p1, const Parameter &p2 ) {
 Parameters::Parameters( const std::vector<std::string> &arguments ) {
     numerics_use_interactionpicture = 0;
     numerics_use_rwa = 0;
-    numerics_order_timetrafo = TIMETRANSFORMATION_MATRIXEXPONENTIAL;
+    numerics_order_timetrafo = QDLC::TransformationOrder::MatrixExponential;
     output_advanced_log = 0;
     output_handlerstrings = 0;
     iterations_t_skip = 1;
@@ -23,12 +23,11 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
     numerics_calculate_till_converged = false;
 
     // Parsing input:
-    Timer &timer_parseInput = Timers::create( "Parsing parameters", true, false );
+    Timer &timer_parseInput = Timers::create( "Parsing parameters", true, false ).start();
     Log::Logger::wrapInBar( "Conversion of input variables", Log::Logger::BAR_SIZE_FULL, Log::Logger::LEVEL_2, Log::Logger::BAR_0 );
     Log::L2( "\n" );
     Log::L2( "[System] Parsing input variables...\n" );
 
-    timer_parseInput.start();
     parse_input( arguments );
     timer_parseInput.end();
     Log::L2( "[System] Successful. Elapsed time is {}ms\n", timer_parseInput.getWallTime( Timers::MILLISECONDS ) );
@@ -93,7 +92,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     if ( numerics_maximum_primary_threads == -1 )
         numerics_maximum_primary_threads = omp_get_max_threads();
     output_handlerstrings = QDLC::CommandlineArguments::get_parameter_passed( "-handler" );
-    numerics_order_timetrafo = QDLC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? TIMETRANSFORMATION_MATRIXEXPONENTIAL : TIMETRANSFORMATION_ANALYTICAL;
+    numerics_order_timetrafo = QDLC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? QDLC::TransformationOrder::MatrixExponential : QDLC::TransformationOrder::Analytical;
     scale_parameters = QDLC::CommandlineArguments::get_parameter_passed( "-scale" ); // MHMHMH
     numerics_use_saved_coefficients = not QDLC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
     numerics_use_saved_hamiltons = not QDLC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
@@ -110,7 +109,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     p_phonon_wcutoffdelta = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononwcutoffdelta" );
     p_phonon_tcutoff = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phonontcutoff" );
     p_phonon_T = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "temperature" );
-    numerics_phonon_approximation_order = QDLC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
+    numerics_phonon_approximation_order = (QDLC::PhononApproximation)QDLC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
     numerics_phonon_approximation_markov1 = QDLC::CommandlineArguments::get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
     numerics_phonon_nork45 = not QDLC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );               // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
     p_phonon_adjust = not QDLC::CommandlineArguments::get_parameter_passed( "-noPhononAdjust" );
@@ -262,7 +261,7 @@ void Parameters::pre_adjust_input() {
     numerics_interpolate_method_tau = methods[method_tau];
 
     // No phonon adjust if pathintegral is chosen
-    if ( numerics_phonon_approximation_order == 5 ) {
+    if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
         p_phonon_adjust = false;
     }
 
@@ -310,7 +309,7 @@ void Parameters::pre_adjust_input() {
     }
 
     // Disable Hamilton Caching and RK45 for PI
-    if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
+    if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
         // numerics_use_saved_hamiltons = false;
         // Log::L2( "[System] Disabled Caching of Hamilton matrices" );
         if ( numerics_rk_order > 5 ) {
@@ -321,7 +320,7 @@ void Parameters::pre_adjust_input() {
 
     // Automatically determin subiterator stepsize
     if ( numerics_subiterator_stepsize < 0 ) {
-        if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ) {
+        if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
             numerics_subiterator_stepsize = t_step_pathint / 5.0;
             Log::L2( "[System] Setting the subiterator stepsize to {}, according to a Path Integral stepsize of {}\n", numerics_subiterator_stepsize, t_step_pathint );
         } else {
@@ -354,9 +353,9 @@ void Parameters::post_adjust_input() {
     Log::L2( "[System] Adjusting Post-Mainloop Inputs...\n" );
 
     // Grid Resolution
-    if ( t_end >= 0 and ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) ) {
+    if ( t_end >= 0 and ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) ) {
         if ( iterations_t_max < 1 ) {
-            iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : t_step ) );
+            iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? t_step_pathint : t_step ) );
             Log::L2( "[System] Set iterations_t_max to {}\n", iterations_t_max );
         }
         if ( grid_resolution < 1 and iterations_t_max > 0 ) {
@@ -380,9 +379,9 @@ void Parameters::post_adjust_grids() {
         Log::L2( "[System-Prameters] Grid was not again modified because the gridinput is fixed by the user.\n" );
         return;
     }
-    if ( numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) {
+    if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) {
         input_correlation_resolution["Standard"].numerical_v["Time"] = { t_end };
-        double time_delta = numerics_phonon_approximation_order == PHONON_PATH_INTEGRAL ? t_step_pathint : Parameter( ( t_end - t_start ) / ( 1. * grid_resolution ) );
+        double time_delta = numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? t_step_pathint : Parameter( ( t_end - t_start ) / ( 1. * grid_resolution ) );
         input_correlation_resolution["Standard"].numerical_v["Delta"] = { time_delta };
         auto &settings = input_correlation_resolution.contains( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
         Log::L2( "[System] Initial Grid Timestep is {}.\n", settings.numerical_v["Delta"].front() );
@@ -459,7 +458,7 @@ void Parameters::parse_system() {
         conf_s.numerical_v["AmpFactor"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) ); // Amplitude Scaling for coupled_to
         conf_s.numerical_v["Amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) ); // Amplitudes
         conf_s.numerical_v["Times"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) );     // "Times"
-        if ( conf[5].find( "," ) != std::string::npos ) {
+        if ( conf[5].find( "," ) != std::string::npos or conf.size() > 6 ) {
             conf_s.numerical_v["ddt"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) ); // "d/dt"
             conf_s.string["Type"] = conf[6];                                                                            // Type
         } else {
@@ -700,11 +699,21 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             Log::L1( " - Coupled to States:\n" );
             for ( int i = 0; i < mat.string_v["CoupledTo"].size(); i++ )
                 Log::L1( " - - {} with scaling {}\n", mat.string_v["CoupledTo"][i], mat.numerical_v["AmpFactor"][i] );
-            for ( int i = 0; i < mat.numerical_v["Amplitude"].size(); i++ ) {
-                Log::L1( " - Chirp Point {}:\n", i );
-                Log::L1( " - - Amplitude: {} Hz - {} meV\n", mat.numerical_v["Amplitude"][i], mat.numerical_v["Amplitude"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
-                Log::L1( " - - Time: {} s - {} ps\n", mat.numerical_v["Times"][i], mat.numerical_v["Times"][i].getSI( Parameter::UNIT_TIME_PS ) );
-                Log::L1( " - - Derivative DDT: {}\n", mat.numerical_v["ddt"][i] );
+            if ( mat.string.at( "Type" ) != "sine" ) {
+                for ( int i = 0; i < mat.numerical_v["Amplitude"].size(); i++ ) {
+                    Log::L1( " - Chirp Point {}:\n", i );
+                    Log::L1( " - - Amplitude: {} Hz - {} meV\n", mat.numerical_v["Amplitude"][i], mat.numerical_v["Amplitude"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
+                    Log::L1( " - - Time: {} s - {} ps\n", mat.numerical_v["Times"][i], mat.numerical_v["Times"][i].getSI( Parameter::UNIT_TIME_PS ) );
+                    Log::L1( " - - Derivative DDT: {}\n", mat.numerical_v["ddt"][i] );
+                }
+            } else {
+                Log::L1( " - Sine Chirp with {} individual frequencies:\n", mat.numerical_v.at( "Amplitude" ).size() );
+                for ( int i = 0; i < mat.numerical_v["Amplitude"].size(); i++ ) {
+                    Log::L1( " - - Sine {}:\n", i );
+                    Log::L1( " - - - Amplitude: {} Hz - {} meV\n", mat.numerical_v["Amplitude"][i], mat.numerical_v["Amplitude"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
+                    Log::L1( " - - - Phase Shift: {} s - {} ps\n", mat.numerical_v["Times"][i], mat.numerical_v["Times"][i].getSI( Parameter::UNIT_TIME_PS ) );
+                    Log::L1( " - - - Sine Frequency: {} Hz - {} meV\n", mat.numerical_v["ddt"][i], mat.numerical_v["ddt"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
+                }
             }
         }
         Log::L1( "\n" );
@@ -732,9 +741,9 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         }
         Log::L1( "<B> = {}\n", p_phonon_b );
         Log::L1( "First Markov approximation used? (rho(t) = rho(t-tau)) - {}\n", ( numerics_phonon_approximation_markov1 ? "Yes" : "No" ) );
-        Log::L1( "Transformation approximation used: {} - {}\n", numerics_phonon_approximation_order, approximations.at( numerics_phonon_approximation_order ) );
+        Log::L1( "Transformation approximation used: {} - {}\n", (int)numerics_phonon_approximation_order, approximations.at( (int)numerics_phonon_approximation_order ) );
         // Pathintegral
-        if ( numerics_phonon_approximation_order == 5 ) {
+        if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
             Log::L1( " - Path Integral Settings:\n" );
             Log::L1( " - Backsteps NC: {}\n", p_phonon_nc );
             Log::L1( " - Iterator Stepsize: {}\n", numerics_subiterator_stepsize );
@@ -753,7 +762,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "Timeborder end: {:.8e} s - {:.2f} ps{}\n", t_end, t_end * 1E12, numerics_calculate_till_converged ? " (variable time end at 99.9\% convergence)" : "" );
     Log::L1( "Timeborder delta: {:.8e} s - {:.2f} fs \n", t_step, t_step * 1E15 );
     Log::L1( "Subiterator delta: {:.8e} s - {:.2f} fs \n", numerics_subiterator_stepsize, numerics_subiterator_stepsize * 1E15 );
-    if ( numerics_phonon_approximation_order == 5 ) {
+    if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
         Log::L1( "Timeborder delta path integral: {:.8e} s - {:.2f} ps\n", t_step_pathint, t_step_pathint * 1E12 );
     }
     Log::L1( "Time iterations (main loop) = {}\n\n", iterations_t_max );
@@ -801,7 +810,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         Log::L1( "Will NOT use RK45 for the phonon backwards integral!\n" );
     Log::L1( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
     Log::L1( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture ) ? "YES" : "NO" ) );
-    Log::L1( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == TIMETRANSFORMATION_ANALYTICAL ) ? "Analytic" : "Matrix Exponential" ) );
+    Log::L1( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == QDLC::TransformationOrder::Analytical ) ? "Analytic" : "Matrix Exponential" ) );
     Log::L1( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\nThreads used by Eigen: {}\n", numerics_maximum_secondary_threads, numerics_maximum_primary_threads, Eigen::nbThreads() );
     Log::L1( "Used scaling for parameters? - {}\n", ( scale_parameters ? std::to_string( scale_value ) : "no" ) );
     if ( p_phonon_T )

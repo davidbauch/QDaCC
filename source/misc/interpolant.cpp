@@ -3,7 +3,7 @@
 // 1D
 
 // Takes X,Y[,Z], Values to return evaluations at
-Interpolant::Interpolant( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::string t = "linear" ) {
+Interpolant::Interpolant( const std::vector<double> &interpolationPointsX, const std::vector<double> &interpolationPointsY, const std::string t ) {
     X = "[";
     Y = "[";
     for ( unsigned long i = 0; i < interpolationPointsX.size(); i++ ) {
@@ -16,7 +16,7 @@ Interpolant::Interpolant( std::vector<double> &interpolationPointsX, std::vector
     generate( t );
 }
 
-Interpolant::Interpolant( std::vector<double> &interpolationPointsX, std::vector<double> &interpolationPointsY, std::vector<double> &interpolationPointsZ, std::string t = "linear" ) {
+Interpolant::Interpolant( const std::vector<double> &interpolationPointsX, const std::vector<double> &interpolationPointsY, const std::vector<double> &interpolationPointsZ, const std::string t ) {
     // TODO: verify inputs (length, etc)
     // Interpolant
     // Generate input strings for interpolant
@@ -31,7 +31,7 @@ Interpolant::Interpolant( std::vector<double> &interpolationPointsX, std::vector
     X += "]";
     Y += "]";
     Z += "]";
-    //std::cout << "X = " << X << "\nY = " << Y << "\nZ = " << Z << "\nType = " << t <<"\n";
+    // std::cout << "X = " << X << "\nY = " << Y << "\nZ = " << Z << "\nType = " << t <<"\n";
     generate( t );
 }
 

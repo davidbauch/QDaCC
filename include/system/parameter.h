@@ -1,5 +1,9 @@
 #pragma once
 
+#include <complex>
+#include <cmath>
+#include "typedef.h"
+
 class Parameter {
    private:
     double value_si;

@@ -1,5 +1,7 @@
 #include "system/system.h"
 
+using namespace QDLC;
+
 Scalar System::dgl_phonons_greenf( double tau, const char mode ) {
     if ( not phi_vector.contains( tau ) )
         phi_vector[tau] = dgl_phonons_phi( tau );

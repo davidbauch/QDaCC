@@ -28,7 +28,7 @@ class Parameters {
     std::string numerics_groundstate_string;
 
     // Order of the Timetransformation. Can be Analytical or Numerical
-    int numerics_order_timetrafo;
+    QDLC::TransformationOrder numerics_order_timetrafo;
 
     // Advanced Output Settings for Debugging
     int output_advanced_log, output_handlerstrings, output_coefficients;
@@ -68,7 +68,7 @@ class Parameters {
     // Enables the first Markov Approximation
     bool numerics_phonon_approximation_markov1;
     // Defines the Approximation Method used for the Polaron Timetransformation
-    int numerics_phonon_approximation_order;
+    QDLC::PhononApproximation numerics_phonon_approximation_order;
     // Quantum Dot / Phonon Parameters
     Parameter p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_wcutoffdelta, p_phonon_pure_dephasing;
     Parameter p_phonon_qd_de, p_phonon_qd_dh, p_phonon_qd_rho, p_phonon_qd_cs, p_phonon_qd_ratio, p_phonon_qd_ae;

@@ -93,6 +93,9 @@ std::string QDLC::Numerics::ODESolver::get_operators_purpose( const std::vector<
 }
 
 Sparse QDLC::Numerics::ODESolver::get_operators_matrix( System &s, const std::string &s_op ) {
+    if ( s_op == "internal_identitymatrix" ) {
+        return s.operatorMatrices.identity;
+    }
     Sparse ret( s.parameters.maxStates, s.parameters.maxStates );
     for ( auto &split_s_op : QDLC::String::splitline( s_op, '+' ) )
         ret += s.operatorMatrices.el_transitions.contains( split_s_op ) ? s.operatorMatrices.el_transitions[split_s_op].hilbert : s.operatorMatrices.ph_transitions[split_s_op].hilbert;
