@@ -41,6 +41,10 @@ class Evaluable {
         Log::L2( "[System-{0}] {0} evaluations/returns: {1}/{2}\n", name, counter_evaluated, counter_returned );
     }
 
+    double get_approximated_dt() {
+        return std::real( std::get<1>( *std::next( value_array.begin() ) ) - std::get<1>( *value_array.begin() ) );
+    }
+
     /**
      * @brief Output this evaluable function to a file
      *
@@ -57,7 +61,7 @@ class Evaluable {
         else
             file << "Time\tValue\tDerivative\tIntegral\n";
         // This should work since the value array is an ordered map
-        const auto dt_approx = std::get<1>( *std::next( value_array.begin() ) ) - std::get<1>( *value_array.begin() );
+        const auto dt_approx = get_approximated_dt();
         for ( const auto &[t, value] : value_array ) {
             const auto deriv = derivative( t, dt_approx );
             const auto integ = integral( t, dt_approx );
@@ -93,18 +97,18 @@ class Evaluable {
         return value_array[t];
     }
     // Return Derivative
-    Scalar derivative( const double t, const bool force_evaluate = false ) {
+    Scalar derivative( const double t, const double dt = 0, const bool force_evaluate = false ) {
         if ( force_evaluate or not derivative_array.contains( t ) ) {
 #pragma omp critical
-            derivative_array[t] = evaluate_derivative( t );
+            derivative_array[t] = evaluate_derivative( t, dt );
         }
         return derivative_array[t];
     }
     // Return Integral
-    Scalar integral( const double t, const bool force_evaluate = false ) {
+    Scalar integral( const double t, const double dt = 0, const bool force_evaluate = false ) {
         if ( force_evaluate or not integral_array.contains( t ) ) {
 #pragma omp critical
-            integral_array[t] = evaluate_integral( t );
+            integral_array[t] = evaluate_integral( t, dt );
         }
         return integral_array[t];
     };
@@ -127,9 +131,9 @@ class Evaluable {
         std::ranges::for_each( value_array, [&]( const std::pair<double, Scalar> &el ) {
             const auto t = std::get<0>( el );
             // Calculate Derivative at fixed timestep
-            derivative( t );
+            derivative( t, p.t_step );
             // Calculate Integral at fixed timestep
-            integral( t );
+            integral( t, p.t_step );
         } );
         // Fourier Transform
         calculate_fourier( p );
