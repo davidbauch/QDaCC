@@ -3,14 +3,14 @@
 void QDLC::Numerics::ODESolver::apply_detector_function( System &s, CacheMatrix &mat ) {
     const auto &purpose = mat.get_name();
     const auto dim = mat.dim();
-    if ( s.parameters.input_conf["Detector"].numerical_v["time_center"].size() > 0 ) {
+    if ( s.parameters.input_conf["Detector"].property_set["time_center"].size() > 0 ) {
         if ( detector_temporal_mask.rows() == 0 ) {
             Log::L2( "[PhotonStatistics] Calculating Detector Temporal Mask... \n" );
             detector_temporal_mask = mat.empty();
-            for ( int c = 0; c < s.parameters.input_conf["Detector"].numerical_v["time_center"].size(); c++ ) {
-                double detector_t_center = s.parameters.input_conf["Detector"].numerical_v["time_center"][c];
-                double detector_t_range = s.parameters.input_conf["Detector"].numerical_v["time_range"][c];
-                double detector_power = s.parameters.input_conf["Detector"].numerical_v["time_power_amplitude"][c];
+            for ( int c = 0; c < s.parameters.input_conf["Detector"].property_set["time_center"].size(); c++ ) {
+                double detector_t_center = s.parameters.input_conf["Detector"].property_set["time_center"][c];
+                double detector_t_range = s.parameters.input_conf["Detector"].property_set["time_range"][c];
+                double detector_power = s.parameters.input_conf["Detector"].property_set["time_power_amplitude"][c];
                 Log::L2( "[PhotonStatistics] Adding Temporal Mask for t_0 = {}, delta = {}, amp = {}\n", detector_t_center, detector_t_range, detector_power );
                 for ( int i = 0; i < dim; i++ ) {
                     double time = mat.t( i );
@@ -36,17 +36,17 @@ void QDLC::Numerics::ODESolver::apply_detector_function( System &s, CacheMatrix 
         Log::L2( "[PhotonStatistics] Applying Detector Temporal Mask to {}... \n", purpose );
         mat.get() = mat.get().cwiseProduct( detector_temporal_mask );
     }
-    if ( s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size() > 0 ) {
+    if ( s.parameters.input_conf["Detector"].property_set["spectral_range"].size() > 0 ) {
         Timer &timer = Timers::create( "Detector (" + purpose + ")" ).start();
         auto progressbar = ProgressBar();
         // Disgusting piece of code
         if ( detector_frequency_mask.empty() ) {
             Log::L2( "[PhotonStatistics] Calculating Detector Spectral Mask... \n" );
-            for ( int c = 0; c < s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size(); c++ ) {
-                double center = s.parameters.input_conf["Detector"].numerical_v["spectral_center"][c];
-                double range = s.parameters.input_conf["Detector"].numerical_v["spectral_range"][c];
-                double points = s.parameters.input_conf["Detector"].numerical_v["spectral_number_points"][c]; // Points-per-sigma
-                double power = s.parameters.input_conf["Detector"].numerical_v["spectral_power_amplitude"][c];
+            for ( int c = 0; c < s.parameters.input_conf["Detector"].property_set["spectral_range"].size(); c++ ) {
+                double center = s.parameters.input_conf["Detector"].property_set["spectral_center"][c];
+                double range = s.parameters.input_conf["Detector"].property_set["spectral_range"][c];
+                double points = s.parameters.input_conf["Detector"].property_set["spectral_number_points"][c]; // Points-per-sigma
+                double power = s.parameters.input_conf["Detector"].property_set["spectral_power_amplitude"][c];
                 double delta_omega = range / points;
                 double w = 0;
                 while ( true ) {

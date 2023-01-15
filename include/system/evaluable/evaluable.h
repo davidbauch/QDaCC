@@ -12,7 +12,7 @@ class Evaluable {
     storage_type derivative_array;
     storage_type integral_array;
     storage_type fourier_value_array;
-    Parameters::input_s inputs;
+    Parameters::universal_config inputs;
     Scalar total_maximum = 0;
     Scalar total_minimum = 0;
     size_t counter_evaluated = 0;
@@ -20,9 +20,9 @@ class Evaluable {
 
    public:
     Evaluable() = default;
-    Evaluable( Parameters::input_s &inputs ) : inputs( inputs ){};
+    Evaluable( Parameters::universal_config &inputs ) : inputs( inputs ){};
     // Dont generate Evaluate Objects directly using inputs, because those inputs cannot be used.
-    Evaluable( Parameters::input_s &inputs, Parameters &p ) = delete;
+    Evaluable( Parameters::universal_config &inputs, Parameters &p ) = delete;
 
     virtual Scalar evaluate( double t ) = 0;
     virtual Scalar evaluate_derivative( double t, double dt = 0 ) = 0;
@@ -164,7 +164,7 @@ class Evaluable {
         return fourier_value_array.size();
     }
 
-    const Parameters::input_s &get_inputs() const {
+    const Parameters::universal_config &get_inputs() const {
         return inputs;
     }
 

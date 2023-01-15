@@ -13,7 +13,7 @@ Sparse QDLC::Numerics::ODESolver::iterateRungeKutta4( const Sparse &rho, System 
     Sparse rk4 = s.dgl_runge_function( rho + t_step * rk3, H_calc_k4, t + t_step, savedStates );
     // Dichtematrix
     return rho + t_step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
-}
+} 
 
 Sparse QDLC::Numerics::ODESolver::iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-6 ausrechnen

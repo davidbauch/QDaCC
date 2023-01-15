@@ -20,9 +20,9 @@ int main( int argc, char* argv[] ) {
                 globalparams.emplace_back( inputs.at( i ) );
             }
         }
-        // Parse file and save to sets vector
+        // Parse file and save to sets vector 
         std::ifstream file( filename );
-        std::string line;
+        std::string line; 
         std::getline( file, line );
         std::string outputname = QDLC::String::splitline( line ).at( 1 );
         std::filesystem::create_directories( inputs.back() + outputname );

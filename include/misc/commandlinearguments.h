@@ -10,6 +10,10 @@
 #include "misc/helperfunctions_string.h"
 #include "misc/helperfunctions.h"
 
+#ifdef CLA_BAKE
+#    include "cla_settings.h"
+#endif
+
 // V 1.1 - Subkeys of groups can also be read individually, e.g. --g1 arg arg with argkeys arg1,arg2 result in --arg1 arg being also a valid parameter that can be read. If the parameter does not have a subkey, it cannot be individually set
 // V 1.1.1 - Init length formatting now better
 // V 1.2 - Better help function, --help arg can now search for arg, no more sorting for now
@@ -87,7 +91,7 @@ class CommandlineArguments {
         operator std::string() const { return toString(); }
 
         // Checks if key used comparse to this datastructure
-        bool validkey( std::string kk ) const {
+        bool validkey( const std::string& kk ) const {
             if ( subkey.length() == 0 ) return false;
             if ( subkey.compare( kk ) == 0 ) return true;
             return false;
@@ -217,7 +221,13 @@ class CommandlineArguments {
     std::vector<Datastructure> cla_datastructures;
 
     bool readConfigFile( std::string filepath ) {
+#ifdef CLA_BAKE
+        std::stringstream in( "" );
+        for ( int i = 0; i < ___settings_cla_len; i++ )
+            in << ___settings_cla[i];
+#else
         std::ifstream in( ( filepath + ".settings.cla" ).c_str() );
+#endif
         if ( !in ) {
             std::cerr << "Cannot open the File : " << filepath << std::endl;
             if ( !generateEmptyConfigfile( filepath ) ) return false;
@@ -230,7 +240,9 @@ class CommandlineArguments {
                 configfile.push_back( str );
             }
         }
+#ifndef CLA_BAKE
         in.close();
+#endif
         return true;
     }
 

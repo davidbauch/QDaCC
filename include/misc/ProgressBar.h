@@ -54,7 +54,7 @@ class ProgressBar {
     int maxSize = 0;
     int type;
 
-    ProgressBar( int _barLength = 60, int _decimalPoints = 0, int _type = BAR_VERTICAL, bool _isSpinning = true, double _spinPS = 0.1, const std::vector<std::string>& _sym = ProgressBarSetting::sym6, const std::vector<std::string>& _spin = { "|", "/", "-", "\\" }, const std::string& _barEnd = "Done" ) : barLength( _barLength ),
+    ProgressBar( int _barLength = 60, int _decimalPoints = 0, int _type = BAR_VERTICAL, bool _isSpinning = true, double _spinPS = 0.1, const std::vector<std::string>& _sym = ProgressBarSetting::sym2, const std::vector<std::string>& _spin = { "|", "/", "-", "\\" }, const std::string& _barEnd = "Done" ) : barLength( _barLength ),
                                                                                                                                                                                                                                                                                                                  decimalPoints( _decimalPoints ),
                                                                                                                                                                                                                                                                                                                  barEnd( _barEnd ),
                                                                                                                                                                                                                                                                                                                  spin( _spin ),

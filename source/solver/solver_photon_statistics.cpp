@@ -8,7 +8,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
     for ( int i = 0; i < spectrum_s.string_v["Modes"].size(); i++ ) {
         const auto &[s_creator, s_annihilator] = get_operator_strings( s, spectrum_s.string_v["Modes"][i] );
-        calculate_spectrum( s, s_creator, s_annihilator, spectrum_s.numerical_v["Center"][i], spectrum_s.numerical_v["Range"][i], spectrum_s.numerical_v["resW"][i], spectrum_s.numerical_v["Order"][i], spectrum_s.string_v["Normalize"][i] == "True" );
+        calculate_spectrum( s, s_creator, s_annihilator, spectrum_s.property_set["Center"][i], spectrum_s.property_set["Range"][i], spectrum_s.property_set["resW"][i], spectrum_s.property_set["Order"][i], spectrum_s.string_v["Normalize"][i] == "True" );
     }
     // Calculate Indist
     auto &indist_s = s.parameters.input_correlation["Indist"];
@@ -33,7 +33,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         calculate_raman_population( s, raman_s.string_v["ElMode1"][i], raman_s.string_v["ElMode2"][i], raman_s.string_v["OpMode"][i], raman_s.string_v["PMode"][i] );
     }
     // Detector Matrix // Moved directly to where its calculated.
-    // if ( s.parameters.input_conf["Detector"].numerical_v["time_center"].size() > 0 ) {
+    // if ( s.parameters.input_conf["Detector"].property_set["time_center"].size() > 0 ) {
     //    Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask.txt...\n" );
     //    auto &f_detector = FileOutput::add_file( "detector_temporal_mask" );
     //    f_detector << "Time_index\ttau_index\tD(t)*D(t+tau)\n";
@@ -44,7 +44,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     //        f_detector << "\n";
     //    }
     //}
-    if ( s.parameters.input_conf["Detector"].numerical_v["spectral_range"].size() > 0 ) {
+    if ( s.parameters.input_conf["Detector"].property_set["spectral_range"].size() > 0 ) {
         Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_spectral_mask.txt...\n" );
         auto &f_detector = FileOutput::add_file( "detector_spectral_mask" );
         f_detector << "Omega\tAmp\tDelta\n";
@@ -58,7 +58,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         double t_step = ( s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? s.parameters.t_step_pathint : s.parameters.t_step );
         /// TODO : in funktion
         auto modes = gs_s.string_v["Modes"][i];
-        int order = std::abs( gs_s.numerical_v["Order"][i] );
+        int order = std::abs( gs_s.property_set["Order"][i] );
         const auto &[s_creator, s_annihilator] = get_operator_strings( s, modes );
         std::string purpose = order == 1 ? get_operators_purpose( { s_creator, s_annihilator } ) : get_operators_purpose( { s_creator, s_creator, s_annihilator, s_annihilator } );
         const auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
@@ -71,7 +71,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         auto &gmat = cache[purpose];
         const auto dim = gmat.dim();
         // G2(t,tau)
-        if ( gs_s.numerical_v["Integrated"][i] == 0 || gs_s.numerical_v["Integrated"][i] == 2 ) {
+        if ( gs_s.string_v["Integrated"][i] == "matrix" || gs_s.string_v["Integrated"][i] == "both" ) {
             Log::L2( "[PhotonStatistics] Saving G{} function matrix to {}_m.txt...\n", order, purpose );
             auto &f_gfunc = FileOutput::add_file( purpose + "_m" );
             f_gfunc << "Time\tTau\tAbs\tReal\tImag\n";
@@ -106,7 +106,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             g2ofzero[k] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 );
         }
         // G2(t,0) and G2(tau)
-        if ( gs_s.numerical_v["Integrated"][i] == 1 || gs_s.numerical_v["Integrated"][i] == 2 ) {
+        if ( gs_s.string_v["Integrated"][i] == "time" || gs_s.string_v["Integrated"][i] == "both" ) {
             Log::L2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
             auto &f_gfunc = FileOutput::add_file( purpose );
             f_gfunc << fmt::format( "Time\tAbs(g{0}(tau))\tReal(g{0}(tau))\tImag(g{0}(tau))\tAbs(g{0}(t,0))\tReal(g{0}(t,0))\tImag(g{0}(t,0))\tAbs(g{0}(0))\tReal(g{0}(0))\tImag(g{0}(0))\n", order );
@@ -126,7 +126,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     // Calculate Conc
     auto &wigner_s = s.parameters.input_correlation["Wigner"];
     for ( int i = 0; i < wigner_s.string_v["Modes"].size(); i++ ) {
-        calculate_wigner( s, wigner_s.string_v["Modes"][i], wigner_s.numerical_v["X"][i], wigner_s.numerical_v["Y"][i], wigner_s.numerical_v["Res"][i], wigner_s.numerical_v["Skip"][i] );
+        calculate_wigner( s, wigner_s.string_v["Modes"][i], wigner_s.property_set["X"][i], wigner_s.property_set["Y"][i], wigner_s.property_set["Res"][i], wigner_s.property_set["Skip"][i] );
     }
 
     // Output Spectra and Rest in seperate Files
@@ -284,7 +284,7 @@ bool QDLC::Numerics::ODESolver::calculate_raman_population( System &s, const std
     //... = s.operatorMatrices.el_transitions[electronic_transition1].energy;
     // double e_electronic_transition2 = s.operatorMatrices.el_transitions[electronic_transition2].energy;
     // double e_optical_transition = s.operatorMatrices.ph_transitions[optical_transition + "bd"].energy;
-    // int pulse_index = s.parameters.input_pulse[pulse_mode].numerical["PulseIndex"];
+    // int pulse_index = s.parameters.input_pulse[pulse_mode].property["PulseIndex"];
     //
     // Log::L2( "Using w_1 = {}, w_2 = {}, w_c = {}, pulse index = {}({})\n", e_electronic_transition1, e_electronic_transition2, e_optical_transition, pulse_mode, pulse_index );
     //

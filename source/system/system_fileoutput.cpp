@@ -84,7 +84,7 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
             fp_electronic << fmt::format( "|{}><{}|\t", name, name );
         if ( p.p_omega_decay > 0.0 )
             for ( auto &[name, rem] : p.input_electronic )
-                if ( rem.numerical["DecayScaling"] != 0.0 )
+                if ( rem.property["DecayScaling"] != 0.0 )
                     fp_electronic << fmt::format( "EM(|{}><{}|)\t", name, name );
         fp_electronic << "\n";
     }

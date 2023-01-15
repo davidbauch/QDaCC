@@ -7,7 +7,9 @@
 #include "system/parameter.h"
 
 #define GLOBAL_PROGRAM_VERSION "3.5.0"
-#define GLOBAL_PROGRAM_LASTCHANGE "Optimization City"
+#define GLOBAL_PROGRAM_LASTCHANGE "I don't remember :("
+
+namespace QDLC {
 
 class Parameters {
    public:
@@ -42,11 +44,6 @@ class Parameters {
     std::map<double, size_t> grid_value_indices;
     // Number of Iterations to skip for the grid. E.g. :....:....:....: (every fith value is used for grid)
     int iterations_t_skip;
-
-    // DEPRECATED Scale Parameters to fit a different scale other than SI. Usefull for example when timesteps < dummy_precision is needed. Currently not functioning.
-    bool scale_parameters;
-    // The value to scale to
-    double scale_value;
 
     // Assumed maximum iterations for the main t-direction calculation
     int iterations_t_max;
@@ -153,6 +150,7 @@ class Parameters {
     Parameter p_omega_decay;
 
     // Main Direction Trigger. Because some system and solver functions use e.g. cached variables, switching this trigger after the main t-direction is calculated enables those functions to adapt.
+    // For example, the polaron functions will start to use cached and interpolated values as soon as this trigger is switched
     bool numerics_main_direction_done;
 
     // Constructor
@@ -164,28 +162,30 @@ class Parameters {
      * The struct also enables the general output of a given inputstruct for easier debugging.
      *
      */
-    struct input_s {
+    class universal_config {
+       public:
+        universal_config() = default;
         // String -> Parameter
-        std::map<std::string, Parameter> numerical;
+        std::map<std::string, Parameter> property;
         // String -> String
         std::map<std::string, std::string> string;
         // String -> Parameter Vector
-        std::map<std::string, std::vector<Parameter>> numerical_v;
+        std::map<std::string, std::vector<Parameter>> property_set;
         // String -> String Vector
         std::map<std::string, std::vector<std::string>> string_v;
         // Output Helper
-        friend std::ostream &operator<<( std::ostream &os, const input_s &is ) {
-            os << "Numerical Values:\n";
-            for ( auto &p : is.numerical )
+        friend std::ostream &operator<<( std::ostream &os, const universal_config &is ) {
+            os << "property Values:\n";
+            for ( auto &p : is.property )
                 os << p.first << " = " << p.second << "\n";
             os << std::endl;
             os << "String Values:\n";
             for ( auto &p : is.string )
                 os << p.first << " = " << p.second << "\n";
             os << std::endl;
-            if ( is.numerical_v.size() > 0 ) {
-                os << "Numerical Vector Values:\n";
-                for ( auto &p : is.numerical_v ) {
+            if ( is.property_set.size() > 0 ) {
+                os << "property Vector Values:\n";
+                for ( auto &p : is.property_set ) {
                     os << p.first << " = ";
                     for ( auto &u : p.second )
                         os << u << " ";
@@ -202,7 +202,47 @@ class Parameters {
                 }
             }
             return os;
-        };
+        }
+
+        const Parameter &get_value( const std::string &key ) const {
+            return property.at( key );
+        }
+        const std::string &get_string( const std::string &key ) const {
+            return string.at( key );
+        }
+        const std::vector<Parameter> &get_value_v( const std::string &key ) const {
+            return property_set.at( key );
+        }
+        const std::vector<std::string> &get_string_v( const std::string &key ) const {
+            return string_v.at( key );
+        }
+        Parameter &get_value( const std::string &key ) {
+            return property.at( key );
+        }
+        std::string &get_string( const std::string &key ) {
+            return string.at( key );
+        }
+        std::vector<Parameter> &get_value_v( const std::string &key ) {
+            return property_set.at( key );
+        }
+        std::vector<std::string> &get_string_v( const std::string &key ) {
+            return string_v.at( key );
+        }
+        /**
+         * @brief Universal Get Method, when no index is provided, the property map is used, if index is provided, the property vector is used.
+         *
+         */
+        static constexpr size_t no_index = 133713371337;
+        Parameter &get( const std::string &key, const size_t &index = no_index ) {
+            if ( index != no_index )
+                return property_set.at( key ).at( index );
+            return property.at( key );
+        }
+        const Parameter &get( const std::string &key, const size_t &index = no_index ) const {
+            if ( index != no_index )
+                return property_set.at( key ).at( index );
+            return property.at( key );
+        }
     };
     // Temporary Inputstrings
     std::string inputstring_electronic;
@@ -214,13 +254,13 @@ class Parameters {
     std::string inputstring_densitymatrix_config;
     std::string inputstring_rk45_config;
     // Input Maps. The Temporary Inputstrings will get verwurstet into these maps, such that their parameters are available via their corresponding string key.
-    std::map<std::string, input_s> input_electronic;
-    std::map<std::string, input_s> input_photonic;
-    std::map<std::string, input_s> input_pulse;
-    std::map<std::string, input_s> input_chirp;
-    std::map<std::string, input_s> input_correlation;            // Spectrum, Indist, Conc
-    std::map<std::string, input_s> input_correlation_resolution; // G1/G2 correlation timesteps. length of g will be determined by gridres
-    std::map<std::string, input_s> input_conf;                   // Everything else
+    std::map<std::string, universal_config> input_electronic;
+    std::map<std::string, universal_config> input_photonic;
+    std::map<std::string, universal_config> input_pulse;
+    std::map<std::string, universal_config> input_chirp;
+    std::map<std::string, universal_config> input_correlation;            // Spectrum, Indist, Conc
+    std::map<std::string, universal_config> input_correlation_resolution; // G1/G2 correlation timesteps. length of g will be determined by gridres
+    std::map<std::string, universal_config> input_conf;                   // Everything else
 
     /**
      * @brief Converts the inputstrings into input_maps. These maps will then be used to generate the operators and to output the inputsystem
@@ -248,22 +288,5 @@ class Parameters {
     void post_adjust_input();
     void post_adjust_grids();
 
-    /**
-     * @brief Scale inputs. Has to be called before anything else is calculated
-     *  TODO: This feature is currently broken.
-     */
-    void scale_inputs( const double scaling );
-
-    /**
-     * @brief Scales a single input variable by a scaling factor
-     *
-     * @return Variable * Scaling
-     */
-    template <typename T>
-    T scaleVariable( const T variable, const double scaling ) {
-        if ( scale_parameters ) {
-            return variable * scaling;
-        }
-        return variable;
-    }
 };
+} // namespace QDLC

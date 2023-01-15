@@ -36,13 +36,13 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     cache[s_g2_1212] = cache[s_g2_2121].conjugate( s_g2_1212 );
 
     // Note: This will probably be either removed completely, or implemented correctly.
-    if ( s.parameters.input_correlation["Conc"].numerical_v["Center"].size() > 0 ) {
+    if ( s.parameters.input_correlation["Conc"].property_set["Center"].size() > 0 ) {
         const Dense combined = cache[s_g2_1111].get() + cache[s_g2_1122].get() + cache[s_g2_1212].get() + cache[s_g2_1221].get() + cache[s_g2_2121].get() + cache[s_g2_2112].get() + cache[s_g2_2211].get() + cache[s_g2_2222].get();
         const std::string combined_name = "concurrence_total_" + fout;
         cache[combined_name] = CacheMatrix( combined, cache[s_g2_1111].get_time(), combined_name );
-        calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].numerical_v["Center"].front(), s.parameters.input_correlation["Conc"].numerical_v["Range"].front(), (int)s.parameters.input_correlation["Conc"].numerical_v["resW"].front(), 2, false, combined_name );
+        calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].property_set["Center"].front(), s.parameters.input_correlation["Conc"].property_set["Range"].front(), (int)s.parameters.input_correlation["Conc"].property_set["resW"].front(), 2, false, combined_name );
         for ( const auto &mode : { s_g2_1111, s_g2_1122, s_g2_1212, s_g2_1221, s_g2_2121, s_g2_2112, s_g2_2211, s_g2_2222 } ) {
-            calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].numerical_v["Center"].front(), s.parameters.input_correlation["Conc"].numerical_v["Range"].front(), (int)s.parameters.input_correlation["Conc"].numerical_v["resW"].front(), 2, false, mode );
+            calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].property_set["Center"].front(), s.parameters.input_correlation["Conc"].property_set["Range"].front(), (int)s.parameters.input_correlation["Conc"].property_set["resW"].front(), 2, false, mode );
         }
     }
 

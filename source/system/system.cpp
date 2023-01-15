@@ -19,11 +19,11 @@ System::System( const std::vector<std::string> &input ) {
         Log::L2( "[System] Initialization failed! Exitting program...\n" );
         Log::Logger::close();
         exit( EXIT_FAILURE );
-    }
+    } 
     Log::L2( "[System] Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( Timers::MILLISECONDS ) );
     // Log the operator matrix base
     parameters.log( operatorMatrices.initial_state_vector_ket );
-    timer_systeminit.end();
+    timer_systeminit.end(); 
 }
 
 bool System::init_system() {
@@ -61,15 +61,15 @@ bool System::init_system() {
 
 Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos ) {
     std::vector<Sparse> ret( 5, Sparse( rho.rows(), rho.cols() ) );
-#pragma omp parallel sections num_threads( parameters.numerics_maximum_secondary_threads )
+//#pragma omp parallel sections num_threads( parameters.numerics_maximum_secondary_threads )
     {
-#pragma omp section
+//#pragma omp section
         {
             ret[0] = -1.0i * dgl_kommutator( H, rho );
             Log::L3( "[System] Lindblad Equation:\n{}\n", Dense( ret[0] ).format( operatorMatrices.output_format ) );
         }
         // Photon Loss
-#pragma omp section
+//#pragma omp section
         if ( parameters.p_omega_cavity_loss != 0.0 ) {
             auto loss = Sparse( rho.rows(), rho.cols() );
             for ( const auto &[transition, data] : operatorMatrices.ph_transitions ) {
@@ -77,12 +77,12 @@ Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const dou
                     continue;
                 std::string mode = data.to;
                 auto &params = parameters.input_photonic[mode];
-                ret[1] += 0.5 * parameters.p_omega_cavity_loss * params.numerical["DecayScaling"] * dgl_lindblad( rho, operatorMatrices.ph_transitions[mode + "b"].hilbert, operatorMatrices.ph_transitions[mode + "bd"].hilbert );
+                ret[1] += 0.5 * parameters.p_omega_cavity_loss * params.property["DecayScaling"] * dgl_lindblad( rho, operatorMatrices.ph_transitions[mode + "b"].hilbert, operatorMatrices.ph_transitions[mode + "bd"].hilbert );
             }
             Log::L3( "[System] Cavity Loss:\n{}\n", Dense( ret[1] ).format( operatorMatrices.output_format ) );
         }
-        // Radiative Decay
-#pragma omp section
+        // Radiative Decay 
+//#pragma omp section
         if ( parameters.p_omega_decay != 0.0 ) {
             auto loss = Sparse( rho.rows(), rho.cols() );
             for ( const auto &[transition, data] : operatorMatrices.el_transitions ) {
@@ -91,19 +91,19 @@ Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const dou
                 const std::string &state = data.to;
                 auto &params = parameters.input_electronic[state];
                 const std::string &trans_transposed = data.name_transposed;
-                ret[2] += 0.5 * parameters.p_omega_decay * params.numerical["DecayScaling"] * dgl_lindblad( rho, operatorMatrices.el_transitions[transition].hilbert, operatorMatrices.el_transitions[trans_transposed].hilbert );
+                ret[2] += 0.5 * parameters.p_omega_decay * params.property["DecayScaling"] * dgl_lindblad( rho, operatorMatrices.el_transitions[transition].hilbert, operatorMatrices.el_transitions[trans_transposed].hilbert );
             }
             Log::L3( "[System] Radiative Decay:\n{}\n", Dense( ret[2] ).format( operatorMatrices.output_format ) );
         }
         // Electronic Dephasing
-#pragma omp section
+//#pragma omp section
         if ( parameters.p_omega_pure_dephasing != 0.0 ) {
             auto loss = Sparse( rho.rows(), rho.cols() );
             for ( const auto &[name_a, data_a] : operatorMatrices.el_states ) {
                 for ( const auto &[name_b, data_b] : operatorMatrices.el_states ) { // TODO: dephasing über el transitions machen.
                     if ( name_a == name_b )
                         continue;
-                    ret[3] -= 0.5 * parameters.input_electronic[name_b].numerical["DephasingScaling"] * parameters.input_electronic[name_a].numerical["DephasingScaling"] * parameters.p_omega_pure_dephasing * data_a.hilbert * rho * data_b.hilbert;
+                    ret[3] -= 0.5 * parameters.input_electronic[name_b].property["DephasingScaling"] * parameters.input_electronic[name_a].property["DephasingScaling"] * parameters.p_omega_pure_dephasing * data_a.hilbert * rho * data_b.hilbert;
                 }
             }
             Log::L3( "[System] Pure Dephasing:\n{}\n", Dense( ret[3] ).format( operatorMatrices.output_format ) );
@@ -180,15 +180,15 @@ void System::calculate_expectation_values( const std::vector<QDLC::SaveState> &r
             ph_out = fmt::format( "{:}\t{:.6e}", ph_out, expval );
             if ( parameters.p_omega_cavity_loss > 0.0 ) {
                 emission_probabilities[mode] += expval * dt;
-                ph_em = fmt::format( "{:}\t{:.6e}", ph_em, parameters.p_omega_cavity_loss * parameters.input_photonic[mode].numerical["DecayScaling"] * emission_probabilities[mode] );
+                ph_em = fmt::format( "{:}\t{:.6e}", ph_em, parameters.p_omega_cavity_loss * parameters.input_photonic[mode].property["DecayScaling"] * emission_probabilities[mode] );
             }
         }
         for ( auto &[mode, state] : operatorMatrices.el_states ) {
             double expval = std::real( dgl_expectationvalue<Sparse, Scalar>( rho, state.hilbert, t ) );
             el_out = fmt::format( "{:}\t{:.6e}", el_out, expval );
-            if ( parameters.p_omega_decay > 0.0 and parameters.input_electronic[mode].numerical["DecayScaling"] != 0.0 ) {
+            if ( parameters.p_omega_decay > 0.0 and parameters.input_electronic[mode].property["DecayScaling"] != 0.0 ) {
                 emission_probabilities[mode] += expval * dt;
-                el_em = fmt::format( "{:}\t{:.6e}", el_em, parameters.p_omega_decay * parameters.input_electronic[mode].numerical["DecayScaling"] * emission_probabilities[mode] );
+                el_em = fmt::format( "{:}\t{:.6e}", el_em, parameters.p_omega_decay * parameters.input_electronic[mode].property["DecayScaling"] * emission_probabilities[mode] );
             }
         }
         // Output

@@ -237,7 +237,7 @@ class ODESolver {
      * @brief Calculates the Eigenvalues of the Hamilton operators H_0, H_I and H_0+H_I and outputs them to "hamilton_eigenvalues.txt"
      *
      */
-    void calculate_hamilton_eigenvalues( System &s );
+    void calculate_hamilton_eigenvalues( System &s, const int power = 1 );
 };
 
 } // namespace QDLC::Numerics

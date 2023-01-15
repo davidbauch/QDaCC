@@ -6,6 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameters.h"
 
+namespace QDLC {
+
 /**
  * @brief This class stores all the State- and Transition Matrices.
  * It also provides all of the neccessary methods for the creation of these Matrices.
@@ -125,3 +127,4 @@ class OperatorMatrices {
         return ret;
     }
 };
+} // namespace QDLC

@@ -1,13 +1,17 @@
 #include "solver/solver_ode.h"
 
-void QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( System &s ) {
+void QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( System &s, const int power ) {
     bool did_title = false;
-    auto &file = FileOutput::add_file( "eigenvalues" );
+    const std::string filename = "eigenvalues" + ( power > 1 ? "_" + std::to_string( power ) : "" );
+    Log::L2( "[Solver] Calculating Hamilton Eigenvalues using H{}(t), saving to {}.txt\n", power > 1 ? fmt::format( "^{}", power ) : "", filename );
+    auto &file = FileOutput::add_file( filename );
     for ( auto &tup : savedStates ) {
         auto &t = tup.t;
-        auto hamilton = s.dgl_get_hamilton( t );
+        Dense hamilton = Dense( s.dgl_get_hamilton( t ) );
+        if ( power > 1 )
+            hamilton = hamilton.pow( power ).eval();
         // Eigen::EigenSolver<Dense> eigensolver( hamilton );
-        auto eigs = Dense( hamilton ).eigenvalues() * QDLC::Math::ev_conversion;
+        auto eigs = hamilton.eigenvalues() * QDLC::Math::ev_conversion;
         if ( not did_title ) {
             file << "Time";
             for ( int i = 0; i < eigs.size(); i++ )
@@ -49,6 +53,9 @@ bool QDLC::Numerics::ODESolver::output_numerical_data( System &s ) {
     // TODO: putput list als dict, dann if "eigenvalues" in outputdict
     if ( s.parameters.output_dict.contains( "eigenvalues" ) ) {
         QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( s );
+    }
+    if ( s.parameters.output_dict.contains( "eigenvalues2" ) ) {
+        QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( s, 2 );
     }
     return true;
 }

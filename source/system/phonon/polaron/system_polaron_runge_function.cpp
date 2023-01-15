@@ -4,7 +4,7 @@ using namespace QDLC;
 
 Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
     // TODO Maybe? Cache explicit times?
-    Scalar chirpcorrection = not chirp.empty() ? ( chirp.back().get( t ) + t * ( chirp.back().get( t ) - parameters.scaleVariable( chirp.back().derivative( t, 0 ), parameters.scale_value ) ) ) : 0;
+    Scalar chirpcorrection = not chirp.empty() ? ( chirp.back().get( t ) + t * ( chirp.back().get( t ) - chirp.back().derivative( t, 0 ) ) ) : 0;
     auto explicit_time = Sparse( chi.rows(), chi.cols() );
 
     // Electronic Transitions
@@ -27,11 +27,10 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
     int pp = 0;
     for ( auto &[mode, param] : parameters.input_pulse ) {
         for ( const auto &transition : param.string_v["CoupledTo"] ) {
-            explicit_time += 1.0i * ( pulse[p].get( t ) + 1.0i * parameters.scaleVariable( pulse[p].derivative( t, parameters.t_step ), parameters.scale_value ) ) * operatorMatrices.polaron_pulse_factors_explicit_time[pp++];
+            explicit_time += 1.0i * ( pulse[p].get( t ) + 1.0i * pulse[p].derivative( t, parameters.t_step ) ) * operatorMatrices.polaron_pulse_factors_explicit_time[pp++];
         }
         p++;
     }
-    // explicit_time = parameters.scaleVariable( explicit_time, 1.0 / parameters.scale_value ); // Deprecated
 
     Sparse hamilton = dgl_get_hamilton( t );
     return -1.0i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( QDLC::Matrix::sparse_projector( chi ) );

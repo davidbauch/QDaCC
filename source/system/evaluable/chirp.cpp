@@ -4,12 +4,13 @@
 
 using namespace QDLC;
 
-Chirp::Chirp( Parameters::input_s &config, Parameters &p ) : Evaluable( config ) {
+Chirp::Chirp( Parameters::universal_config &config, Parameters &p ) : Evaluable( config ) {
     const std::string type = config.string.at( "Type" );
-    Log::L2( "[System-Chirp] Creating Chirp with {} points of type {}...\n", config.numerical_v.at( "Times" ).size(), type );
+    Log::L2( "[System-Chirp] Creating Chirp with {} points of type {}...\n", config.property_set.at( "Times" ).size(), type );
     if ( type != "sine" ) {
         Log::L2( "[System-Chirp] Done initializing class, creating interpolant...\n" );
-        interpolant = Interpolant( config.numerical_v.at( "Times" ), config.numerical_v.at( "Amplitude" ), config.numerical_v.at( "ddt" ), config.string.at( "Type" ) );
+        interpolant = Interpolant( config.property_set.at( "Times" ), config.property_set.at( "Amplitude" ), config.property_set.at( "ddt" ), config.string.at( "Type" ) );
+        isSineChirp = false;
         Log::L2( "[System-Chirp] Done creating interpolant, generating chirp...\n" );
     } else {
         Log::L2( "[System-Chirp] No interpolant class used, using sine chirp instead.\n" );
@@ -23,8 +24,8 @@ Scalar Chirp::evaluate( double t ) {
     if ( isSineChirp ) {
         Scalar ret = 0;
         const auto &config = get_inputs();
-        for ( long unsigned int i = 0; i < config.numerical_v.at( "Times" ).size(); i++ ) {
-            ret += config.numerical_v.at( "Amplitude" ).at( i ) * std::sin( 6.283 * t * config.numerical_v.at( "ddt" ).at( i ) + 6.283 * config.numerical_v.at( "Times" ).at( i ) );
+        for ( long unsigned int i = 0; i < config.property_set.at( "Times" ).size(); i++ ) {
+            ret += config.property_set.at( "Amplitude" ).at( i ) * std::sin( 6.283 * t * config.property_set.at( "ddt" ).at( i ) + 6.283 * config.property_set.at( "Times" ).at( i ) );
         }
         return ret;
     }
@@ -36,9 +37,9 @@ Scalar Chirp::evaluate_derivative( double t, double dt ) {
     if ( isSineChirp ) {
         Scalar ret = 0;
         const auto &config = get_inputs();
-        for ( long unsigned int i = 0; i < config.numerical_v.at( "Times" ).size(); i++ ) {
-            const auto inner_derivative = 6.283 * config.numerical_v.at( "ddt" ).at( i );
-            ret += config.numerical_v.at( "Amplitude" ).at( i ) * inner_derivative * std::cos( 6.283 * t * config.numerical_v.at( "ddt" ).at( i ) + 6.283 * config.numerical_v.at( "Times" ).at( i ) );
+        for ( long unsigned int i = 0; i < config.property_set.at( "Times" ).size(); i++ ) {
+            const auto inner_derivative = 6.283 * config.property_set.at( "ddt" ).at( i );
+            ret += config.property_set.at( "Amplitude" ).at( i ) * inner_derivative * std::cos( 6.283 * t * config.property_set.at( "ddt" ).at( i ) + 6.283 * config.property_set.at( "Times" ).at( i ) );
         }
         return ret;
     }

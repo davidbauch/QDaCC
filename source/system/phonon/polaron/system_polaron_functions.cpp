@@ -129,8 +129,8 @@ Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::v
                     auto X_tau_back_g = chi_tau_back + chi_tau_back_adjoint;           // dgl_phonons_chiToX( chi_tau_back, 'g' );
                     auto X_tau_back_u = 1.i * ( chi_tau_back - chi_tau_back_adjoint ); // dgl_phonons_chiToX( chi_tau_back, 'u' );
                     auto thread = omp_get_thread_num();
-                    threadmap_g[thread] += dgl_phonons_greenf( tau, 'g' ) * X_tau_back_g; //.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'g' ) );
-                    threadmap_u[thread] += dgl_phonons_greenf( tau, 'u' ) * X_tau_back_u; //.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'u' ) );
+                    threadmap_g[thread] += X_tau_back_g.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'g' ) ); //*dgl_phonons_greenf( tau, 'g' )
+                    threadmap_u[thread] += X_tau_back_u.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'u' ) ); //*dgl_phonons_greenf( tau, 'u' )
                     Log::L3( "[System-PME]         Added Contributions for tau = {}. The sum of the contributions is {}, the phi value is {}\n", tau, threadmap_u[thread].sum() + threadmap_g[thread].sum(), phi_vector[tau] );
                 }
 // Sum all contributions from threadmaps into one coefficient

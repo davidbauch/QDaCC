@@ -113,7 +113,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         // Calculate G1/G2 functions
         auto &gs_s = s.parameters.input_correlation["GFunc"];
         for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
-            int order = std::abs( gs_s.numerical_v["Order"][i] );
+            int order = std::abs( gs_s.property_set["Order"][i] );
             const auto &[s_creator, s_annihilator] = get_operator_strings( s, gs_s.string_v["Modes"][i] );
             std::string g = order == 1 ? get_operators_purpose( { s_creator, s_annihilator } ) : get_operators_purpose( { s_creator, s_creator, s_annihilator, s_annihilator } );
             auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );

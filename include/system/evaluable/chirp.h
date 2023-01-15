@@ -13,7 +13,7 @@ class Chirp : public Evaluable {
 
    public:
     Chirp() : Evaluable(){};
-    Chirp( Parameters::input_s& config, Parameters& p );
+    Chirp( Parameters::universal_config& config, Parameters& p );
     Scalar evaluate( double t );
     Scalar evaluate_derivative( double t, double dt = 0 );
     Scalar evaluate_integral( double t, double dt = 0 );

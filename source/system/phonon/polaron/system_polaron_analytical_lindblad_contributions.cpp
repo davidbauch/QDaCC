@@ -54,7 +54,7 @@ Sparse System::dgl_phonons_lindblad_contribution( const double t, const Sparse &
             const auto &transition = operatorMatrices.el_transitions[mode].hilbert;
             const auto &transition_transposed = operatorMatrices.el_transitions[mode_transposed].hilbert;
             // std::cout << p << " m1 = " << mode << ", m2 = " << mode_transposed << std::endl;
-            auto delta_E = mat.numerical_v["Frequency"][m] - operatorMatrices.el_transitions[mode].energy + chirpcorrection;
+            auto delta_E = mat.property_set["Frequency"][m] - operatorMatrices.el_transitions[mode].energy + chirpcorrection;
             auto r1 = dgl_phonons_lindblad_coefficients( delta_E, 0.0, pulse[p].get( t ), 'L', 1.0, -1 );
             auto r2 = dgl_phonons_lindblad_coefficients( delta_E, 0.0, pulse[p].get( t ), 'L', 1.0, 1 );
             Log::L3( "[System-PME]     Pulse induced Phonon Transition rates: {} ({}), {} ({}) for delta_E = {}\n", mode, r1, mode_transposed, r2, delta_E );
@@ -67,15 +67,15 @@ Sparse System::dgl_phonons_lindblad_contribution( const double t, const Sparse &
         for ( auto &mode : mat.string_v["CoupledTo"] ) {
             int c = 0;
             const std::string upper_level = operatorMatrices.el_transitions[mode].to; // QDLC::String::split( mode, parameters.transition_delimiter ).back();
-            const double phonon_scaling = parameters.input_electronic[upper_level].numerical["PhononCoupling"];
+            const double phonon_scaling = parameters.input_electronic[upper_level].property["PhononCoupling"];
             const auto &mode_transposed = operatorMatrices.el_transitions[mode].name_transposed;
             const auto &transition = operatorMatrices.el_transitions[mode].hilbert;
             const auto &transition_transposed = operatorMatrices.el_transitions[mode_transposed].hilbert;
             const auto &optical_transition = operatorMatrices.ph_transitions[name + "b"].hilbert;
             const auto &optical_transition_transposed = operatorMatrices.ph_transitions[name + "bd"].hilbert;
-            auto delta_E = mat.numerical["Energy"] - operatorMatrices.el_transitions[mode].energy + chirpcorrection;
-            auto r1 = dgl_phonons_lindblad_coefficients( delta_E, mat.numerical_v["CouplingScaling"][c] * parameters.p_omega_coupling, 0.0, 'C', phonon_scaling, -1 );
-            auto r2 = dgl_phonons_lindblad_coefficients( delta_E, mat.numerical_v["CouplingScaling"][c] * parameters.p_omega_coupling, 0.0, 'C', phonon_scaling, 1 );
+            auto delta_E = mat.property["Energy"] - operatorMatrices.el_transitions[mode].energy + chirpcorrection;
+            auto r1 = dgl_phonons_lindblad_coefficients( delta_E, mat.property_set["CouplingScaling"][c] * parameters.p_omega_coupling, 0.0, 'C', phonon_scaling, -1 );
+            auto r2 = dgl_phonons_lindblad_coefficients( delta_E, mat.property_set["CouplingScaling"][c] * parameters.p_omega_coupling, 0.0, 'C', phonon_scaling, 1 );
             Log::L3( "[System-PME]     Cavity induced Phonon Transition rates: {}-{}bd ({}), {}-{}b ({})", mode, name, r1, mode_transposed, name, r2 );
             ret += r1 * dgl_lindblad( rho, transition * optical_transition_transposed, transition_transposed * optical_transition );
             ret += r2 * dgl_lindblad( rho, transition_transposed * optical_transition, transition * optical_transition_transposed );

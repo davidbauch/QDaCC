@@ -105,7 +105,7 @@ CLA_ARGUMENT = {
 		subkey = 'GF'
 		value = ''
 		datatype = 'string'
-		description = 'G1/2 func. Syntax: [Mode:Order]'
+		description = 'G1/2 func. Syntax: [Mode:Order:Integration]. Order can be either 1 or 2, Integration can be either of time,matrix,both.'
 	}
 	CLA_PARAMETER = {
 		subkey = 'GW'
