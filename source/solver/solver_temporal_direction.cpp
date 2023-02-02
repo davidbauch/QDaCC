@@ -21,7 +21,7 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
             // Adjust Temporal Stuff and Grid if no RK45 is used:
             s.parameters.post_adjust_input();
         }
-        calculate_runge_kutta( rho, s.parameters.t_start, s.parameters.t_end, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
+        calculate_runge_kutta( rho, s.parameters.t_start, s.parameters.t_end, rkTimer, progressbar, "T-Direction", s, savedStates, true );
         // Reenabling if caching was disabled.
         if ( s.parameters.numerics_enable_saving_coefficients ) {
             s.parameters.numerics_enable_saving_coefficients = false;

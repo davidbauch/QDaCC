@@ -97,16 +97,16 @@ class ODESolver {
      * @brief Calculates the G1(tau) function. Calculates <b^+(t) * b(t+tau)> via quantum regression theorem. Logs and outputs progress.
      *
      */
-    void calculate_g1( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, const std::string &purpose = "unknown" );
-    void calculate_g1( System &s, const std::vector<std::string> &s_op_creator, const std::string &s_op_annihilator, const std::vector<std::string> &purposes );
+    void calculate_g1( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &purpose = "unknown" );
+    void calculate_g1( System &s, const std::vector<std::string> &s_op_i, const std::string &s_op_j, const std::vector<std::string> &purposes );
 
     /**
      * @brief Calculates the G2 Correlation Function
      * The G2 function will be evaluated in time only once, but the expectation value loop can be evaulated multiple times.
      *
      */
-    void calculate_g2( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const std::string &purpose = "unknown" );
-    void calculate_g2( System &s, const std::string &s_op_creator_1, const std::vector<std::string> &s_op_annihilator_1, const std::vector<std::string> &s_op_creator_2, const std::string &s_op_annihilator_2, const std::vector<std::string> &purposes );
+    void calculate_g2( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose = "unknown" );
+    void calculate_g2( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::string &s_op_l, const std::vector<std::string> &purposes );
 
    public:
     ODESolver(){};

@@ -15,7 +15,7 @@ bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const
 
     // Calculate G-Functions if neccessary
     calculate_g1( s, s_op_creator, s_op_annihilator, s_g1 );
-    calculate_g2( s, s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator, s_g2 );
+    calculate_g2( s, s_op_creator, s_op_creator, s_op_annihilator, s_op_annihilator, s_g2 );
 
     auto &akf_mat_g1 = cache[s_g1];
     auto &akf_mat_g2 = cache[s_g2];

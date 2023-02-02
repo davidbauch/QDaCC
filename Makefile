@@ -1,5 +1,5 @@
 # -*- Makefile -*-
-MAKEFLAGS+="j 5"
+#MAKEFLAGS+="j 5"
 TARGET_EXEC := a.out
 TARGET_EXEC_LATEST := a.out
 TARGET_DIR := ./build
@@ -7,7 +7,7 @@ BUILD_DIR := ./build
 SRC_DIRS := ./source ./external/ALGLIB
 COMPILER = $(CXX)
 
-VERSION := 3.5.0
+VERSION := 3.6.0
 
 SRCS := $(shell find $(SRC_DIRS) -name "*.cpp")
 

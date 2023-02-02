@@ -13,21 +13,29 @@
 
 namespace Log {
 
+const static int LEVEL_1 = 1;
+const static int LEVEL_2 = 2;
+const static int LEVEL_3 = 3;
+const static int BAR_SIZE_FULL = 75;
+const static int BAR_SIZE_HALF = 40;
+const static int BAR_0 = 0;
+const static int BAR_1 = 1;
+const static int BAR_2 = 2;
+const static int BAR_3 = 3;
+const static int BAR_4 = 4;
+const static int BAR_5 = 5;
+const static int BAR_6 = 6;
+
+// Escape Commands
+const static std::string RED = "\033[31m";
+const static std::string GREEN = "\033[32m";
+const static std::string YELLOW = "\033[33m";
+const static std::string BLUE = "\033[34m";
+const static std::string BOLD = "\033[1m";
+const static std::string RESET = "\033[0m";
+
 class Logger {
    public:
-    const static int LEVEL_1 = 1;
-    const static int LEVEL_2 = 2;
-    const static int LEVEL_3 = 3;
-    const static int BAR_SIZE_FULL = 75;
-    const static int BAR_SIZE_HALF = 40;
-    const static int BAR_0 = 0;
-    const static int BAR_1 = 1;
-    const static int BAR_2 = 2;
-    const static int BAR_3 = 3;
-    const static int BAR_4 = 4;
-    const static int BAR_5 = 5;
-    const static int BAR_6 = 6;
-
     Logger( const Logger & ) = delete;
 
     static Logger &Get() {
@@ -73,13 +81,13 @@ class Logger {
         return Get().Ierror_log( file, function, line, msg, fmt::make_format_args( args... ) );
     }
 
-    static void Bar( int size = Logger::BAR_SIZE_FULL, int level = Logger::LEVEL_1, int _bar = Logger::BAR_0 ) {
+    static void Bar( int size = Log::BAR_SIZE_FULL, int level = Log::LEVEL_1, int _bar = Log::BAR_0 ) {
         return Get().Ibar( size, level, _bar );
     }
-    static void inBar( const std::string &msg, int size = Logger::BAR_SIZE_FULL, int level = Logger::LEVEL_1, int _bar = Logger::BAR_0 ) {
+    static void inBar( const std::string &msg, int size = Log::BAR_SIZE_FULL, int level = Log::LEVEL_1, int _bar = Log::BAR_0 ) {
         return Get().Iinbar( msg, size, level, _bar );
     }
-    static void wrapInBar( const std::string &msg, int size = Logger::BAR_SIZE_FULL, int level = Logger::LEVEL_1, int _barOut = Logger::BAR_0, int _barIn = -1 ) {
+    static void wrapInBar( const std::string &msg, int size = Log::BAR_SIZE_FULL, int level = Log::LEVEL_1, int _barOut = Log::BAR_0, int _barIn = -1 ) {
         return Get().Iwrapinbar( msg, size, level, _barOut, _barIn );
     }
     static void Debug( const std::string &msg = "" ) {
@@ -115,13 +123,13 @@ class Logger {
         std::setbuf( stdout, NULL );
         max_loglevel = max_log_level;
         debug_counter = 0;
-        bars = { repeat( "=", Logger::BAR_SIZE_FULL ),
-                 repeat( "-", Logger::BAR_SIZE_FULL ),
-                 repeat( "o", Logger::BAR_SIZE_FULL ),
-                 repeat( "#", Logger::BAR_SIZE_FULL ),
-                 repeat( ":", Logger::BAR_SIZE_FULL ),
-                 repeat( "+", Logger::BAR_SIZE_FULL ),
-                 repeat( "*", Logger::BAR_SIZE_FULL ) };
+        bars = { repeat( "=", Log::BAR_SIZE_FULL ),
+                 repeat( "-", Log::BAR_SIZE_FULL ),
+                 repeat( "o", Log::BAR_SIZE_FULL ),
+                 repeat( "#", Log::BAR_SIZE_FULL ),
+                 repeat( ":", Log::BAR_SIZE_FULL ),
+                 repeat( "+", Log::BAR_SIZE_FULL ),
+                 repeat( "*", Log::BAR_SIZE_FULL ) };
         if ( max_loglevel >= 2 ) {
             fmt::print( file, "Succesfully created logfile '{}'!\n", filepath );
         }
@@ -183,7 +191,7 @@ class Logger {
         fmt::vprint( file, "[ERROR] " + error_message + msg, args );
     }
     void Ibar( int size, int level, int _bar ) {
-        size = std::min( std::max( size, 0 ), Logger::BAR_SIZE_FULL );
+        size = std::min( std::max( size, 0 ), Log::BAR_SIZE_FULL );
         std::string ret = bars.at( _bar ).substr( 0, size );
         if ( level == LEVEL_1 ) {
             L1( "{}{}\n", ret, ret );

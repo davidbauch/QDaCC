@@ -193,9 +193,9 @@ void System::calculate_expectation_values( const std::vector<QDLC::SaveState> &r
         }
         // Output
         if ( not operatorMatrices.ph_states.empty() )
-            FileOutput::get_file( "photonic" ) << fmt::format( "{:}\t{:}\n", ph_out, ph_em );
+            FileOutput::get_file( "photonic" ) << fmt::format( "{:}{:}\n", ph_out, ph_em );
         if ( not operatorMatrices.el_states.empty() )
-            FileOutput::get_file( "electronic" ) << fmt::format( "{:}\t{:}\n", el_out, el_em );
+            FileOutput::get_file( "electronic" ) << fmt::format( "{:}{:}\n", el_out, el_em );
 
         if ( parameters.input_conf["DMconfig"].string["output_mode"] != "none" ) {
             FileOutput::get_file( "densitymatrix" ) << fmt::format( "{:.5e}\t", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );

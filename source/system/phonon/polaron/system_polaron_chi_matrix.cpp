@@ -9,6 +9,7 @@ Sparse System::dgl_phonons_chi( const double t ) {
     // QD-Pulse
     for ( int i = 0; i < pulse.size(); i++ ) {
         auto p = pulse[i].get( t );
+
         if ( parameters.numerics_use_rwa )
             ret += operatorMatrices.pulse_mat[2 * i + 1] * p;
         else

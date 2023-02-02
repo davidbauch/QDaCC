@@ -83,7 +83,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
     // Calculate Remaining
     Sparse rho = rho0;
     for ( double t_t = t_start; t_t <= t_end; t_t += t_step_initial ) {
-        Log::Logger::Bar( Log::Logger::BAR_SIZE_FULL, Log::Logger::LEVEL_3 );
+        Log::Logger::Bar( Log::BAR_SIZE_FULL, Log::LEVEL_3 );
         Log::L3( "[RKSOLVER] Calculating Iteration for t = {}\n", t_t );
         // Runge-Kutta iteration
         rho = iterate( rho, s, t_t, t_step_initial, output );

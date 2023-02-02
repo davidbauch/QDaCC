@@ -129,7 +129,7 @@ double Timers::Isummary( bool output ) {
                 Log::L1( "\n" );
             }
         }
-        Log::Logger::Bar( 75, Log::Logger::LEVEL_1, Log::Logger::BAR_1 );
+        Log::Logger::Bar( 75, Log::LEVEL_1, Log::BAR_1 );
         Log::L1( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0 ? Timer::format( totalCPUTime ) : "--" ) );
         Log::Logger::Bar();
     }

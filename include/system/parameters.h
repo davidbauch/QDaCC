@@ -6,8 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "3.5.0"
-#define GLOBAL_PROGRAM_LASTCHANGE "I don't remember :("
+#define GLOBAL_PROGRAM_VERSION "3.6.0"
+#define GLOBAL_PROGRAM_LASTCHANGE "GUI cleanup"
 
 namespace QDLC {
 
@@ -67,10 +67,10 @@ class Parameters {
     // Defines the Approximation Method used for the Polaron Timetransformation
     QDLC::PhononApproximation numerics_phonon_approximation_order;
     // Quantum Dot / Phonon Parameters
-    Parameter p_phonon_b, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_wcutoffdelta, p_phonon_pure_dephasing;
+    Parameter p_phonon_b, p_phonon_ohm, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_wcutoffdelta, p_phonon_pure_dephasing;
     Parameter p_phonon_qd_de, p_phonon_qd_dh, p_phonon_qd_rho, p_phonon_qd_cs, p_phonon_qd_ratio, p_phonon_qd_ae;
-    // When false, the temperature depndent adjustments of both Radiative Decay and Pure Dephasing Rates is disabled
-    bool p_phonon_adjust;
+    // Additional Scalings for phonon adjustment.
+    double p_phonon_adjust_rad, p_phonon_adjust_dep, p_phonon_adjust_b;
     // When false, RK45 for the Polaron Backwards integral is disabled. Default should be false.
     // TODO: currently, enabling this would lead to wrong results because the PME subroutine expects equidistant matrices. Need to interpolate then.
     bool numerics_phonon_nork45;

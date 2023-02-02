@@ -10,32 +10,32 @@ double QDLC::Numerics::get_tdelta( const std::vector<SaveState> &savedStates, si
     return var_index == 0 ? savedStates[var_index + 1].t - savedStates[var_index].t : savedStates[var_index].t - savedStates[var_index - 1].t;
 }
 
-void QDLC::Numerics::ODESolver::calculate_g1( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, const std::string &purpose ) {
+void QDLC::Numerics::ODESolver::calculate_g1( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &purpose ) {
     if ( cache.contains( purpose ) ) {
         Log::L2( "[CorrelationFunction] G1(tau) for {} already exists.\n", purpose );
     }
-    calculate_g2( s, "internal_identitymatrix", std::vector<std::string>{ "internal_identitymatrix" }, { s_op_creator }, s_op_annihilator, { purpose } );
+    calculate_g1( s, std::vector<std::string>{ s_op_i }, s_op_j, { purpose } );
 }
 
-void QDLC::Numerics::ODESolver::calculate_g1( System &s, const std::vector<std::string> &s_op_creator, const std::string &s_op_annihilator, const std::vector<std::string> &purposes ) {
-    const auto size = s_op_creator.size();
-    calculate_g2( s, "internal_identitymatrix", std::vector<std::string>{ size, "internal_identitymatrix" }, s_op_creator, s_op_annihilator, purposes );
+void QDLC::Numerics::ODESolver::calculate_g1( System &s, const std::vector<std::string> &s_op_i, const std::string &s_op_j, const std::vector<std::string> &purposes ) {
+    const auto size = s_op_i.size();
+    calculate_g2( s, "internal_identitymatrix", std::vector<std::string>{ size, "internal_identitymatrix" }, s_op_i, s_op_j, purposes );
 }
 
-void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const std::string &purpose ) {
+void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose ) {
     if ( cache.contains( purpose ) ) {
         Log::L2( "[CorrelationFunction] G2(tau) for {} already exists.\n", purpose );
     }
-    calculate_g2( s, s_op_creator_1, std::vector<std::string>{ s_op_annihilator_1 }, { s_op_creator_2 }, s_op_annihilator_2, { purpose } );
+    calculate_g2( s, s_op_i, std::vector<std::string>{ s_op_j }, { s_op_k }, s_op_l, { purpose } );
 }
 
-void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_creator_1, const std::vector<std::string> &s_op_annihilator_1, const std::vector<std::string> &s_op_creator_2, const std::string &s_op_annihilator_2, const std::vector<std::string> &purposes ) {
+void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::string &s_op_l, const std::vector<std::string> &purposes ) {
     Log::L2( "[CorrelationFunction] Preparing to calculate Correlation function\n" );
     Log::L2( "[CorrelationFunction] Generating Sparse Operator Matrices from String input...\n" );
 
     // Find Operator Matrices
-    const auto op_creator_1 = get_operators_matrix( s, s_op_creator_1 );
-    const auto op_annihilator_2 = get_operators_matrix( s, s_op_annihilator_2 );
+    const auto op_i = get_operators_matrix( s, s_op_i );
+    const auto op_l = get_operators_matrix( s, s_op_l );
 
     // Matrix Dimension
     const size_t matdim = s.parameters.grid_values.size(); // int( savedStates.size() / s.parameters.iterations_t_skip );
@@ -46,17 +46,17 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
     std::vector<std::pair<Sparse, std::string>> eval_operators;
 
     // Preconstruct
-    for ( auto current = 0; current < s_op_annihilator_1.size(); current++ ) {
+    for ( auto current = 0; current < s_op_k.size(); current++ ) {
         const auto &purpose = purposes[current];
         // Cancel if Purpose already exists
         if ( cache.contains( purpose ) ) {
             Log::L2( "[CorrelationFunction] Matrix for {} already exists! Skipping!\n", purpose );
             continue;
         }
-        const auto &op_creator_2 = get_operators_matrix( s, s_op_creator_2[current] );
-        const auto &op_annihilator_1 = get_operators_matrix( s, s_op_annihilator_1[current] );
+        const auto &op_j = get_operators_matrix( s, s_op_j[current] );
+        const auto &op_k = get_operators_matrix( s, s_op_k[current] );
         // Construct Evaluation Operators
-        eval_operators.emplace_back( op_creator_2 * op_annihilator_1, purpose );
+        eval_operators.emplace_back( op_j * op_k, purpose );
 
         Log::L2( "[CorrelationFunction] Preparing Cache Matrices for {}...\n", purpose );
         cache[purpose] = CacheMatrix( matdim, purpose );
@@ -89,7 +89,7 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
         // Get Time from saved State
         double t_t = get_time_at( i );
         // Calculate New Modified Density Matrix
-        Sparse rho_tau = s.dgl_calc_rhotau_2( get_rho_at( i ), op_annihilator_2, op_creator_1, t_t );
+        Sparse rho_tau = s.dgl_calc_rhotau_2( get_rho_at( i ), op_l, op_i, t_t );
         // Calculate Runge Kutta
         calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, super_purpose, s, savedRhos, false );
         // Interpolate saved states to equidistant timestep

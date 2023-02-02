@@ -239,6 +239,12 @@ CLA_ARGUMENT = {
 		datatype = 'string'
 		description = 'Phonon Cutoff time. -1 for automatic determination.'
 	}
+	CLA_PARAMETER = {
+		subkey = 'phononohm'
+		value = '3'
+		datatype = 'double'
+		description = 'Phonon Spectral Power.'
+	}
 }
 CLA_ARGUMENT = {
 	type = '2hyphen'
@@ -410,9 +416,33 @@ CLA_ARGUMENT = {
 	}
 }
 CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'phononAdjust'
+	description = 'Configures the PME adjustment of radiative decay, pure dephasing and <B> scaling.'
+	group = 'General'
+	CLA_PARAMETER = {
+		subkey = 'pARad'
+		value = '1'
+		datatype = 'double'
+		description = 'Radiative Decay Adjustment'
+	}
+	CLA_PARAMETER = {
+		subkey = 'pAPure'
+		value = '0'
+		datatype = 'double'
+		description = 'Pure Dephasing Adjustment'
+	}
+	CLA_PARAMETER = {
+		subkey = 'pARescaling'
+		value = '1'
+		datatype = 'double'
+		description = '<B> Rescaling Adjustment'
+	}
+}
+CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'noPhononAdjust'
-	description = 'Disable the adjustments done on radiative decay if phonons are active.'
+	description = 'DEPRECATED USE --phononAdjust instead. Disable the adjustments done on radiative decay if phonons are active.'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''

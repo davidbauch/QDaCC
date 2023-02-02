@@ -16,7 +16,7 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
             calculate_g1( s, s_op_creator, s_op_annihilator, s_g );
         } else {
             s_g = get_operators_purpose( { s_op_creator, s_op_creator, s_op_annihilator, s_op_annihilator } );
-            calculate_g2( s, s_op_creator, s_op_annihilator, s_op_creator, s_op_annihilator, s_g );
+            calculate_g2( s, s_op_creator, s_op_creator, s_op_annihilator, s_op_annihilator, s_g );
         }
     }
     auto &akf_mat = cache[s_g];

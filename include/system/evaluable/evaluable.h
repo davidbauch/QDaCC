@@ -42,7 +42,9 @@ class Evaluable {
     }
 
     double get_approximated_dt() {
-        return std::real( std::get<1>( *std::next( value_array.begin() ) ) - std::get<1>( *value_array.begin() ) );
+        //double dt =  std::get<1>( *value_array.begin() ) );
+        //for (const auto [t,el])
+        return std::get<0>( *std::next( value_array.begin() ) ) - std::get<0>( *value_array.begin() );
     }
 
     /**

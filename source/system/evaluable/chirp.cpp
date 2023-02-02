@@ -43,7 +43,7 @@ Scalar Chirp::evaluate_derivative( double t, double dt ) {
         }
         return ret;
     }
-    if ( dt == 0 )
+    if ( dt <= 0 )
         dt = get_approximated_dt();
     return ( evaluate( t ) - evaluate( t - dt ) ) / dt;
 }

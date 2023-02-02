@@ -57,7 +57,9 @@ void Pulse::calculate_fourier( Parameters &p ) {
     double omega_range = p.input_conf["PulseConf"].property["Range"];
     double dw = p.input_conf["PulseConf"].property["Res"];
     double dt = p.input_conf["PulseConf"].property["dt"]; //TODO: dt can be negative... 
-
+    if (dt <= 0) {
+        dt = get_approximated_dt();
+    }
     Log::L2( "[System-Pulse] Pulsearray.size() = {}... \n", size() );
     const auto &config = get_inputs();
     if ( config.property_set.at( "Frequency" ).size() > 0 ) {

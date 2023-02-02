@@ -65,7 +65,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         if ( order == 1 ) {
             calculate_g1( s, s_creator, s_annihilator, purpose );
         } else {
-            calculate_g2( s, s_creator, s_annihilator, s_creator, s_annihilator, purpose );
+            calculate_g2( s, s_creator, s_creator, s_annihilator, s_annihilator, purpose );
         }
         // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
         auto &gmat = cache[purpose];
@@ -202,11 +202,13 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             }
             for ( int k = 0; k < 4; k++ ) {
                 for ( int l = 0; l < 4; l++ ) {
-                    f_twophot << fmt::format( "{:.8e}\t", std::imag( mat( k, l ) ) );
+                    f_twophot << fmt::format( "{:.8e}", std::imag( mat( k, l ) ) );
+                    if ( k == 3 && l == 3 )
+                        f_twophot << "\n";
+                    else
+                        f_twophot << "\t";
                 }
             }
-
-            f_twophot << "\n";
         }
     }
     for ( auto &[mode, data] : to_output_m["Wigner"] ) {
@@ -232,10 +234,14 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
                     for ( int j = 0; j < data[0].rows(); j++ )
                         f_wigner << fmt::format( "Re(|{}_{}><{}_{}|)\t", smode, i, smode, j );
                 for ( int i = 0; i < data[0].rows(); i++ )
-                    for ( int j = 0; j < data[0].rows(); j++ )
-                        f_wigner << fmt::format( "Im(|{}_{}><{}_{}|)\t", smode, i, smode, j );
+                    for ( int j = 0; j < data[0].rows(); j++ ){
+                        f_wigner << fmt::format( "Im(|{}_{}><{}_{}|)", smode, i, smode, j );
+                        if ( i == data[0].rows() - 1 && j == data[0].rows() - 1 )
+                            f_wigner << "\n";
+                        else
+                            f_wigner << "\t";
+                    }
             }
-            f_wigner << "\n";
         } else {
             f_wigner << fmt::format( "Time\t{}\n", mode );
         }
@@ -249,10 +255,13 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             }
             for ( int k = 0; k < currentwigner.rows(); k++ ) {
                 for ( int l = 0; l < currentwigner.cols(); l++ ) {
-                    f_wigner << fmt::format( "{:.8e}\t", std::imag( currentwigner( k, l ) ) );
+                    f_wigner << fmt::format( "{:.8e}", std::imag( currentwigner( k, l ) ) );
+                    if ( k == currentwigner.rows() - 1 && l == currentwigner.cols() - 1 )
+                        f_wigner << "\n";
+                    else
+                        f_wigner << "\t";
                 }
             }
-            f_wigner << "\n";
         }
     }
     return true;
