@@ -38,6 +38,7 @@ std::ostream &operator<<( std::ostream &os, const std::vector<T> &v ) {
 #include <set>
 #include <unordered_map>
 #include <filesystem>
+#include <ranges>
 //#include <experimental/filesystem>
 // namespace std {
 // namespace filesystem = std::experimental::filesystem::v1;
