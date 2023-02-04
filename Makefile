@@ -26,7 +26,7 @@ endif
 
 # ADjust os dependent stuff
 ifeq ($(OS),Windows_NT)
-	LIB_FLAGS += -std=c++2a
+	LIB_FLAGS += -std=c++2b
 	TARGET_DIR = ../../Threadhandler
 	TARGET_EXEC := QDLC-$(VERSION).exe
 	TARGET_EXEC_LATEST := QDLC.exe
@@ -42,7 +42,7 @@ else
 		COMPILER = g++-12
 	endif
 	ifeq ($(UNAME_S),Linux)
-		LIB_FLAGS += -std=c++2a
+		LIB_FLAGS += -std=c++2b
 		TARGET_EXEC = QDLC-$(VERSION).out
 		TARGET_EXEC_LATEST = QDLC.out
 		TARGET_DIR = ./
