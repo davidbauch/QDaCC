@@ -136,28 +136,29 @@ double Timers::Isummary( bool output ) {
     return totalWallTime;
 }
 
-void Timers::IoutputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, int state ) {
+void Timers::IoutputProgress( Timer &t, ProgressBar &p, const unsigned int current_iter, const unsigned int max_iter_total, const std::string &suffix, int state ) {
     if ( output_handler )
-        outputTimeStrings( t, currentIt, maxItTotal, suffix, state );
+        outputTimeStrings( t, current_iter, max_iter_total, suffix, state );
     else
-        outputProgressBar( t, p, currentIt, maxItTotal, suffix, state );
+        outputProgressBar( t, p, current_iter, max_iter_total, suffix, state );
 }
-void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, int state ) {
+void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int current_iter, const unsigned int max_iter_total, const std::string &suffix, int state ) {
     if ( t.doOutput() || state == PROGRESS_FORCE_OUTPUT ) {
         if ( state == WAITING ) {
             p.wait( "", suffix );
-        } else if ( state != PROGRESS_FORCE_OUTPUT )
-            p.print( currentIt, maxItTotal, fmt::format( "T - {}", Timer::format( ( maxItTotal - currentIt ) * t.getAverageIterationTime() ) ), suffix );
-        else {
-            p.print( maxItTotal, maxItTotal, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
+        } else if ( state == PROGRESS_FORCE_OUTPUT ){
+            p.print( max_iter_total, max_iter_total, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
             fmt::print( "\n" );
+        }else {
+            const double time_remaining = (max_iter_total-current_iter) * t.getAverageIterationTime();
+            p.print( current_iter, max_iter_total, fmt::format( "T - {}", Timer::format( time_remaining )), suffix );
         }
     }
 }
-void Timers::IoutputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final ) {
+void Timers::IoutputTimeStrings( Timer &t, const unsigned int current_iter, const unsigned int max_iter_total, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
-        fmt::print( "{0}\t{1:.2f}\n", QDLC::Message::Prefix::PERCENT, ( currentIt / (double)maxItTotal * 100. ) );
-        fmt::print( "{0}\t{1:.0f}\n", QDLC::Message::Prefix::PERCENT_TIME, 1.0 * maxItTotal / currentIt * t.getWallTimeOnce() );
+        fmt::print( "{0}\t{1:.2f}\n", QDLC::Message::Prefix::PERCENT, ( current_iter / (double)max_iter_total * 100. ) );
+        fmt::print( "{0}\t{1:.0f}\n", QDLC::Message::Prefix::PERCENT_TIME, 1.0 * max_iter_total / current_iter * t.getWallTimeOnce() );
         fmt::print( "{0}\t{1}\n", QDLC::Message::Prefix::SUFFIX, suffix );
     }
 }

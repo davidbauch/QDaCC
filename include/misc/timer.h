@@ -66,14 +66,14 @@ class Timers {
     static Timer &create( const std::string &name, bool addToTotalStatistics = true, bool printToSummary = true ) {
         return Get().Icreate( name, addToTotalStatistics, printToSummary );
     }
-    static void outputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", bool final = false ) {
-        return Get().IoutputTimeStrings( t, currentIt, maxItTotal, suffix, final );
+    static void outputTimeStrings( Timer &t, const unsigned int current_iter, const unsigned int max_iter_total, const std::string &suffix = "", bool final = false ) {
+        return Get().IoutputTimeStrings( t, current_iter, max_iter_total, suffix, final );
     }
-    static void outputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", int state = RUNNING ) {
-        return Get().IoutputProgressBar( t, p, currentIt, maxItTotal, suffix, state );
+    static void outputProgressBar( Timer &t, ProgressBar &p, const unsigned int current_iter, const unsigned int max_iter_total, const std::string &suffix = "", int state = RUNNING ) {
+        return Get().IoutputProgressBar( t, p, current_iter, max_iter_total, suffix, state );
     }
-    static void outputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix = "", int state = RUNNING ) {
-        return Get().IoutputProgress( t, p, currentIt, maxItTotal, suffix, state );
+    static void outputProgress( Timer &t, ProgressBar &p, const unsigned int current_iter, const unsigned int max_iter_total, const std::string &suffix = "", int state = RUNNING ) {
+        return Get().IoutputProgress( t, p, current_iter, max_iter_total, suffix, state );
     }
     static void reset() {
         return Get().Ireset();
@@ -101,9 +101,9 @@ class Timers {
         Log::L2( "[Timer] Created timer with name '{}'{}.\n", name, ( addToTotalStatistic ? " which will be added to total statistics" : "" ) );
         return timers.back();
     }
-    void IoutputTimeStrings( Timer &t, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, bool final );
-    void IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, int state );
-    void IoutputProgress( Timer &t, ProgressBar &p, const unsigned int currentIt, const unsigned int maxItTotal, const std::string &suffix, int state );
+    void IoutputTimeStrings( Timer &t, const unsigned int current_iter, const unsigned int max_iter_total, const std::string &suffix, bool final );
+    void IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int current_iter, const unsigned int max_iter_total, const std::string &suffix, int state );
+    void IoutputProgress( Timer &t, ProgressBar &p, const unsigned int current_iter, const unsigned int max_iter_total, const std::string &suffix, int state );
     void Ireset() {
         timers.clear();
     }
