@@ -27,13 +27,13 @@ System::System( const std::vector<std::string> &input ) {
 bool System::init_system() {
     // Single chirp for single atomic level
     for ( auto &[name, chirpinputs] : parameters.input_chirp ) {
-        chirp.push_back( { chirpinputs, parameters } );
+        chirp.emplace_back( chirpinputs, parameters );
         chirp.back().to_file( "chirp_" + name, false /*complex*/, false /*spectrum*/ );
     }
 
     // Arbitrary number of pulses onto single atomic level.
     for ( auto &[name, pulseinputs] : parameters.input_pulse ) {
-        pulse.push_back( { pulseinputs, parameters } );
+        pulse.emplace_back( pulseinputs, parameters );
         pulse.back().to_file( "pulse_" + name, true /*complex*/, true /*spectrum*/ );
     }
 
