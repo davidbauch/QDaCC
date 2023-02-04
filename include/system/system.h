@@ -12,8 +12,6 @@ namespace QDLC {
 
 class System {
    public:
-    // Class Name
-    std::string name;
 
     // Vector of input arguments. The argv elements will get pushed into this vector
     std::vector<std::string> arguments;

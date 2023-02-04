@@ -3,9 +3,7 @@
 using namespace QDLC;
 
 System::System( const std::vector<std::string> &input ) {
-    // Set Name of this system.
-    name = "Generic Electronic System";
-    Log::L2( "[System] Creating System Class for '{}'\n", name );
+    Log::L2( "[System] Creating System Class\n" );
     // Initialize all subclasses with the input vector
     parameters = Parameters( input );
     operatorMatrices = OperatorMatrices( parameters );
@@ -13,7 +11,7 @@ System::System( const std::vector<std::string> &input ) {
     // Initialize FileOutput with the current system
     FileOutput::init( parameters, operatorMatrices );
     // Initialize / Adjust the remaining system class
-    Timer &timer_systeminit = Timers::create( "System Initialization", true, false ).start();
+    Timer &timer_systeminit = Timers::create( "System Initialization", true /*statistics*/, false /*print*/ ).start();
     Log::L2( "[System] Initialization...\n" );
     if ( !init_system() ) {
         Log::L2( "[System] Initialization failed! Exitting program...\n" );
