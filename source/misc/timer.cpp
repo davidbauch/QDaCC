@@ -150,7 +150,7 @@ void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int cu
             p.print( max_iter_total, max_iter_total, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
             fmt::print( "\n" );
         }else {
-            const double time_remaining = (max_iter_total-current_iter) * t.getAverageIterationTime();
+            const double time_remaining =  t.getWallTimeOnce()/current_iter*(max_iter_total-current_iter);
             p.print( current_iter, max_iter_total, fmt::format( "T - {}", Timer::format( time_remaining )), suffix );
         }
     }
