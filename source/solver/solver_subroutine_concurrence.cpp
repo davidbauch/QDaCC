@@ -228,8 +228,6 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     for ( const auto &mode : { "1111", "1211", "2111", "2211", "1112", "1212", "2112", "2212", "1121", "1221", "2121", "2221", "1122", "1222", "2122", "2222" } ) {
         rho_tpdm_string[mode] = mode_purpose.contains( mode ) ? mode_purpose.at( mode ) : "zero";
     }
-    for (const auto& el : rho_tpdm_string)
-        std::cout << el.first << " " << el.second << std::endl;
     // Calculate two-photon densitymatrices and calculate concurrence
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( size_t k = 0; k < T; k++ ) {
