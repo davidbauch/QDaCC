@@ -166,8 +166,9 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         rho[mode] = std::vector<Scalar>( T, 0 );
         rho_g2zero[mode] = std::vector<Scalar>( T, 0 );
     }
-    rho["zero"] = std::vector<Scalar>( T, 0 );
-    rho_g2zero["zero"] = std::vector<Scalar>( T, 0 );
+    // Set "Zero" to 1E-100 to avoid division by zero
+    rho["zero"] = std::vector<Scalar>( T, 1E-100 );
+    rho_g2zero["zero"] = std::vector<Scalar>( T, 1E-100 );
 
     // #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( const auto &[mode, purpose] : mode_purpose ) {
