@@ -152,6 +152,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             f_indist << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Indist"]["Time"][i] ), std::real( to_output["Indist"][mode][i] ), std::real( to_output["Visibility"][mode][i] ) );
         }
     }
+    if (s.parameters.output_dict.contains("conc"))
     for ( auto &[mode, data] : to_output["Conc"] ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
@@ -178,6 +179,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             f_raman << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", get_time_at( i ), std::real( to_output["Raman"][mode][i] ), std::real( to_output["RamanEmProb"][mode][i] ) );
         }
     }
+    if (s.parameters.output_dict.contains("tpm"))
     for ( auto &[mode, data] : to_output_m["TwoPMat"] ) {
         if ( mode.compare( "Time" ) == 0 )
             continue;
