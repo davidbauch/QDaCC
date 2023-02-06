@@ -18,14 +18,18 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     }
     // Calculate Conc
     auto &conc_s = s.parameters.input_correlation["Conc"];
-    for ( auto &modes : conc_s.string_v["Modes"] ) {
+    for ( auto i = 0; i < conc_s.string_v["Modes"].size(); i++ ) {
+        const auto &modes = conc_s.string_v["Modes"][i];
+        const std::map<std::string, int> orders = {{"full", 3}, {"outin",2}, {"outer", 1}};
+        const auto order = conc_s.string_v["Order"][i];
+        const int matrix_priority_evaluation = orders.contains(order) ? orders.at(order) : 3;
         std::vector<std::string> s_creator, s_annihilator;
         for ( auto &mode : QDLC::String::splitline( modes, '-' ) ) {
             const auto &[ss_creator, ss_annihilator] = get_operator_strings( s, mode );
             s_creator.emplace_back( ss_creator );
             s_annihilator.emplace_back( ss_annihilator );
         }
-        calculate_concurrence( s, s_creator[0], s_annihilator[0], s_creator[1], s_annihilator[1] );
+        calculate_concurrence( s, s_creator[0], s_annihilator[0], s_creator[1], s_annihilator[1], matrix_priority_evaluation );
     }
     // Calculate Raman
     auto &raman_s = s.parameters.input_correlation["Raman"];

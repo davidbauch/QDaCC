@@ -454,11 +454,13 @@ void Parameters::parse_system() {
         conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' ); // Modes to calculate Indistinguishgability for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
         input_correlation["Indist"] = conf_s;
     }
+    // TODO: von a,b:c,d wechseln auf a:c;b:d
     for ( std::string &conc : QDLC::String::splitline( inputstring_conc, ';' ) ) {
         auto conf = QDLC::String::splitline( conc, ':' );
         universal_config conf_s;
         conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' ); // Modes to calculate Concurrence for
-        if ( conf.size() > 1 ) {
+        conf_s.string_v["Order"] = conf.size() > 1 ? QDLC::String::splitline( conf[1], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "full" );
+        if ( conf.size() > 2 ) {
             // Experimental: Calculate spectrum for all matrix entries. Also outputs the non-normalized matrices
             conf_s.property_set["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) ); // Center
             conf_s.property_set["Range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );  // Range
@@ -593,7 +595,7 @@ void Parameters::parse_system() {
 }
 
 void Parameters::log( const Dense &initial_state_vector_ket ) {
-    Log::L1("         _______                   _____                    _____     _____          \n        /::\\    \\                 /\\    \\                  /\\    \\   /\\    \\         \n       /::::\\    \\               /::\\    \\                /::\\____\\ /::\\    \\        \n      /::::::\\    \\             /::::\\    \\              /:::/    //::::\\    \\       \n     /::::::::\\    \\           /::::::\\    \\            /:::/    //::::::\\    \\      \n    /:::/~~\\:::\\    \\         /:::/\\:::\\    \\          /:::/    //:::/\\:::\\    \\     \n   /:::/    \\:::\\    \\       /:::/  \\:::\\    \\        /:::/    //:::/  \\:::\\    \\    \n  /:::/    / \\:::\\    \\     /:::/    \\:::\\    \\      /:::/    //:::/    \\:::\\    \\   \n /:::/____/   \\:::\\____\\   /:::/    / \\:::\\    \\    /:::/    //:::/    / \\:::\\    \\  \n|:::|    |     |:::|    | /:::/    /   \\:::\\ ___\\  /:::/    //:::/    /   \\:::\\    \\ \n|:::|____|     |:::|____|/:::/____/     \\:::|    |/:::/____//:::/____/     \\:::\\____\\\n \\:::\\   _\\___/:::/    / \\:::\\    \\     /:::|____|\\:::\\    \\\\:::\\    \\      \\::/    /\n  \\:::\\ |::| /:::/    /   \\:::\\    \\   /:::/    /  \\:::\\    \\\\:::\\    \\      \\/____/ \n   \\:::\\|::|/:::/    /     \\:::\\    \\ /:::/    /    \\:::\\    \\\\:::\\    \\             \n    \\::::::::::/    /       \\:::\\    /:::/    /      \\:::\\    \\\\:::\\    \\            \n     \\::::::::/    /         \\:::\\  /:::/    /        \\:::\\    \\\\:::\\    \\           \n      \\::::::/    /           \\:::\\/:::/    /          \\:::\\    \\\\:::\\    \\          \n       \\::::/____/             \\::::::/    /            \\:::\\    \\\\:::\\    \\         \n        |::|    |               \\::::/    /              \\:::\\____\\\\:::\\____\\        \n        |::|____|                \\::/____/                \\::/    / \\::/    /        \n         ~~                       ~~                       \\/____/   \\/____/         \n                                                                                     \n");
+    Log::L1( "         _______                   _____                    _____     _____          \n        /::\\    \\                 /\\    \\                  /\\    \\   /\\    \\         \n       /::::\\    \\               /::\\    \\                /::\\____\\ /::\\    \\        \n      /::::::\\    \\             /::::\\    \\              /:::/    //::::\\    \\       \n     /::::::::\\    \\           /::::::\\    \\            /:::/    //::::::\\    \\      \n    /:::/~~\\:::\\    \\         /:::/\\:::\\    \\          /:::/    //:::/\\:::\\    \\     \n   /:::/    \\:::\\    \\       /:::/  \\:::\\    \\        /:::/    //:::/  \\:::\\    \\    \n  /:::/    / \\:::\\    \\     /:::/    \\:::\\    \\      /:::/    //:::/    \\:::\\    \\   \n /:::/____/   \\:::\\____\\   /:::/    / \\:::\\    \\    /:::/    //:::/    / \\:::\\    \\  \n|:::|    |     |:::|    | /:::/    /   \\:::\\ ___\\  /:::/    //:::/    /   \\:::\\    \\ \n|:::|____|     |:::|____|/:::/____/     \\:::|    |/:::/____//:::/____/     \\:::\\____\\\n \\:::\\   _\\___/:::/    / \\:::\\    \\     /:::|____|\\:::\\    \\\\:::\\    \\      \\::/    /\n  \\:::\\ |::| /:::/    /   \\:::\\    \\   /:::/    /  \\:::\\    \\\\:::\\    \\      \\/____/ \n   \\:::\\|::|/:::/    /     \\:::\\    \\ /:::/    /    \\:::\\    \\\\:::\\    \\             \n    \\::::::::::/    /       \\:::\\    /:::/    /      \\:::\\    \\\\:::\\    \\            \n     \\::::::::/    /         \\:::\\  /:::/    /        \\:::\\    \\\\:::\\    \\           \n      \\::::::/    /           \\:::\\/:::/    /          \\:::\\    \\\\:::\\    \\          \n       \\::::/____/             \\::::::/    /            \\:::\\    \\\\:::\\    \\         \n        |::|    |               \\::::/    /              \\:::\\____\\\\:::\\____\\        \n        |::|____|                \\::/____/                \\::/    / \\::/    /        \n         ~~                       ~~                       \\/____/   \\/____/         \n                                                                                     \n" );
     Log::Logger::wrapInBar( "System Parameters" );
     Log::L1( "Version: {} ({})\n\n", GLOBAL_PROGRAM_VERSION, GLOBAL_PROGRAM_LASTCHANGE );
 
@@ -633,7 +635,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::Logger::wrapInBar( "Initial System Parameters", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     Log::L1( "Initial state rho0 = [{}]\n\n", initial_state_vector_ket.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ) );
     Log::L1( "Matrix Groundstate Index = {}\n\n", numerics_groundstate );
-    
+
     Log::Logger::wrapInBar( "Pulse", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( input_pulse.size() > 0 ) {
         for ( auto &[name, mat] : input_pulse ) {
@@ -741,10 +743,16 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         Log::L1( "Tau-grid resolution is {}\n", numerics_calculate_till_converged ? "to be determined." : fmt::format( "{}x{}", grid_values.size(), grid_values.size() ) );
         Log::L1( "Calculating:\n" );
         for ( auto &[name, mat] : input_correlation ) {
-            Log::L1( " - {} on mode(s) ", name );
-            for ( auto &mode : mat.string_v["Modes"] )
-                Log::L1( "{} ", mode );
-            Log::L1( "\n" );
+            Log::L1( " - {} on mode(s):\n", name );
+            for ( auto i = 0; i < mat.string_v["Modes"].size(); i++ ) {
+                const auto &mode = mat.string_v["Modes"][i];
+                if ( name == "Conc" ) {
+                    const auto &order = mat.string_v["Order"][i];
+                    Log::L1( " - - {} using matrix evaluation order: '{}'\n", mode, order );
+                } else {
+                    Log::L1( " - - {}\n", mode );
+                }
+            }
         }
         Log::L1( "\n" );
         // Detector Stuff
@@ -767,7 +775,6 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                 Log::L1( " - - FT Points: {}\n", input_conf["Detector"].property_set["spectral_number_points"][i] );
             }
         }
-
     } else {
         Log::L1( "Not using any G1 or G2 correlation functions.\n\n" );
     }
