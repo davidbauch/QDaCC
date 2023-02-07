@@ -69,10 +69,24 @@ Dense _fidelity_matrix_wootters( const Dense &rho, const Dense &spinflip ) {
     const Dense R5 = R.sqrt();
     return R5;
 }
+
+/**
+ * @brief Calculates the fidelity matrix F = rho * spinflip * rho.conjugated * spinflip
+ * according to https://onlinelibrary.wiley.com/doi/full/10.1002/qute.202000108
+ * @param rho Input two photon density matrix
+ * @param spinflip Spinflip matrix
+ * @return Dense
+*/
 Dense _fidelity_matrix_seidelmann( const Dense &rho, const Dense &spinflip ) {
     const Dense M = rho * spinflip * rho.conjugate() * spinflip;
     return M;
 }
+
+/**
+ * @brief Calculates the concurrence eigenvalues from the fidelity matrix
+ * @param fidelity_matrix Fidelity matrix
+ * @return Dense
+*/
 Dense _concurrence_eigenvalues( const Dense &fidelity_matrix ) {
     Eigen::SelfAdjointEigenSolver<Dense> eigensolver( fidelity_matrix );
     auto eigenvalues = eigensolver.eigenvalues().real();
