@@ -28,7 +28,7 @@ bool System::init_system() {
     // Single chirp for single atomic level
     for ( auto &[name, chirpinputs] : parameters.input_chirp ) {
         chirp.emplace_back( chirpinputs, parameters );
-        chirp.back().to_file( "chirp_" + name, false /*complex*/, false /*spectrum*/ );
+        chirp.back().to_file( "chirp_" + name, false /*complex*/, parameters.output_dict.contains("chirpf") /*spectrum*/ );
     }
 
     // Arbitrary number of pulses onto single atomic level.
