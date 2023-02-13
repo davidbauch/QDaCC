@@ -34,7 +34,7 @@ bool System::init_system() {
     // Arbitrary number of pulses onto single atomic level.
     for ( auto &[name, pulseinputs] : parameters.input_pulse ) {
         pulse.emplace_back( pulseinputs, parameters );
-        pulse.back().to_file( "pulse_" + name, true /*complex*/, true /*spectrum*/ );
+        pulse.back().to_file( "pulse_" + name, true /*complex*/, parameters.output_dict.contains("pulsef") /*spectrum*/ );
     }
 
     // if ( parameters.numerics_use_saved_coefficients )
