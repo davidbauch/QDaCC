@@ -12,7 +12,6 @@ namespace QDLC {
 
 class System {
    public:
-
     // Vector of input arguments. The argv elements will get pushed into this vector
     std::vector<std::string> arguments;
 
@@ -177,6 +176,7 @@ class System {
     double dgl_phonons_lindblad_coefficients( const double energy, const double coupling, const Scalar pulse, const char mode = 'L', const double scaling = 1.0, const double sign = 1.0 );
 
     Sparse dgl_phonons_lindblad_contribution( const double t, const Sparse &rho );
+    Sparse dgl_phonons_integrated_contribution( const double t, const Sparse &rho, const std::vector<QDLC::SaveState> &past_rhos );
 
     /**
      * @brief Initializes the Polaron Frame Functions by precalculating the Phi(tau) function and the corresponding Green functions
