@@ -100,11 +100,11 @@ Sparse System::dgl_phonons_integrated_contribution( const double t, const Sparse
             track_getcoefficient_write++;
         }
         track_getcoefficient_calculate++;
-        integrant = parameters.numerics_subiterator_stepsize * ( dgl_kommutator( XUT, chi_tau_back_u * rho ) + dgl_kommutator( XGT, chi_tau_back_g * rho ) );
+        integrant = parameters.numerics_subiterator_stepsize * ( dgl_kommutator( XGT, chi_tau_back_g * rho ) + dgl_kommutator( XUT, chi_tau_back_u * rho ) );
     }
     // Calculate phonon contributions from (saved/calculated) coefficients and rho(t)
     Sparse adjoint = integrant.adjoint();
-    return adjoint - integrant;
+    return -(integrant+adjoint);
 }
 
 //} else {

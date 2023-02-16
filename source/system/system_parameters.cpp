@@ -740,6 +740,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
 
     Log::Logger::wrapInBar( "G-Function Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( input_correlation.size() > 0 ) {
+        //TODO: print grid resolution later
         Log::L1( "Tau-grid resolution is {}\n", numerics_calculate_till_converged ? "to be determined." : fmt::format( "{}x{}", grid_values.size(), grid_values.size() ) );
         Log::L1( "Calculating:\n" );
         for ( auto &[name, mat] : input_correlation ) {

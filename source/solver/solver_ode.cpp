@@ -10,6 +10,7 @@ QDLC::Numerics::ODESolver::ODESolver( System &s ) {
     savedStates.clear();
     savedStates.reserve( size );
     detector_frequency_mask.clear();
+    Log::L2("[System] Allocated memory for {} states.\n",savedStates.size());
 }
 
 // TODO: interpolation für tau direction, dann wieder cachen in t wie mit phononen
