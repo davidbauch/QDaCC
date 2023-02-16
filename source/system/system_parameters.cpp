@@ -234,7 +234,7 @@ void Parameters::pre_adjust_input() {
         if ( p_phonon_adjust_b > 0 ) {
             p_phonon_b = std::exp( -0.5 * integral );
             const auto new_value = p_phonon_b * p_phonon_adjust_b;
-            Log::L2( "[System] Adjusting phononscaling from <B> = {} to <B> = \n", p_phonon_b, new_value );
+            Log::L2( "[System] Adjusting phononscaling from <B> = {} to <B> = {}\n", p_phonon_b, new_value );
             p_phonon_b = new_value;
         }
         if ( p_phonon_adjust_rad > 0 ) {
