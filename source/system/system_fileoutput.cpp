@@ -2,10 +2,13 @@
 
 using namespace QDLC;
 
-std::ofstream &FileOutput::add_file( const std::string &name, const std::string &file_ending ) {
+std::ifstream FileOutput::load_file( const std::string &name, const std::string &file_ending ) {
+    return Get().Iload_file( name, file_ending );
+}
+std::fstream &FileOutput::add_file( const std::string &name, const std::string &file_ending, const std::ios_base::openmode mode ) {
     return Get().Iadd_file( name, file_ending );
 }
-std::ofstream &FileOutput::get_file( const std::string &name ) {
+std::fstream &FileOutput::get_file( const std::string &name ) {
     return Get().Iget_file( name );
 }
 bool FileOutput::close_file( const std::string &name ) {
@@ -18,14 +21,24 @@ void FileOutput::init( Parameters &p, OperatorMatrices &op ) {
     return Get().Iinit( p, op );
 }
 
-std::ofstream &FileOutput::Iget_file( const std::string &name ) {
+std::fstream &FileOutput::Iget_file( const std::string &name ) {
     return files[name];
 }
 
-std::ofstream &FileOutput::Iadd_file( const std::string &name, const std::string &file_ending ) {
-    if ( files.contains( name ) )
+std::ifstream FileOutput::Iload_file( const std::string &name, const std::string &file_ending) {
+    auto file = std::ifstream( path + name + "." + file_ending );
+    if ( file.is_open() )
+        Log::L2( "[System-Fileoutput] Loaded file '{}.{}'\n", name, file_ending );
+    else
+        Log::Error( "[System-Fileoutput] Could not load file '{}.{}'!\n", name, file_ending );
+    return file;
+}
+
+std::fstream &FileOutput::Iadd_file( const std::string &name, const std::string &file_ending, const std::ios_base::openmode mode ) {
+    if ( files.contains( name ) and get_file( name ).is_open() ) {
         return get_file( name );
-    files[name].open( path + name + "." + file_ending );
+    }
+    get_file( name ).open( path + name + "." + file_ending, mode );
     if ( get_file( name ).is_open() )
         Log::L2( "[System-Fileoutput] Added file '{}.{}'\n", name, file_ending );
     else

@@ -7,10 +7,11 @@ namespace QDLC {
 
 class FileOutput {
    private:
-    std::unordered_map<std::string, std::ofstream> files;
+    std::unordered_map<std::string, std::fstream> files;
     void Iinit( Parameters &p, OperatorMatrices &op );
-    std::ofstream &Iadd_file( const std::string &name, const std::string &file_ending );
-    std::ofstream &Iget_file( const std::string &name );
+    std::ifstream Iload_file( const std::string &name, const std::string &file_ending );
+    std::fstream &Iadd_file( const std::string &name, const std::string &file_ending, const std::ios_base::openmode mode = std::ios::out );
+    std::fstream &Iget_file( const std::string &name );
     bool Iclose_file( const std::string &name );
     bool Iclose_all();
     std::string path;
@@ -22,8 +23,9 @@ class FileOutput {
         static FileOutput instance;
         return instance;
     }
-    static std::ofstream &add_file( const std::string &name, const std::string &file_ending = "txt" );
-    static std::ofstream &get_file( const std::string &name );
+    static std::ifstream load_file( const std::string &name, const std::string &file_ending );
+    static std::fstream &add_file( const std::string &name, const std::string &file_ending = "txt", const std::ios_base::openmode mode = std::ios::out );
+    static std::fstream &get_file( const std::string &name );
     static bool close_file( const std::string &name );
     static bool close_all();
     static void init( Parameters &p, OperatorMatrices &op );

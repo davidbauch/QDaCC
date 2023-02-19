@@ -90,8 +90,12 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
         double t_t = get_time_at( i );
         // Calculate New Modified Density Matrix
         Sparse rho_tau = s.dgl_calc_rhotau_2( get_rho_at( i ), op_l, op_i, t_t );
-        // Calculate Runge Kutta
-        calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, super_purpose, s, savedRhos, false );
+        // Calculate Runge Kutta or PI
+        if ( s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+            calculate_path_integral_correlation( rho_tau, t_t, s.parameters.t_end, timer, s, savedRhos, op_l, op_i, 1 /*ADM Cores*/ );
+        } else {
+            calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, super_purpose, s, savedRhos, false /*Output*/ );
+        }
         // Interpolate saved states to equidistant timestep
         savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
         for ( const auto &[eval, purpose] : eval_operators ) {

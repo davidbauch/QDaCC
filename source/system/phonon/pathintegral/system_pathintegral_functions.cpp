@@ -36,10 +36,13 @@ void System::initialize_path_integral_functions() {
 
     Log::L2( "[PathIntegral] Outputting phonon functions to phonons.txt from phi_vector({})...\n", phi_vector.size() );
     // Output Phonon Functions
-    auto &file = FileOutput::add_file( "phonon_PI" );
-    file << fmt::format( "t\tabs(K(t))\treal(K(t))\timag(K(t))\tabs(K(t))\treal(K(t))\timag(K(t))\n" );
-    for ( int i = 0; i < phi_vector_int.size(); i++ ) {
-        file << fmt::format( "{}\t{}\t{}\t{}\n", parameters.t_step_pathint * i, std::abs( phi_vector_int[i] ), std::real( phi_vector_int[i] ), std::imag( phi_vector_int[i] ) );
+    if ( parameters.output_dict.contains( "PIkernel" ) ) {
+        auto &file = FileOutput::add_file( "phonon_PI" );
+        file << fmt::format( "t\tabs(K(t))\treal(K(t))\timag(K(t))\tabs(K(t))\treal(K(t))\timag(K(t))\n" );
+        for ( int i = 0; i < phi_vector_int.size(); i++ ) {
+            file << fmt::format( "{}\t{}\t{}\t{}\n", parameters.t_step_pathint * i, std::abs( phi_vector_int[i] ), std::real( phi_vector_int[i] ), std::imag( phi_vector_int[i] ) );
+        }
+        file.close();
     }
     // Lets output more than the 4-8 elements usually used
     // std::vector<Scalar> phi_vector_o;
@@ -53,6 +56,5 @@ void System::initialize_path_integral_functions() {
     //     int i = std::floor( t / ( parameters.t_step / 10.0 ) );
     //     fmt::print( fp_phonons, "{}\t{}\t{}\t{}\n", t, std::abs( phi_vector_o.at( i ) ), std::real( phi_vector_o.at( i ) ), std::imag( phi_vector_o.at( i ) ) );
     // }
-    file.close();
     Log::L2( "[PathIntegral] Done...\n" );
 }

@@ -6,8 +6,8 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "3.6.0"
-#define GLOBAL_PROGRAM_LASTCHANGE "GUI cleanup"
+#define GLOBAL_PROGRAM_VERSION "3.7.0"
+#define GLOBAL_PROGRAM_LASTCHANGE "PI nad PME Refurbishment"
 
 namespace QDLC {
 

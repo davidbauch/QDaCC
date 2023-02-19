@@ -11,6 +11,11 @@
 
 #include "typedef.h"
 #include "misc/log.h"
+#include "solver/solver_hash.h"
+
+// Das hier ist rekursiv. TODO: solver_tensor_map als ode solver klasse. Oder die funktion unten als template. aber eig kann die implementation hiervon einfach in ne .cpp.
+// Der inlcude von fileoutput ist dann ok
+//#include "system/fileoutput.h"
 
 // Windows Workaround for unsigned int struct
 #ifndef u_int64_t
@@ -31,45 +36,7 @@ namespace QDLC::Numerics {
 // Other TODO: correlation func for PI reimplementieren, dann einen punkt für 09 nachrechnen.
 // Rechnungen auf cluster meddeln
 
-// https://wjngkoh.wordpress.com/2015/03/04/c-hash-function-for-eigen-matrix-and-vector/
-template <typename T>
-struct vector_hash {
-    static std::hash<T> hasher;
-    std::size_t operator()( std::vector<T> const &vec ) const {
-        size_t seed = 0;
-        for ( const auto &el : vec ) {
-            seed ^= hasher( el ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-        }
-        return seed;
-    }
-};
-template <typename T>
-struct vector_compare {
-    bool operator()( const std::vector<T> &A, const std::vector<T> &B ) const {
-        return vector_hash<T>()( A ) < vector_hash<T>()( B );
-    }
-};
-// struct tuple_vector_hash {
-//     static std::hash<QDLC::Type::iVector::QDLC::Type::Scalar> hasher;
-//     std::size_t operator()( std::tuple<QDLC::Type::iVector, QDLC::Type::iVector> const &tup ) const {
-//         size_t seed = 0;
-//         auto &[vec1, vec2] = tup;
-//         for ( size_t i = 0; i < vec1.size(); ++i ) {
-//             auto elem = *( vec1.data() + i );
-//             seed ^= hasher( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-//         }
-//         for ( size_t i = 0; i < vec2.size(); ++i ) {
-//             auto elem = *( vec2.data() + i );
-//             seed ^= hasher( elem ) + 0x9e3779b9 + ( seed << 6 ) + ( seed >> 2 );
-//         }
-//         return seed;
-//     }
-// };
-// struct tuple_vector_compare {
-//     bool operator()( const std::tuple<QDLC::Type::iVector, QDLC::Type::iVector> &A, const std::tuple<QDLC::Type::iVector, QDLC::Type::iVector> &B ) const {
-//         return tuple_vector_hash()( A ) < tuple_vector_hash()( B );
-//     }
-// };
+
 
 // TODO: Implementation in .cpp file
 
@@ -80,7 +47,8 @@ class Tensor {
     // Tensor Rank indices (N0,N1,...,NN,M0,M1,...,MM)
     using IndexVector = std::vector<Index>;
     // QDLC::Type::Scalar QDLC::Type::Scalar type
-    using ValueVector = std::vector<QDLC::Type::Scalar>;
+    using Value = QDLC::Type::Scalar;
+    using ValueVector = std::vector<Value>;
     using IndexMap = std::map<IndexVector, IndexFlat, vector_compare<Index>>;
     using IndexRefVector = std::vector<IndexVector>;
 
@@ -93,51 +61,28 @@ class Tensor {
     // Save References of the keys in vector to allow for fast acces / conversion of IndexFlat - to - IndexVector
     // using IndexRefVector = std::vector<std::reference_wrapper<IndexVector>>;
     static IndexRefVector index_flat_to_index_vector_struct;
-
-    void permute( IndexVector current, const IndexVector &dimensions, int index = 0 ) {
-        if ( index == dimensions.size() ) {
-            const auto index = index_vector_to_index_flat_struct.size();
-            index_vector_to_index_flat_struct[current] = index;
-            if ( current.size() > 0 )
-                index_flat_to_index_vector_struct[index] = current;
-        } else {
-            for ( Index c = 0; c < dimensions[index]; c++ ) {
-                current[index] = c;
-                permute( current, dimensions, index + 1 );
-            }
-        }
-    }
+    static int different_dimensions;
+    static int tensor_dimensions;
+    static int tensor_size;
+    /**
+     * @brief Recursive function to calculate all possible index permutations
+     * @param current Current index permutation
+     * @param dimensions Dimensions of the tensor
+     * @param index Current index
+     */
+    void permute( IndexVector current, const IndexVector &dimensions, int index = 0 );
 
    public:
     Tensor() = default;
-    Tensor( const IndexFlat num, const QDLC::Type::Scalar &init_value = 0 ) {
-        values = ValueVector( num, init_value );
-    }
-    Tensor( const IndexVector &dimensions, QDLC::Type::Scalar init_value = 0 ) {
-        // Reserve Memory and initialize value vector
-        auto max_elements = 1;
-        index_vector_to_index_flat_struct.clear();
-        index_flat_to_index_vector_struct.clear();
-        std::ranges::for_each( dimensions, [&]( const auto &el ) { max_elements *= el; } );
-        index_flat_to_index_vector_struct = IndexRefVector( max_elements ); // FIXME: max_elements ist für Biex nicht gleich der hinzugefügten elemente?????????????
-        values = ValueVector( max_elements, init_value );
-        // Calculate and Save all possible index permutations
-        permute( IndexVector( dimensions.size(), 0 ), dimensions );
-        // Save References to map keys in vector for fast lookup
-        // std::ranges::for_each( index_vector_to_index_flat_struct, []( const auto &el ) { index_flat_to_index_vector_struct[el.second] = el.first; } );
-        // Lazy fix for upper fixme:
-        for ( int i = index_flat_to_index_vector_struct.size() - 1; i > 0; i-- )
-            if ( index_flat_to_index_vector_struct[i].size() == 0 )
-                index_flat_to_index_vector_struct.erase( index_flat_to_index_vector_struct.begin() + i );
-        Log::L2( "[PathIntegral] Added {} elements to the dimension vector ({} elements to the inverse map).\n", index_vector_to_index_flat_struct.size(), index_flat_to_index_vector_struct.size() );
-    }
+    Tensor( const IndexFlat num, const Value &init_value = 0 );
+    Tensor( const IndexVector &dimensions, Value init_value = 0 );
     Tensor( const Tensor &other ) = default; //: values( other.values ){};
 
     // Access Operator
-    inline QDLC::Type::Scalar &operator()( const IndexVector &index ) {
+    inline Value &operator()( const IndexVector &index ) {
         return values[to_flat( index )];
     }
-    inline QDLC::Type::Scalar &operator()( const IndexFlat &index ) {
+    inline Value &operator()( const IndexFlat &index ) {
         return values[index];
     }
 
@@ -153,13 +98,30 @@ class Tensor {
     inline IndexRefVector &get_indices() {
         return index_flat_to_index_vector_struct;
     }
+    inline IndexRefVector &get_indices() const {
+        return index_flat_to_index_vector_struct;
+    }
 
     inline size_t nonZeros() const {
         return values.size();
     }
 
     inline size_t size() const {
-        return values.size() * ( sizeof( QDLC::Type::Scalar ) + sizeof( Index ) * index_flat_to_index_vector_struct.front().size() ); // / 1024. / 1024;
+        return values.size() * ( sizeof( Value ) + sizeof( Index ) * index_flat_to_index_vector_struct.front().size() ); // / 1024. / 1024;
+    }
+
+    inline int primary_dimensions() const {
+        return tensor_dimensions;
+    }
+    inline int secondary_dimensions() const {
+        return different_dimensions;
+    }
+
+    void save_to_file(const int index);
+    void load_from_file(const int index);
+
+    static inline int max_size() {
+        return tensor_size;
     }
 };
 

@@ -198,16 +198,21 @@ class ODESolver {
     bool calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output = true );
 
     /**
-     * @brief Iterates rho0 from t_start to t_end using the Path Integral Method. If correlation functions are evaluated, this function calls calculate_path_integral_correlation multiple times per iteration.
+     * @brief Calculates rho0 from t_start to t_end using the Path Integral Method. If correlation functions are evaluated, this function calls calculate_path_integral_correlation multiple times per iteration.
      *
      */
-    bool calculate_path_integral( Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output = true );
-
+    bool calculate_path_integral( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output = true );
+    
     /**
-     * @brief Iterates rho0 from t_start to t_end incorporating the corresponding correlation modification.
+     * @brief Iterates rho0 from t_start to t_end using the Path Integral Method. 
+    */
+    Tensor iterate_path_integral( System &s, Tensor &adm_tensor, std::vector<std::vector<Sparse>>& propagator, const int max_index );
+    
+    /**
+     * @brief Calculates rho0 from t_start to t_end incorporating the corresponding correlation modification.
      *
      */
-    bool calculate_path_integral_correlation( Tensor adms, Sparse &rho0, double t_start, double t_end, double t_step_initial, Timer &rkTimer, ProgressBar &progressbar, size_t total_progressbar_iterations, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output, const std::vector<Sparse> &matrices, int adm_multithreading_cores, int different_dimensions );
+    bool calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDLC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores );
 
     /**
      * @brief Creates a table file containing the available propagation paths in the .dot format
