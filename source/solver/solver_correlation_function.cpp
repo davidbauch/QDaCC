@@ -100,9 +100,13 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
         savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
         for ( const auto &[eval, purpose] : eval_operators ) {
             auto &gmat = cache[purpose];
-            for ( size_t j = 0; j < savedRhos.size() and i + j < std::min<size_t>( matdim, savedRhos.size() ); j++ ) {
+            for ( size_t j = 0; j < savedRhos.size(); j++ ) {
                 const double t_tau = savedRhos.at( j ).t;
+                //if ( s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+                //    gmat( i, j ) = s.get_trace<Scalar>( eval.cwiseProduct(savedRhos.at( j ).mat).eval());
+                //}else {
                 gmat( i, j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, eval, t_tau );
+                //}
             }
         }
         Timers::outputProgress( timer, progressbar, i, savedStates.size(), super_purpose );

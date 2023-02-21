@@ -153,6 +153,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
 
     auto adm_tensor = _generate_initial_tensor( s, rho0 );
     const auto tensor_dim = adm_tensor.primary_dimensions();
+    adm_tensor.save_to_file( 0 );
 
     // First step is just rho0
     Sparse rho = rho0;
@@ -162,9 +163,6 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
         // Calculate the maximum Vector index. For times < cutofftime, the number of active elements is reduced
         int max_index = 2 + std::min<int>( s.parameters.p_phonon_nc - 2, std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) );
-        if ( max_index < s.parameters.p_phonon_nc ) {
-            Log::L3( "[PathIntegral] max_index = {}, nc = {}\n", max_index, s.parameters.p_phonon_nc );
-        }
 
         // Calculate Propagators for current time
         auto &propagator = calculate_propagator_vector( s, tensor_dim, t_t, s.parameters.numerics_subiterator_stepsize, output );
@@ -175,7 +173,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         saveState( rho, t_t + s.parameters.t_step_pathint, output );
 
         // Save ADM Tensor to file
-        const int tensor_int_time = t_t / s.parameters.t_step_pathint;
+        const int tensor_int_time = std::floor( 1.001 * t_t / s.parameters.t_step_pathint + 1. );
         adm_tensor.save_to_file( tensor_int_time );
 
         // Progress and time output
@@ -188,8 +186,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
 
 bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDLC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores ) {
     output.reserve( s.parameters.iterations_t_max + 1 );
-    
-    const int tensor_int_time = t_start / s.parameters.t_step_pathint; // This assumes t_start for the main direction is zero!
+    const int tensor_int_time = std::floor( 1.001 * t_start / s.parameters.t_step_pathint ); // This assumes t_start for the main direction is zero!
     auto adm_correlation = Tensor( Tensor::max_size() );
     adm_correlation.load_from_file( tensor_int_time );
     const auto tensor_dim = adm_correlation.primary_dimensions();
@@ -198,19 +195,15 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Sparse &rho
     std::vector<std::vector<Sparse>> initial_propagator = calculate_propagator_vector( s, tensor_dim, t_start, s.parameters.numerics_subiterator_stepsize, output );
     for ( auto &vec : initial_propagator )
         for ( auto &el : vec )
-            el = s.dgl_timetrafo( op_l * el * op_i, t_start );
+            el = s.dgl_timetrafo( op_l, t_start + s.parameters.t_step_pathint ) * el * s.dgl_timetrafo( op_i, t_start + s.parameters.t_step_pathint );
 
-    // First step is just rho0. TODO: iterate once by hand to include new prop, then save that as rho0
-    Sparse rho = rho0;
+    // Sparse rho = rho0;
     saveState( rho0, t_start, output );
 
     // Iterate Path integral for further time steps
     for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
         // Calculate the maximum Vector index. For times < cutofftime, the number of active elements is reduced
         int max_index = 2 + std::min<int>( s.parameters.p_phonon_nc - 2, std::floor( 1.001 * t_t / s.parameters.t_step_pathint ) );
-        if ( max_index < s.parameters.p_phonon_nc ) {
-            Log::L3( "[PathIntegral] max_index = {}, nc = {}\n", max_index, s.parameters.p_phonon_nc );
-        }
 
         // Calculate Propagators for current time
         auto &propagator = calculate_propagator_vector( s, tensor_dim, t_t, s.parameters.numerics_subiterator_stepsize, output );
@@ -219,13 +212,12 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Sparse &rho
             adm_correlation = iterate_path_integral( s, adm_correlation, initial_propagator, max_index );
         else
             adm_correlation = iterate_path_integral( s, adm_correlation, propagator, max_index );
-        rho = _reduce_adm_tensor( adm_correlation );
+        const auto rho = _reduce_adm_tensor( adm_correlation );
+
         // Save Rho
         saveState( rho, t_t + s.parameters.t_step_pathint, output );
 
-        // Progress and time output
         rkTimer.iterate();
-        //Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );
     }
     return true;
 }
