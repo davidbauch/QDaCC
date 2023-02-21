@@ -4,7 +4,7 @@
 
 This program solves the von-Neumann Equation
 
-![](<https://latex.codecogs.com/svg.image?%5Cfrac%7B%5Ctext%7Bd%7D%5Crho%7D%7B%5Ctext%7Bd%7Dt%7D%20=%20%5Cfrac%7B%5Ci%7D%7B%5Chbar%7D%5Cleft%5B%5Cmathcal%7BH%7D,%5Crho%5Cright%5D%20+%20%5Csum%20%5Cmathcal%7BL%7D_%7B%5Chat%7BO%7D%7D(%5Crho)>)
+![](<https://latex.codecogs.com/svg.image?%5Cfrac%7B%5Ctext%7Bd%7D%5Crho%7D%7B%5Ctext%7Bd%7Dt%7D%20=%20%5Cfrac%7B%5Ci%7D%7B%5Chbar%7D%5Cleft%5B%5Cmathcal%7BH%7D,%5Crho%5CriG=Ht%5D%20+%20%5Csum%20%5Cmathcal%7BL%7D_%7B%5Chat%7BO%7D%7D(%5Crho)>)
 
 for a given fermionic (electronic) system coupled to a (or multiple) bosonic optical resonator including multiple sources of Loss and Electron-Phonon coupling.
 
@@ -42,7 +42,7 @@ The general features of this program include:
 All numerical parameters support the following units:
 Units of Energy:
 
-- `Hz` - Hertz, may be omitted, meaning the default unit for energy is `Hz`
+- `H=Z` - Hertz, may be omitted, meaning the default unit for energy is `H=Z`
 - `eV` - Electron Volt
 - `meV` - Milli Electron Volt `= 1E-3eV`
 - `mueV` - Micro Electron Volt `= 1E-6eV`
@@ -118,9 +118,9 @@ Multiple photonic states can be chained by using the chain operator `;`. The par
 
 Example:
 
-    --SE 'c:1.5eV:2:GX:1:1'
+    --SE 'c:1.5eV:2:G=X:1:1'
 
-- Cavity with `Name = c` with `Energy = 1.5eV`. The maximum number of photons allowed is `MaxPhotons = 2`. The resonator is coupled to the electronic transition `CoupledToTransition = GX` with a coupling scaling of `CouplingScaling = 1`. The photons inside the resonator decay with a scaled rate of `DecayScaling = 1`.
+- Cavity with `Name = c` with `Energy = 1.5eV`. The maximum number of photons allowed is `MaxPhotons = 2`. The resonator is coupled to the electronic transition `CoupledToTransition = G=X` with a coupling scaling of `CouplingScaling = 1`. The photons inside the resonator decay with a scaled rate of `DecayScaling = 1`.
 
 ### Further Examples
 
@@ -128,16 +128,16 @@ Example:
   `--SE 'G:0:X:0:1:0;X:1.5eV:-:1:1:1'`
 - Single Exciton coupled to a single mode Resonator with a maximum of two photons. Hilbert Space Dimensions: 6 by 6
   `--SE 'G:0:X:0:1:0;X:1.5eV:-:1:1:1'`
-  `--SO 'c:1.5eV:2:GX:1:1'`
-- Three Level System with cavity at two-photon resonance. No direct Ground-to-Highest State transition is allowed in this system. Phonons scaled doubled for the upper state. Hilbert Space Dimensions: `9 by 9`.
+  `--SO 'c:1.5eV:2:G=X:1:1'`
+- Three Level System with cavity at two-photon resonance. No direct Ground-to-HiG=Hest State transition is allowed in this system. Phonons scaled doubled for the upper state. Hilbert Space Dimensions: `9 by 9`.
   `--SE 'G:0:L:0:1:0;L:1.5eV:U:1:1:1;U:2.8eV:-:1:1:2'`
   `--SO 'c:1.6eV:2:GL,LU:1,1:1'`
 - [Polarized Biexciton with polarization dependent cavity modes](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308). The excitons are seperated by a large finestructuresplitting energy of `100mueV` and the biexciton is reduced by a binding energy of `20meV`. The resonators lie at the two-photon resonance of the biexciton and only couple to their specific polarized exciton transitions. Hilbert Space Dimensions: `36 by 36`.
   `--SE 'G:0:H,V:0:1:0;H:1.5001eV:Z:1:1:1;V:1.4999eV:Z:1:1:1;Z:2.98eV:-:1:1:1'`
-  `--SO 'h:1.49eV:2:GH,HZ:1,1:1;v:1.49eV:2:GV,VZ:1,1:1'`
+  `--SO 'h:1.49eV:2:G=H,H=Z:1,1:1;v:1.49eV:2:G=V,V=Z:1,1:1'`
 - Polarized Biexciton with polarization dependend bi-modal cavity modes. The two energetically distinguishable resonator modes enhance the ground-exciton as well as the exciton-biexciton transitions. Hilbert Space Dimensions: `324 by 324`.
   `--SE 'G:0:H,V:0:1:0;H:1.5001eV:Z:1:1:1;V:1.4999eV:Z:1:1:1;Z:2.98eV:-:1:1:1'`
-  `--SO 'h:1.5eV:2:GH,HZ:1,1:1;v:1.5eV:2:GV,VZ:1,1:1;k:1.48eV:2:GH,HZ:1,1:1;l:1.48eV:2:GV,VZ:1,1:1'`
+  `--SO 'h:1.5eV:2:G=H,H=Z:1,1:1;v:1.5eV:2:G=V,V=Z:1,1:1;k:1.48eV:2:G=H,H=Z:1,1:1;l:1.48eV:2:G=V,V=Z:1,1:1'`
 
 ### Optical Pulse - Optical Driving of the electronic or optical transitions
 
@@ -166,15 +166,15 @@ There are additional type parameters that can be added onto either `cw` or `gaus
 
 Examples:
 
-    --SP 'p:GX:1pi:1.5eV:2ps:20ps:gauss'
+    --SP 'p:G=X:1pi:1.5eV:2ps:20ps:gauss'
 
-Pulse for a single exciton with `Amp = PulseArea = 1*PI`, `Energy = 1.5eV`, centered at `Center = 20ps` with width `Width = 2ps`. The pulse is not chirped such that `Chirp = 0`. A Gaussian shape is used. Not that with `Type = gauss`, this pulse would have an energy equivalent of `Energy = 1Hz` due to the missing specification for the type. Since no `GaussAmp` was provided, the default value of `2` is used.
+Pulse for a single exciton with `Amp = PulseArea = 1*PI`, `Energy = 1.5eV`, centered at `Center = 20ps` with width `Width = 2ps`. The pulse is not chirped such that `Chirp = 0`. A Gaussian shape is used. Not that with `Type = gauss`, this pulse would have an energy equivalent of `Energy = 1H=Z` due to the missing specification for the type. Since no `GaussAmp` was provided, the default value of `2` is used.
 
-    --SP 'p:GH,HZ:5.4pi:1.48eV:5ps:30ps:gauss+exponent(12)'
+    --SP 'p:G=H,H=Z:5.4pi:1.48eV:5ps:30ps:gauss+exponent(12)'
 
 Pulse for the horizontally polarized biexciton transition. A `GaussAmp = 12` is used to approximate a flat-top Gaussian shape.
 
-    --SP 'p:GH,HZ:5.4pi,1pi,1:1.48eV,1.5eV,1.5eV:5ps,1ps,1ps:30ps,50ps,60ps:gauss,gauss,gauss'
+    --SP 'p:G=H,H=Z:5.4pi,1pi,1:1.48eV,1.5eV,1.5eV:5ps,1ps,1ps:30ps,50ps,60ps:gauss,gauss,gauss'
 
 The same pulse as before, followed by two short PI-pulses at later times.
 
@@ -323,9 +323,9 @@ Where `TEMP` is any value greater than or equal to zero. For values smaller than
 
 The spectral properties of the phonons are defined by
 
-![](<https://latex.codecogs.com/svg.image?%5Cleft.J_%7Bij%7D%5Comega=%5Csum_%7Bk%7D%5Cgamma_k%5Ei%5Cgamma_k%5Ej%5Cdelta(%5Comega-%5Comega_k)=%5Cfrac%7B%5Comega%5E3%7D%7B4%5Cpi%5E2%5Crho%5Chbar%20c_s%5E5%7D%5Cleft(D_ee%5E%7B-%5Comega%5E2a_e%5E2/(4c_s%5E2)%7D-D_he%5E%7B-%5Comega%5E2a_h%5E2/(4c_s%5E2)%7D%5Cright)%5E2=%5Calpha_p%5Comega%5E3e%5E%7B-%5Cfrac%7B%5Comega%5E2%7D%7B2%5Comega_b%7D%7D%5Cright.>).
+![](<https://latex.codecogs.com/svg.image?%5Cleft.J_%7Bij%7D%5Comega=%5Csum_%7Bk%7D%5Cgamma_k%5Ei%5Cgamma_k%5Ej%5Cdelta(%5Comega-%5Comega_k)=%5Cfrac%7B%5Comega%5E3%7D%7B4%5Cpi%5E2%5Crho%5Chbar%20c_s%5E5%7D%5Cleft(D_ee%5E%7B-%5Comega%5E2a_e%5E2/(4c_s%5E2)%7D-D_he%5E%7B-%5Comega%5E2a_h%5E2/(4c_s%5E2)%7D%5CriG=Ht)%5E2=%5Calpha_p%5Comega%5E3e%5E%7B-%5Cfrac%7B%5Comega%5E2%7D%7B2%5Comega_b%7D%7D%5CriG=Ht.>).
 
-While the specific spectral shape varies slightly for electrons (`e`) and holes (`h`), the algorithm used in this program assumes a unified distribution combining both electron and hole parameters into two settings:
+While the specific spectral shape varies sliG=Htly for electrons (`e`) and holes (`h`), the algorithm used in this program assumes a unified distribution combining both electron and hole parameters into two settings:
 
     --phononalpha [COUPLING]
 
@@ -368,7 +368,7 @@ where `ORDER` is an integer value between `0` and `5`. The order defines:
 
 ### Path Integral
 
-The Path Integral approach accumulates all possible trajectories provided by the right side of the von-Neumann equation weighted accordingly by the electron-phonon coupling through a fixed number of iteration steps.
+The Path Integral approach accumulates all possible trajectories provided by the riG=Ht side of the von-Neumann equation weiG=Hted accordingly by the electron-phonon coupling throuG=H a fixed number of iteration steps.
 The path integral specific settings read:
 
     --NC [STEPS]
@@ -411,9 +411,9 @@ To specify the resolution for the `G1` and `G2` grid, see `Numerical Parameters`
 
 Examples:
 
-    --GF 'h,GX:1,1:2,2'
+    --GF 'h,G=X:1,1:2,2'
 
-Calculating the G1 functions for the resonator mode `h` and the radiative electronic mode `GX`. Both of order `1` and both output as a matrix and integrated.
+Calculating the G1 functions for the resonator mode `h` and the radiative electronic mode `G=X`. Both of order `1` and both output as a matrix and integrated.
 
     --GF 'h,h:1,2:2:2'
 
@@ -444,9 +444,9 @@ Examples:
 
 Calculating the emission spectrum for the resonator mode `h` centered around `1.5meV` expanding for `500mueV` in both directions. The Fourier transformation is evaluated for `1000` points, resulting in $d\omega=1\mu eV$.
 
-    --GS 'h,GX,h+GX:1.5eV,1.5eV,1.5eV:1meV,1meV,1meV:2000,2000,2000'
+    --GS 'h,G=X,h+G=X:1.5eV,1.5eV,1.5eV:1meV,1meV,1meV:2000,2000,2000'
 
-Calculating the emission spectra for the resonator mode `h`, the radiative transition `GX` and the superposition of both `h+GX` using the same parameters as before.
+Calculating the emission spectra for the resonator mode `h`, the radiative transition `G=X` and the superposition of both `h+G=X` using the same parameters as before.
 
 ---
 
@@ -454,17 +454,17 @@ Calculating the emission spectra for the resonator mode `h`, the radiative trans
 
 The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%E2%80%93Ou%E2%80%93Mandel_effect) is a figure of merit for the consistentcy and quality of a single photon source. The indistinguishability is calculated [via](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.045309)
 
-![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BI%7D_%7Bi%7D%20%3D%201-p_%7Bc%2Ci%7D%20%3D%201-%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29dt%27dt%7D%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%5Cleft%28%202G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29-%20%7C%5Clangle%5Chat%7Ba%7D_i%28t+t%27%29%5Crangle%20%5Clangle%5Chat%7Ba%7D_i%5E%5Cdagger%28t%29%5Crangle%7C%5E2%20%5Cright%29dt%27dt%7D)  
+![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BI%7D_%7Bi%7D%20%3D%201-p_%7Bc%2Ci%7D%20%3D%201-%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29dt%27dt%7D%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%5Cleft%28%202G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29-%20%7C%5Clangle%5Chat%7Ba%7D_i%28t+t%27%29%5Crangle%20%5Clangle%5Chat%7Ba%7D_i%5E%5Cdagger%28t%29%5Crangle%7C%5E2%20%5CriG=Ht%29dt%27dt%7D)  
 with
 
-![](https://latex.codecogs.com/svg.latex?G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29%20%3D%20%5Cfrac%7B1%7D%7B2%7D%5Cleft%28%20G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29+G%5E%7B%282%29%7D_%7Bi%2Ci%7D%28t%2Ct%27%29%20-%20%7CG_i%5E%7B%281%29%7D%28t%2Ct%27%29%7C%5E2%20%5Cright%29)  
+![](https://latex.codecogs.com/svg.latex?G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29%20%3D%20%5Cfrac%7B1%7D%7B2%7D%5Cleft%28%20G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29+G%5E%7B%282%29%7D_%7Bi%2Ci%7D%28t%2Ct%27%29%20-%20%7CG_i%5E%7B%281%29%7D%28t%2Ct%27%29%7C%5E2%20%5CriG=Ht%29)  
 and
 
 ![](https://latex.codecogs.com/svg.latex?G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%20%3D%20%5Clangle%5Chat%7Bb%7D_i%5E%5Cdagger%5Chat%7Bb%7D_i%5Crangle%28t%29%5Clangle%5Chat%7Bb%7D_i%5E%5Cdagger%5Chat%7Bb%7D_i%5Crangle%28t+t%27%29).
 
 The single photon visibility is a more simple figure of merit for the photon quality and is calculated [via](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.125.233605)
 
-![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BV%7D_%7Bi%7D%20%3D%20%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202%7CG_%7Bi%7D%5E%7B%281%29%7D%28t%2Ct%27%29%7C%5E2%5Ctext%7Bd%7Dt%27%5Ctext%7Bd%7Dt%7D%7B%5Cleft%28%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Clangle%5Chat%7Ba%7D%5E%5Cdagger_i%28t%29%5Chat%7Ba%7D_i%28t%29%5Crangle%5Ctext%7Bd%7Dt%5Cright%29%5E2%7D).
+![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BV%7D_%7Bi%7D%20%3D%20%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202%7CG_%7Bi%7D%5E%7B%281%29%7D%28t%2Ct%27%29%7C%5E2%5Ctext%7Bd%7Dt%27%5Ctext%7Bd%7Dt%7D%7B%5Cleft%28%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Clangle%5Chat%7Ba%7D%5E%5Cdagger_i%28t%29%5Chat%7Ba%7D_i%28t%29%5Crangle%5Ctext%7Bd%7Dt%5CriG=Ht%29%5E2%7D).
 
 If any of the neccessary `G1` or `G2` correlation functions is not yet available, it will be automatically calculated. The general syntax reads:
 
@@ -482,9 +482,9 @@ Examples:
 
 Calculate both properties for a single resonator mode `h`.
 
-    --GI 'h,GH,h+GH'
+    --GI 'h,G=H,h+G=H'
 
-Calculate both properties for the resonator mode `h`, the radiative transition `GH` and the superposition of both.
+Calculate both properties for the resonator mode `h`, the radiative transition `G=H` and the superposition of both.
 
 ---
 
@@ -502,7 +502,7 @@ Because of symmetry of the operators, only 6 of the 8 `G2` functions have to be 
 
 where
 
-![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BC%7D%20%3D%20%5Ctext%7Bmax%7D%5Cleft%5C%7B%7B0%2C%5Clambda_4-%5Clambda_3-%5Clambda_2-%5Clambda_1%7D%5Cright%5C%7D%20%5Ctext%7B%20with%20%7D%20%5Clambda_i%20%5Ctext%7B%20%5Ctextit%7Bi%7D%27th%20Eigenvalue%20of%20%7D%20R)
+![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BC%7D%20%3D%20%5Ctext%7Bmax%7D%5Cleft%5C%7B%7B0%2C%5Clambda_4-%5Clambda_3-%5Clambda_2-%5Clambda_1%7D%5CriG=Ht%5C%7D%20%5Ctext%7B%20with%20%7D%20%5Clambda_i%20%5Ctext%7B%20%5Ctextit%7Bi%7D%27th%20Eigenvalue%20of%20%7D%20R)
 
 If any of the neccessary `G2` correlation functions is not yet available, it will be automatically calculated. Note that if the Hilbert space of the system does not allow `G2` to be non-zero (e.g only a single photon allowed in a resonator mode), the concurrence will be undefined. The general syntax reads:
 
@@ -518,7 +518,7 @@ Examples:
 
 Calculating the concurrence for the two resonator modes of the polarization dependent biexciton.
 
-    --GC 'h+GH+HZ-v+GV+VZ'
+    --GC 'h+G=H+H=Z-v+G=V+V=Z'
 
 Calculating the concurrence for every cavity or radiative mode of the polarization dependent biexciton.
 
@@ -526,7 +526,7 @@ Calculating the concurrence for every cavity or radiative mode of the polarizati
 
 ## Wigner Function
 
-The Wigner function is calculated using the weighted superposition of Laguerre polynomials. A reduced denistymatrix for a given mode is calculated by using a partial trace over the total Hilbert space. This densitymatrix is then assumed to be in a Fock-base containing the different weights for the Laguerre polynomials.
+The Wigner function is calculated using the weiG=Hted superposition of Laguerre polynomials. A reduced denistymatrix for a given mode is calculated by using a partial trace over the total Hilbert space. This densitymatrix is then assumed to be in a Fock-base containing the different weiG=Hts for the Laguerre polynomials.
 
 The general syntax to calculate the Wigner function reads:
 
@@ -538,7 +538,7 @@ The parameters read as follows:
 - `X` : Comma sperated list of X-Resolutions, where the total interval will be `-X:X`
 - `Y` : Optional Parameter, comma seperated list of Y-Resolutions. As default it is assumed that X=Y
 - `Resolution` : Optional Parameter, comma sperated list of resolutions, where `dx,dy = 2X/Resolution, 2Y/Resolution`. The default value is `100`.
-- `Skip` : Number of timesteps to skip. Higher values will result in faster calculations. The default value is `1`.
+- `Skip` : Number of timesteps to skip. HiG=Her values will result in faster calculations. The default value is `1`.
 
 Examples:
 
@@ -688,7 +688,7 @@ Will result in the `RK4` method to use a `10fs` timestep, while the output will 
 
 ### Logfile Output
 
-The program generates `logfile.log` which contains information about the input parameters as well as the calculated outputs. While general information is always logged, higher tiers of logging can be enabled, mostly for debugging purposes because the creator of this program refuses to read into actual g++ debugging :)
+The program generates `logfile.log` which contains information about the input parameters as well as the calculated outputs. While general information is always logged, hiG=Her tiers of logging can be enabled, mostly for debugging purposes because the creator of this program refuses to read into actual g++ debugging :)
 
     -L2
 
