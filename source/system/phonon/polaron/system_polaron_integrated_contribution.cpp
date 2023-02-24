@@ -39,15 +39,16 @@ static inline std::tuple<Sparse, Sparse> _interpolate_cached_coefficient( const 
     const auto& greater_or_equal_than_t = saved_coefficients.lower_bound( t );
     const auto& smaller_than_t = std::prev( greater_or_equal_than_t );
     //  Interpolate
-    const auto& chi_tau_back_u = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat1, greater_or_equal_than_t->second.begin()->second.mat1, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
-    const auto& chi_tau_back_g = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat2, greater_or_equal_than_t->second.begin()->second.mat2, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
+    const auto& chi_tau_back_g = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat1, greater_or_equal_than_t->second.begin()->second.mat1, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
+    const auto& chi_tau_back_u = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat2, greater_or_equal_than_t->second.begin()->second.mat2, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
+    Log::L3("Returning interpolate coefficient for t = {} using t0 = {} and t1 = {}, where t1-t0 = {}\n",t,smaller_than_t->first*1E12,greater_or_equal_than_t->first*1E12,(-smaller_than_t->first+greater_or_equal_than_t->first)*1E12);
     return std::make_tuple( chi_tau_back_g, chi_tau_back_u );
 }
 
-static inline std::tuple<Sparse, Sparse> _get_thread_reduced_coefficients( const auto& threadmap_u, const auto& threadmap_g ) {
+static inline std::tuple<Sparse, Sparse> _get_thread_reduced_coefficients( const auto& threadmap_g, const auto& threadmap_u ) {
     return std::make_tuple(
-        std::accumulate( threadmap_u.begin(), threadmap_u.end(), Sparse( threadmap_u.front().rows(), threadmap_u.front().cols() ) ),
-        std::accumulate( threadmap_g.begin(), threadmap_g.end(), Sparse( threadmap_g.front().rows(), threadmap_g.front().cols() ) ) );
+        std::accumulate( threadmap_g.begin(), threadmap_g.end(), Sparse( threadmap_g.front().rows(), threadmap_g.front().cols() ) ),
+        std::accumulate( threadmap_u.begin(), threadmap_u.end(), Sparse( threadmap_u.front().rows(), threadmap_u.front().cols() ) ) );
 }
 
 Sparse System::dgl_phonons_integrated_contribution( const double t, const Sparse& rho, const std::vector<QDLC::SaveState>& past_rhos ) {
@@ -78,8 +79,8 @@ Sparse System::dgl_phonons_integrated_contribution( const double t, const Sparse
         // Not using saved_coefficients or index wasn't found or interpolation wasn't succesfull, recalculating.
         else {
             // Initialize temporary matrices to zero for threads to write to
-            std::vector<Sparse> threadmap_u( phonon_iterator_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
             std::vector<Sparse> threadmap_g( phonon_iterator_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
+            std::vector<Sparse> threadmap_u( phonon_iterator_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
             // Calculate backwards integral and sum it into threadmaps. Threadmaps will later be summed into one coefficient matrix.
 #pragma omp parallel for schedule( dynamic ) num_threads( phonon_iterator_threads )
             for ( int tau_index = 0; tau_index < tau_max; tau_index++ ) {

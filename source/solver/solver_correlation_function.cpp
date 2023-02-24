@@ -36,7 +36,8 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
     // Find Operator Matrices
     const auto op_i = get_operators_matrix( s, s_op_i );
     const auto op_l = get_operators_matrix( s, s_op_l );
-
+    Log::L2( "[CorrelationFunction] Iterated Operators are op_i = {} and op_l = {}\n", s_op_i, s_op_l );
+    
     // Matrix Dimension
     const size_t matdim = s.parameters.grid_values.size(); // int( savedStates.size() / s.parameters.iterations_t_skip );
 
@@ -58,7 +59,7 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
         // Construct Evaluation Operators
         eval_operators.emplace_back( op_j * op_k, purpose );
 
-        Log::L2( "[CorrelationFunction] Preparing Cache Matrices for {}...\n", purpose );
+        Log::L2( "[CorrelationFunction] Preparing Cache Matrices for {}. Using Eval Operators op_j = {}, op_k = {}\n", purpose, s_op_j[current], s_op_k[current] );
         cache[purpose] = CacheMatrix( matdim, purpose );
         auto &mat = cache[purpose];
         // Fill Time Matrix

@@ -31,12 +31,12 @@ static Dense _generate_spinflip() {
  * @param rho Map of rho matrix elements. Each entry contains a vector rho_ij(t), where t is the vector index
  * @return Dense
  */
-static Dense _rho_to_tpdm( const size_t i, const std::map<std::string, std::vector<Scalar>> &rho, const std::map<std::string, std::string> &me ) {
+static Dense _rho_to_tpdm( const size_t i, const std::map<std::string, std::vector<Scalar>> &rho ) {
     Dense ret = Dense::Zero( 4, 4 );
-    ret << rho.at( me.at( "1111" ) )[i], rho.at( me.at( "1211" ) )[i], rho.at( me.at( "2111" ) )[i], rho.at( me.at( "2211" ) )[i],
-        rho.at( me.at( "1112" ) )[i], rho.at( me.at( "1212" ) )[i], rho.at( me.at( "2112" ) )[i], rho.at( me.at( "2212" ) )[i],
-        rho.at( me.at( "1121" ) )[i], rho.at( me.at( "1221" ) )[i], rho.at( me.at( "2121" ) )[i], rho.at( me.at( "2221" ) )[i],
-        rho.at( me.at( "1122" ) )[i], rho.at( me.at( "1222" ) )[i], rho.at( me.at( "2122" ) )[i], rho.at( me.at( "2222" ) )[i];
+    ret << rho.at( "1111" )[i], rho.at( "1211" )[i], rho.at( "2111" )[i], rho.at( "2211" )[i],
+        rho.at( "1112" )[i], rho.at( "1212" )[i], rho.at( "2112" )[i], rho.at( "2212" )[i],
+        rho.at( "1121" )[i], rho.at( "1221" )[i], rho.at( "2121" )[i], rho.at( "2221" )[i],
+        rho.at( "1122" )[i], rho.at( "1222" )[i], rho.at( "2122" )[i], rho.at( "2222" )[i];
     // Add a tiny number that is otherwise out of reach of the TPM elements to avoid real zeros.
     ret.array() += 1E-200;
     // Norm by trace.
@@ -76,7 +76,7 @@ Dense _fidelity_matrix_wootters( const Dense &rho, const Dense &spinflip ) {
  * @param rho Input two photon density matrix
  * @param spinflip Spinflip matrix
  * @return Dense
-*/
+ */
 Dense _fidelity_matrix_seidelmann( const Dense &rho, const Dense &spinflip ) {
     const Dense M = rho * spinflip * rho.conjugate() * spinflip;
     return M;
@@ -86,12 +86,12 @@ Dense _fidelity_matrix_seidelmann( const Dense &rho, const Dense &spinflip ) {
  * @brief Calculates the concurrence eigenvalues from the fidelity matrix
  * @param fidelity_matrix Fidelity matrix
  * @return Dense
-*/
+ */
 Dense _concurrence_eigenvalues( const Dense &fidelity_matrix ) {
     Eigen::ComplexEigenSolver<Dense> eigensolver( fidelity_matrix );
     // The eigenvalues have to be real, positive and sorted. To ensure this, we take the absolute value and sort them in descending order.
-    auto eigenvalues = eigensolver.eigenvalues().real().cwiseAbs().eval();
-    std::ranges::sort( eigenvalues, std::greater<double>() );
+    auto eigenvalues = eigensolver.eigenvalues().eval();                                                              //.real().cwiseAbs().eval();
+    std::ranges::sort( eigenvalues, []( const auto &a, const auto &b ) { return std::real( a ) > std::real( b ); } ); // std::greater<double>()
     return eigenvalues;
 }
 
@@ -205,12 +205,10 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     tpdm_t rho;
     tpdm_t rho_g2zero;
     // And fill them with zeros
-    for ( const auto &[n, mode] : mode_purpose ) {
+    for ( const auto &mode : { "1111", "1211", "2111", "2211", "1112", "1212", "2112", "2212", "1121", "1221", "2121", "2221", "1122", "1222", "2122", "2222" } ) {
         rho[mode] = std::vector<Scalar>( T, 0 );
         rho_g2zero[mode] = std::vector<Scalar>( T, 0 );
     }
-    rho["zero"] = std::vector<Scalar>( T, 0 ); 
-    rho_g2zero["zero"] = std::vector<Scalar>( T, 0 ); 
 
     // #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( const auto &[mode, purpose] : mode_purpose ) {
@@ -219,19 +217,19 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         for ( int t = 0; t < T; t++ ) {
             // G2(t,tau)
             // Lower Triangle Integral -> Move to seperate function!
-            rho[purpose][t] = t > 0 ? rho[purpose][t - 1] : 0.0;
+            rho[mode][t] = t > 0 ? rho[mode][t - 1] : 0.0;
             for ( int i = 0; i <= t; i++ ) {
                 double dt = gmat.dt( i );
                 // Tau index is
                 int tau = t - i;
                 // for ( int tau = 0; tau < T - i; tau++ ) {
                 double dtau = gmat.dtau( tau, i ); // FIXED: dtau instead of dt!
-                rho[purpose][t] += gmat( i, tau ) * dt * dtau;
+                rho[mode][t] += gmat( i, tau ) * dt * dtau;
             }
             // G2(t,0) - No Triangular Integral
             double dt = gmat.dt( t );
             double t_t = gmat.t( t ); // std::real( gmat_time( t, 0 ) ); // Note: all correlation functions have to have the same times. cache[purpose+"_time"] else.
-            rho_g2zero[purpose][t] = t > 0 ? rho_g2zero[purpose][t - 1] + s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( rho_index_map[t_t] ), mode_matrix[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( 0 ), mode_matrix[mode], get_time_at( 0 ) ) * dt;
+            rho_g2zero[mode][t] = t > 0 ? rho_g2zero[mode][t - 1] + s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( rho_index_map[t_t] ), mode_matrix[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( 0 ), mode_matrix[mode], get_time_at( 0 ) ) * dt;
             if ( mode == "1111" ) {
                 timer_c.iterate();
                 Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + "): " );
@@ -267,47 +265,44 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
 
     // Generate spinflip matrix
     const Dense spinflip = _generate_spinflip();
-    // Map all used modes
-    std::map<std::string, std::string> rho_tpdm_string;
-    for ( const auto &mode : { "1111", "1211", "2111", "2211", "1112", "1212", "2112", "2212", "1121", "1221", "2121", "2221", "1122", "1222", "2122", "2222" } ) {
-        rho_tpdm_string[mode] = mode_purpose.contains( mode ) ? mode_purpose.at( mode ) : "zero";
-    }
+
     const int fidelity_method = 0; // 0 Wootters, 1 Seidelmann
     // Calculate two-photon densitymatrices and calculate concurrence
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( size_t k = 0; k < T; k++ ) {
-
         // Neumann-Iterated TPDM
-        const auto rho_2phot = _rho_to_tpdm( k, rho, rho_tpdm_string );
-        const auto fidelity_matrix = fidelity_method ? _fidelity_matrix_seidelmann(rho_2phot, spinflip) : _fidelity_matrix_wootters(rho_2phot, spinflip);
-        auto eigenvalues = _concurrence_eigenvalues(fidelity_matrix);
-        if (fidelity_method)
+        const auto rho_2phot = _rho_to_tpdm( k, rho );
+        const auto fidelity_matrix = fidelity_method ? _fidelity_matrix_seidelmann( rho_2phot, spinflip ) : _fidelity_matrix_wootters( rho_2phot, spinflip );
+        auto eigenvalues = _concurrence_eigenvalues( fidelity_matrix );
+        if ( fidelity_method )
             eigenvalues = eigenvalues.cwiseSqrt().eval();
         auto conc = eigenvalues( 0 ) - eigenvalues( 1 ) - eigenvalues( 2 ) - eigenvalues( 3 );
         double fidelity = std::pow( std::real( fidelity_matrix.trace() ), 2.0 );
 
         // G2(0) TPDM
-        const auto rho_2phot_g2zero = _rho_to_tpdm( k, rho_g2zero, rho_tpdm_string );
-        const auto fidelity_matrix_g2zero = fidelity_method ? _fidelity_matrix_seidelmann(rho_2phot_g2zero, spinflip) : _fidelity_matrix_wootters(rho_2phot_g2zero, spinflip);
-        auto eigenvalues_g2zero = _concurrence_eigenvalues(fidelity_matrix_g2zero);
-        if (fidelity_method)
+        const auto rho_2phot_g2zero = _rho_to_tpdm( k, rho_g2zero );
+        const auto fidelity_matrix_g2zero = fidelity_method ? _fidelity_matrix_seidelmann( rho_2phot_g2zero, spinflip ) : _fidelity_matrix_wootters( rho_2phot_g2zero, spinflip );
+        auto eigenvalues_g2zero = _concurrence_eigenvalues( fidelity_matrix_g2zero );
+        if ( fidelity_method )
             eigenvalues_g2zero = eigenvalues_g2zero.cwiseSqrt().eval();
         auto conc_g2zero = eigenvalues_g2zero( 0 ) - eigenvalues_g2zero( 1 ) - eigenvalues_g2zero( 2 ) - eigenvalues_g2zero( 3 );
         double fidelity_g2zero = std::pow( std::real( fidelity_matrix_g2zero.trace() ), 2.0 );
 
-        // Analytical Eigenvalues. 
-        const auto eigenvalues_analytical = analytical_eigenvalues( rho_2phot / rho_2phot.trace() );
-        
+        // Analytical Eigenvalues.
+        auto eigenvalues_analytical = analytical_eigenvalues( rho_2phot );
+        std::ranges::sort( eigenvalues_analytical, []( const auto &a, const auto &b ) { return std::real( a ) > std::real( b ); } );
+        const auto conc_analytical = eigenvalues_analytical( 0 ) - eigenvalues_analytical( 1 ) - eigenvalues_analytical( 2 ) - eigenvalues_analytical( 3 );
+
         // Cache to output arrays
         output_eigenvalues.at( k ) = eigenvalues;
         output.at( k ) = conc;
-        output_simple.at( k ) = 2.0 * std::abs( rho_2phot( 3, 0 ) / rho_2phot.trace() );
+        output_simple.at( k ) = 2.0 * std::abs( rho_2phot( 0, 3 ) );
         output_fidelity.at( k ) = fidelity;
         output_g2zero.at( k ) = conc_g2zero;
-        output_g2zero_simple.at( k ) = 2.0 * std::abs( rho_2phot_g2zero( 3, 0 ) / rho_2phot_g2zero.trace() );
+        output_g2zero_simple.at( k ) = 2.0 * std::abs( rho_2phot_g2zero( 0, 3 ) );
         output_fidelity_g2zero.at( k ) = fidelity_g2zero;
         time.at( k ) = cache[mode_purpose.at( "1111" )].t( k );
-        output_analytical.at( k ) = eigenvalues_analytical( 3 ) - eigenvalues_analytical( 2 ) - eigenvalues_analytical( 1 ) - eigenvalues_analytical( 0 );
+        output_analytical.at( k ) = conc_analytical;
         twophotonmatrix.at( k ) = rho_2phot;
         twophotonmatrix_g2zero.at( k ) = rho_2phot_g2zero;
         timer_c.iterate();
