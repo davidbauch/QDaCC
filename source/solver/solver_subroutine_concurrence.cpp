@@ -38,9 +38,9 @@ static Dense _rho_to_tpdm( const size_t i, const std::map<std::string, std::vect
         rho.at( me.at( "1121" ) )[i], rho.at( me.at( "1221" ) )[i], rho.at( me.at( "2121" ) )[i], rho.at( me.at( "2221" ) )[i],
         rho.at( me.at( "1122" ) )[i], rho.at( me.at( "1222" ) )[i], rho.at( me.at( "2122" ) )[i], rho.at( me.at( "2222" ) )[i];
     // Add a tiny number that is otherwise out of reach of the TPM elements to avoid real zeros.
-    ret.array() += 1E-100;
+    ret.array() += 1E-200;
     // Norm by trace.
-    return ret / std::abs( ret.trace() );
+    return ret / ret.trace();
 }
 
 /**
@@ -88,8 +88,9 @@ Dense _fidelity_matrix_seidelmann( const Dense &rho, const Dense &spinflip ) {
  * @return Dense
 */
 Dense _concurrence_eigenvalues( const Dense &fidelity_matrix ) {
-    Eigen::SelfAdjointEigenSolver<Dense> eigensolver( fidelity_matrix );
-    auto eigenvalues = eigensolver.eigenvalues().real();
+    Eigen::ComplexEigenSolver<Dense> eigensolver( fidelity_matrix );
+    // The eigenvalues have to be real, positive and sorted. To ensure this, we take the absolute value and sort them in descending order.
+    auto eigenvalues = eigensolver.eigenvalues().real().cwiseAbs().eval();
     std::ranges::sort( eigenvalues, std::greater<double>() );
     return eigenvalues;
 }
@@ -208,9 +209,8 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         rho[mode] = std::vector<Scalar>( T, 0 );
         rho_g2zero[mode] = std::vector<Scalar>( T, 0 );
     }
-    // Set "Zero" to 1E-100 to avoid division by zero
-    rho["zero"] = std::vector<Scalar>( T, 1E-100 );
-    rho_g2zero["zero"] = std::vector<Scalar>( T, 1E-100 );
+    rho["zero"] = std::vector<Scalar>( T, 0 ); 
+    rho_g2zero["zero"] = std::vector<Scalar>( T, 0 ); 
 
     // #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( const auto &[mode, purpose] : mode_purpose ) {
