@@ -1,5 +1,7 @@
 # Kwandebungdprogramm
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/976b99b41ca44f34927dacf806c2c177)](https://app.codacy.com/gh/davidbauch/QDLC-C?utm_source=github.com&utm_medium=referral&utm_content=davidbauch/QDLC-C&utm_campaign=Badge_Grade_Settings)
+
 # Whats it doos?
 
 This program solves the von-Neumann Equation
