@@ -74,22 +74,10 @@ std::pair<std::string, std::string> QDLC::String::split_pair( const std::string 
 }
 
 int QDLC::String::instr( const std::string &arr, const std::string tofind, int start ) {
-    bool found = true;
-    for ( int i = start; i < (int)arr.size() + 1 - (int)tofind.size(); i++ ) {
-        found = true;
-        for ( int j = 0; j < (int)tofind.size(); j++ ) {
-            // fmt::print("comparing {} and {}... ",arr.at(i+j),tofind.at(j));
-            if ( tofind.at( j ) != arr.at( i + j ) ) {
-                found = false;
-                j = (int)tofind.size();
-            }
-        }
-        if ( found ) {
-            // fmt::print("found at index {}\n",i);
-            return i;
-        }
-    }
-    return -1;
+    auto pos = arr.find(tofind, start);
+    if (pos == std::string::npos)
+        return -1;
+    return pos;
 }
 
 std::vector<std::string> QDLC::String::str_to_vec( std::string input ) {

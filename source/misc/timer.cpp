@@ -108,31 +108,31 @@ std::string Timer::format( double in ) {
 
 // returns total time taken
 double Timers::Isummary( bool output ) {
-    int len = 0;
-    double totalWallTime = 0;
+    const int len = std::ranges::max( timers, []( auto &a, auto &b ) { return a.getName().size() < b.getName().size(); } ).getName().size();
+    
+    Log::Logger::inBar( "Timer" );
     double totalCPUTime = 0;
+    double totalWallTime = 0;
     for ( Timer timer : timers ) {
-        if ( (int)timer.getName().size() > len )
-            len = timer.getName().size();
-    }
-    if ( output ) {
-        Log::Logger::inBar( "Timer" );
-        for ( Timer timer : timers ) {
-            if ( timer.addtoTotalStatistic ) {
-                totalWallTime += timer.getWallTime();
-                totalCPUTime += timer.getCPUTime();
-            }
-            if ( timer.printToSummary ) {
-                Log::L1( "{:<{}}: Walltime: {} ", timer.getName(), len, Timer::format( timer.getWallTime() ) );
-                if ( timer.getTotalIterationNumber() > 1 )
-                    Log::L1( "CPUTime: {} Iterations: {} Average Time per Iteration: {}", ( timer.getCPUTime() != 0 ) ? Timer::format( timer.getCPUTime() ) : "--", timer.getTotalIterationNumber(), Timer::format( timer.getAverageIterationTime() ) );
-                Log::L1( "\n" );
-            }
+        if ( timer.addtoTotalStatistic ) {
+            totalWallTime += timer.getWallTime();
+            totalCPUTime += timer.getCPUTime();
         }
-        Log::Logger::Bar( 75, Log::LEVEL_1, Log::BAR_1 );
-        Log::L1( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0 ? Timer::format( totalCPUTime ) : "--" ) );
-        Log::Logger::Bar();
+        if ( not output )
+            continue;
+        if ( timer.printToSummary ) {
+            Log::L1( "{:<{}}: Walltime: {} ", timer.getName(), len, Timer::format( timer.getWallTime() ) );
+            if ( timer.getTotalIterationNumber() > 1 )
+                Log::L1( "CPUTime: {} Iterations: {} Average Time per Iteration: {}", ( timer.getCPUTime() != 0 ) ? Timer::format( timer.getCPUTime() ) : "--", timer.getTotalIterationNumber(), Timer::format( timer.getAverageIterationTime() ) );
+            Log::L1( "\n" );
+        }
     }
+    if ( not output )
+        return totalWallTime;
+    
+    Log::Logger::Bar( 75, Log::LEVEL_1, Log::BAR_1 );
+    Log::L1( "{:<{}}: Walltime: {} CPUTime: {}\n", "Total", len, Timer::format( totalWallTime ), ( totalCPUTime != 0 ? Timer::format( totalCPUTime ) : "--" ) );
+    Log::Logger::Bar();
     return totalWallTime;
 }
 
@@ -146,12 +146,12 @@ void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int cu
     if ( t.doOutput() || state == PROGRESS_FORCE_OUTPUT ) {
         if ( state == WAITING ) {
             p.wait( "", suffix );
-        } else if ( state == PROGRESS_FORCE_OUTPUT ){
+        } else if ( state == PROGRESS_FORCE_OUTPUT ) {
             p.print( max_iter_total, max_iter_total, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
             fmt::print( "\n" );
-        }else {
-            const double time_remaining =  t.getWallTimeOnce()/current_iter*(max_iter_total-current_iter);
-            p.print( current_iter, max_iter_total, fmt::format( "T - {}", Timer::format( time_remaining )), suffix );
+        } else {
+            const double time_remaining = t.getWallTimeOnce() / current_iter * ( max_iter_total - current_iter );
+            p.print( current_iter, max_iter_total, fmt::format( "T - {}", Timer::format( time_remaining ) ), suffix );
         }
     }
 }
