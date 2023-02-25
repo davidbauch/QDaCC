@@ -41,7 +41,7 @@ static inline std::tuple<Sparse, Sparse> _interpolate_cached_coefficient( const 
     //  Interpolate
     const auto& chi_tau_back_g = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat1, greater_or_equal_than_t->second.begin()->second.mat1, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
     const auto& chi_tau_back_u = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat2, greater_or_equal_than_t->second.begin()->second.mat2, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
-    Log::L3("Returning interpolate coefficient for t = {} using t0 = {} and t1 = {}, where t1-t0 = {}\n",t,smaller_than_t->first*1E12,greater_or_equal_than_t->first*1E12,(-smaller_than_t->first+greater_or_equal_than_t->first)*1E12);
+    Log::L3( "Returning interpolate coefficient for t = {} using t0 = {} and t1 = {}, where t1-t0 = {}\n", t, smaller_than_t->first * 1E12, greater_or_equal_than_t->first * 1E12, ( -smaller_than_t->first + greater_or_equal_than_t->first ) * 1E12 );
     return std::make_tuple( chi_tau_back_g, chi_tau_back_u );
 }
 
@@ -81,6 +81,7 @@ Sparse System::dgl_phonons_integrated_contribution( const double t, const Sparse
             // Initialize temporary matrices to zero for threads to write to
             std::vector<Sparse> threadmap_g( phonon_iterator_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
             std::vector<Sparse> threadmap_u( phonon_iterator_threads, Sparse( parameters.maxStates, parameters.maxStates ) );
+            
             // Calculate backwards integral and sum it into threadmaps. Threadmaps will later be summed into one coefficient matrix.
 #pragma omp parallel for schedule( dynamic ) num_threads( phonon_iterator_threads )
             for ( int tau_index = 0; tau_index < tau_max; tau_index++ ) {
@@ -105,7 +106,7 @@ Sparse System::dgl_phonons_integrated_contribution( const double t, const Sparse
     }
     // Calculate phonon contributions from (saved/calculated) coefficients and rho(t)
     Sparse adjoint = integrant.adjoint();
-    return -(integrant+adjoint);
+    return -( integrant + adjoint );
 }
 
 //} else {
