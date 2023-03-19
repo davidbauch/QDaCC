@@ -2,26 +2,7 @@
 
 using namespace QDLC;
 
-namespace std {
-double max( const Parameter &p1, const Parameter &p2 ) {
-    return max( p2.get(), p1.get() );
-}
-double min( const Parameter &p1, const Parameter &p2 ) {
-    return min( p2.get(), p1.get() );
-}
-}; // namespace std
-
 Parameters::Parameters( const std::vector<std::string> &arguments ) {
-    numerics_use_interactionpicture = 0;
-    numerics_use_rwa = 0;
-    numerics_order_timetrafo = QDLC::TransformationOrder::MatrixExponential;
-    output_advanced_log = 0;
-    output_handlerstrings = 0;
-    iterations_t_skip = 1;
-    iterations_t_max = -1;
-    maxStates = 0;
-    numerics_calculate_till_converged = false;
-
     // Parsing input:
     Timer &timer_parseInput = Timers::create( "Parsing parameters", true, false ).start();
     Log::Logger::wrapInBar( "Conversion of input variables", Log::BAR_SIZE_FULL, Log::LEVEL_2, Log::BAR_0 );
@@ -138,6 +119,8 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
     hbar = 1.0545718E-34; // J/s, scaling will be 1
 
+    maxStates = 0;
+    numerics_calculate_till_converged = false;
     numerics_main_direction_done = false;
 
     parse_system();
@@ -205,7 +188,7 @@ void Parameters::pre_adjust_input() {
 
     // Set interpolation order:
     auto orders = QDLC::String::splitline( s_numerics_interpolate, ',' );
-    std::map<std::string, int> methods = { { "monotone", 3 }, { "linear", 0 } };
+    std::map<std::string, int> methods = { {"cubic", 1}, { "monotone", 2 }, { "linear", 0 } };
     std::string method_time = orders.front();
     std::string method_tau = orders.size() > 1 ? orders.back() : "linear";
     numerics_interpolate_method_time = methods[method_time];
@@ -594,6 +577,11 @@ void Parameters::parse_system() {
     }
 }
 
+std::string _get_interpolator_name(int index) {
+    const std::vector names = {"Linear", "Quintic Hermite", "Cubic Hermite"};
+    return names[index];
+}
+
 void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "         _______                   _____                    _____     _____          \n        /::\\    \\                 /\\    \\                  /\\    \\   /\\    \\         \n       /::::\\    \\               /::\\    \\                /::\\____\\ /::\\    \\        \n      /::::::\\    \\             /::::\\    \\              /:::/    //::::\\    \\       \n     /::::::::\\    \\           /::::::\\    \\            /:::/    //::::::\\    \\      \n    /:::/~~\\:::\\    \\         /:::/\\:::\\    \\          /:::/    //:::/\\:::\\    \\     \n   /:::/    \\:::\\    \\       /:::/  \\:::\\    \\        /:::/    //:::/  \\:::\\    \\    \n  /:::/    / \\:::\\    \\     /:::/    \\:::\\    \\      /:::/    //:::/    \\:::\\    \\   \n /:::/____/   \\:::\\____\\   /:::/    / \\:::\\    \\    /:::/    //:::/    / \\:::\\    \\  \n|:::|    |     |:::|    | /:::/    /   \\:::\\ ___\\  /:::/    //:::/    /   \\:::\\    \\ \n|:::|____|     |:::|____|/:::/____/     \\:::|    |/:::/____//:::/____/     \\:::\\____\\\n \\:::\\   _\\___/:::/    / \\:::\\    \\     /:::|____|\\:::\\    \\\\:::\\    \\      \\::/    /\n  \\:::\\ |::| /:::/    /   \\:::\\    \\   /:::/    /  \\:::\\    \\\\:::\\    \\      \\/____/ \n   \\:::\\|::|/:::/    /     \\:::\\    \\ /:::/    /    \\:::\\    \\\\:::\\    \\             \n    \\::::::::::/    /       \\:::\\    /:::/    /      \\:::\\    \\\\:::\\    \\            \n     \\::::::::/    /         \\:::\\  /:::/    /        \\:::\\    \\\\:::\\    \\           \n      \\::::::/    /           \\:::\\/:::/    /          \\:::\\    \\\\:::\\    \\          \n       \\::::/____/             \\::::::/    /            \\:::\\    \\\\:::\\    \\         \n        |::|    |               \\::::/    /              \\:::\\____\\\\:::\\____\\        \n        |::|____|                \\::/____/                \\::/    / \\::/    /        \n         ~~                       ~~                       \\/____/   \\/____/         \n                                                                                     \n" );
     Log::Logger::wrapInBar( "System Parameters" );
@@ -737,11 +725,12 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
         Log::L1( "Timeborder delta path integral: {:.8e} s - {:.2f} ps\n", t_step_pathint, t_step_pathint * 1E12 );
     }
-
+    Log::L1( "\n" );
     Log::Logger::wrapInBar( "G-Function Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( input_correlation.size() > 0 ) {
         //TODO: print grid resolution later
         Log::L1( "Tau-grid resolution is {}\n", numerics_calculate_till_converged ? "to be determined." : fmt::format( "{}x{}", grid_values.size(), grid_values.size() ) );
+        Log::L1("Interpolator used: {}\n", _get_interpolator_name(numerics_interpolate_method_tau) );
         Log::L1( "Calculating:\n" );
         for ( auto &[name, mat] : input_correlation ) {
             Log::L1( " - {} on mode(s):\n", name );
@@ -791,8 +780,9 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\nThreads used by Eigen: {}\n", numerics_maximum_secondary_threads, numerics_maximum_primary_threads, Eigen::nbThreads() );
     if ( p_phonon_T )
         Log::L1( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? "Yes" : "No" ) );
-    if ( numerics_interpolate_outputs )
-        Log::L1( "WARNING: Temporal outputs are interpolated!\n" );
+    if ( numerics_interpolate_outputs ) {
+        Log::L1( "WARNING: Temporal outputs are interpolated! Interpolator used: {}\n", _get_interpolator_name(numerics_interpolate_method_time) );
+    }
     if ( not numerics_use_function_caching )
         Log::L1( "NOT using function caching.\n" );
     if ( not numerics_use_saved_hamiltons )

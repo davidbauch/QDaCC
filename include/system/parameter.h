@@ -110,6 +110,18 @@ class Parameter {
     double operator/( Parameter &other ) {
         return get() / other.get();
     }
+    bool operator<( Parameter &other ) {
+        return get() < other.get();
+    }
+    bool operator>( Parameter &other ) {
+        return get() > other.get();
+    }
+    double operator<=( Parameter &other ) {
+        return get() <= other.get();
+    }
+    double operator>=( Parameter &other ) {
+        return get() >= other.get();
+    }
     friend std::ostream &operator<<( std::ostream &stream, Parameter &param ) {
         return stream << param.get();
     }

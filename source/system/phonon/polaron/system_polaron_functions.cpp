@@ -8,7 +8,6 @@ void System::initialize_polaron_frame_functions() {
         // Initialize Phi(tau)
         double tau = 0.0;
         double last = 1.0;
-        double first = std::abs( dgl_phonons_phi( 0.0 ) );
         while ( parameters.p_phonon_tcutoff < 0 ? true : ( tau < parameters.p_phonon_tcutoff ) ) {
             phi_vector[tau] = dgl_phonons_phi( tau );
             dgl_phonons_greenf_matrix( tau, 'g' );

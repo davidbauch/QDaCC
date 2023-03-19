@@ -69,10 +69,9 @@ QDLC::Numerics::Tensor QDLC::Numerics::ODESolver::iterate_path_integral( System 
     // Create New Tensor
     Tensor adm_tensor_next( adm_tensor.nonZeros() );
     const auto different_dimensions = adm_tensor.secondary_dimensions();
-
     // Iterate Tensor
 #pragma omp parallel for num_threads( s.parameters.numerics_maximum_secondary_threads ) schedule( static )
-    for ( const Tensor::IndexVector &index : adm_tensor.get_indices() ) {
+    for ( Tensor::IndexVector &index : adm_tensor.get_indices() ) {
         Scalar new_value = 0.0;
         // Extract N0,M0 indices
         int i_n = index[0];
@@ -103,11 +102,7 @@ QDLC::Numerics::Tensor QDLC::Numerics::ODESolver::iterate_path_integral( System 
                 index_old[0] = i_n_m1;
                 index_old[1] = j_n_m1;
                 // Propagator value
-                Scalar propagator_value;
-                // if ( j_n_m1 > i_n_m1 )
-                //     propagator_value = std::conj( propagator[j_n_m1][i_n_m1].coeff( i_n, j_n ) );
-                // else
-                propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
+                Scalar propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
                 // If this propagation is not allowed, continue
                 if ( QDLC::Math::abs2( propagator_value ) == 0.0 )
                     continue;
@@ -154,6 +149,8 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     auto adm_tensor = _generate_initial_tensor( s, rho0 );
     const auto tensor_dim = adm_tensor.primary_dimensions();
     adm_tensor.save_to_file( 0 );
+ 
+    const bool save_tensor = not s.parameters.input_correlation.empty();
 
     // First step is just rho0
     Sparse rho = rho0;
@@ -167,14 +164,23 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         // Calculate Propagators for current time
         auto &propagator = calculate_propagator_vector( s, tensor_dim, t_t, s.parameters.numerics_subiterator_stepsize, output );
         // Iterate the tensor
+        //adm_tensor = iterate_path_integral_gpu( s, adm_tensor, propagator, max_index );
         adm_tensor = iterate_path_integral( s, adm_tensor, propagator, max_index );
         rho = _reduce_adm_tensor( adm_tensor );
         // Save Rho
         saveState( rho, t_t + s.parameters.t_step_pathint, output );
 
-        // Save ADM Tensor to file
-        const int tensor_int_time = std::floor( 1.001 * t_t / s.parameters.t_step_pathint + 1. );
-        adm_tensor.save_to_file( tensor_int_time );
+        // Save ADM Tensor to file 
+        if (save_tensor){
+            const int tensor_int_time = std::floor( 1.001 * t_t / s.parameters.t_step_pathint + 1. );
+            adm_tensor.save_to_file( tensor_int_time );
+        }
+ 
+        // If prune == auto: prune tensor if non_zero elements dont change below difference of 10 elements and NC > NC_max
+        // if prune = manual: Xps:prune:[threshold];Yps:extend;Zps:prune:[threshold] where prune calls prune, extend cleas pruned vector.
+        // if prune is set to auto, automatically determine prunes and extends using the pulse, chirp 
+        if (t_t / s.parameters.t_step_pathint > 6. and not adm_tensor.is_pruned()) 
+            adm_tensor.make_indices_sparse(); 
 
         // Progress and time output
         rkTimer.iterate();

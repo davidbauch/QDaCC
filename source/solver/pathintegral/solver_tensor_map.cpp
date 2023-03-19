@@ -1,10 +1,12 @@
 #include "solver/solver_tensor_map.h"
 #include "system/fileoutput.h"
+#include "misc/helperfunctions_math.h"
 
 using namespace QDLC::Numerics;
 
 QDLC::Numerics::Tensor::IndexMap QDLC::Numerics::Tensor::index_vector_to_index_flat_struct{};
 QDLC::Numerics::Tensor::IndexRefVector QDLC::Numerics::Tensor::index_flat_to_index_vector_struct{};
+QDLC::Numerics::Tensor::IndexRefVector QDLC::Numerics::Tensor::index_flat_to_index_vector_struct_pruned{};
 int QDLC::Numerics::Tensor::tensor_dimensions{};
 int QDLC::Numerics::Tensor::different_dimensions{};
 int QDLC::Numerics::Tensor::tensor_size{};
@@ -69,6 +71,21 @@ void Tensor::load_from_file( const int index ) {
     }
     f_adm.close();
     Log::L2( "[PathIntegral] Loaded {} non-zero elements from file {}.\n", non_zeros, file_name );
+}
+
+void Tensor::make_indices_sparse(const double eps ) {
+    int non_zeros = 0;
+    index_flat_to_index_vector_struct_pruned.clear();
+    const auto max_size = index_flat_to_index_vector_struct.size();
+    index_flat_to_index_vector_struct_pruned.reserve( max_size );
+    for (auto i = 0; i < values.size(); i++) {
+        if (QDLC::Math::abs2(values[i]) < eps) 
+            continue;
+        non_zeros++;
+        index_flat_to_index_vector_struct_pruned.push_back(index_flat_to_index_vector_struct[i]);
+    }
+    index_flat_to_index_vector_struct_pruned.shrink_to_fit();
+    Log::L2("[PathIntegral] Pruned {} elements from the dimension vector ({} elements to the index vector).\n", index_flat_to_index_vector_struct.size() - non_zeros, non_zeros);
 }
 
 void Tensor::permute( IndexVector current, const IndexVector &dimensions, int index ) {

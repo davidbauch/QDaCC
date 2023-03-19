@@ -12,7 +12,6 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
     std::vector<QDLC::SaveState> ret;
     ret.reserve( num_of_points );
     if ( order == 0 ) {
-        size_t max_index = t_values.size() - 2;
         Log::L3( "Interpolating from {} to {} to vector of size {} with timevector of size {}, anticipaed return suize is {}\n", t_start, t_end, input.size(), t_values.size(), t_values.size() - current_index );
         //  Do a very simple linear interpolation. Linear and monotone interpolation should be changed by paramter
         size_t i = 1;
@@ -36,9 +35,6 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
             double f = ( t_t - first ) / ( second - first );
             Sparse mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
             ret.push_back( { mat, t_t } );
-            // current_index = std::min<size_t>( current_index + 1, t_values.size() - 2 );
-            // if ( current_index < max_index )
-            //    current_index++;
             if ( current_index == t_values.size() - 1 )
                 break;
             current_index = std::min<size_t>( current_index + 1, t_values.size() - 1 );
@@ -103,7 +99,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         //     ret.back().mat.makeCompressed();
         // }
     }
-    // Log::L2("Done interpolating, returnign vector of size {}\n",ret.size());
+    Log::L2("Done interpolating, returnign vector of size {}\n",ret.size());
     return ret;
 }
 

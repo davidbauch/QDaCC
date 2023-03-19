@@ -15,7 +15,7 @@ INC_DIRS := include/ external/ #$(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 LIB_DIRS :=  #$(shell find $(SRC_DIRS) -type d)
-LIB_FLAGS := $(addprefix -L,$(LIB_DIRS)) -O3 -DFMT_HEADER_ONLY -D_GLIBCXX_PARALLEL
+LIB_FLAGS := $(addprefix -L,$(LIB_DIRS)) -O3 -DFMT_HEADER_ONLY -D_GLIBCXX_PARALLEL -l OpenCL
 LIB_LINKS := 
 
 ifneq ($(COMPILER), /opt/intel/oneapi/compiler/latest/mac/bin/intel64/icpc)

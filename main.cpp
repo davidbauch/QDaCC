@@ -96,8 +96,9 @@ int main( int argc, char* argv[] ) {
         Log::L1( "\nStartcommand: " );
         for ( auto& ii : inputs )
             Log::L1( "{} ", ii );
-        Log::L1( "\n\nTerminate.\n" );
+        Log::L1( "\n" );
 
+        // TODO: remove all handlerstrings, because they are not needed anymore
         if ( system.parameters.output_handlerstrings ) {
             Log::L1( "\n{0} {1:.1f}\n", QDLC::Message::Prefix::PERCENT_TIME_FINAL, finalTime );
             Log::L1( "{0} Done in {1}\n", QDLC::Message::Prefix::SUFFIX, Timer::format( finalTime ) );

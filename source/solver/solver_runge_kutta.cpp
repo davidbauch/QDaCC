@@ -141,7 +141,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t
     int tries = 1;
     while ( t_t <= t_end ) {
         // Make sure tolarances are correct
-        if ( t_t > std::get<0>( s.parameters.numerics_rk_tol[i] ) and i < s.parameters.numerics_rk_tol.size() ) {
+        if ( i < s.parameters.numerics_rk_tol.size() and t_t > std::get<0>( s.parameters.numerics_rk_tol[i] ) ) {
             i++;
             tolerance = std::get<1>( s.parameters.numerics_rk_tol[i] );
             Log::L3( "[Solver-RK45] Set local tolerance to {} at t = {} (threshold is {}).\n", tolerance, t_t, std::get<0>( s.parameters.numerics_rk_tol[i] ) );

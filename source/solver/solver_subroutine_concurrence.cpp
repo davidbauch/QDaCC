@@ -88,9 +88,20 @@ Dense _fidelity_matrix_seidelmann( const Dense &rho, const Dense &spinflip ) {
  * @return Dense
  */
 Dense _concurrence_eigenvalues( const Dense &fidelity_matrix ) {
-    Eigen::ComplexEigenSolver<Dense> eigensolver( fidelity_matrix );
+    // check if fidelity_matrix is approximately real:
+    const double threshold = 1E-14;
+    const bool is_approximately_real = fidelity_matrix.real().isApprox( fidelity_matrix, threshold );
+    Vector eigenvalues;
+    if ( is_approximately_real ) {
+        Log::L2("[Concurrence] Fidelity matrix is approximately real. Using General EigenSolver class.\n");
+        dDense fidelity_matrix_real = fidelity_matrix.real();
+        Eigen::EigenSolver<dDense> eigensolver( fidelity_matrix_real );
+        eigenvalues = eigensolver.eigenvalues().eval();
+    } else {
+        Eigen::ComplexEigenSolver<Dense> eigensolver( fidelity_matrix );
+        eigenvalues = eigensolver.eigenvalues().eval();
+    }
     // The eigenvalues have to be real, positive and sorted. To ensure this, we take the absolute value and sort them in descending order.
-    auto eigenvalues = eigensolver.eigenvalues().eval();                                                              //.real().cwiseAbs().eval();
     std::ranges::sort( eigenvalues, []( const auto &a, const auto &b ) { return std::real( a ) > std::real( b ); } ); // std::greater<double>()
     return eigenvalues;
 }

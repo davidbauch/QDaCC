@@ -59,7 +59,6 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
     // Calculate G1/G2 functions
     auto &gs_s = s.parameters.input_correlation["GFunc"];
     for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
-        double t_step = ( s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? s.parameters.t_step_pathint : s.parameters.t_step );
         /// TODO : in funktion
         auto modes = gs_s.string_v["Modes"][i];
         int order = std::abs( gs_s.property_set["Order"][i] );

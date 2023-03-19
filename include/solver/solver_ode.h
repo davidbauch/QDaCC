@@ -207,6 +207,7 @@ class ODESolver {
      * @brief Iterates rho0 from t_start to t_end using the Path Integral Method. 
     */
     Tensor iterate_path_integral( System &s, Tensor &adm_tensor, std::vector<std::vector<Sparse>>& propagator, const int max_index );
+    Tensor iterate_path_integral_gpu( System &s, Tensor &adm_tensor, std::vector<std::vector<Sparse>>& propagator, const int max_index );
     
     /**
      * @brief Calculates rho0 from t_start to t_end incorporating the corresponding correlation modification.

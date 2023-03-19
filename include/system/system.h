@@ -33,7 +33,6 @@ class System {
     std::vector<Scalar> phi_vector_int;
     // Vector of saved coefficients for e.g. phonon terms.
     std::map<double, std::map<double, QDLC::SaveStateTau>> savedCoefficients;
-
     // ##### Helper Variables #####
     std::map<std::string, double> emission_probabilities;
 

@@ -55,6 +55,8 @@ class Tensor {
    private:
     // Current Tensor Values. Creating a new Tensor will allocate this as new
     ValueVector values;
+    // When loading the tensor, save the non-zero indices here. Used to approximate sparse behaviour.
+    static IndexRefVector index_flat_to_index_vector_struct_pruned;
     // Index Maps can be static because we only need them once in memory.
     // Save IndexVector - to - IndexFlat map
     static IndexMap index_vector_to_index_flat_struct;
@@ -95,10 +97,10 @@ class Tensor {
         return index_flat_to_index_vector_struct[index];
     }
 
-    inline IndexRefVector &get_indices() {
-        return index_flat_to_index_vector_struct;
-    }
-    inline IndexRefVector &get_indices() const {
+    inline IndexRefVector &get_indices(bool sparse = false) {
+        sparse = not index_flat_to_index_vector_struct_pruned.empty();
+        if (sparse)
+            return index_flat_to_index_vector_struct_pruned;
         return index_flat_to_index_vector_struct;
     }
 
@@ -119,6 +121,11 @@ class Tensor {
 
     void save_to_file(const int index);
     void load_from_file(const int index);
+    void make_indices_sparse(const double eps = 1E-15);
+
+    bool is_pruned() {
+        return not index_flat_to_index_vector_struct_pruned.empty();
+    }
 
     static inline int max_size() {
         return tensor_size;
