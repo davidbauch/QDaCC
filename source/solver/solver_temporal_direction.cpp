@@ -52,6 +52,9 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
 
     // Index Map:
     Log::L2( "[Solver] Creating Index map for {} density matrices...\n", savedStates.size() );
+    // Output Warning if size of cached rhos is too large, indicating interpolation is necessary.
+    if (savedStates.size() > 20000)
+        Log::L2("[Solver] WARNING Size of saved states is very large! It may be advisable to interpolate to lower dimensions.\n");
     for ( int i = 0; i < savedStates.size(); i++ ) {
         rho_index_map[get_time_at( i )] = i;
     }

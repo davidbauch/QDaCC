@@ -106,7 +106,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
 std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, double t_step, int threads, int order, bool output_handler ) {
     size_t num_of_points = (size_t)( ( t_end - t_start ) / t_step );
     std::vector<QDLC::SaveState> ret;
-    Log::L2( "[Interpolator] Interpolation order = {}\n", order );
+    Log::L2( "[Interpolator] Interpolation order = {}. Reserving for {} points.\n", order, num_of_points );
     if ( order == 0 ) {
         // Linear Interpolation
         ret.reserve( num_of_points );
