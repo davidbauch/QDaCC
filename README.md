@@ -1,10 +1,10 @@
-# Kwandebungdprogramm
+# QDLC
 
 I created this program throughout my Bachelor's, Master's and my time as an ongoing PHD Student at the University of Paderborn.
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/7118c9d79bb5421392acac8d2da8e56a)](https://www.codacy.com/gh/davidbauch/QDLC-C/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=davidbauch/QDLC-C&amp;utm_campaign=Badge_Grade) [![DOI](https://zenodo.org/badge/190289483.svg)](https://zenodo.org/badge/latestdoi/190289483)
 
-# Whats it doos?
+# What does it do?
 
 This program solves the von-Neumann Equation
 
