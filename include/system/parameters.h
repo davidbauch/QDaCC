@@ -6,7 +6,7 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "0.4.0"
+#define GLOBAL_PROGRAM_VERSION "4.0.0"
 #define GLOBAL_PROGRAM_LASTCHANGE ""
 
 namespace QDLC {
