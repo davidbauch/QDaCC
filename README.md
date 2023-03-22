@@ -8,18 +8,18 @@ I created this program throughout my Bachelor's, Master's and my time as an ongo
 
 This program solves the von-Neumann Equation
 
-![](<https://latex.codecogs.com/svg.image?%5Cfrac%7B%5Ctext%7Bd%7D%5Crho%7D%7B%5Ctext%7Bd%7Dt%7D%20=%20%5Cfrac%7B%5Ci%7D%7B%5Chbar%7D%5Cleft%5B%5Cmathcal%7BH%7D,%5Crho%5CriG=Ht%5D%20+%20%5Csum%20%5Cmathcal%7BL%7D_%7B%5Chat%7BO%7D%7D(%5Crho)>)
+<img src="doc/von_neumann_equation.svg"  height="70px">
 
 for a given fermionic (electronic) system coupled to a (or multiple) bosonic optical resonator including multiple sources of Loss and Electron-Phonon coupling.
 
 The Hamilton Operator for the electronic and optical states reads
 
-![](https://latex.codecogs.com/svg.image?H_0%20=%5Csum_%7Bi%7DE_i%7C%7Bi%7D%5Crangle%5Clangle%7Bi%7D%7C%20+%20%5Csum_%7Bc%7D%20E_c%5Chat%7Bb%7D_c%5E%5Cdagger%5Chat%7Bb%7D_c%20)
+<img src="doc/hamilton_operator.svg"  height="70px">
 
 and is treated by an Interaction picture Transformation.
 The Interaction Hamilton is given by
 
-![](<https://latex.codecogs.com/svg.image?H_%5Ctext%7BInteraction%7D%20=%20%5Csum_%7Bij,c%7Dg%7C%7Bi%7D%5Crangle%5Clangle%7Bj%7D%7C%5Chat%7Bb%7D_c%5E%5Cdagger%20+%20%5Csum_%7Bij,p%7D%7C%7Bi%7D%5Crangle%5Clangle%7Bj%7D%7C%5COmega_p(t)%20+%20%5Ctext%7BH.c.%7D>)
+<img src="doc/hamilton_interaction.svg"  height="70px">
 
 where the transitions `|i><j|` are either coupled to the optical resonator `c` and/or to an external driving field `p`.
 
@@ -208,11 +208,11 @@ Multiple levels can be changed by the same chirp, and multiple chirps can be cha
 
 Examples:
 
-    --SC 'c:X:1:0,1meV,0,0:50ps,100ps,150ps,200ps:0,0,0,0:monotone'
+    --SC 'c:X:1:0,1meV,0,0:50ps,100ps,150ps,200ps:monotone'
 
 A chirp for a single state `CoupledTo = X` with an amplitude scaling of `AmpFactors = 1`. The curve will follow the list of points provided using a monotone interpolation method.
 
-    --SC 'c:H,V,Z:1,1,2:0,1meV,0,0:50ps,100ps,150ps,200ps:0,0,0,0:monotone'
+    --SC 'c:H,V,Z:1,1,2:0,1meV,0,0:50ps,100ps,150ps,200ps:monotone'
 
 The same chirp but for the biexciton system. The two single excitons are shifted with factor `1`, while the biexciton shifts twice with factor `2` because of its energy definition.
 
@@ -229,9 +229,9 @@ The general syntax reads:
 where `INITIALSTATE` can be multiple of the following, chained by using the chain oprator `+`:
 
 - `AMP|el|nN|...>`: General state, where `el` is the initially occupied electronic state. The amplitude for this state is `AMP`, where a complex amplitude is indicated by a trailing `i`. The initial resonator states `nN` are given by providing the resonator `N` and the photon number `n`. Note that the states are sorted alphabetically and need to be provided in the correct order for the initial state to function properly.
-  - Replacing the photon number `n` by `alpha#` indicates the resonator `N` should be initialized into a coherent state with `<n>=alpha`
-  - Replacing the photon number `n` by `alpha#` indicates the resonator `N` should be initialized into a thermal state with `<n>=alpha`
-  - Replacing the photon number `n` by `r_Phi&` indicates the resonator `N` should be initialized into a squeezed state with squeezing parameters `r` and `Phi`
+  - Replacing the photon number `n` by `coherent(alpha)` indicates the resonator `N` should be initialized into a coherent state with `<n>=alpha`
+  - Replacing the photon number `n` by `thermal(alpha)` indicates the resonator `N` should be initialized into a thermal state with `<n>=alpha`
+  - Replacing the photon number `n` by `squeezed(r,Phi)` indicates the resonator `N` should be initialized into a squeezed state with squeezing parameters `r` and `Phi`
 
 Examples:
 
@@ -243,11 +243,11 @@ Initial state is a fully occupied Biexciton with no phonons in either resonator.
 
 Initial state is a superposition of the Exciton and Groundstate. The result will be a pure state.
 
-    --R |G|2.0#h>
+    --R |G|coherent(2)h>
 
 Initial state is the electronic groundstate with a coherent state in resonator h with `alpha = 2`.
 
-    --R |G|0.1_0.5&h>
+    --R |G|squeezed(0.1,0.5)h>
 
 Initial state is the electronic groundstate with a squeezed state in resonator h with `r = 0.1` and `Phi = 0.5`.
 
@@ -395,11 +395,11 @@ Two different types of correlation functions can be evaluated: `G1(t,tau)` and `
 
 The G1 function is calculated via
 
-![](https://latex.codecogs.com/svg.latex?G_i%5E%7B%281%29%7D%28t%2Ct%27%29%20%3D%5Ctext%7BTr%7D%5B%7B%5Crho%27%28t%27%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29%7D%5D%5Ctext%7B%20with%20%7D%5Crho%27%280%29%20%3D%20%5Chat%7Bb%7D_i%280%29%5Crho%28t%29).
+<img src="doc/g1_corr_func.svg"  height="70px">.
 
 The G2 function is calculated via
 
-![](https://latex.codecogs.com/svg.latex?G_%7Bi%2Cj%7D%5E%7B%282%29%7D%28t%2Ct%27%29%20%3D%20%5Ctext%7BTr%7D%5B%7B%5Crho%27%28t%27%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29%5Chat%7Bb%7D_j%280%29%7D%5D%5Ctext%7B%20with%20%7D%5Crho%27%280%29%20%3D%20%5Chat%7Bb%7D_j%280%29%5Crho%28t%29%5Chat%7Bb%7D_i%5E%5Cdagger%280%29).
+<img src="doc/g2_corr_func.svg"  height="70px">.
 
 The general Syntax for both functions reads:
 
@@ -429,7 +429,7 @@ Calculating the G1 and G2 functions for the resonator mode `h`.
 
 The emission characteristics of any transition can be calculated by using the [Eberly-Wodkiewicz](https://www.osapublishing.org/josa/abstract.cfm?uri=josa-67-9-1252) Spectrum and is calculated via
 
-![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BS%7D_i%28t_%5Ctext%7Bmax%7D%2C%5Comega%29%20%3D%20%5CRe%20%5Cint_%7B0%7D%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D-t%7DG_i%5E%7B%281%29%7D%28t%2Ct%27%29e%5E%7B-i%5Comega%20t%27%7D%5Ctext%7Bd%7Dt%27%5Ctext%7Bd%7Dt).
+<img src="doc/ew_spectrum.svg"  height="70px">.
 
 If the neccessary `G1` function is not yet available, it will be calculated automatically. The fourier transformation is brute-forced for a set number of points. The general syntax for spectrum calculation reads:
 
@@ -458,17 +458,16 @@ Calculating the emission spectra for the resonator mode `h`, the radiative trans
 
 The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%E2%80%93Ou%E2%80%93Mandel_effect) is a figure of merit for the consistentcy and quality of a single photon source. The indistinguishability is calculated [via](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.045309)
 
-![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BI%7D_%7Bi%7D%20%3D%201-p_%7Bc%2Ci%7D%20%3D%201-%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29dt%27dt%7D%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%5Cleft%28%202G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29-%20%7C%5Clangle%5Chat%7Ba%7D_i%28t+t%27%29%5Crangle%20%5Clangle%5Chat%7Ba%7D_i%5E%5Cdagger%28t%29%5Crangle%7C%5E2%20%5CriG=Ht%29dt%27dt%7D)  
+<img src="doc/indist_small.svg" height="70px">
 with
+<img src="doc/indist_full.svg" height="140px">
+and 
 
-![](https://latex.codecogs.com/svg.latex?G_%7B%5Ctext%7BHOM%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29%20%3D%20%5Cfrac%7B1%7D%7B2%7D%5Cleft%28%20G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%28t%2Ct%27%29+G%5E%7B%282%29%7D_%7Bi%2Ci%7D%28t%2Ct%27%29%20-%20%7CG_i%5E%7B%281%29%7D%28t%2Ct%27%29%7C%5E2%20%5CriG=Ht%29)  
-and
-
-![](https://latex.codecogs.com/svg.latex?G_%7B%5Ctext%7Bpop%7D%2Ci%7D%5E%7B%282%29%7D%20%3D%20%5Clangle%5Chat%7Bb%7D_i%5E%5Cdagger%5Chat%7Bb%7D_i%5Crangle%28t%29%5Clangle%5Chat%7Bb%7D_i%5E%5Cdagger%5Chat%7Bb%7D_i%5Crangle%28t+t%27%29).
+<img src="doc/indist_g_pop.svg" height="140px">.
 
 The single photon visibility is a more simple figure of merit for the photon quality and is calculated [via](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.125.233605)
 
-![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BV%7D_%7Bi%7D%20%3D%20%5Cfrac%7B%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7B%7Bt_%5Ctext%7Bmax%7D%7D-t%7D%202%7CG_%7Bi%7D%5E%7B%281%29%7D%28t%2Ct%27%29%7C%5E2%5Ctext%7Bd%7Dt%27%5Ctext%7Bd%7Dt%7D%7B%5Cleft%28%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Clangle%5Chat%7Ba%7D%5E%5Cdagger_i%28t%29%5Chat%7Ba%7D_i%28t%29%5Crangle%5Ctext%7Bd%7Dt%5CriG=Ht%29%5E2%7D).
+<img src="doc/indist_vis.svg" height="70px">.
 
 If any of the neccessary `G1` or `G2` correlation functions is not yet available, it will be automatically calculated. The general syntax reads:
 
@@ -498,15 +497,19 @@ The [Two-Photon Concurrence](https://journals.aps.org/prl/abstract/10.1103/PhysR
 
 The Two-Photon Matrix results in
 
-![](https://latex.codecogs.com/svg.latex?%5Crho_%5Ctext%7B2phot%7D%3D%5Cbegin%7Bbmatrix%7D%5Crho_%7Biiii%7D%20%26%200%20%26%200%20%26%20%5Crho_%7Biijj%7D%20%5Ccr%200%20%26%20%5Crho_%7Bijij%7D%20%26%20%5Crho_%7Bijji%7D%20%26%200%20%5Ccr%200%20%26%20%5Crho_%7Bjiij%7D%20%26%20%5Crho%5E*_%7Bijij%7D%20%26%200%20%5Ccr%20%5Crho%5E*_%7Biijj%7D%20%26%200%20%26%200%20%26%20%5Crho_%7Bjjjj%7D%5Cend%7Bbmatrix%7D%20%5Ctext%7B%20with%20%7D%20%5Crho_%7Bijkl%7D%20%3D%20%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D%7D%5Cint_0%5E%7Bt_%5Ctext%7Bmax%7D-t%7DG_%7Bij%2Ckl%7D%5E%7B%282%29%7D%28t%2Ct%27%29%5Ctext%7Bd%7Dt%27%5Ctext%7Bd%7Dt)
+<img src="doc/two_photon_matrix.svg" height="140px">
+
+with matrix elements
+
+<img src="doc/two_photon_matrix_element.svg" height="70px">
 
 Because of symmetry of the operators, only 6 of the 8 `G2` functions have to be calculated. The concurrence is then evaluated by calculating the Eigenvalues of
 
-![](https://latex.codecogs.com/svg.latex?R%3D%5Csqrt%7B%5Csqrt%7B%5Crho_%5Ctext%7B2ph%7D%7D%28%5Csigma_y%20%5Cotimes%20%5Csigma_y%29%5Crho_%5Ctext%7B2ph%7D%5E*%28%5Csigma_y%20%5Cotimes%20%5Csigma_y%29%5Csqrt%7B%5Crho_%5Ctext%7B2ph%7D%7D%7D)
+<img src="doc/concurrence_R.svg" height="70px">
 
 where
 
-![](https://latex.codecogs.com/svg.latex?%5Cmathcal%7BC%7D%20%3D%20%5Ctext%7Bmax%7D%5Cleft%5C%7B%7B0%2C%5Clambda_4-%5Clambda_3-%5Clambda_2-%5Clambda_1%7D%5CriG=Ht%5C%7D%20%5Ctext%7B%20with%20%7D%20%5Clambda_i%20%5Ctext%7B%20%5Ctextit%7Bi%7D%27th%20Eigenvalue%20of%20%7D%20R)
+<img src="doc/concurrence_eigs.svg" height="70px">
 
 If any of the neccessary `G2` correlation functions is not yet available, it will be automatically calculated. Note that if the Hilbert space of the system does not allow `G2` to be non-zero (e.g only a single photon allowed in a resonator mode), the concurrence will be undefined. The general syntax reads:
 
