@@ -395,11 +395,11 @@ Two different types of correlation functions can be evaluated: `G1(t,tau)` and `
 
 The G1 function is calculated via
 
-<img src="doc/g1_corr_func.svg"  height="70px">.
+<img src="doc/g1_corr_func.svg"  height="40px">.
 
 The G2 function is calculated via
 
-<img src="doc/g2_corr_func.svg"  height="70px">.
+<img src="doc/g2_corr_func.svg"  height="40px">.
 
 The general Syntax for both functions reads:
 
@@ -429,7 +429,7 @@ Calculating the G1 and G2 functions for the resonator mode `h`.
 
 The emission characteristics of any transition can be calculated by using the [Eberly-Wodkiewicz](https://www.osapublishing.org/josa/abstract.cfm?uri=josa-67-9-1252) Spectrum and is calculated via
 
-<img src="doc/ew_spectrum.svg"  height="70px">.
+<img src="doc/ew_spectrum.svg"  height="100px">.
 
 If the neccessary `G1` function is not yet available, it will be calculated automatically. The fourier transformation is brute-forced for a set number of points. The general syntax for spectrum calculation reads:
 
@@ -460,14 +460,14 @@ The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%
 
 <img src="doc/indist_small.svg" height="70px">
 with
-<img src="doc/indist_full.svg" height="140px">
+<img src="doc/indist_full.svg" height="100px">
 and 
 
-<img src="doc/indist_g_pop.svg" height="140px">.
+<img src="doc/indist_g_pop.svg" height="100px">.
 
 The single photon visibility is a more simple figure of merit for the photon quality and is calculated [via](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.125.233605)
 
-<img src="doc/indist_vis.svg" height="70px">.
+<img src="doc/indist_vis.svg" height="100px">.
 
 If any of the neccessary `G1` or `G2` correlation functions is not yet available, it will be automatically calculated. The general syntax reads:
 
