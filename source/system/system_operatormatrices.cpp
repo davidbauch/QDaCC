@@ -493,7 +493,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     // Split starting state into superposition. States can be passed as "|...>+|...>" with amplitudes
     initial_state_vector_ket = Dense::Zero( base.size(), 1 );
     for ( auto state : QDLC::String::splitline( p.p_initial_state_s, '+' ) ) {
-        // State Syntax: |state> where state can be an actual system state or coherent(alpha,mode), squeezed(x,y,mode) or thermal(alpha,mode)
+        // State Syntax: |state> where state can be an actual system state or coherent(alpha)mode, squeezed(x,y)mode or thermal(alpha)mode
         Scalar amp = state[0] == '|' ? 1.0 : std::stod( QDLC::String::splitline( state, '|' ).front() );
         std::string pure_state = state.substr( state.find( '|' ) );
         // Coherent State
