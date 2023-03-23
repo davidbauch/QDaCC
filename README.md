@@ -8,18 +8,18 @@ I created this program throughout my Bachelor's, Master's and my time as an ongo
 
 This program solves the von-Neumann Equation
 
-<img src="doc/von_neumann_equation.svg"  height="70px">
+<img src="doc/von_neumann_equation.svg"  height="60px">
 
 for a given fermionic (electronic) system coupled to a (or multiple) bosonic optical resonator including multiple sources of Loss and Electron-Phonon coupling.
 
 The Hamilton Operator for the electronic and optical states reads
 
-<img src="doc/hamilton_operator.svg"  height="70px">
+<img src="doc/hamilton_operator.svg"  height="77px">
 
 and is treated by an Interaction picture Transformation.
 The Interaction Hamilton is given by
 
-<img src="doc/hamilton_interaction.svg"  height="70px">
+<img src="doc/hamilton_interaction.svg"  height="77px">
 
 where the transitions `|i><j|` are either coupled to the optical resonator `c` and/or to an external driving field `p`.
 
@@ -327,9 +327,9 @@ Where `TEMP` is any value greater than or equal to zero. For values smaller than
 
 The spectral properties of the phonons are defined by
 
-![](<https://latex.codecogs.com/svg.image?%5Cleft.J_%7Bij%7D%5Comega=%5Csum_%7Bk%7D%5Cgamma_k%5Ei%5Cgamma_k%5Ej%5Cdelta(%5Comega-%5Comega_k)=%5Cfrac%7B%5Comega%5E3%7D%7B4%5Cpi%5E2%5Crho%5Chbar%20c_s%5E5%7D%5Cleft(D_ee%5E%7B-%5Comega%5E2a_e%5E2/(4c_s%5E2)%7D-D_he%5E%7B-%5Comega%5E2a_h%5E2/(4c_s%5E2)%7D%5CriG=Ht)%5E2=%5Calpha_p%5Comega%5E3e%5E%7B-%5Cfrac%7B%5Comega%5E2%7D%7B2%5Comega_b%7D%7D%5CriG=Ht.>).
+<img src="doc/phonon_spectral_density.svg"  height="83px">.
 
-While the specific spectral shape varies sliG=Htly for electrons (`e`) and holes (`h`), the algorithm used in this program assumes a unified distribution combining both electron and hole parameters into two settings:
+While the specific spectral shape varies slightly for electrons (`e`) and holes (`h`), the algorithm used in this program assumes a unified distribution combining both electron and hole parameters into two settings:
 
     --phononalpha [COUPLING]
 
@@ -349,8 +349,8 @@ The Markov Approximation (`rho(t)=rho(t+tau)`) used by the Polaron Approach can 
 
     -noMarkov
 
-When a temperature greater or qual than zero is provided, the Radiative Decay and Pure Dephasing are scaled by the temperature to ![](<https://latex.codecogs.com/svg.image?%5Cgamma_%5Ctext%7BRad%7D(T)%20=%20%5Clangle%20B%5Crangle%20%5Ccdot%20%5Cgamma_%5Ctext%7BRad%7D>) and
-![](<https://latex.codecogs.com/svg.image?%5Cgamma_%5Ctext%7BPure%7D(T)%20=%20T%20%5Ccdot%201%5Cmu%5Ctext%7BeV%7D>).
+When a temperature greater or qual than zero is provided, the Radiative Decay and Pure Dephasing are scaled by the temperature to <img src="doc/phonon_gamma_rad_dep.svg"  height="30px"> and
+<img src="doc/phonon_gamma_pure_dep.svg"  height="30px">.
 Note that while the Radiative Decay only gets scaled by the averaged Phonon Contributions `<B>`, the Pure Dephasing becomes a per-Kelvin unit. This scaling can be disabled entirely by providing the flag
 
     -noPhononAdjust
@@ -395,11 +395,11 @@ Two different types of correlation functions can be evaluated: `G1(t,tau)` and `
 
 The G1 function is calculated via
 
-<img src="doc/g1_corr_func.svg"  height="40px">.
+<img src="doc/g1_corr_func.svg"  height="46px">.
 
 The G2 function is calculated via
 
-<img src="doc/g2_corr_func.svg"  height="40px">.
+<img src="doc/g2_corr_func.svg"  height="46px">.
 
 The general Syntax for both functions reads:
 
@@ -429,7 +429,7 @@ Calculating the G1 and G2 functions for the resonator mode `h`.
 
 The emission characteristics of any transition can be calculated by using the [Eberly-Wodkiewicz](https://www.osapublishing.org/josa/abstract.cfm?uri=josa-67-9-1252) Spectrum and is calculated via
 
-<img src="doc/ew_spectrum.svg"  height="100px">.
+<img src="doc/ew_spectrum.svg"  height="86px">.
 
 If the neccessary `G1` function is not yet available, it will be calculated automatically. The fourier transformation is brute-forced for a set number of points. The general syntax for spectrum calculation reads:
 
@@ -458,16 +458,16 @@ Calculating the emission spectra for the resonator mode `h`, the radiative trans
 
 The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%E2%80%93Ou%E2%80%93Mandel_effect) is a figure of merit for the consistentcy and quality of a single photon source. The indistinguishability is calculated [via](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.045309)
 
-<img src="doc/indist_small.svg" height="70px">
+<img src="doc/indist_small.svg" height="35px">
 with
-<img src="doc/indist_full.svg" height="100px">
+<img src="doc/indist_full.svg" height="105px">
 and 
 
-<img src="doc/indist_g_pop.svg" height="100px">.
+<img src="doc/indist_g_pop.svg" height="56px">.
 
 The single photon visibility is a more simple figure of merit for the photon quality and is calculated [via](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.125.233605)
 
-<img src="doc/indist_vis.svg" height="100px">.
+<img src="doc/indist_vis.svg" height="110px">.
 
 If any of the neccessary `G1` or `G2` correlation functions is not yet available, it will be automatically calculated. The general syntax reads:
 
@@ -497,19 +497,19 @@ The [Two-Photon Concurrence](https://journals.aps.org/prl/abstract/10.1103/PhysR
 
 The Two-Photon Matrix results in
 
-<img src="doc/two_photon_matrix.svg" height="140px">
+<img src="doc/two_photon_matrix.svg" height="156px">
 
 with matrix elements
 
-<img src="doc/two_photon_matrix_element.svg" height="70px">
+<img src="doc/two_photon_matrix_element.svg" height="90px">
 
 Because of symmetry of the operators, only 6 of the 8 `G2` functions have to be calculated. The concurrence is then evaluated by calculating the Eigenvalues of
 
-<img src="doc/concurrence_R.svg" height="70px">
+<img src="doc/concurrence_R.svg" height="64px">
 
 where
 
-<img src="doc/concurrence_eigs.svg" height="70px">
+<img src="doc/concurrence_eigs.svg" height="36px">
 
 If any of the neccessary `G2` correlation functions is not yet available, it will be automatically calculated. Note that if the Hilbert space of the system does not allow `G2` to be non-zero (e.g only a single photon allowed in a resonator mode), the concurrence will be undefined. The general syntax reads:
 
@@ -687,7 +687,7 @@ Changes the interpolation method for the temporal output data to use the Linear 
 
 Note that the interpolation is only usefull when using the `RK45` method. If one wants to use `RK4` or `RK5` but still interpolate the output to more or fewer timesteps, the `--grid` parameter can be used to achieve this:
 
-    --rkorder 4 --tstep 10fs --tend 100ps --grid 1ps-100ps
+    --rkorder 4 --tstep 10fs --tend 100ps --grid 1ps:100ps
 
 Will result in the `RK4` method to use a `10fs` timestep, while the output will be output only for the grid parameters.
 
@@ -707,4 +707,4 @@ This flag enables deep logging, where all subroutines log everything they do. So
 
     -handler
 
-This flag enables handler outputs for the [Threadhandler](https://github.com/davidbauch/Threadhandler), an ancient project.
+This flag enables handler outputs for the [Threadhandler](https://github.com/davidbauch/Threadhandler), an ancient project which is no longer continued.
