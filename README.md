@@ -10,6 +10,9 @@ Published Work using QDLC:
 
 [![PRB](https://img.shields.io/badge/Phys.Rev.B-104,085308-ba0c2f.svg)](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308) [![arXiv](https://img.shields.io/badge/arXiv-2105.06783-b31b1b.svg)](https://arxiv.org/abs/2105.06783) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1103/PhysRevB.104.085308)](https://arxiv.org/abs/2105.06783)
 
+"On-demand indistinguishable and entangled photons at telecom frequencies using tailored cavity designs"
+
+in progress
 
 There will be a GUI available soon at [gitub/QDLC-GUI](https://github.com/davidbauch/QDLC-GUI)
 
