@@ -58,7 +58,7 @@ The general features of this program include:
 All numerical parameters support the following units:
 Units of Energy:
 
-- `H=Z` - Hertz, may be omitted, meaning the default unit for energy is `H=Z`
+- `Hz` - Hertz, may be omitted, meaning the default unit for energy is `Hz`
 - `eV` - Electron Volt
 - `meV` - Milli Electron Volt `= 1E-3eV`
 - `mueV` - Micro Electron Volt `= 1E-6eV`
