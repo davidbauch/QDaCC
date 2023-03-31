@@ -8,11 +8,12 @@ Published Work using QDLC:
 
 ["Ultrafast electric control of cavity mediated single-photon and photon-pair generation with semiconductor quantum dots"](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308)
 
-[![PRB](https://img.shields.io/badge/Phys.Rev.B-104,085308-ba0c2f.svg)](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308) [![arXiv](https://img.shields.io/badge/arXiv-2105.06783-b31b1b.svg)](https://arxiv.org/abs/2105.06783) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1103/PhysRevB.104.085308)](https://arxiv.org/abs/2105.06783)
+[![PRB](https://img.shields.io/badge/Phys.Rev.B-104,085308-ba0c2f.svg)](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308) [![arXiv](https://img.shields.io/badge/arXiv-2105.06783-b31b1b.svg)](https://arxiv.org/abs/2105.06783) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5256236.svg)](https://doi.org/10.5281/zenodo.5256236) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1103/PhysRevB.104.085308)](https://arxiv.org/abs/2105.06783)
 
-"On-demand indistinguishable and entangled photons at telecom frequencies using tailored cavity designs"
+"On-demand indistinguishable and entangled photons at telecom frequencies using tailored cavity designs" (Unpublished)
 
-in progress
+[![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734)
+
 
 There will be a GUI available soon at [gitub/QDLC-GUI](https://github.com/davidbauch/QDLC-GUI)
 
