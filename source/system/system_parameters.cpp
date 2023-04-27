@@ -188,7 +188,7 @@ void Parameters::pre_adjust_input() {
 
     // Set interpolation order:
     auto orders = QDLC::String::splitline( s_numerics_interpolate, ',' );
-    std::map<std::string, int> methods = { {"cubic", 1}, { "monotone", 2 }, { "linear", 0 } };
+    std::map<std::string, int> methods = { { "cubic", 1 }, { "monotone", 2 }, { "linear", 0 } };
     std::string method_time = orders.front();
     std::string method_tau = orders.size() > 1 ? orders.back() : "linear";
     numerics_interpolate_method_time = methods[method_time];
@@ -429,15 +429,14 @@ void Parameters::parse_system() {
         conf_s.property_set["resW"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );                                                                                       // Resolution for w
         conf_s.property_set["Order"] = conf.size() > 4 ? QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) ) : std::vector<Parameter>( conf_s.property_set["Range"].size(), 1 ); // Order (1 or 2)?
         conf_s.string_v["Normalize"] = conf.size() > 5 ? QDLC::String::splitline( conf[5], ',' ) : std::vector<std::string>( conf_s.property_set["Range"].size(), "False" );                                // Normalize?
-        input_correlation["Spectrum"] = conf_s;
+        input_correlation["Spectrum"].emplace_back( conf_s );
     }
     for ( std::string &indist : QDLC::String::splitline( inputstring_indist, ';' ) ) {
         auto conf = QDLC::String::splitline( indist, ':' );
         universal_config conf_s;
         conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' ); // Modes to calculate Indistinguishgability for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
-        input_correlation["Indist"] = conf_s;
+        input_correlation["Indist"].emplace_back( conf_s );
     }
-    // TODO: von a,b:c,d wechseln auf a:c;b:d
     for ( std::string &conc : QDLC::String::splitline( inputstring_conc, ';' ) ) {
         auto conf = QDLC::String::splitline( conc, ':' );
         universal_config conf_s;
@@ -449,7 +448,7 @@ void Parameters::parse_system() {
             conf_s.property_set["Range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );  // Range
             conf_s.property_set["resW"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );   // Resolution for w
         }
-        input_correlation["Conc"] = conf_s;
+        input_correlation["Conc"].emplace_back( conf_s );
     }
     for ( std::string &g_func : QDLC::String::splitline( inputstring_gfunc, ';' ) ) {
         auto conf = QDLC::String::splitline( g_func, ':' );
@@ -458,7 +457,7 @@ void Parameters::parse_system() {
         conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                                                                    // Modes to calculate G1/G2 functions for
         conf_s.property_set["Order"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );                                         // 1 or 2
         conf_s.string_v["Integrated"] = n > 2 ? QDLC::String::splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "time" ); // time,matrix,both for false/true/both
-        input_correlation["GFunc"] = conf_s;
+        input_correlation["GFunc"].emplace_back( conf_s );
     }
     for ( std::string &wigner : QDLC::String::splitline( inputstring_wigner, ';' ) ) {
         auto conf = QDLC::String::splitline( wigner, ':' );
@@ -469,7 +468,7 @@ void Parameters::parse_system() {
         conf_s.property_set["Y"] = QDLC::Misc::convertParam<Parameter>( n > 2 ? QDLC::String::splitline( conf[2], ',' ) : QDLC::String::splitline( conf[1], ',' ) );                              // -Y to Y
         conf_s.property_set["Res"] = QDLC::Misc::convertParam<Parameter>( n > 3 ? QDLC::String::splitline( conf[3], ',' ) : std::vector<std::string>( conf_s.property_set["X"].size(), "100" ) ); // Resolution
         conf_s.property_set["Skip"] = QDLC::Misc::convertParam<Parameter>( n > 4 ? QDLC::String::splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.property_set["X"].size(), "1" ) );  // Skips in t-direction
-        input_correlation["Wigner"] = conf_s;
+        input_correlation["Wigner"].emplace_back( conf_s );
     }
     for ( std::string &raman : QDLC::String::splitline( inputstring_raman, ';' ) ) {
         auto conf = QDLC::String::splitline( raman, ':' );
@@ -479,7 +478,7 @@ void Parameters::parse_system() {
         conf_s.string_v["RamanMode"] = QDLC::String::splitline( conf[1], ',' );
         conf_s.string_v["OpMode"] = QDLC::String::splitline( conf[2], ',' );
         conf_s.string_v["PMode"] = QDLC::String::splitline( conf[3], ',' );
-        input_correlation["Raman"] = conf_s;
+        input_correlation["Raman"].emplace_back( conf_s );
     }
     // Correlation Grid
     if ( std::ranges::find( inputstring_correlation_resolution, ':' ) != inputstring_correlation_resolution.end() ) {
@@ -577,8 +576,8 @@ void Parameters::parse_system() {
     }
 }
 
-std::string _get_interpolator_name(int index) {
-    const std::vector names = {"Linear", "Quintic Hermite", "Cubic Hermite"};
+std::string _get_interpolator_name( int index ) {
+    const std::vector names = { "Linear", "Quintic Hermite", "Cubic Hermite" };
     return names[index];
 }
 
@@ -728,22 +727,23 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "\n" );
     Log::Logger::wrapInBar( "G-Function Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( input_correlation.size() > 0 ) {
-        //TODO: print grid resolution later
+        // TODO: print grid resolution later
         Log::L1( "Tau-grid resolution is {}\n", numerics_calculate_till_converged ? "to be determined." : fmt::format( "{}x{}", grid_values.size(), grid_values.size() ) );
-        Log::L1("Interpolator used: {}\n", _get_interpolator_name(numerics_interpolate_method_tau) );
+        Log::L1( "Interpolator used: {}\n", _get_interpolator_name( numerics_interpolate_method_tau ) );
         Log::L1( "Calculating:\n" );
-        for ( auto &[name, mat] : input_correlation ) {
-            Log::L1( " - {} on mode(s):\n", name );
-            for ( auto i = 0; i < mat.string_v["Modes"].size(); i++ ) {
-                const auto &mode = mat.string_v["Modes"][i];
-                if ( name == "Conc" ) {
-                    const auto &order = mat.string_v["Order"][i];
-                    Log::L1( " - - {} using matrix evaluation order: '{}'\n", mode, order );
-                } else {
-                    Log::L1( " - - {}\n", mode );
+        for ( auto &[name, all_correlations] : input_correlation )
+            for ( auto &mat : all_correlations ) {
+                Log::L1( " - {} on mode(s):\n", name );
+                for ( auto i = 0; i < mat.string_v["Modes"].size(); i++ ) {
+                    const auto &mode = mat.string_v["Modes"][i];
+                    if ( name == "Conc" ) {
+                        const auto &order = mat.string_v["Order"][i];
+                        Log::L1( " - - {} using matrix evaluation order: '{}'\n", mode, order );
+                    } else {
+                        Log::L1( " - - {}\n", mode );
+                    }
                 }
             }
-        }
         Log::L1( "\n" );
         // Detector Stuff
         if ( input_conf["Detector"].property_set["time_center"].size() > 0 ) {
@@ -781,7 +781,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     if ( p_phonon_T )
         Log::L1( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? "Yes" : "No" ) );
     if ( numerics_interpolate_outputs ) {
-        Log::L1( "WARNING: Temporal outputs are interpolated! Interpolator used: {}\n", _get_interpolator_name(numerics_interpolate_method_time) );
+        Log::L1( "WARNING: Temporal outputs are interpolated! Interpolator used: {}\n", _get_interpolator_name( numerics_interpolate_method_time ) );
     }
     if ( not numerics_use_function_caching )
         Log::L1( "NOT using function caching.\n" );

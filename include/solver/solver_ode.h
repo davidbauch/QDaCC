@@ -159,7 +159,7 @@ class ODESolver {
      * @brief Calculates the Concurrence for a given operator combination. This function requires the calculation of 6 G2 Functions and will produce 4 values for the concurrence.
      *
      */
-    bool calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const int matrix_priority_evaluation );
+    bool calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const int matrix_priority_evaluation, const double spec_center, const double spec_range, const double spec_res );
 
     /**
      * @brief Calculates the Wigner Function for a given operator combination

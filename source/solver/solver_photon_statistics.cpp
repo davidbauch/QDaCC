@@ -5,37 +5,47 @@
 
 bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s ) {
     // Calculate Spectra
-    auto &spectrum_s = s.parameters.input_correlation["Spectrum"];
-    for ( int i = 0; i < spectrum_s.string_v["Modes"].size(); i++ ) {
-        const auto &[s_creator, s_annihilator] = get_operator_strings( s, spectrum_s.string_v["Modes"][i] );
-        calculate_spectrum( s, s_creator, s_annihilator, spectrum_s.property_set["Center"][i], spectrum_s.property_set["Range"][i], spectrum_s.property_set["resW"][i], spectrum_s.property_set["Order"][i], spectrum_s.string_v["Normalize"][i] == "True" );
-    }
-    // Calculate Indist
-    auto &indist_s = s.parameters.input_correlation["Indist"];
-    for ( int i = 0; i < indist_s.string_v["Modes"].size(); i++ ) {
-        const auto &[s_creator, s_annihilator] = get_operator_strings( s, indist_s.string_v["Modes"][i] );
-        calculate_indistinguishability( s, s_creator, s_annihilator );
-    }
-    // Calculate Conc
-    auto &conc_s = s.parameters.input_correlation["Conc"];
-    for ( auto i = 0; i < conc_s.string_v["Modes"].size(); i++ ) {
-        const auto &modes = conc_s.string_v["Modes"][i];
-        const std::map<std::string, int> orders = { { "full", 3 }, { "outin", 2 }, { "outer", 1 } };
-        const auto order = conc_s.string_v["Order"][i];
-        const int matrix_priority_evaluation = orders.contains( order ) ? orders.at( order ) : 3;
-        std::vector<std::string> s_creator, s_annihilator;
-        for ( auto &mode : QDLC::String::splitline( modes, '-' ) ) {
-            const auto &[ss_creator, ss_annihilator] = get_operator_strings( s, mode );
-            s_creator.emplace_back( ss_creator );
-            s_annihilator.emplace_back( ss_annihilator );
+    auto &all_spectra = s.parameters.input_correlation["Spectrum"];
+    for ( auto &spectrum_s : all_spectra )
+        for ( int i = 0; i < spectrum_s.string_v["Modes"].size(); i++ ) {
+            const auto &[s_creator, s_annihilator] = get_operator_strings( s, spectrum_s.string_v["Modes"][i] );
+            calculate_spectrum( s, s_creator, s_annihilator, spectrum_s.property_set["Center"][i], spectrum_s.property_set["Range"][i], spectrum_s.property_set["resW"][i], spectrum_s.property_set["Order"][i], spectrum_s.string_v["Normalize"][i] == "True" );
         }
-        calculate_concurrence( s, s_creator[0], s_annihilator[0], s_creator[1], s_annihilator[1], matrix_priority_evaluation );
-    }
+    // Calculate Indist
+    auto &all_indist = s.parameters.input_correlation["Indist"];
+    for ( auto &indist_s : all_indist )
+        for ( int i = 0; i < indist_s.string_v["Modes"].size(); i++ ) {
+            const auto &[s_creator, s_annihilator] = get_operator_strings( s, indist_s.string_v["Modes"][i] );
+            calculate_indistinguishability( s, s_creator, s_annihilator );
+        }
+    // Calculate Conc
+    auto &all_conc = s.parameters.input_correlation["Conc"];
+    for ( auto &conc_s : all_conc )
+        for ( auto i = 0; i < conc_s.string_v["Modes"].size(); i++ ) {
+            const auto &modes = conc_s.string_v["Modes"][i];
+            const std::map<std::string, int> orders = { { "full", 3 }, { "outin", 2 }, { "outer", 1 } };
+            const auto order = conc_s.string_v["Order"][i];
+            const int matrix_priority_evaluation = orders.contains( order ) ? orders.at( order ) : 3;
+            std::vector<std::string> s_creator, s_annihilator;
+            for ( auto &mode : QDLC::String::splitline( modes, '-' ) ) {
+                const auto &[ss_creator, ss_annihilator] = get_operator_strings( s, mode );
+                s_creator.emplace_back( ss_creator );
+                s_annihilator.emplace_back( ss_annihilator );
+            }
+            // Spectra
+            bool use_spec = not conc_s.property_set["Center"].empty();
+            const double spec_center = use_spec ? conc_s.property_set["Center"].front().get() : -1.;
+            const double spec_range = use_spec ? conc_s.property_set["Range"].front().get() : -1.;
+            const double spec_resW = use_spec ? conc_s.property_set["resW"].front().get() : -1.;
+            // Calculate Concurrence
+            calculate_concurrence( s, s_creator[0], s_annihilator[0], s_creator[1], s_annihilator[1], matrix_priority_evaluation, spec_center, spec_range, spec_resW );
+        }
     // Calculate Raman
-    auto &raman_s = s.parameters.input_correlation["Raman"];
-    for ( int i = 0; i < raman_s.string_v["ElMode1"].size(); i++ ) {
-        calculate_raman_population( s, raman_s.string_v["ElMode1"][i], raman_s.string_v["ElMode2"][i], raman_s.string_v["OpMode"][i], raman_s.string_v["PMode"][i] );
-    }
+    auto &all_raman = s.parameters.input_correlation["Raman"];
+    for ( auto &raman_s : all_raman )
+        for ( int i = 0; i < raman_s.string_v["ElMode1"].size(); i++ ) {
+            calculate_raman_population( s, raman_s.string_v["ElMode1"][i], raman_s.string_v["ElMode2"][i], raman_s.string_v["OpMode"][i], raman_s.string_v["PMode"][i] );
+        }
     // Detector Matrix // Moved directly to where its calculated.
     // if ( s.parameters.input_conf["Detector"].property_set["time_center"].size() > 0 ) {
     //    Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask.txt...\n" );
@@ -57,80 +67,82 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         }
     }
     // Calculate G1/G2 functions
-    auto &gs_s = s.parameters.input_correlation["GFunc"];
-    for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
-        /// TODO : in funktion
-        auto modes = gs_s.string_v["Modes"][i];
-        int order = std::abs( gs_s.property_set["Order"][i] );
-        const auto &[s_creator, s_annihilator] = get_operator_strings( s, modes );
-        std::string purpose = order == 1 ? get_operators_purpose( { s_creator, s_annihilator } ) : get_operators_purpose( { s_creator, s_creator, s_annihilator, s_annihilator } );
-        const auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
-        if ( order == 1 ) {
-            calculate_g1( s, s_creator, s_annihilator, purpose );
-        } else {
-            calculate_g2( s, s_creator, s_creator, s_annihilator, s_annihilator, purpose );
-        }
-        // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
-        auto &gmat = cache[purpose];
-        const auto dim = gmat.dim();
-        // G2(t,tau)
-        if ( gs_s.string_v["Integrated"][i] == "matrix" || gs_s.string_v["Integrated"][i] == "both" ) {
-            Log::L2( "[PhotonStatistics] Saving G{} function matrix to {}_m.txt...\n", order, purpose );
-            auto &f_gfunc = FileOutput::add_file( purpose + "_m" );
-            f_gfunc << "Time\tTau\tAbs\tReal\tImag\n";
-            for ( int k = 0; k < dim; k++ ) {
-                double t_t = gmat.t( k );
-                for ( int l = 0; l < dim; l++ ) {
-                    double t_tau = gmat.tau( l, k );
-                    const auto el = gmat( k, l );
-                    f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_t, t_tau, std::abs( el ), std::real( el ), std::imag( el ) );
-                }
-                f_gfunc << "\n";
+    auto &all_gfuncs = s.parameters.input_correlation["GFunc"];
+    for ( auto &gs_s : all_gfuncs )
+        for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
+            /// TODO : in funktion
+            auto modes = gs_s.string_v["Modes"][i];
+            int order = std::abs( gs_s.property_set["Order"][i] );
+            const auto &[s_creator, s_annihilator] = get_operator_strings( s, modes );
+            std::string purpose = order == 1 ? get_operators_purpose( { s_creator, s_annihilator } ) : get_operators_purpose( { s_creator, s_creator, s_annihilator, s_annihilator } );
+            const auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
+            if ( order == 1 ) {
+                calculate_g1( s, s_creator, s_annihilator, purpose );
+            } else {
+                calculate_g2( s, s_creator, s_creator, s_annihilator, s_annihilator, purpose );
             }
-        }
-        // G2(0)
-        int T = std::min<int>( dim, savedStates.size() );
-        std::vector<Scalar> topv( T, 0 );
-        std::vector<Scalar> g2ofzero( T, 0 );
+            // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
+            auto &gmat = cache[purpose];
+            const auto dim = gmat.dim();
+            // G2(t,tau)
+            if ( gs_s.string_v["Integrated"][i] == "matrix" || gs_s.string_v["Integrated"][i] == "both" ) {
+                Log::L2( "[PhotonStatistics] Saving G{} function matrix to {}_m.txt...\n", order, purpose );
+                auto &f_gfunc = FileOutput::add_file( purpose + "_m" );
+                f_gfunc << "Time\tTau\tAbs\tReal\tImag\n";
+                for ( int k = 0; k < dim; k++ ) {
+                    double t_t = gmat.t( k );
+                    for ( int l = 0; l < dim; l++ ) {
+                        double t_tau = gmat.tau( l, k );
+                        const auto el = gmat( k, l );
+                        f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_t, t_tau, std::abs( el ), std::real( el ), std::imag( el ) );
+                    }
+                    f_gfunc << "\n";
+                }
+            }
+            // G2(0)
+            int T = std::min<int>( dim, savedStates.size() );
+            std::vector<Scalar> topv( T, 0 );
+            std::vector<Scalar> g2ofzero( T, 0 );
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
-        for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
-            for ( int i = 0; i <= upper_limit; i++ ) {
-                int j = upper_limit - i;
-                topv[upper_limit] += gmat( i, j );
-            }
-        }
-        Scalar topsumv = 0;
-        Scalar bottomsumv = 0;
-        for ( int k = 0; k < topv.size(); k++ ) {
-            double t_t = gmat.t( k );
-            int t = rho_index_map[t_t];
-            topsumv += topv[k];
-            bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( t ), creator * annihilator, t_t );
-            g2ofzero[k] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 );
-        }
-        // G2(t,0) and G2(tau)
-        if ( gs_s.string_v["Integrated"][i] == "time" || gs_s.string_v["Integrated"][i] == "both" ) {
-            Log::L2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
-            auto &f_gfunc = FileOutput::add_file( purpose );
-            f_gfunc << fmt::format( "Time\tAbs(g{0}(tau))\tReal(g{0}(tau))\tImag(g{0}(tau))\tAbs(g{0}(t,0))\tReal(g{0}(t,0))\tImag(g{0}(t,0))\tAbs(g{0}(0))\tReal(g{0}(0))\tImag(g{0}(0))\n", order );
-            for ( int l = 0; l < topv.size(); l++ ) {
-                Scalar g2oftau = 0;
-                for ( int k = 0; k < gmat.dim(); k++ ) {
-                    const auto dt = gmat.dt( l, k );
-                    g2oftau += gmat( k, l ) * dt;
+            for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
+                for ( int i = 0; i <= upper_limit; i++ ) {
+                    int j = upper_limit - i;
+                    topv[upper_limit] += gmat( i, j );
                 }
-                const double t_tau = gmat.tau( l );
-                const auto tau_index = rho_index_map[t_tau];
-                Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * creator * annihilator * annihilator, t_tau ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( l ), creator * annihilator, get_time_at( l ) ), 2.0 );
-                f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_tau, std::abs( g2oftau ), std::real( g2oftau ), std::imag( g2oftau ), std::abs( g2oft ), std::real( g2oft ), std::imag( g2oft ), std::abs( g2ofzero[l] ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ) );
+            }
+            Scalar topsumv = 0;
+            Scalar bottomsumv = 0;
+            for ( int k = 0; k < topv.size(); k++ ) {
+                double t_t = gmat.t( k );
+                int t = rho_index_map[t_t];
+                topsumv += topv[k];
+                bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( t ), creator * annihilator, t_t );
+                g2ofzero[k] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 );
+            }
+            // G2(t,0) and G2(tau)
+            if ( gs_s.string_v["Integrated"][i] == "time" || gs_s.string_v["Integrated"][i] == "both" ) {
+                Log::L2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
+                auto &f_gfunc = FileOutput::add_file( purpose );
+                f_gfunc << fmt::format( "Time\tAbs(g{0}(tau))\tReal(g{0}(tau))\tImag(g{0}(tau))\tAbs(g{0}(t,0))\tReal(g{0}(t,0))\tImag(g{0}(t,0))\tAbs(g{0}(0))\tReal(g{0}(0))\tImag(g{0}(0))\n", order );
+                for ( int l = 0; l < topv.size(); l++ ) {
+                    Scalar g2oftau = 0;
+                    for ( int k = 0; k < gmat.dim(); k++ ) {
+                        const auto dt = gmat.dt( l, k );
+                        g2oftau += gmat( k, l ) * dt;
+                    }
+                    const double t_tau = gmat.tau( l );
+                    const auto tau_index = rho_index_map[t_tau];
+                    Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * creator * annihilator * annihilator, t_tau ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( l ), creator * annihilator, get_time_at( l ) ), 2.0 );
+                    f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_tau, std::abs( g2oftau ), std::real( g2oftau ), std::imag( g2oftau ), std::abs( g2oft ), std::real( g2oft ), std::imag( g2oft ), std::abs( g2ofzero[l] ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ) );
+                }
             }
         }
-    }
     // Calculate Conc
-    auto &wigner_s = s.parameters.input_correlation["Wigner"];
-    for ( int i = 0; i < wigner_s.string_v["Modes"].size(); i++ ) {
-        calculate_wigner( s, wigner_s.string_v["Modes"][i], wigner_s.property_set["X"][i], wigner_s.property_set["Y"][i], wigner_s.property_set["Res"][i], wigner_s.property_set["Skip"][i] );
-    }
+    auto &all_wigner = s.parameters.input_correlation["Wigner"];
+    for ( auto &wigner_s : all_wigner )
+        for ( int i = 0; i < wigner_s.string_v["Modes"].size(); i++ ) {
+            calculate_wigner( s, wigner_s.string_v["Modes"][i], wigner_s.property_set["X"][i], wigner_s.property_set["Y"][i], wigner_s.property_set["Res"][i], wigner_s.property_set["Skip"][i] );
+        }
 
     // Output Spectra and Rest in seperate Files
     for ( auto &[mode, data] : to_output["Spectrum"] ) {
@@ -217,7 +229,6 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             }
         }
     for ( auto &[mode, data] : to_output_m["Wigner"] ) {
-        auto &wigner_s = s.parameters.input_correlation["Wigner"];
         if ( mode.compare( "Time" ) == 0 )
             continue;
         Log::L2( "[PhotonStatistics] Saving Wigner function to wigner_" + mode + ".txt...\n" );

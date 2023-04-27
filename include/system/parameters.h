@@ -258,9 +258,9 @@ class Parameters {
     std::map<std::string, universal_config> input_photonic;
     std::map<std::string, universal_config> input_pulse;
     std::map<std::string, universal_config> input_chirp;
-    std::map<std::string, universal_config> input_correlation;            // Spectrum, Indist, Conc
-    std::map<std::string, universal_config> input_correlation_resolution; // G1/G2 correlation timesteps. length of g will be determined by gridres
-    std::map<std::string, universal_config> input_conf;                   // Everything else
+    std::map<std::string, std::vector<universal_config>> input_correlation; // Spectrum, Indist, Conc
+    std::map<std::string, universal_config> input_correlation_resolution;   // G1/G2 correlation timesteps. length of g will be determined by gridres
+    std::map<std::string, universal_config> input_conf;                     // Everything else
 
     /**
      * @brief Converts the inputstrings into input_maps. These maps will then be used to generate the operators and to output the inputsystem
@@ -287,6 +287,5 @@ class Parameters {
     void pre_adjust_input();
     void post_adjust_input();
     void post_adjust_grids();
-
 };
 } // namespace QDLC

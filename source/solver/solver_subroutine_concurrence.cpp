@@ -127,7 +127,7 @@ Dense _concurrence_eigenvalues( const Dense &fidelity_matrix ) {
  * @param s_op_creator_2
  * @param s_op_annihilator_2
  */
-bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const int matrix_priority_evaluation ) {
+bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const int matrix_priority_evaluation, const double spec_center, const double spec_range, const double spec_res ) {
     Log::L2( "[Concurrence] Conc for modes {} {} and {} {} with priority {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2, matrix_priority_evaluation );
 
     // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading
@@ -188,7 +188,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     // cache[s_g2_2211] = cache[s_g2_1122].conjugate( s_g2_2211 );
     // cache[s_g2_1212] = cache[s_g2_2121].conjugate( s_g2_1212 );
     // Note: This will probably be either removed completely, or implemented correctly.
-    if ( s.parameters.input_correlation["Conc"].property_set["Center"].size() > 0 ) {
+    if ( spec_range > 0 ) {
         const auto matrix_dim = cache[mode_purpose.at( "1111" )].dim();
         // Don't use accumulate here, because the Dense Matrix in cache is hiding behind the .get() call.
         Dense combined = Dense::Zero( matrix_dim, matrix_dim );
@@ -197,9 +197,9 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         }
         const std::string combined_name = "concurrence_total_" + fout;
         cache[combined_name] = CacheMatrix( combined, cache[mode_purpose.at( "1111" )].get_time(), combined_name );
-        calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].property_set["Center"].front(), s.parameters.input_correlation["Conc"].property_set["Range"].front(), (int)s.parameters.input_correlation["Conc"].property_set["resW"].front(), 2, false, combined_name );
+        calculate_spectrum( s, "none", "none", spec_center, spec_range, (int)spec_res, 2, false, combined_name );
         for ( const auto &[n, mode] : mode_purpose ) {
-            calculate_spectrum( s, "none", "none", s.parameters.input_correlation["Conc"].property_set["Center"].front(), s.parameters.input_correlation["Conc"].property_set["Range"].front(), (int)s.parameters.input_correlation["Conc"].property_set["resW"].front(), 2, false, mode );
+            calculate_spectrum( s, "none", "none", spec_center, spec_range, (int)spec_res, 2, false, mode );
         }
     }
 
