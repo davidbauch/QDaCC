@@ -6,6 +6,29 @@ using namespace QDLC;
 /**
  * TODO: function add_state, add_resontor die dann ket =, bra = , bname = , name^T = usw übernehmen!
  */
+
+// TODO for this: change initial state to initial state matrix element --> |X> to |X><X|, or with new syntax: :X; to :X;X:
+// This way, we can also initialize the off-diagonals, like :X;G:.
+// Function to parse states like "|><|" aka :X;X:
+// add scalings -> a:X;X: or i:X;X: or ai:X;X:
+
+// Separates amp:state; or amp:state;state: strings and returns the isolated Scalar amplitude and the string state
+std::tuple<Scalar, std::string> separate_state(const std::string& input) {
+    // Edge Case; No Amplitude
+    if (input.front() == )
+        return {1,input};
+    // Split Amp and State at first ":"
+    auto [amp, state] = QDLC::String::split_pair(input, ":");
+    Scalar res = 1;
+    if (amp.back() == 'i') {
+        amp.pop_back();
+        res = 1i;
+    }
+    res *= std::stod(amp);
+    return {res, state};
+
+}
+
 OperatorMatrices::OperatorMatrices( Parameters &p ) {
     Timer &timer_operatormatrices = Timers::create( "Operator Matrices", true, false ).start();
     Log::L2( "[System-OperatorMatrices] Generating operator matrices...\n" );
@@ -509,9 +532,10 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     // Create Initial State
     // Split starting state into superposition. States can be passed as "|...>+|...>" with amplitudes
     initial_state_vector_ket = Dense::Zero( base.size(), 1 );
-    for ( auto state : QDLC::String::splitline( p.p_initial_state_s, '+' ) ) {
+    for ( auto amped_state : QDLC::String::splitline( p.p_initial_state_s, '+' ) ) {
         // State Syntax: |state> where state can be an actual system state or coherent(alpha)mode, squeezed(x,y)mode or thermal(alpha)mode
-        Scalar amp = state[0] == ':' ? 1.0 : std::stod( QDLC::String::splitline( state, ':' ).front() );
+        //Scalar amp = state[0] == ':' ? 1.0 : std::stod( QDLC::String::splitline( state, ':' ).front() );
+        auto [amp, state] = separate_state(amped_state);
         std::string pure_state = state.substr( state.find( ':' ) );
         // Coherent State
         if ( pure_state.find( "coherent" ) != std::string::npos ) {
