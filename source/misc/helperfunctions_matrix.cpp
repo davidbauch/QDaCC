@@ -57,7 +57,7 @@ std::vector<std::string> QDLC::Matrix::tensor( const std::vector<std::string> &a
     std::vector<std::string> ret;
     for ( int i = 0; i < (int)a.size(); i++ )
         for ( int k = 0; k < (int)b.size(); k++ ) {
-            ret.emplace_back( a.at( i ) + "|" + b.at( k ) );
+            ret.emplace_back( a.at( i ) + ":" + b.at( k ) );
         }
     return ret;
 }

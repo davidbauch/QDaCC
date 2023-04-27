@@ -179,8 +179,9 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         // If prune == auto: prune tensor if non_zero elements dont change below difference of 10 elements and NC > NC_max
         // if prune = manual: Xps:prune:[threshold];Yps:extend;Zps:prune:[threshold] where prune calls prune, extend cleas pruned vector.
         // if prune is set to auto, automatically determine prunes and extends using the pulse, chirp 
-        if (t_t / s.parameters.t_step_pathint > 6. and not adm_tensor.is_pruned()) 
-            adm_tensor.make_indices_sparse(); 
+        // FOR NOW: disable it
+        //if (t_t / s.parameters.t_step_pathint > 6. and not adm_tensor.is_pruned()) 
+        //    adm_tensor.make_indices_sparse(); 
 
         // Progress and time output
         rkTimer.iterate();
