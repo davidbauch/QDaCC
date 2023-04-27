@@ -27,9 +27,6 @@
 
 #endif
 
-// Recent versions of ICC require <cstdint> for pointer types below.
-#define EIGEN_ICC_NEEDS_CSTDINT (EIGEN_COMP_ICC>=1600)
-
 // Define portable (u)int{32,64} types
 #include <cstdint>
 
@@ -43,6 +40,32 @@ typedef std::uint32_t uint32_t;
 typedef std::int32_t  int32_t;
 typedef std::uint64_t uint64_t;
 typedef std::int64_t  int64_t;
+
+template <size_t Size>
+struct get_integer_by_size {
+    typedef void signed_type;
+    typedef void unsigned_type;
+};
+template <>
+struct get_integer_by_size<1> {
+    typedef int8_t signed_type;
+    typedef uint8_t unsigned_type;
+};
+template <>
+struct get_integer_by_size<2> {
+    typedef int16_t signed_type;
+    typedef uint16_t unsigned_type;
+};
+template <>
+struct get_integer_by_size<4> {
+    typedef int32_t signed_type;
+    typedef uint32_t unsigned_type;
+};
+template <>
+struct get_integer_by_size<8> {
+    typedef int64_t signed_type;
+    typedef uint64_t unsigned_type;
+};
 }
 }
 
@@ -66,17 +89,6 @@ namespace internal {
   * \note In case you wonder, yes we're aware that Boost already provides all these features,
   * we however don't want to add a dependency to Boost.
   */
-
-// Only recent versions of ICC complain about using ptrdiff_t to hold pointers,
-// and older versions do not provide *intptr_t types.
-#if EIGEN_ICC_NEEDS_CSTDINT
-typedef std::intptr_t  IntPtr;
-typedef std::uintptr_t UIntPtr;
-#else
-typedef std::ptrdiff_t IntPtr;
-typedef std::size_t UIntPtr;
-#endif
-#undef EIGEN_ICC_NEEDS_CSTDINT
 
 struct true_type {  enum { value = 1 }; };
 struct false_type { enum { value = 0 }; };
@@ -109,7 +121,10 @@ using remove_all_t = typename remove_all<T>::type;
 template<typename T> struct is_arithmetic      { enum { value = false }; };
 template<> struct is_arithmetic<float>         { enum { value = true }; };
 template<> struct is_arithmetic<double>        { enum { value = true }; };
+// GPU devices treat `long double` as `double`.
+#ifndef EIGEN_GPU_COMPILE_PHASE
 template<> struct is_arithmetic<long double>   { enum { value = true }; };
+#endif
 template<> struct is_arithmetic<bool>          { enum { value = true }; };
 template<> struct is_arithmetic<char>          { enum { value = true }; };
 template<> struct is_arithmetic<signed char>   { enum { value = true }; };
@@ -126,6 +141,21 @@ template<typename T> struct is_same<T,T> { enum { value = 1 }; };
 
 template< class T >
 struct is_void : is_same<void, std::remove_const_t<T>> {};
+
+/** \internal
+  * Implementation of std::void_t for SFINAE.
+  *
+  * Pre C++17:
+  * Custom implementation.
+  *
+  * Post C++17: Uses std::void_t
+  */
+#if EIGEN_COMP_CXXVER >= 17
+using std::void_t;
+#else
+template<typename...>
+using void_t = void;
+#endif
 
 template<> struct is_arithmetic<signed long long>   { enum { value = true }; };
 template<> struct is_arithmetic<unsigned long long> { enum { value = true }; };
@@ -206,7 +236,7 @@ template<typename T, std::size_t N> struct array_size<std::array<T,N> > {
   *
   * For C++20, this function just forwards to `std::ssize`, or any ADL discoverable `ssize` function.
   */
-#if EIGEN_COMP_CXXVER < 20  || EIGEN_GNUC_AT_MOST(9,4)
+#if EIGEN_COMP_CXXVER < 20 || EIGEN_GNUC_STRICT_LESS_THAN(10,0,0)
 template <typename T>
 EIGEN_CONSTEXPR auto index_list_size(const T& x) {
   using R = std::common_type_t<std::ptrdiff_t, std::make_signed_t<decltype(x.size())>>;

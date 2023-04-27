@@ -44,8 +44,6 @@ namespace internal {
 struct default_packet_traits
 {
   enum {
-    HasHalfPacket = 0,
-
     HasAdd       = 1,
     HasSub       = 1,
     HasShift     = 1,
@@ -59,6 +57,7 @@ struct default_packet_traits
     HasMax       = 1,
     HasConj      = 1,
     HasSetLinear = 1,
+    HasSign      = 1,
     HasBlend     = 0,
     // This flag is used to indicate whether packet comparison is supported.
     // pcmp_eq, pcmp_lt and pcmp_le should be defined for it to be true.
@@ -81,6 +80,7 @@ struct default_packet_traits
     HasASin   = 0,
     HasACos   = 0,
     HasATan   = 0,
+    HasATanh  = 0,
     HasSinh   = 0,
     HasCosh   = 0,
     HasTanh   = 0,
@@ -101,8 +101,7 @@ struct default_packet_traits
     HasRound  = 0,
     HasRint   = 0,
     HasFloor  = 0,
-    HasCeil   = 0,
-    HasSign   = 0
+    HasCeil   = 0
   };
 };
 
@@ -114,7 +113,6 @@ template<typename T> struct packet_traits : default_packet_traits
     Vectorizable = 0,
     size = 1,
     AlignedOnScalar = 0,
-    HasHalfPacket = 0
   };
   enum {
     HasAdd    = 0,
@@ -179,7 +177,7 @@ struct eigen_packet_wrapper
  */
 template<typename Packet>
 struct is_scalar {
-  typedef typename unpacket_traits<Packet>::type Scalar;
+  using Scalar = typename unpacket_traits<Packet>::type;
   enum {
     value = internal::is_same<Packet, Scalar>::value
   };
@@ -442,6 +440,12 @@ pnot(const Packet& a) {
 template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
 pandnot(const Packet& a, const Packet& b) { return pand(a, pnot(b)); }
 
+/** \internal \returns isnan(a) */
+template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
+pisnan(const Packet& a) {
+  return pandnot(ptrue(a), pcmp_eq(a, a));
+}
+
 // In the general case, use bitwise select.
 template<typename Packet, typename EnableIf = void>
 struct pselect_impl {
@@ -563,13 +567,13 @@ template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
 parg(const Packet& a) { using numext::arg; return arg(a); }
 
 
-/** \internal \returns \a a logically shifted by N bits to the right */
+/** \internal \returns \a a arithmetically shifted by N bits to the right */
 template<int N> EIGEN_DEVICE_FUNC inline int
 parithmetic_shift_right(const int& a) { return a >> N; }
 template<int N> EIGEN_DEVICE_FUNC inline long int
 parithmetic_shift_right(const long int& a) { return a >> N; }
 
-/** \internal \returns \a a arithmetically shifted by N bits to the right */
+/** \internal \returns \a a logically shifted by N bits to the right */
 template<int N> EIGEN_DEVICE_FUNC inline int
 plogical_shift_right(const int& a) { return static_cast<int>(static_cast<unsigned int>(a) >> N); }
 template<int N> EIGEN_DEVICE_FUNC inline long int
@@ -606,13 +610,45 @@ pldexp(const Packet &a, const Packet &exponent) {
 template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
 pabsdiff(const Packet& a, const Packet& b) { return pselect(pcmp_lt(a, b), psub(b, a), psub(a, b)); }
 
-/** \internal \returns a packet version of \a *from, from must be 16 bytes aligned */
+/** \internal \returns a packet version of \a *from, from must be properly aligned */
 template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
 pload(const typename unpacket_traits<Packet>::type* from) { return *from; }
+
+/** \internal \returns n elements of a packet version of \a *from, from must be properly aligned
+  * offset indicates the starting element in which to load and
+  * offset + n <= unpacket_traits::size
+  * All elements before offset and after the last element loaded will initialized with zero */
+template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
+pload_partial(const typename unpacket_traits<Packet>::type* from, const Index n, const Index offset = 0)
+{
+  const Index packet_size = unpacket_traits<Packet>::size;
+  eigen_assert(n + offset <= packet_size && "number of elements plus offset will read past end of packet");
+  typedef typename unpacket_traits<Packet>::type Scalar;
+  EIGEN_ALIGN_MAX Scalar elements[packet_size] = { Scalar(0) };
+  for (Index i = offset; i < numext::mini(n+offset,packet_size); i++) {
+    elements[i] = from[i-offset];
+  }
+  return pload<Packet>(elements);
+}
 
 /** \internal \returns a packet version of \a *from, (un-aligned load) */
 template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
 ploadu(const typename unpacket_traits<Packet>::type* from) { return *from; }
+
+/** \internal \returns n elements of a packet version of \a *from, (un-aligned load)
+  * All elements after the last element loaded will initialized with zero */
+template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
+ploadu_partial(const typename unpacket_traits<Packet>::type* from, const Index n)
+{
+  const Index packet_size = unpacket_traits<Packet>::size;
+  eigen_assert(n <= packet_size && "number of elements will read past end of packet");
+  typedef typename unpacket_traits<Packet>::type Scalar;
+  EIGEN_ALIGN_MAX Scalar elements[packet_size] = { Scalar(0) };
+  for (Index i = 0; i < numext::mini(n,packet_size); i++) {
+    elements[i] = from[i];
+  }
+  return pload<Packet>(elements);
+}
 
 /** \internal \returns a packet version of \a *from, (un-aligned masked load)
  * There is no generic implementation. We only have implementations for specialized
@@ -704,13 +740,39 @@ peven_mask(const Packet& /*a*/) {
 }
 
 
-/** \internal copy the packet \a from to \a *to, \a to must be 16 bytes aligned */
+/** \internal copy the packet \a from to \a *to, \a to must be properly aligned */
 template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline void pstore(Scalar* to, const Packet& from)
 { (*to) = from; }
+
+/** \internal copy n elements of the packet \a from to \a *to, \a to must be properly aligned
+ * offset indicates the starting element in which to store and
+ * offset + n <= unpacket_traits::size */
+template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline void pstore_partial(Scalar* to, const Packet& from, const Index n, const Index offset = 0)
+{
+  const Index packet_size = unpacket_traits<Packet>::size;
+  eigen_assert(n + offset <= packet_size && "number of elements plus offset will write past end of packet");
+  EIGEN_ALIGN_MAX Scalar elements[packet_size];
+  pstore<Scalar>(elements, from);
+  for (Index i = 0; i < numext::mini(n,packet_size-offset); i++) {
+    to[i] = elements[i + offset];
+  }
+}
 
 /** \internal copy the packet \a from to \a *to, (un-aligned store) */
 template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline void pstoreu(Scalar* to, const Packet& from)
 {  (*to) = from; }
+
+/** \internal copy n elements of the packet \a from to \a *to, (un-aligned store) */
+template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline void pstoreu_partial(Scalar* to, const Packet& from, const Index n)
+{
+  const Index packet_size = unpacket_traits<Packet>::size;
+  eigen_assert(n <= packet_size && "number of elements will write past end of packet");
+  EIGEN_ALIGN_MAX Scalar elements[packet_size];
+  pstore<Scalar>(elements, from);
+  for (Index i = 0; i < numext::mini(n,packet_size); i++) {
+    to[i] = elements[i];
+  }
+}
 
 /** \internal copy the packet \a from to \a *to, (un-aligned store with a mask)
  * There is no generic implementation. We only have implementations for specialized
@@ -721,11 +783,31 @@ EIGEN_DEVICE_FUNC inline
 std::enable_if_t<unpacket_traits<Packet>::masked_store_available, void>
 pstoreu(Scalar* to, const Packet& from, typename unpacket_traits<Packet>::mask_t umask);
 
- template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline Packet pgather(const Scalar* from, Index /*stride*/)
- { return ploadu<Packet>(from); }
+template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline Packet pgather(const Scalar* from, Index /*stride*/)
+{ return ploadu<Packet>(from); }
 
- template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline void pscatter(Scalar* to, const Packet& from, Index /*stride*/)
- { pstore(to, from); }
+template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline Packet pgather_partial(const Scalar* from, Index stride, const Index n)
+{
+  const Index packet_size = unpacket_traits<Packet>::size;
+  EIGEN_ALIGN_MAX Scalar elements[packet_size] = { Scalar(0) };
+  for (Index i = 0; i < numext::mini(n,packet_size); i++) {
+    elements[i] = from[i*stride];
+  }
+  return pload<Packet>(elements);
+}
+
+template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline void pscatter(Scalar* to, const Packet& from, Index /*stride*/)
+{ pstore(to, from); }
+
+template<typename Scalar, typename Packet> EIGEN_DEVICE_FUNC inline void pscatter_partial(Scalar* to, const Packet& from, Index stride, const Index n)
+{
+  const Index packet_size = unpacket_traits<Packet>::size;
+  EIGEN_ALIGN_MAX Scalar elements[packet_size];
+  pstore<Scalar>(elements, from);
+  for (Index i = 0; i < numext::mini(n,packet_size); i++) {
+    to[i*stride] = elements[i];
+  }
+}
 
 /** \internal tries to do cache prefetching of \a addr */
 template<typename Scalar> EIGEN_DEVICE_FUNC inline void prefetch(const Scalar* addr)
@@ -779,9 +861,6 @@ Packet pasin(const Packet& a) { EIGEN_USING_STD(asin); return asin(a); }
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
 Packet pacos(const Packet& a) { EIGEN_USING_STD(acos); return acos(a); }
 
-/** \internal \returns the arc tangent of \a a (coeff-wise) */
-template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
-Packet patan(const Packet& a) { EIGEN_USING_STD(atan); return atan(a); }
 
 /** \internal \returns the hyperbolic sine of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
@@ -791,9 +870,17 @@ Packet psinh(const Packet& a) { EIGEN_USING_STD(sinh); return sinh(a); }
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
 Packet pcosh(const Packet& a) { EIGEN_USING_STD(cosh); return cosh(a); }
 
+/** \internal \returns the arc tangent of \a a (coeff-wise) */
+template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
+Packet patan(const Packet& a) { EIGEN_USING_STD(atan); return atan(a); }
+
 /** \internal \returns the hyperbolic tan of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
 Packet ptanh(const Packet& a) { EIGEN_USING_STD(tanh); return tanh(a); }
+
+/** \internal \returns the arc tangent of \a a (coeff-wise) */
+template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
+Packet patanh(const Packet& a) { EIGEN_USING_STD(atanh); return atanh(a); }
 
 /** \internal \returns the exp of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
@@ -842,6 +929,24 @@ Packet print(const Packet& a) { using numext::rint; return rint(a); }
 /** \internal \returns the ceil of \a a (coeff-wise) */
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
 Packet pceil(const Packet& a) { using numext::ceil; return ceil(a); }
+
+template<typename Packet, typename EnableIf = void>
+struct psign_impl {
+  static EIGEN_DEVICE_FUNC inline Packet run(const Packet& a) {
+    return numext::sign(a);
+  }
+};
+
+/** \internal \returns the sign of \a a (coeff-wise) */
+template<typename Packet> EIGEN_DEVICE_FUNC inline Packet
+psign(const Packet& a) {
+  return psign_impl<Packet>::run(a);
+}
+
+template<> EIGEN_DEVICE_FUNC inline bool
+psign(const bool& a) {
+  return a;
+}
 
 /** \internal \returns the first element of a packet */
 template<typename Packet>
@@ -996,6 +1101,17 @@ EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE Packet ploadt(const typename unpacket_trai
     return ploadu<Packet>(from);
 }
 
+/** \internal \returns n elements of a packet version of \a *from.
+  * The pointer \a from must be aligned on a \a Alignment bytes boundary. */
+template<typename Packet, int Alignment>
+EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE Packet ploadt_partial(const typename unpacket_traits<Packet>::type* from, const Index n, const Index offset = 0)
+{
+  if(Alignment >= unpacket_traits<Packet>::alignment)
+    return pload_partial<Packet>(from, n, offset);
+  else
+    return ploadu_partial<Packet>(from, n);
+}
+
 /** \internal copy the packet \a from to \a *to.
   * The pointer \a from must be aligned on a \a Alignment bytes boundary. */
 template<typename Scalar, typename Packet, int Alignment>
@@ -1005,6 +1121,17 @@ EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE void pstoret(Scalar* to, const Packet& fro
     pstore(to, from);
   else
     pstoreu(to, from);
+}
+
+/** \internal copy n elements of the packet \a from to \a *to.
+  * The pointer \a from must be aligned on a \a Alignment bytes boundary. */
+template<typename Scalar, typename Packet, int Alignment>
+EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE void pstoret_partial(Scalar* to, const Packet& from, const Index n, const Index offset = 0)
+{
+  if(Alignment >= unpacket_traits<Packet>::alignment)
+    pstore_partial(to, from, n, offset);
+  else
+    pstoreu_partial(to, from, n);
 }
 
 /** \internal \returns a packet version of \a *from.
@@ -1071,6 +1198,89 @@ EIGEN_DEVICE_FUNC inline Packet preciprocal(const Packet& a) {
 template<typename Packet> EIGEN_DECLARE_FUNCTION_ALLOWING_MULTIPLE_DEFINITIONS
 Packet prsqrt(const Packet& a) {
   return preciprocal<Packet>(psqrt(a));
+}
+
+template <typename Packet, bool IsScalar = is_scalar<Packet>::value,
+          bool IsInteger = NumTraits<typename unpacket_traits<Packet>::type>::IsInteger>
+struct psignbit_impl;
+template <typename Packet, bool IsInteger>
+struct psignbit_impl<Packet, true, IsInteger> {
+  EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE static constexpr Packet run(const Packet& a) { return numext::signbit(a); }
+};
+template <typename Packet>
+struct psignbit_impl<Packet, false, false> {
+  // generic implementation if not specialized in PacketMath.h
+  // slower than arithmetic shift
+  typedef typename unpacket_traits<Packet>::type Scalar;
+  EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE static Packet run(const Packet& a) {
+    const Packet cst_pos_one = pset1<Packet>(Scalar(1));
+    const Packet cst_neg_one = pset1<Packet>(Scalar(-1));
+    return pcmp_eq(por(pand(a, cst_neg_one), cst_pos_one), cst_neg_one);
+  }
+};
+template <typename Packet>
+struct psignbit_impl<Packet, false, true> {
+  // generic implementation for integer packets
+  EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE static constexpr Packet run(const Packet& a) { return pcmp_lt(a, pzero(a)); }
+};
+/** \internal \returns the sign bit of \a a as a bitmask*/
+template <typename Packet>
+EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE constexpr Packet
+psignbit(const Packet& a) { return psignbit_impl<Packet>::run(a); }
+
+/** \internal \returns the 2-argument arc tangent of \a y and \a x (coeff-wise) */
+template <typename Packet, std::enable_if_t<is_scalar<Packet>::value, int> = 0>
+EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE Packet patan2(const Packet& y, const Packet& x) {
+  return numext::atan2(y, x);
+}
+
+/** \internal \returns the 2-argument arc tangent of \a y and \a x (coeff-wise) */
+template <typename Packet, std::enable_if_t<!is_scalar<Packet>::value, int> = 0>
+EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE Packet patan2(const Packet& y, const Packet& x) {
+  typedef typename internal::unpacket_traits<Packet>::type Scalar;
+
+  // See https://en.cppreference.com/w/cpp/numeric/math/atan2
+  // for how corner cases are supposed to be handled according to the
+  // IEEE floating-point standard (IEC 60559).
+  const Packet kSignMask = pset1<Packet>(-Scalar(0));
+  const Packet kZero = pzero(x);
+  const Packet kOne = pset1<Packet>(Scalar(1));
+  const Packet kPi = pset1<Packet>(Scalar(EIGEN_PI));
+
+  const Packet x_has_signbit = psignbit(x);
+  const Packet y_signmask = pand(y, kSignMask);
+  const Packet x_signmask = pand(x, kSignMask);
+  const Packet result_signmask = pxor(y_signmask, x_signmask);
+  const Packet shift = por(pand(x_has_signbit, kPi), y_signmask);
+
+  const Packet x_and_y_are_same = pcmp_eq(pabs(x), pabs(y));
+  const Packet x_and_y_are_zero = pcmp_eq(por(x, y), kZero);
+
+  Packet arg = pdiv(y, x);
+  arg = pselect(x_and_y_are_same, por(kOne, result_signmask), arg);
+  arg = pselect(x_and_y_are_zero, result_signmask, arg);
+
+  Packet result = patan(arg);
+  result = padd(result, shift);
+  return result;
+}
+
+/** \internal \returns the argument of \a a as a complex number */
+template <typename Packet, std::enable_if_t<is_scalar<Packet>::value, int> = 0>
+EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE Packet pcarg(const Packet& a) {
+  return Packet(numext::arg(a));
+}
+
+/** \internal \returns the argument of \a a as a complex number */
+template <typename Packet, std::enable_if_t<!is_scalar<Packet>::value, int> = 0>
+EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE Packet pcarg(const Packet& a) {
+  using Scalar = typename unpacket_traits<Packet>::type;
+  EIGEN_STATIC_ASSERT(NumTraits<Scalar>::IsComplex, THIS METHOD IS FOR COMPLEX TYPES ONLY)
+  using RealPacket = typename unpacket_traits<Packet>::as_real;
+  // a                                              // r     i    r     i    ...
+  RealPacket aflip = pcplxflip(a).v;                // i     r    i     r    ...
+  RealPacket result = patan2(aflip, a.v);           // atan2 crap atan2 crap ...
+  return (Packet)pand(result, peven_mask(result));  // atan2 0    atan2 0    ...
 }
 
 } // end namespace internal

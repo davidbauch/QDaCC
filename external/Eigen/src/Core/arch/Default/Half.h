@@ -37,7 +37,6 @@
 #define EIGEN_HALF_H
 
 #include "../../InternalHeaderCheck.h"
-#include <sstream>
 
 #if defined(EIGEN_HAS_GPU_FP16) || defined(EIGEN_HAS_ARM64_FP16_SCALAR_ARITHMETIC)
 // When compiling with GPU support, the "__half_raw" base class as well as
@@ -391,7 +390,7 @@ EIGEN_STRONG_INLINE __device__ bool operator >= (const half& a, const half& b) {
 }
 #endif
 
-#if defined(EIGEN_HAS_ARM64_FP16_SCALAR_ARITHMETIC)
+#if defined(EIGEN_HAS_ARM64_FP16_SCALAR_ARITHMETIC) && !defined(EIGEN_GPU_COMPILE_PHASE)
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half operator + (const half& a, const half& b) {
   return half(vaddh_f16(a.x, b.x));
 }
@@ -446,7 +445,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator >= (const half& a, const hal
 // of the functions, while the latter can only deal with one of them.
 #elif !defined(EIGEN_HAS_NATIVE_FP16) || (EIGEN_COMP_CLANG && !EIGEN_COMP_NVCC) // Emulate support for half floats
 
-#if EIGEN_COMP_CLANG && defined(EIGEN_CUDACC)
+#if EIGEN_COMP_CLANG && defined(EIGEN_GPUCC)
 // We need to provide emulated *host-side* FP16 operators for clang.
 #pragma push_macro("EIGEN_DEVICE_FUNC")
 #undef EIGEN_DEVICE_FUNC
@@ -511,7 +510,7 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC bool operator >= (const half& a, const hal
   return float(a) >= float(b);
 }
 
-#if defined(__clang__) && defined(__CUDA__)
+#if EIGEN_COMP_CLANG && defined(EIGEN_GPUCC)
 #pragma pop_macro("EIGEN_DEVICE_FUNC")
 #endif
 #endif  // Emulate support for half floats
@@ -759,6 +758,9 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half sqrt(const half& a) {
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half pow(const half& a, const half& b) {
   return half(::powf(float(a), float(b)));
 }
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half atan2(const half& a, const half& b) {
+  return half(::atan2f(float(a), float(b)));
+}
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half sin(const half& a) {
   return half(::sinf(float(a)));
 }
@@ -776,6 +778,12 @@ EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half asin(const half& a) {
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half acos(const half& a) {
   return half(::acosf(float(a)));
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half atan(const half& a) {
+  return half(::atanf(float(a)));
+}
+EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half atanh(const half& a) {
+  return half(::atanhf(float(a)));
 }
 EIGEN_STRONG_INLINE EIGEN_DEVICE_FUNC half floor(const half& a) {
 #if (EIGEN_CUDA_SDK_VER >= 80000 && defined EIGEN_CUDA_ARCH && EIGEN_CUDA_ARCH >= 300) || \

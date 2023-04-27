@@ -7,8 +7,8 @@
 // Public License v. 2.0. If a copy of the MPL was not distributed
 // with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef EIGEN_TRSM_KERNEL_IMPL_H
-#define EIGEN_TRSM_KERNEL_IMPL_H
+#ifndef EIGEN_CORE_ARCH_AVX512_TRSM_KERNEL_H
+#define EIGEN_CORE_ARCH_AVX512_TRSM_KERNEL_H
 
 #include "../../InternalHeaderCheck.h"
 
@@ -26,12 +26,6 @@
 #else  // EIGEN_USE_AVX512_TRSM_KERNELS == 0
 #define EIGEN_USE_AVX512_TRSM_R_KERNELS 0
 #define EIGEN_USE_AVX512_TRSM_L_KERNELS 0
-#endif
-
-#if defined(EIGEN_HAS_CXX17_IFCONSTEXPR)
-#define EIGEN_IF_CONSTEXPR(X) if constexpr (X)
-#else
-#define EIGEN_IF_CONSTEXPR(X) if (X)
 #endif
 
 // Need this for some std::min calls.
@@ -106,13 +100,17 @@ int64_t avx512_trsm_cutoff(int64_t L2Size, int64_t N, double L2Cap) {
   int64_t cutoff_l = static_cast<int64_t>(cutoff_d);
   return (cutoff_l / EIGEN_AVX_MAX_NUM_ROW) * EIGEN_AVX_MAX_NUM_ROW;
 }
+#else // !(EIGEN_USE_AVX512_TRSM_KERNELS) || !(EIGEN_COMP_CLANG != 0)
+#define EIGEN_ENABLE_AVX512_NOCOPY_TRSM_CUTOFFS 0
+#define EIGEN_ENABLE_AVX512_NOCOPY_TRSM_R_CUTOFFS 0
+#define EIGEN_ENABLE_AVX512_NOCOPY_TRSM_L_CUTOFFS 0
 #endif
 
 /**
  * Used by gemmKernel for the case A/B row-major and C col-major.
  */
 template <typename Scalar, typename vec, int64_t unrollM, int64_t unrollN, bool remM, bool remN>
-static EIGEN_ALWAYS_INLINE void transStoreC(PacketBlock<vec, EIGEN_ARCH_DEFAULT_NUMBER_OF_REGISTERS> &zmm,
+EIGEN_ALWAYS_INLINE void transStoreC(PacketBlock<vec, EIGEN_ARCH_DEFAULT_NUMBER_OF_REGISTERS> &zmm,
                                             Scalar *C_arr, int64_t LDC, int64_t remM_ = 0, int64_t remN_ = 0) {
   EIGEN_UNUSED_VARIABLE(remN_);
   EIGEN_UNUSED_VARIABLE(remM_);
@@ -723,7 +721,7 @@ void gemmKernel(Scalar *A_arr, Scalar *B_arr, Scalar *C_arr, int64_t M, int64_t 
  * The B matrix (RHS) is assumed to be row-major
  */
 template <typename Scalar, typename vec, int64_t unrollM, bool isARowMajor, bool isFWDSolve, bool isUnitDiag>
-static EIGEN_ALWAYS_INLINE void triSolveKernel(Scalar *A_arr, Scalar *B_arr, int64_t K, int64_t LDA, int64_t LDB) {
+EIGEN_ALWAYS_INLINE void triSolveKernel(Scalar *A_arr, Scalar *B_arr, int64_t K, int64_t LDA, int64_t LDB) {
   static_assert(unrollM <= EIGEN_AVX_MAX_NUM_ROW, "unrollM should be equal to EIGEN_AVX_MAX_NUM_ROW");
   using urolls = unrolls::trsm<Scalar>;
   constexpr int64_t U3 = urolls::PacketSize * 3;
@@ -804,7 +802,7 @@ void triSolveKernelLxK(Scalar *A_arr, Scalar *B_arr, int64_t M, int64_t K, int64
  *
  */
 template <typename Scalar, bool toTemp = true, bool remM = false>
-static EIGEN_ALWAYS_INLINE void copyBToRowMajor(Scalar *B_arr, int64_t LDB, int64_t K, Scalar *B_temp, int64_t LDB_,
+EIGEN_ALWAYS_INLINE void copyBToRowMajor(Scalar *B_arr, int64_t LDB, int64_t K, Scalar *B_temp, int64_t LDB_,
                                                 int64_t remM_ = 0) {
   EIGEN_UNUSED_VARIABLE(remM_);
   using urolls = unrolls::transB<Scalar>;
@@ -1184,4 +1182,4 @@ EIGEN_DONT_INLINE void trsmKernelL<double, Index, Mode, false, TriStorageOrder, 
 #endif  // EIGEN_USE_AVX512_TRSM_KERNELS
 }  // namespace internal
 }  // namespace Eigen
-#endif  // EIGEN_TRSM_KERNEL_IMPL_H
+#endif  // EIGEN_CORE_ARCH_AVX512_TRSM_KERNEL_H

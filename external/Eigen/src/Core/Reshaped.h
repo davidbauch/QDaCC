@@ -251,7 +251,7 @@ class ReshapedImpl_dense<XprType, Rows, Cols, Order, true>
     EIGEN_DEVICE_FUNC EIGEN_CONSTEXPR
     inline Index outerStride() const
     {
-      return ((Flags&RowMajorBit)==RowMajorBit) ? this->cols() : this->rows();
+      return (((Flags&RowMajorBit)==RowMajorBit) ? this->cols() : this->rows()) * m_xpr.innerStride();
     }
 
   protected:
@@ -444,7 +444,7 @@ struct reshaped_evaluator<ArgType, Rows, Cols, Order, /* HasDirectAccess */ true
     : mapbase_evaluator<XprType, typename XprType::PlainObject>(xpr)
   {
     // TODO: for the 3.4 release, this should be turned to an internal assertion, but let's keep it as is for the beta lifetime
-    eigen_assert(((internal::UIntPtr(xpr.data()) % plain_enum_max(1, evaluator<XprType>::Alignment)) == 0) && "data is not aligned");
+    eigen_assert(((std::uintptr_t(xpr.data()) % plain_enum_max(1, evaluator<XprType>::Alignment)) == 0) && "data is not aligned");
   }
 };
 

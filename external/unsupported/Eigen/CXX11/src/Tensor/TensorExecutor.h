@@ -94,9 +94,8 @@ class TensorExecutor {
                 "You must #define EIGEN_USE_THREADS, EIGEN_USE_GPU or "
                 "EIGEN_USE_SYCL before including Eigen headers.");
 
-  EIGEN_DEVICE_FUNC
   static EIGEN_STRONG_INLINE void run(const Expression& expr,
-                                      const Device& device = Device()) {
+                                      const Device& device = DefaultDevice()) {
     TensorEvaluator<Expression, Device> evaluator(expr, device);
     const bool needs_assign = evaluator.evalSubExprsIfNeeded(NULL);
     if (needs_assign) {
@@ -126,7 +125,6 @@ class TensorExecutor<Expression, DefaultDevice, /*Vectorizable=*/true,
  public:
   typedef typename Expression::Index StorageIndex;
 
-  EIGEN_DEVICE_FUNC
   static EIGEN_STRONG_INLINE void run(
       const Expression& expr, const DefaultDevice& device = DefaultDevice()) {
     TensorEvaluator<Expression, DefaultDevice> evaluator(expr, device);
@@ -688,12 +686,12 @@ struct ExecExprFunctorKernel {
       : evaluator(evaluator_), range(range_) {}
 
   EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE void operator()(
-      cl::sycl::nd_item<1> itemID) {
+      cl::sycl::nd_item<1> itemID) const {
     compute(itemID);
   }
   template <bool is_vec = Evaluator::PacketAccess>
   EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE std::enable_if_t<!is_vec>
-  compute(const cl::sycl::nd_item<1>& itemID) {
+  compute(const cl::sycl::nd_item<1>& itemID) const {
     Index gId = static_cast<Index>(itemID.get_global_linear_id());
     Index total_threads = itemID.get_global_range(0);
 
@@ -703,7 +701,7 @@ struct ExecExprFunctorKernel {
   }
   template <bool is_vec = Evaluator::PacketAccess>
   EIGEN_DEVICE_FUNC EIGEN_ALWAYS_INLINE std::enable_if_t<is_vec>
-  compute(const cl::sycl::nd_item<1>& itemID) {
+  compute(const cl::sycl::nd_item<1>& itemID) const {
     const Index vectorizedRange =
         (range / Evaluator::PacketSize) * Evaluator::PacketSize;
     Index gId = static_cast<Index>(itemID.get_global_linear_id());

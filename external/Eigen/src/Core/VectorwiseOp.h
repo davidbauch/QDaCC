@@ -350,8 +350,8 @@ template<typename ExpressionType, int Direction> class VectorwiseOp
     typedef typename ReturnType<internal::member_hypotNorm,RealScalar>::Type HypotNormReturnType;
     typedef typename ReturnType<internal::member_sum>::Type SumReturnType;
     typedef EIGEN_EXPR_BINARYOP_SCALAR_RETURN_TYPE(SumReturnType,Scalar,quotient) MeanReturnType;
-    typedef typename ReturnType<internal::member_all>::Type AllReturnType;
-    typedef typename ReturnType<internal::member_any>::Type AnyReturnType;
+    typedef typename ReturnType<internal::member_all, bool>::Type AllReturnType;
+    typedef typename ReturnType<internal::member_any, bool>::Type AnyReturnType;
     typedef PartialReduxExpr<ExpressionType, internal::member_count<Index,Scalar>, Direction> CountReturnType;
     typedef typename ReturnType<internal::member_prod>::Type ProdReturnType;
     typedef Reverse<const ExpressionType, Direction> ConstReverseReturnType;
@@ -745,7 +745,7 @@ template<typename ExpressionType, int Direction> class VectorwiseOp
 #   endif
 
   protected:
-    Index redux_length() const
+    EIGEN_DEVICE_FUNC Index redux_length() const
     {
       return Direction==Vertical ? m_matrix.rows() : m_matrix.cols();
     }

@@ -23,6 +23,15 @@
 #include <stdint.h>
 #include <iostream>
 
+#ifdef SYCL_COMPILER_IS_DPCPP
+template <typename T>
+struct cl::sycl::is_device_copyable<
+    OffByOneScalar<T>,
+    std::enable_if_t<!(!std::is_trivially_copyable<OffByOneScalar<T>>::value &&
+                       (std::is_const_v<OffByOneScalar<T>> || std::is_volatile_v<OffByOneScalar<T>>))>>
+    : std::true_type {};
+#endif
+
 template <typename DataType, int DataLayout, typename IndexType>
 void test_device_memory(const Eigen::SyclDevice &sycl_device) {
   IndexType sizeDim1 = 100;

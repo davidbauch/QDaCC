@@ -438,13 +438,13 @@ struct TensorEvaluator<TensorChippingOp<DimId, ArgType>, Device>
     : Base(op, device)
     { }
 
-  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE CoeffReturnType& coeffRef(Index index)
+  EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE CoeffReturnType& coeffRef(Index index) const
   {
     return this->m_impl.coeffRef(this->srcCoeff(index));
   }
 
   template <int StoreMode> EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE
-  void writePacket(Index index, const PacketReturnType& x)
+  void writePacket(Index index, const PacketReturnType& x) const
   {
     if (this->isInnerChipping()) {
       // m_stride is equal to 1, so let's avoid the integer division.
@@ -483,7 +483,7 @@ struct TensorEvaluator<TensorChippingOp<DimId, ArgType>, Device>
   template <typename TensorBlock>
   EIGEN_DEVICE_FUNC EIGEN_STRONG_INLINE void writeBlock(
       const TensorBlockDesc& desc, const TensorBlock& block) {
-    assert(this->m_impl.data() != NULL);
+    eigen_assert(this->m_impl.data() != NULL);
 
     const Index chip_dim = this->m_dim.actualDim();
 
