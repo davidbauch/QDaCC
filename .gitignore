@@ -38,3 +38,10 @@
 /misc/out.txt
 /misc/temp_interpolation_test.cpp
 .DS_Store
+.clang-format
+
+# Doc Garbage
+doc/*.png
+
+# GUI
+GUI/*
