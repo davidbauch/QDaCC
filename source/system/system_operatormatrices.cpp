@@ -25,7 +25,8 @@ std::tuple<Scalar, std::string> separate_state(const std::string& input) {
         res = 1i;
     }
     res *= std::stod(amp);
-    return {res, state};
+    std::cout << "Converting AMP to " << res << std::endl;
+    return {res, ":"+state};
 
 }
 
