@@ -15,7 +15,7 @@ using namespace QDLC;
 // Separates amp:state; or amp:state;state: strings and returns the isolated Scalar amplitude and the string state
 std::tuple<Scalar, std::string> separate_state(const std::string& input) {
     // Edge Case; No Amplitude
-    if (input.front() == )
+    if (input.front() == ':')
         return {1,input};
     // Split Amp and State at first ":"
     auto [amp, state] = QDLC::String::split_pair(input, ":");
