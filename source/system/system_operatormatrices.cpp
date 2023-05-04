@@ -13,21 +13,20 @@ using namespace QDLC;
 // add scalings -> a:X;X: or i:X;X: or ai:X;X:
 
 // Separates amp:state; or amp:state;state: strings and returns the isolated Scalar amplitude and the string state
-std::tuple<Scalar, std::string> separate_state(const std::string& input) {
+std::tuple<Scalar, std::string> separate_state( const std::string &input ) {
     // Edge Case; No Amplitude
-    if (input.front() == ':')
-        return {1,input};
+    if ( input.front() == ':' )
+        return { 1, input };
     // Split Amp and State at first ":"
-    auto [amp, state] = QDLC::String::split_pair(input, ":");
+    auto [amp, state] = QDLC::String::split_pair( input, ":" );
     Scalar res = 1;
-    if (amp.back() == 'i') {
+    if ( amp.back() == 'i' ) {
         amp.pop_back();
         res = 1i;
     }
-    res *= std::stod(amp);
+    res *= std::stod( amp );
     std::cout << "Converting AMP to " << res << std::endl;
-    return {res, ":"+state};
-
+    return { res, ":" + state };
 }
 
 OperatorMatrices::OperatorMatrices( Parameters &p ) {
@@ -226,7 +225,14 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
                 pulsemat += el_transitions[transition].hilbert;
                 std::string transition_transposed = el_transitions[transition].name_transposed; // sigma_+
                 pulsemat_star += el_transitions[transition_transposed].hilbert;
-            } else if ( std::isupper( transition.front() ) ) { // This will require the electronic states to be capitalized and not start with a numerical.
+            } else if ( ph_transitions.contains( transition ) ) {
+                Log::L2( "[System-OperatorMatrices] Pulse transition {} is cavity...\n", transition );
+                // pulsemat += ph_transitions[transition + "b"].hilbert;
+                // pulsemat_star += ph_transitions[transition + "bd"].hilbert;
+                const auto pindx = pulse_mat_cavity_cache.size();
+                pulse_mat_cavity_cache[pindx - 2] += ph_transitions[transition + "b"].hilbert;
+                pulse_mat_cavity_cache[pindx - 1] += ph_transitions[transition + "bd"].hilbert;
+            } else {
                 Log::L2( "[System-OperatorMatrices] Electronic Pulse transition {} is not in the list of allowed electronic transitions, recreating transition matrices and adding to pulse {}\n", transition, i );
                 auto [from, to] = QDLC::String::split_pair( transition, p.transition_delimiter );
                 auto ket1 = el_states[from].ket;
@@ -267,13 +273,6 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
 
                 pulsemat += transition_hilbert;
                 pulsemat_star += transition_transposed_hilbert;
-            } else {
-                Log::L2( "[System-OperatorMatrices] Pulse transition {} is cavity...\n", transition );
-                // pulsemat += ph_transitions[transition + "b"].hilbert;
-                // pulsemat_star += ph_transitions[transition + "bd"].hilbert;
-                const auto pindx = pulse_mat_cavity_cache.size();
-                pulse_mat_cavity_cache[pindx - 2] += ph_transitions[transition + "b"].hilbert;
-                pulse_mat_cavity_cache[pindx - 1] += ph_transitions[transition + "bd"].hilbert;
             }
         }
         pulse_mat.emplace_back( pulsemat );      // sigma_-
@@ -535,8 +534,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     initial_state_vector_ket = Dense::Zero( base.size(), 1 );
     for ( auto amped_state : QDLC::String::splitline( p.p_initial_state_s, '+' ) ) {
         // State Syntax: |state> where state can be an actual system state or coherent(alpha)mode, squeezed(x,y)mode or thermal(alpha)mode
-        //Scalar amp = state[0] == ':' ? 1.0 : std::stod( QDLC::String::splitline( state, ':' ).front() );
-        auto [amp, state] = separate_state(amped_state);
+        // Scalar amp = state[0] == ':' ? 1.0 : std::stod( QDLC::String::splitline( state, ':' ).front() );
+        auto [amp, state] = separate_state( amped_state );
         std::string pure_state = state.substr( state.find( ':' ) );
         // Coherent State
         if ( pure_state.find( "coherent" ) != std::string::npos ) {
