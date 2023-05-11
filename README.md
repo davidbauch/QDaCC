@@ -1,17 +1,21 @@
-# QDLC
+# QDaCC - Quantum Dot and Cavity Computing
 
 I created this program throughout my Bachelor's, Master's and my time as an ongoing PHD Student at the University of Paderborn.
 
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/7118c9d79bb5421392acac8d2da8e56a)](https://www.codacy.com/gh/davidbauch/QDLC-C/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=davidbauch/QDLC-C&amp;utm_campaign=Badge_Grade) [![DOI](https://zenodo.org/badge/190289483.svg)](https://zenodo.org/badge/latestdoi/190289483) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/davidbauch)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/7118c9d79bb5421392acac8d2da8e56a)](https://www.codacy.com/gh/davidbauch/QDaCC-C/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=davidbauch/QDaCC-C&amp;utm_campaign=Badge_Grade) [![DOI](https://zenodo.org/badge/190289483.svg)](https://zenodo.org/badge/latestdoi/190289483) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/davidbauch)
 
-Published Work using QDLC:
+Published Work using QDaCC:
 
 ["Ultrafast electric control of cavity mediated single-photon and photon-pair generation with semiconductor quantum dots"](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308)
 
-[![PRB](https://img.shields.io/badge/Phys.Rev.B-104,085308-ba0c2f.svg)](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308) [![arXiv](https://img.shields.io/badge/arXiv-2105.06783-b31b1b.svg)](https://arxiv.org/abs/2105.06783) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1103/PhysRevB.104.085308)](https://arxiv.org/abs/2105.06783)
+[![PRB](https://img.shields.io/badge/Phys.Rev.B-104,085308-ba0c2f.svg)](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308) [![arXiv](https://img.shields.io/badge/arXiv-2105.06783-b31b1b.svg)](https://arxiv.org/abs/2105.06783) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5256236.svg)](https://doi.org/10.5281/zenodo.5256236) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1103/PhysRevB.104.085308)](https://arxiv.org/abs/2105.06783)
+
+["On-demand indistinguishable and entangled photons at telecom frequencies using tailored cavity designs" (arXiv)](https://arxiv.org/abs/2303.13871)
+
+[![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734)
 
 
-There will be a GUI available soon at [gitub/QDLC-GUI](https://github.com/davidbauch/QDLC-GUI)
+There will be a GUI available soon at [gitub/QDaCC-GUI](https://github.com/davidbauch/QDaCC-GUI)
 
 # What does it do?
 
@@ -55,7 +59,7 @@ The general features of this program include:
 All numerical parameters support the following units:
 Units of Energy:
 
-- `H=Z` - Hertz, may be omitted, meaning the default unit for energy is `H=Z`
+- `Hz` - Hertz, may be omitted, meaning the default unit for energy is `Hz`
 - `eV` - Electron Volt
 - `meV` - Milli Electron Volt `= 1E-3eV`
 - `mueV` - Micro Electron Volt `= 1E-6eV`
