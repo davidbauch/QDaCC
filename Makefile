@@ -7,7 +7,7 @@ BUILD_DIR := ./build
 SRC_DIRS := ./source ./external/ALGLIB
 COMPILER = $(CXX)
 
-VERSION := 4.0.0
+VERSION := 1.0.0
 
 SRCS := $(shell find $(SRC_DIRS) -name "*.cpp")
 
@@ -28,23 +28,23 @@ endif
 ifeq ($(OS),Windows_NT)
 	LIB_FLAGS += -std=c++2b
 	TARGET_DIR = ../../Threadhandler
-	TARGET_EXEC := QDLC-$(VERSION).exe
-	TARGET_EXEC_LATEST := QDLC.exe
+	TARGET_EXEC := QDaCC-$(VERSION).exe
+	TARGET_EXEC_LATEST := QDaCC.exe
 	BUILD_DIR = ./build/win
 else
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Darwin)
 		LIB_FLAGS += -std=c++2b
-		TARGET_EXEC = QDLC-$(VERSION).out
-		TARGET_EXEC_LATEST = QDLC.out
+		TARGET_EXEC = QDaCC-$(VERSION).out
+		TARGET_EXEC_LATEST = QDaCC.out
 		TARGET_DIR = /Users/davidbauch/bin
 		BUILD_DIR = ./build/darwin
 		COMPILER = g++-12
 	endif
 	ifeq ($(UNAME_S),Linux)
 		LIB_FLAGS += -std=c++2b
-		TARGET_EXEC = QDLC-$(VERSION).out
-		TARGET_EXEC_LATEST = QDLC.out
+		TARGET_EXEC = QDaCC-$(VERSION).out
+		TARGET_EXEC_LATEST = QDaCC.out
 		TARGET_DIR = ./
 		BUILD_DIR = ./build/linux
 		COMPILER = g++
@@ -62,13 +62,13 @@ main: $(OBJS)
 	@echo Compiling Main Program into $(TARGET_DIR)/$(TARGET_EXEC), compiler is $(COMPILER), libs are $(LIB_FLAGS)
 	@echo User Flags: $(UFLAG)
 	@$(COMPILER) main.cpp -o $(TARGET_DIR)/$(TARGET_EXEC) $(OBJS) $(LIB_LINKS) $(CPPFLAGS)
-	# ln -sf $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/QDLC
+	# ln -sf $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/QDaCC
 	cp $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/$(TARGET_EXEC_LATEST)
 maindebug: $(OBJS)g
 	@echo Compiling Main Program into $(TARGET_DIR)/$(TARGET_EXEC), compiler is $(COMPILER), libs are $(LIB_FLAGS)
 	@echo User Flags: $(UFLAG)
 	@$(COMPILER) main.cpp -g -o $(TARGET_DIR)/$(TARGET_EXEC) $(OBJS) $(LIB_LINKS) $(CPPFLAGS)
-	# ln -sf $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/QDLC
+	# ln -sf $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/QDaCC
 	cp $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/$(TARGET_EXEC_LATEST)
 
 # Build step for C++ source
