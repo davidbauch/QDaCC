@@ -2,7 +2,7 @@
 
 bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
     std::vector<QDLC::SaveState> dummy{ { rho0, 0.0 } };
-    auto &fp_dot = FileOutput::add_file( "pathintegral", "dot" );
+    auto &fp_dot = FileOutput::add_file( "path", "dot" );
     fp_dot << "digraph G{{\ngraph [pad=\"0.5\", nodesep=\"0.1\", ranksep=\"3\", rankdir=\"TB\"]\n";
 
     // Cache Parameters
@@ -113,51 +113,69 @@ bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
     }
 
     // Path Integral Mappings
-    fp_dot << fmt::format( "\n\"Phonon Kernel\" [pos=\"0,-1!\", color=\"dodgerblue2\"]\n" );
-    // Phonon correlation function:
-    if ( s.phi_vector_int.size() == 0 )
-        s.initialize_path_integral_functions();
-    for ( size_t i = 0; i < rho0.rows(); i++ )
-        for ( size_t j = 0; j < rho0.rows(); j++ )
-            for ( size_t i_n = 0; i_n < rho0.rows(); i_n++ )
-                for ( size_t j_n = 0; j_n < rho0.rows(); j_n++ ) {
-                    Scalar val = 0;
-                    for ( int tau = 0; tau < s.parameters.p_phonon_nc; tau++ )
-                        if ( s.parameters.numerics_pathint_partially_summed )
-                            val += s.dgl_phonon_memory_function( tau, s.operatorMatrices.phonon_hilbert_index_to_group_index[i], s.operatorMatrices.phonon_hilbert_index_to_group_index[j], s.operatorMatrices.phonon_hilbert_index_to_group_index[i_n], s.operatorMatrices.phonon_hilbert_index_to_group_index[j_n] );
-                        else
-                            val += s.dgl_phonon_memory_function( tau, i, j, i_n, j_n );
-                    if ( std::abs( val ) > 1E-15 )
-                        fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( val ), std::imag( val ), "dodgerblue2", 1.0, 0.1, "Phonon Kernel" );
-                    // fmt::print( "i = {}, j = {}, id = {}, jd = {} --> converted i = {}, j = {}, id = {}, jd = {} --> {}\n", i, j, i_n, j_n, s.operatorMatrices.phonon_hilbert_index_to_group_index[i], s.operatorMatrices.phonon_hilbert_index_to_group_index[j], s.operatorMatrices.phonon_hilbert_index_to_group_index[i_n], s.operatorMatrices.phonon_hilbert_index_to_group_index[j_n], val );
-                }
-
-    // Polaron Frame Mapping
-    s.initialize_polaron_frame_functions();
-    fp_dot << fmt::format( "\n\"Polaron Mapping\" [pos=\"3,-1!\", color=\"firebrick4\"]\n" );
-    std::vector<std::vector<Sparse>> polaron( (size_t)rho0.rows(), { (size_t)rho0.rows(), Sparse( rho0.rows(), rho0.rows() ) } );
-    // Calculate the remaining propagators
-    for ( int i = 0; i < rho0.rows(); i++ ) {
-        for ( int j = 0; j < rho0.rows(); j++ ) {
-            Sparse projector = Sparse( rho0.rows(), rho0.rows() );
-            projector.coeffRef( i, j ) = 1;
-            polaron[i][j] = s.dgl_phonons_pmeq( projector, s.parameters.p_phonon_tcutoff, dummy );
-        }
+    try {
+        if ( s.parameters.p_phonon_T < 0 or s.parameters.numerics_phonon_approximation_order != QDLC::PhononApproximation::PathIntegral )
+            throw std::runtime_error( "Phonon Path Integral Kernel is only available for Path Integral Phonons." );
+        fp_dot << fmt::format( "\n\"Phonon Kernel\" [pos=\"0,-1!\", color=\"dodgerblue2\"]\n" );
+        // Phonon correlation function:
+        if ( s.phi_vector_int.size() == 0 )
+            s.initialize_path_integral_functions();
+        for ( size_t i = 0; i < rho0.rows(); i++ )
+            for ( size_t j = 0; j < rho0.rows(); j++ )
+                for ( size_t i_n = 0; i_n < rho0.rows(); i_n++ )
+                    for ( size_t j_n = 0; j_n < rho0.rows(); j_n++ ) {
+                        Scalar val = 0;
+                        for ( int tau = 0; tau < s.parameters.p_phonon_nc; tau++ )
+                            if ( s.parameters.numerics_pathint_partially_summed )
+                                val += s.dgl_phonon_memory_function( tau, s.operatorMatrices.phonon_hilbert_index_to_group_index[i], s.operatorMatrices.phonon_hilbert_index_to_group_index[j], s.operatorMatrices.phonon_hilbert_index_to_group_index[i_n], s.operatorMatrices.phonon_hilbert_index_to_group_index[j_n] );
+                            else
+                                val += s.dgl_phonon_memory_function( tau, i, j, i_n, j_n );
+                        if ( std::abs( val ) > 1E-15 )
+                            fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( val ), std::imag( val ), "dodgerblue2", 1.0, 0.1, "Phonon Kernel" );
+                        // fmt::print( "i = {}, j = {}, id = {}, jd = {} --> converted i = {}, j = {}, id = {}, jd = {} --> {}\n", i, j, i_n, j_n, s.operatorMatrices.phonon_hilbert_index_to_group_index[i], s.operatorMatrices.phonon_hilbert_index_to_group_index[j], s.operatorMatrices.phonon_hilbert_index_to_group_index[i_n], s.operatorMatrices.phonon_hilbert_index_to_group_index[j_n], val );
+                    }
+    } catch ( const std::exception &e ) {
+        Log::L2( "[Dot-Visualizer] Error when calculating and outputting Path Integral Kernel. Exception: {}\n", e.what() );
     }
-    for ( auto i = 0; i < polaron.size(); i++ )
-        for ( auto j = 0; j < polaron.size(); j++ )
-            for ( int l = 0; l < polaron[i][j].outerSize(); ++l )
-                for ( Sparse::InnerIterator M( polaron[i][j], l ); M; ++M ) {
-                    int i_n = M.row();
-                    int j_n = M.col();
-                    double stroke = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.2 : 1.0; // std::min( 2.0, std::max( 0.2, std::abs( M.value() ) / total_weights[fmt::format( "{},{}->{},{}", i, j, i_n, j_n )] ) );
-                    double arrowsize = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.05 : 0.1;
-                    fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( M.value() ), std::imag( M.value() ), "firebrick4", stroke, arrowsize, "Polaron Mapping" );
-                }
-
+    // Polaron Frame Mapping
+    try {
+        if ( s.parameters.p_phonon_T < 0 or s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral )
+            throw std::runtime_error( "Phonon PME Kernel is only available for PME Phonons." );
+        s.initialize_polaron_frame_functions();
+        fp_dot << fmt::format( "\n\"Polaron Mapping\" [pos=\"3,-1!\", color=\"firebrick4\"]\n" );
+        std::vector<std::vector<Sparse>> polaron( (size_t)rho0.rows(), { (size_t)rho0.rows(), Sparse( rho0.rows(), rho0.rows() ) } );
+        // Calculate the remaining propagators
+        for ( int i = 0; i < rho0.rows(); i++ ) {
+            for ( int j = 0; j < rho0.rows(); j++ ) {
+                Sparse projector = Sparse( rho0.rows(), rho0.rows() );
+                projector.coeffRef( i, j ) = 1;
+                polaron[i][j] = s.dgl_phonons_pmeq( projector, s.parameters.p_phonon_tcutoff, dummy );
+            }
+        }
+        for ( auto i = 0; i < polaron.size(); i++ )
+            for ( auto j = 0; j < polaron.size(); j++ )
+                for ( int l = 0; l < polaron[i][j].outerSize(); ++l )
+                    for ( Sparse::InnerIterator M( polaron[i][j], l ); M; ++M ) {
+                        int i_n = M.row();
+                        int j_n = M.col();
+                        double stroke = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.2 : 1.0; // std::min( 2.0, std::max( 0.2, std::abs( M.value() ) / total_weights[fmt::format( "{},{}->{},{}", i, j, i_n, j_n )] ) );
+                        double arrowsize = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.05 : 0.1;
+                        fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( M.value() ), std::imag( M.value() ), "firebrick4", stroke, arrowsize, "Polaron Mapping" );
+                    }
+    } catch ( const std::exception &e ) {
+        Log::L2( "[Dot-Visualizer] Error when calculating and outputting PME Kernel.\n" );
+    }
+    // Always End the File
     fp_dot << "}}";
-    // RIP
-    std::system( fmt::format( "dot -Kneato -Tsvg '{0}pathintegral.dot' -o '{0}pathintegral.svg'", s.parameters.working_directory ).c_str() );
-    std::system( fmt::format( "dot -Tsvg '{0}pathintegral.dot' -o '{0}pathintegral_unordered.svg'", s.parameters.working_directory ).c_str() );
+    // Close File to ensure Flushing
+    fp_dot.close();
+    // RIP. TODO: no system call; for now dont care
+    Log::L2("[Dot-Visualizer] Outputting dot file to path.dot\n");
+    Log::L2("[Dot-Visualizer] dot -v -Kneato -Tsvg \"{0}path.dot\" -o \"{0}path.svg\"\n",s.parameters.working_directory);
+    Log::L2("[Dot-Visualizer] Return value: {}\n",std::system( fmt::format( "dot -v -Kneato -Tsvg \"{0}path.dot\" -o \"{0}path.svg\"", s.parameters.working_directory ).c_str() ) );
+    Log::L2("[Dot-Visualizer] dot -v -Kneato -Tpng \"{0}path.dot\" -o \"{0}path.png\"\n",s.parameters.working_directory);
+    Log::L2("[Dot-Visualizer] Return value: {}\n",std::system( fmt::format( "dot -v -Kneato -Tpng \"{0}path.dot\" -o \"{0}path.png\"", s.parameters.working_directory ).c_str() ) );
+    Log::L2("[Dot-Visualizer] dot -v -Tsvg \"{0}path.dot\" -o \"{0}path_unordered.svg\"\n",s.parameters.working_directory);
+    Log::L2("[Dot-Visualizer] Return value: {}\n",std::system( fmt::format( "dot -v -Tsvg \"{0}path.dot\" -o \"{0}path_unordered.svg\"", s.parameters.working_directory ).c_str() ) );
     return true;
 }
