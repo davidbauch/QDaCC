@@ -225,7 +225,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
                 pulsemat += el_transitions[transition].hilbert;
                 std::string transition_transposed = el_transitions[transition].name_transposed; // sigma_+
                 pulsemat_star += el_transitions[transition_transposed].hilbert;
-            } else if ( ph_transitions.contains( transition ) ) {
+            } else if ( ph_transitions.contains( transition + "b" ) ) {
                 Log::L2( "[System-OperatorMatrices] Pulse transition {} is cavity...\n", transition );
                 // pulsemat += ph_transitions[transition + "b"].hilbert;
                 // pulsemat_star += ph_transitions[transition + "bd"].hilbert;
@@ -374,6 +374,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     for ( auto &[mode, param] : p.input_photonic ) { // TODO: das hier auf input matritzen ändern kekw.
         int i = 0;
         for ( const auto &transition : param.string_v["CoupledTo"] ) {
+            if ( not el_transitions.contains( transition ) )
+                continue;
             Log::L2( "[System-PME] Adding Polaron Cavity Transition |{}><{}|b_{}\n", el_transitions[transition].to, el_transitions[transition].from, mode );
             auto transition_transposed = el_transitions[transition].name_transposed;
             polaron_factors[0] += el_transitions[transition_transposed].hilbert * p.p_omega_coupling * param.get( "CouplingScaling", i ) * ph_transitions[mode + "b"].hilbert;
@@ -429,10 +431,18 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
             std::string transition = data.string_v["CoupledTo"][i];
             std::string transition_transposed = QDLC::String::split_and_reverse( transition, p.transition_delimiter );
             const auto coupling_scaling = data.get( "CouplingScaling", i );
-            H_I_a += coupling_scaling * el_transitions[transition_transposed].hilbert * ph_transitions[name + "b"].hilbert;
-            H_I_a += coupling_scaling * el_transitions[transition].hilbert * ph_transitions[name + "bd"].hilbert;
-            H_I_b += coupling_scaling * el_transitions[transition_transposed].hilbert * ph_transitions[name + "bd"].hilbert;
-            H_I_b += coupling_scaling * el_transitions[transition].hilbert * ph_transitions[name + "b"].hilbert;
+            if ( el_transitions.contains( transition ) ) {
+                H_I_a += p.p_omega_coupling * coupling_scaling * el_transitions[transition_transposed].hilbert * ph_transitions[name + "b"].hilbert;
+                H_I_a += p.p_omega_coupling * coupling_scaling * el_transitions[transition].hilbert * ph_transitions[name + "bd"].hilbert;
+                H_I_b += p.p_omega_coupling * coupling_scaling * el_transitions[transition_transposed].hilbert * ph_transitions[name + "bd"].hilbert;
+                H_I_b += p.p_omega_coupling * coupling_scaling * el_transitions[transition].hilbert * ph_transitions[name + "b"].hilbert;
+            } else if ( ph_transitions.contains( transition + "b" ) ) {
+                Log::L2( "[System-OperatorMatrices] Cavity {} has intracavity coupling to {}!\n", name, transition );
+                H_I_a += p.p_omega_coupling*coupling_scaling * ph_transitions[transition + "bd"].hilbert * ph_transitions[name + "b"].hilbert;
+                H_I_a += p.p_omega_coupling*coupling_scaling * ph_transitions[transition + "b"].hilbert * ph_transitions[name + "bd"].hilbert;
+                H_I_b += p.p_omega_coupling*coupling_scaling * ph_transitions[transition + "b"].hilbert * ph_transitions[name + "b"].hilbert;
+                H_I_b += p.p_omega_coupling*coupling_scaling * ph_transitions[transition + "bd"].hilbert * ph_transitions[name + "bd"].hilbert;
+            }
         }
     }
     if ( output_operators )
@@ -596,9 +606,9 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     // Choose Final Hamilton. The Coupling scalings are incorporateed in H_I_a and H_I_b. The PME scaling <B> is incorporated in H_I_a/b and the Pulse Matrices.
     Log::L2( "[System-OperatorMatrices] Choosing final Hamilton Operator...\n" );
     if ( p.numerics_use_rwa )
-        H_I = p.p_omega_coupling * H_I_a;
+        H_I = H_I_a;
     else
-        H_I = p.p_omega_coupling * ( H_I_a + H_I_b );
+        H_I = H_I_a + H_I_b;
     if ( p.numerics_use_interactionpicture )
         H_used = H_I;
     else
