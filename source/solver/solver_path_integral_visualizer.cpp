@@ -1,6 +1,7 @@
 #include "solver/solver_ode.h"
 
 bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
+    Log::L2("[Dot-Visualizer] Starting to output dot file to path.dot\n");
     std::vector<QDLC::SaveState> dummy{ { rho0, 0.0 } };
     auto &fp_dot = FileOutput::add_file( "path", "dot" );
     fp_dot << "digraph G{{\ngraph [pad=\"0.5\", nodesep=\"0.1\", ranksep=\"3\", rankdir=\"TB\"]\n";
