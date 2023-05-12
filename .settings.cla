@@ -158,6 +158,18 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '2hyphen'
+	key = 'expv'
+	description = 'Custom Expectation Values'
+	group = 'Systemparameter'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'none'
+		datatype = 'string'
+		description = 'Custom Expectation Values. Syntax: [i,j,val:k,l:val:...;]'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
 	key = 'system'
 	description = 'All system parameters'
 	group = 'Systemparameter'

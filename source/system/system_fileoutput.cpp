@@ -25,7 +25,7 @@ std::fstream &FileOutput::Iget_file( const std::string &name ) {
     return files[name];
 }
 
-std::ifstream FileOutput::Iload_file( const std::string &name, const std::string &file_ending) {
+std::ifstream FileOutput::Iload_file( const std::string &name, const std::string &file_ending ) {
     auto file = std::ifstream( path + name + "." + file_ending );
     if ( file.is_open() )
         Log::L2( "[System-Fileoutput] Loaded file '{}.{}'\n", name, file_ending );
@@ -112,5 +112,22 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
             for ( auto &[name, rem] : p.input_photonic )
                 fp_photonic << fmt::format( "EM(|{}><{}|)\t", name, name );
         fp_photonic << "\n";
+    }
+    // Photon Expv
+    if ( p.output_dict.contains( "photons" ) ) {
+        for ( auto &[mode, state] : op.ph_states ) {
+            add_file( "photons_" + mode ) << "t";
+            for ( int i = 0; i < state.self_hilbert.rows(); i++ )
+                for ( int j = 0; j < state.self_hilbert.cols(); j++ )
+                    get_file( "photons_" + mode ) << fmt::format( "\t|{}><{}|", i, j );
+            get_file( "photons_" + mode ) << "\n";
+        }
+    }
+    // Custom Expv
+    if (not p.numerics_custom_expectation_values.empty()) {
+        add_file( "custom_expectation_values" ) << "t";
+        for (auto i = 0;  i < p.numerics_custom_expectation_values.size(); i++)
+            get_file( "custom_expectation_values" ) << fmt::format( "\tCustom_{}", i );
+        get_file( "custom_expectation_values" ) << "\n";
     }
 }

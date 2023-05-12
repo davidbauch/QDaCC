@@ -115,6 +115,8 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     auto output_dict_vec = QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--output" ), ';' );
     // Move all elements into the set
     output_dict = std::set<std::string>( std::make_move_iterator( output_dict_vec.begin() ), std::make_move_iterator( output_dict_vec.end() ) );
+    
+    numerics_custom_expectation_values = QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--expv" ), ';' );
 
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
     hbar = 1.0545718E-34; // J/s, scaling will be 1

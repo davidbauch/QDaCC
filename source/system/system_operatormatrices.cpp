@@ -411,6 +411,20 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         current++;
     }
 
+    // Create Custom Exp Value operators
+    Log::L2( "[System-OperatorMatrices] Creating Custom Exp Value Operators...\n" );
+    for (auto& str_mat : p.numerics_custom_expectation_values) {
+        auto elements = QDLC::String::split(str_mat, ":");
+        numerics_custom_expectation_values_operators.emplace_back(base.size(), base.size());
+        for (auto& element : elements) {
+            auto element_split = QDLC::String::split(element, ",");
+            const auto i = std::stoi(element_split[0]);
+            const auto j = std::stoi(element_split[1]);
+            const auto val = std::stod(element_split[2]);
+            numerics_custom_expectation_values_operators.back().coeffRef(i, j) = val;
+        }
+    }
+
     Log::L2( "[System-OperatorMatrices] Creating Hamiltonoperator...\n" );
     // Generate Self Action Hamilton H_0:
     H_0 = Sparse( base.size(), base.size() );

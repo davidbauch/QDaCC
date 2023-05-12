@@ -83,6 +83,9 @@ class OperatorMatrices {
     // The initial State vector
     Dense initial_state_vector_ket;
 
+    // Custom expectation value operators
+    std::vector<Sparse> numerics_custom_expectation_values_operators;
+
     // A global output format for Eigen's matrices. Could also be declared to Eigen at compile time.
     Eigen::IOFormat output_format;
 

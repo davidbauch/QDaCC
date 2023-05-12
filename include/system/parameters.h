@@ -153,6 +153,9 @@ class Parameters {
     // For example, the polaron functions will start to use cached and interpolated values as soon as this trigger is switched
     bool numerics_main_direction_done;
 
+    // Custom Expectation Values
+    std::vector<std::string> numerics_custom_expectation_values;
+
     // Constructor
     Parameters() = default;
     explicit Parameters( const std::vector<std::string> &arguments );

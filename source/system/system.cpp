@@ -17,24 +17,24 @@ System::System( const std::vector<std::string> &input ) {
         Log::L2( "[System] Initialization failed! Exitting program...\n" );
         Log::Logger::close();
         exit( EXIT_FAILURE );
-    } 
+    }
     Log::L2( "[System] Successful! Elapsed time is {}ms\n", timer_systeminit.getWallTime( Timers::MILLISECONDS ) );
     // Log the operator matrix base
     parameters.log( operatorMatrices.initial_state_vector_ket );
-    timer_systeminit.end(); 
+    timer_systeminit.end();
 }
 
 bool System::init_system() {
     // Single chirp for single atomic level
     for ( auto &[name, chirpinputs] : parameters.input_chirp ) {
         chirp.emplace_back( chirpinputs, parameters );
-        chirp.back().to_file( "chirp_" + name, false /*complex*/, parameters.output_dict.contains("chirpf") /*spectrum*/ );
+        chirp.back().to_file( "chirp_" + name, false /*complex*/, parameters.output_dict.contains( "chirpf" ) /*spectrum*/ );
     }
 
     // Arbitrary number of pulses onto single atomic level.
     for ( auto &[name, pulseinputs] : parameters.input_pulse ) {
         pulse.emplace_back( pulseinputs, parameters );
-        pulse.back().to_file( "pulse_" + name, true /*complex*/, parameters.output_dict.contains("pulsef") /*spectrum*/ );
+        pulse.back().to_file( "pulse_" + name, true /*complex*/, parameters.output_dict.contains( "pulsef" ) /*spectrum*/ );
     }
 
     // if ( parameters.numerics_use_saved_coefficients )
@@ -59,15 +59,15 @@ bool System::init_system() {
 
 Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos ) {
     std::vector<Sparse> ret( 5, Sparse( rho.rows(), rho.cols() ) );
-//#pragma omp parallel sections num_threads( parameters.numerics_maximum_secondary_threads )
+    // #pragma omp parallel sections num_threads( parameters.numerics_maximum_secondary_threads )
     {
-//#pragma omp section
+        // #pragma omp section
         {
             ret[0] = -1.0i * dgl_kommutator( H, rho );
             Log::L3( "[System] Lindblad Equation:\n{}\n", Dense( ret[0] ).format( operatorMatrices.output_format ) );
         }
         // Photon Loss
-//#pragma omp section
+        // #pragma omp section
         if ( parameters.p_omega_cavity_loss != 0.0 ) {
             auto loss = Sparse( rho.rows(), rho.cols() );
             for ( const auto &[transition, data] : operatorMatrices.ph_transitions ) {
@@ -79,8 +79,8 @@ Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const dou
             }
             Log::L3( "[System] Cavity Loss:\n{}\n", Dense( ret[1] ).format( operatorMatrices.output_format ) );
         }
-        // Radiative Decay 
-//#pragma omp section
+        // Radiative Decay
+        // #pragma omp section
         if ( parameters.p_omega_decay != 0.0 ) {
             auto loss = Sparse( rho.rows(), rho.cols() );
             for ( const auto &[transition, data] : operatorMatrices.el_transitions ) {
@@ -94,7 +94,7 @@ Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const dou
             Log::L3( "[System] Radiative Decay:\n{}\n", Dense( ret[2] ).format( operatorMatrices.output_format ) );
         }
         // Electronic Dephasing
-//#pragma omp section
+        // #pragma omp section
         if ( parameters.p_omega_pure_dephasing != 0.0 ) {
             auto loss = Sparse( rho.rows(), rho.cols() );
             for ( const auto &[name_a, data_a] : operatorMatrices.el_states ) {
@@ -212,6 +212,31 @@ void System::calculate_expectation_values( const std::vector<QDLC::SaveState> &r
                 for ( int j = 0; j < parameters.maxStates; j++ )
                     FileOutput::get_file( "densitymatrix" ) << fmt::format( "{:.5e}\t", std::real( rho.coeff( j, j ) ) );
             FileOutput::get_file( "densitymatrix" ) << "\n";
+        }
+
+        // Explicit Photon Matrices
+        if ( parameters.output_dict.contains( "photons" ) ) {
+            bool int_trafo = parameters.input_conf["DMconfig"].string["interaction_picture"] == "int";
+            for ( auto &[mode, state] : operatorMatrices.ph_states ) {
+                // Calculate Partial Trace
+                const auto base_index = state.base;
+                auto current = partial_trace( int_trafo ? rho : dgl_timetrafo( rho, t ), base_index );
+                // Output Partial Trace Matrix to File
+                FileOutput::get_file( "photons_" + mode ) << fmt::format( "{:.5e}", t );
+                for ( int i = 0; i < current.rows(); i++ )
+                    for ( int j = 0; j < current.cols(); j++ )
+                        FileOutput::get_file( "photons_" + mode ) << fmt::format( "\t{:.5e}", std::real( current.coeff( i, j ) ) );
+
+                FileOutput::get_file( "photons_" + mode ) << "\n";
+            }
+        }
+        // Output Custom Expectation values
+        if ( not operatorMatrices.numerics_custom_expectation_values_operators.empty() ) {
+            FileOutput::add_file( "custom_expectation_values" ) << fmt::format( "{:.5e}", t );
+            for ( auto &mat : operatorMatrices.numerics_custom_expectation_values_operators ) {
+                FileOutput::get_file( "custom_expectation_values" ) << fmt::format( "\t{:.5e}", std::real( dgl_expectationvalue<Sparse, Scalar>( rho, mat, t ) ) );
+            }
+            FileOutput::get_file( "custom_expectation_values" ) << fmt::format( "\n" );
         }
         evalTimer.iterate();
     }
