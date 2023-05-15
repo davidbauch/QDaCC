@@ -621,7 +621,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     // Build initial density matrix
     Dense dense_rho = initial_state_vector_ket * initial_state_vector_ket.adjoint().eval();
     //Dense dense_rho = Dense(initial_state_vector_ket.asDiagonal());
-    rho = ( dense_rho ).sparseView();
+    rho = ( dense_rho ).sparseView() / dense_rho.trace();
 
     // Choose Final Hamilton. The Coupling scalings are incorporateed in H_I_a and H_I_b. The PME scaling <B> is incorporated in H_I_a/b and the Pulse Matrices.
     Log::L2( "[System-OperatorMatrices] Choosing final Hamilton Operator...\n" );
