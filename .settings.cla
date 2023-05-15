@@ -163,7 +163,7 @@ CLA_ARGUMENT = {
 	group = 'Systemparameter'
 	CLA_PARAMETER = {
 		subkey = ''
-		value = 'none'
+		value = ''
 		datatype = 'string'
 		description = 'Custom Expectation Values. Syntax: [i,j,val:k,l:val:...;]'
 	}

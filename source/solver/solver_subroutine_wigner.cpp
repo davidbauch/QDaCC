@@ -7,7 +7,6 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
     int base = s.operatorMatrices.el_states.count( s_mode ) != 0 ? s.operatorMatrices.el_states[s_mode].base : s.operatorMatrices.ph_states[s_mode].base;
     Log::L2( "[Wigner] Calculating Wigner function for mode {}/{}\n", s_mode, base );
     // The Wigner function uses the interpolated savedStates, not the actually calculated states from the RK45 method.
-    // TODO: interaction pic sollte man hier ausstellen können. am besten für normale rho ausgabe auch.
     bool int_trafo = s.parameters.input_conf["DMconfig"].string["interaction_picture"] == "int";
     Log::L2( "[Wigner] Output Matrix format will be {}\n", int_trafo ? "in the interaction frame." : "in the Schrödinger frame." );
     for ( int i = 0; i < savedStates.size(); i += skips ) {
@@ -23,7 +22,7 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
     Dense A = ( X_mat + 1.0i * Y_mat );
 
     std::vector<Dense> wigner( reduced_rho.size(), Dense::Zero( A.rows(), A.cols() ) );
-    Log::L2( "[Wigner] First Matrix for Wigner:\n{}\n", reduced_rho.front() );
+    Log::L3( "[Wigner] First Matrix for Wigner:\n{}\n", reduced_rho.front() );
 
     ProgressBar progressbar = ProgressBar();
     Timer &timer_w = Timers::create( "Wigner (" + s_mode + ")" ).start();
@@ -44,7 +43,7 @@ bool QDLC::Numerics::ODESolver::calculate_wigner( System &s, const std::string &
                 }
             }
         }
-        return ( 1 / ( 2. * 3.1415 ) * std::exp( -2. * QDLC::Math::abs2( alpha ) ) * Wval );
+        return ( 1 / ( 2. * QDLC::Math::PI ) * std::exp( -2. * QDLC::Math::abs2( alpha ) ) * Wval );
     };
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( int i = 0; i < reduced_rho.size(); i++ ) {

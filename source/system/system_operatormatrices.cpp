@@ -565,12 +565,13 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         if ( pure_state.find( "coherent" ) != std::string::npos ) {
             auto state_left = pure_state.substr( 0, pure_state.find( "coherent(" ) );
             auto state_right = pure_state.substr( pure_state.find( ")" ) + 1 );
-            auto alpha = std::stod( pure_state.substr( state_left.size() + 9, pure_state.size() - state_left.size() - 9 - state_right.size() ).c_str() );
+            auto alpha = std::stod( pure_state.substr( state_left.size() + 9, pure_state.size() - state_left.size() - 9 - state_right.size() ).c_str() ); //TODO: complex amp
             auto mode = state_right.find( ":" ) != std::string::npos ? QDLC::String::splitline( state_right, ':' ).front() : state_right.substr( 0, state_right.size() - 1 );
             Log::L2( "[System-OperatorMatrices] Creating superpositioned coherent state {} for mode {} with alpha = {} and scaled amplitude {}\n", pure_state, mode, alpha, amp );
             for ( int n = 0; n <= p.input_photonic[mode].get( "MaxPhotons" ); n++ ) {
                 std::string current = state_left + std::to_string( n ) + state_right;
-                Log::L2( "[System-OperatorMatrices] Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], QDLC::Math::getCoherent( alpha, n ) * amp );
+                auto coherent_value = QDLC::Math::getCoherent( alpha, n );
+                Log::L2( "[System-OperatorMatrices] Creating coherent substate {} ({}) with amplitude {}\n", current, base_index_map[current], coherent_value * amp );
                 // Add initial state with amplitudes
                 initial_state_vector_ket( base_index_map[current] ) += amp * QDLC::Math::getCoherent( alpha, n );
             }
@@ -613,9 +614,14 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         }
     }
 
-    initial_state_vector_ket.normalize();
     Log::L2( "[System-OperatorMatrices] Initial State Vector: [{}]\n", initial_state_vector_ket.format( Eigen::IOFormat( 4, 0, ", ", " ", "", "" ) ) );
-    rho = ( initial_state_vector_ket * initial_state_vector_ket.transpose() ).sparseView();
+    // Normalize the initial state to 1
+    initial_state_vector_ket = initial_state_vector_ket / initial_state_vector_ket.sum();
+    Log::L2( "[System-OperatorMatrices] Sum of Initial State Vector: {}\n", initial_state_vector_ket.sum());
+    // Build initial density matrix
+    Dense dense_rho = initial_state_vector_ket * initial_state_vector_ket.adjoint().eval();
+    //Dense dense_rho = Dense(initial_state_vector_ket.asDiagonal());
+    rho = ( dense_rho ).sparseView();
 
     // Choose Final Hamilton. The Coupling scalings are incorporateed in H_I_a and H_I_b. The PME scaling <B> is incorporated in H_I_a/b and the Pulse Matrices.
     Log::L2( "[System-OperatorMatrices] Choosing final Hamilton Operator...\n" );
