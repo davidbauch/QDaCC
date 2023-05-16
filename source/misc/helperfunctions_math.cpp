@@ -32,11 +32,13 @@ double QDLC::Math::factorial_range( double upper, double lower ) {
     return ( upper == 1.0 || upper == 0.0 || upper <= lower ) ? 1.0 : QDLC::Math::factorial_range( upper - 1.0, lower ) * upper;
 }
 
-double QDLC::Math::getCoherent( double alpha, double N ) {
-    return std::exp( -std::pow( alpha, 2.0 ) ) * std::pow( std::pow( alpha, 2.0 ), N ) / QDLC::Math::factorial( N );
+QDLC::Type::Scalar QDLC::Math::getCoherent( QDLC::Type::Scalar alpha, double N ) {
+    return std::exp( -std::pow( std::abs(alpha), 2.0 ) / 2.0 ) * std::pow( alpha, N ) / std::sqrt(QDLC::Math::factorial( N ));
 }
 
-double QDLC::Math::getThermal( double alpha, double N ) {
+
+QDLC::Type::Scalar QDLC::Math::getThermal( 
+    QDLC::Type::Scalar alpha, double N ) {
     return std::pow( alpha, N ) / std::pow( 1.0 + alpha, N + 1 );
 }
 
