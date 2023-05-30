@@ -196,21 +196,21 @@ void System::calculate_expectation_values( const std::vector<QDLC::SaveState> &r
             FileOutput::get_file( "electronic" ) << fmt::format( "{:}{:}\n", el_out, el_em );
 
         if ( parameters.input_conf["DMconfig"].string["output_mode"] != "none" ) {
-            FileOutput::get_file( "densitymatrix" ) << fmt::format( "{:.5e}\t", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
+            FileOutput::get_file( "densitymatrix" ) << fmt::format( "{:.5e}", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
             if ( parameters.input_conf["DMconfig"].string["interaction_picture"] != "int" )
                 rho = dgl_timetrafo( rho, t );
             if ( parameters.input_conf["DMconfig"].string["output_mode"] == "full" ) {
                 for ( int i = 0; i < parameters.maxStates; i++ )
                     for ( int j = 0; j < parameters.maxStates; j++ ) {
-                        FileOutput::get_file( "densitymatrix" ) << fmt::format( "{:.10e}\t", std::real( rho.coeff( i, j ) ) );
+                        FileOutput::get_file( "densitymatrix" ) << fmt::format( "\t{:.10e}", std::real( rho.coeff( i, j ) ) );
                     }
                 for ( int i = 0; i < parameters.maxStates; i++ )
                     for ( int j = 0; j < parameters.maxStates; j++ ) {
-                        FileOutput::get_file( "densitymatrix" ) << fmt::format( "{:.10e}\t", std::imag( rho.coeff( i, j ) ) );
+                        FileOutput::get_file( "densitymatrix" ) << fmt::format( "\t{:.10e}", std::imag( rho.coeff( i, j ) ) );
                     }
             } else
                 for ( int j = 0; j < parameters.maxStates; j++ )
-                    FileOutput::get_file( "densitymatrix" ) << fmt::format( "{:.5e}\t", std::real( rho.coeff( j, j ) ) );
+                    FileOutput::get_file( "densitymatrix" ) << fmt::format( "\t{:.5e}", std::real( rho.coeff( j, j ) ) );
             FileOutput::get_file( "densitymatrix" ) << "\n";
         }
 

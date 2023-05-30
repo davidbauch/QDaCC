@@ -459,8 +459,6 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
             }
         }
     }
-    if ( output_operators )
-        Log::L2( "[System-OperatorMatrices] Used Hamilton:\n{}\n", Dense( H_I_a ) );
 
     Log::L2( "[System-OperatorMatrices] Creating Path Integral Sorting Vectors...\n" );
     // The Path Integral can be partially summed by either: the electronic state index; or the electronic state coupling factor.
@@ -633,6 +631,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         H_used = H_I;
     else
         H_used = H_0 + H_I;
+    if (output_operators)
+        Log::L2( "[System-OperatorMatrices] H_used:\n{}\n", Dense( H_used ).format( output_format ) );
 
     Log::L2( "[System-OperatorMatrices] Hamilton Eigenvalues:\n" );
     Log::L2( "[System-OperatorMatrices] H_0: [{}]\n", ( Dense( H_0 ).eigenvalues() * QDLC::Math::ev_conversion ).format( Eigen::IOFormat( -1, 0, ", ", ", ", "", "" ) ) );

@@ -147,6 +147,7 @@ void Parameters::pre_adjust_input() {
         mat.property_set["SUPERDelta"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
         mat.property_set["SUPERFreq"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
         mat.property_set["CutoffDelta"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
+        mat.property_set["Phase"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
 
         for ( int i = 0; i < mat.string_v["Amplitude"].size(); i++ ) {
             const auto type_params = QDLC::String::splitline( mat.string_v["Type"][i], '+' );
@@ -171,6 +172,8 @@ void Parameters::pre_adjust_input() {
                         mat.property_set["SUPERFreq"][i] = QDLC::Misc::convertParam<Parameter>( splitparam[1] );
                     } else if ( type.find( "exponent" ) != std::string::npos ) {
                         mat.property_set["GaussAmp"][i] = QDLC::Misc::convertParam<Parameter>( param );
+                    } else if ( type.find( "phase" ) != std::string::npos ) {
+                        mat.property_set["Phase"][i] = QDLC::Misc::convertParam<Parameter>( param ) * QDLC::Math::PI;
                     }
                 }
             }
@@ -389,7 +392,7 @@ void Parameters::parse_system() {
     }
 
     // --SP 'p:GX:1pi,5pi:1.5eV,1eV:4ps,2ps:20ps,35ps:gauss:'
-    // Type is cw or superposition (chained with '+', e.g. 'gauss+chirped(1E-24)' ) of gauss,cutoff,chirped(rate),super(delta),exponent(exponent)
+    // Type is cw or superposition (chained with '+', e.g. 'gauss+chirped(1E-24)' ) of gauss,cutoff,chirped(rate),super(delta),exponent(exponent),phase(angle)
     // p:TYPE:...parameters...
     int pindex = 0;
     for ( auto pulses = QDLC::String::splitline( inputstring_pulse, ';' ); const std::string &pulse : pulses ) {
@@ -645,6 +648,8 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                     Log::L1( " - - SUPER Amplitude: {} - {} meV\n", mat.property_set["SUPERDelta"][i], mat.property_set["SUPERDelta"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
                     Log::L1( " - - SUPER Frequency: {} - {} meV\n", mat.property_set["SUPERFreq"][i], mat.property_set["SUPERFreq"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
                 }
+                if ( QDLC::Math::abs2( mat.property_set["Phase"][i] != 0.0 ) ) 
+                    Log::L1( " - - Phase: {}pi\n", mat.property_set["Phase"][i]/QDLC::Math::PI );
                 Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i], mat.string_v["Type"][i] == "gauss" ? fmt::format( " (Gaussian Amplitude: {})", mat.property_set["GaussAmp"][i] ) : "" );
             }
         }
@@ -726,6 +731,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
         Log::L1( "Timeborder delta path integral: {:.8e} s - {:.2f} ps\n", t_step_pathint, t_step_pathint * 1E12 );
     }
+    Log::L1("Output Timeframe: {}", input_conf["DMconfig"].string["interaction_picture"]);
     Log::L1( "\n" );
     Log::Logger::wrapInBar( "G-Function Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( input_correlation.size() > 0 ) {
