@@ -12,13 +12,15 @@ Scalar Pulse::evaluate( double t ) {
     Scalar ret = 0;
     const auto &config = get_inputs();
     for ( int i = 0; i < (int)config.property_set.at( "Amplitude" ).size(); i++ ) { // TODO: zip this using cpp23
+        // Phase
+        double phase = config.property_set.at( "Phase" )[i];
         // SUPER modulation
         const double centered_time = t - config.property_set.at( "Center" )[i];
         double main_freq = config.property_set.at( "Frequency" )[i] * centered_time;
         if ( config.property_set.at( "SUPERFreq" )[i] != 0.0 )
-            main_freq += config.property_set.at( "SUPERDelta" )[i] / config.property_set.at( "SUPERFreq" )[i] * std::cos( config.property_set.at( "SUPERFreq" )[i] * centered_time );
+            main_freq += config.property_set.at( "SUPERDelta" )[i] / config.property_set.at( "SUPERFreq" )[i] * std::cos( config.property_set.at( "SUPERFreq" )[i] * centered_time + phase );
         if ( config.string_v.at( "Type" )[i] == "cw" && t >= config.property_set.at( "Center" )[i] ) {
-            ret += config.property_set.at( "Amplitude" )[i] * std::exp( -1.0i * ( main_freq + config.property_set.at( "ChirpRate" )[i] * std::pow( centered_time, 2.0 ) ) );
+            ret += config.property_set.at( "Amplitude" )[i] * std::exp( -1.0i * ( main_freq + phase + config.property_set.at( "ChirpRate" )[i] * std::pow( centered_time, 2.0 ) ) );
         } else {
             double shape = 0;
             if ( config.string_v.at( "Type" )[i] == "gauss" ) {
@@ -31,23 +33,81 @@ Scalar Pulse::evaluate( double t ) {
             // Chirped frequency
             double freq = config.property_set.at( "ChirpRate" )[i] / ( std::pow( config.property_set.at( "ChirpRate" )[i], 2.0 ) + std::pow( config.property_set.at( "Width" )[i], 4.0 ) );
             if ( config.property_set.at( "CutoffDelta" )[i] != 0 ) {
-                ret += config.property_set.at( "Amplitude" )[i] * shape * std::exp( -1.0i * ( main_freq - config.property_set.at( "CutoffDelta" )[i] * centered_time + 0.5 * freq * std::pow( centered_time, 2.0 ) ) );
-                ret += config.property_set.at( "Amplitude" )[i] * shape * std::exp( -1.0i * ( main_freq + config.property_set.at( "CutoffDelta" )[i] * centered_time + 0.5 * freq * std::pow( centered_time, 2.0 ) ) );
+                ret += config.property_set.at( "Amplitude" )[i] * shape * std::exp( -1.0i * ( main_freq + phase - config.property_set.at( "CutoffDelta" )[i] * centered_time + 0.5 * freq * std::pow( centered_time, 2.0 ) ) );
+                ret += config.property_set.at( "Amplitude" )[i] * shape * std::exp( -1.0i * ( main_freq + phase + config.property_set.at( "CutoffDelta" )[i] * centered_time + 0.5 * freq * std::pow( centered_time, 2.0 ) ) );
             } else {
-                ret += config.property_set.at( "Amplitude" )[i] * shape * std::exp( -1.0i * ( main_freq + 0.5 * freq * std::pow( centered_time, 2.0 ) ) );
+                ret += config.property_set.at( "Amplitude" )[i] * shape * std::exp( -1.0i * ( main_freq + phase + 0.5 * freq * std::pow( centered_time, 2.0 ) ) );
             }
         }
     }
     return ret;
 }
 
-// TODO: implement analytically
-Scalar Pulse::evaluate_derivative( double t, double dt ) {
-    return 0;
+Scalar Pulse::evaluate_derivative(double t, double dt) {
+    Scalar ret = 0;
+    const auto &config = get_inputs();
+    for (int i = 0; i < (int)config.property_set.at("Amplitude").size(); i++) {
+        double phase = config.property_set.at("Phase")[i];
+        const double centered_time = t - config.property_set.at("Center")[i];
+        double main_freq = config.property_set.at("Frequency")[i] * centered_time;
+        if (config.property_set.at("SUPERFreq")[i] != 0.0)
+            main_freq += config.property_set.at("SUPERDelta")[i] / config.property_set.at("SUPERFreq")[i] * std::cos(config.property_set.at("SUPERFreq")[i] * centered_time + phase);
+        if (config.string_v.at("Type")[i] == "cw" && t >= config.property_set.at("Center")[i]) {
+            ret += config.property_set.at("Amplitude")[i] * std::exp(-1.0i * (main_freq + phase + config.property_set.at("ChirpRate")[i] * std::pow(centered_time, 2.0))) * (-1.0i * (config.property_set.at("Frequency")[i] + config.property_set.at("ChirpRate")[i] * centered_time));
+        } else {
+            double shape = 0;
+            double shape_derivative = 0;
+            if (config.string_v.at("Type")[i] == "gauss") {
+                const double amplitude = std::sqrt(std::pow(config.property_set.at("ChirpRate")[i] / config.property_set.at("Width")[i], 2.0) + std::pow(config.property_set.at("Width")[i], 2.0));
+                shape = std::exp(-0.5 * std::pow(centered_time / amplitude, config.property_set.at("GaussAmp")[i]));
+                shape_derivative = -shape * centered_time / amplitude * config.property_set.at("GaussAmp")[i] / amplitude;
+            } else if (config.string_v.at("Type")[i] == "lorentz") {
+                const auto x = centered_time / config.property_set.at("Width")[i];
+                shape = 1. / (1. + std::pow(x, config.property_set.at("GaussAmp")[i]));
+                shape_derivative = -shape * shape * config.property_set.at("GaussAmp")[i] * std::pow(x, config.property_set.at("GaussAmp")[i] - 1) / config.property_set.at("Width")[i];
+            }
+            double freq = config.property_set.at("ChirpRate")[i] / (std::pow(config.property_set.at("ChirpRate")[i], 2.0) + std::pow(config.property_set.at("Width")[i], 4.0));
+            if (config.property_set.at("CutoffDelta")[i] != 0) {
+                ret += config.property_set.at("Amplitude")[i] * shape_derivative * std::exp(-1.0i * (main_freq + phase - config.property_set.at("CutoffDelta")[i] * centered_time + 0.5 * freq * std::pow(centered_time, 2.0))) * (-1.0i * (config.property_set.at("Frequency")[i] - config.property_set.at("CutoffDelta")[i] + freq * centered_time));
+                ret += config.property_set.at("Amplitude")[i] * shape_derivative * std::exp(-1.0i * (main_freq + phase + config.property_set.at("CutoffDelta")[i] * centered_time + 0.5 * freq * std::pow(centered_time, 2.0))) * (-1.0i * (config.property_set.at("Frequency")[i] + config.property_set.at("CutoffDelta")[i] + freq * centered_time));
+            } else {
+                ret += config.property_set.at("Amplitude")[i] * shape_derivative * std::exp(-1.0i * (main_freq + phase + 0.5 * freq * std::pow(centered_time, 2.0))) * (-1.0i * (config.property_set.at("Frequency")[i] + freq * centered_time));
+            }
+        }
+    }
+    return ret;
 }
-// TODO: implement analytically
-Scalar Pulse::evaluate_integral( double t, double dt ) {
-    return 0;
+
+Scalar Pulse::evaluate_integral(double t, double dt) {
+    Scalar ret = 0;
+    const auto &config = get_inputs();
+    for (int i = 0; i < (int)config.property_set.at("Amplitude").size(); i++) {
+        double phase = config.property_set.at("Phase")[i];
+        const double centered_time = t - config.property_set.at("Center")[i];
+        double main_freq = config.property_set.at("Frequency")[i] * centered_time;
+        if (config.property_set.at("SUPERFreq")[i] != 0.0)
+            main_freq += config.property_set.at("SUPERDelta")[i] / config.property_set.at("SUPERFreq")[i] * std::cos(config.property_set.at("SUPERFreq")[i] * centered_time + phase);
+        if (config.string_v.at("Type")[i] == "cw" && t >= config.property_set.at("Center")[i]) {
+            ret += config.property_set.at("Amplitude")[i] * std::exp(-1.0i * (main_freq + phase + config.property_set.at("ChirpRate")[i] * std::pow(centered_time, 2.0))) / (-1.0i * (config.property_set.at("Frequency")[i] + config.property_set.at("ChirpRate")[i] * centered_time));
+        } else {
+            double shape = 0;
+            if (config.string_v.at("Type")[i] == "gauss") {
+                const double amplitude = std::sqrt(std::pow(config.property_set.at("ChirpRate")[i] / config.property_set.at("Width")[i], 2.0) + std::pow(config.property_set.at("Width")[i], 2.0));
+                shape = std::exp(-0.5 * std::pow(centered_time / amplitude, config.property_set.at("GaussAmp")[i]));
+            } else if (config.string_v.at("Type")[i] == "lorentz") {
+                const auto x = centered_time / config.property_set.at("Width")[i];
+                shape = 1. / (1. + std::pow(x, config.property_set.at("GaussAmp")[i]));
+            }
+            double freq = config.property_set.at("ChirpRate")[i] / (std::pow(config.property_set.at("ChirpRate")[i], 2.0) + std::pow(config.property_set.at("Width")[i], 4.0));
+            if (config.property_set.at("CutoffDelta")[i] != 0) {
+                ret += config.property_set.at("Amplitude")[i] * shape * std::exp(-1.0i * (main_freq + phase - config.property_set.at("CutoffDelta")[i] * centered_time + 0.5 * freq * std::pow(centered_time, 2.0))) / (-1.0i * (config.property_set.at("Frequency")[i] - config.property_set.at("CutoffDelta")[i] + freq * centered_time));
+                ret += config.property_set.at("Amplitude")[i] * shape * std::exp(-1.0i * (main_freq + phase + config.property_set.at("CutoffDelta")[i] * centered_time + 0.5 * freq * std::pow(centered_time, 2.0))) / (-1.0i * (config.property_set.at("Frequency")[i] + config.property_set.at("CutoffDelta")[i] + freq * centered_time));
+            } else {
+                ret += config.property_set.at("Amplitude")[i] * shape * std::exp(-1.0i * (main_freq + phase + 0.5 * freq * std::pow(centered_time, 2.0))) / (-1.0i * (config.property_set.at("Frequency")[i] + freq * centered_time));
+            }
+        }
+    }
+    return ret;
 }
 
 // Generate array of energy-values corresponding to the Pulse
