@@ -111,6 +111,8 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     numerics_pathintegral_docutoff_propagator = QDLC::CommandlineArguments::get_parameter_passed( "-cutoffPropagator" );
     numerics_pathint_partially_summed = !QDLC::CommandlineArguments::get_parameter_passed( "-disablePSPath" );
     t_step_pathint = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "tstepPath" );
+    numerics_pathintegral_use_qrt = QDLC::CommandlineArguments::get_parameter_passed( "-useQRT" );
+    numerics_pathintegral_set_couplings_zero = QDLC::CommandlineArguments::get_parameter_passed( "-setCouplingsZero" );
 
     auto output_dict_vec = QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--output" ), ';' );
     // Move all elements into the set
@@ -157,6 +159,8 @@ void Parameters::pre_adjust_input() {
                     mat.string_v["Type"][i] = "cw";
                 else if ( type.find( "gauss" ) != std::string::npos )
                     mat.string_v["Type"][i] = "gauss";
+                else if ( type.find( "sech" ) != std::string::npos )
+                    mat.string_v["Type"][i] = "sech";
                 else if ( type.find( "lorentz" ) != std::string::npos )
                     mat.string_v["Type"][i] = "lorentz";
                 else {
@@ -262,7 +266,7 @@ void Parameters::pre_adjust_input() {
             }
         }
         if ( t_end < 0 )
-            t_end = std::max<double>( 1E-12, 10.0 * t_step );
+            t_end = std::max<double>( 1E-12, 10.0 * std::max<double>(t_step,t_step_pathint) );
         Log::L2( "[System] Calculate till at least {} and adjust accordingly to guarantee convergence. The matrix index used is {}\n", t_end, numerics_groundstate );
     }
 
@@ -640,7 +644,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                 Log::L1( " - Single Pulse:\n" );
                 Log::L1( " - - Amplitude: {} Hz - {:.8} mueV\n", mat.property_set["Amplitude"][i], mat.property_set["Amplitude"][i].getSI( Parameter::UNIT_ENERGY_MUEV ) );
                 Log::L1( " - - Frequency: {} Hz - {:.8} eV - {:.8} nm\n", mat.property_set["Frequency"][i], mat.property_set["Frequency"][i].getSI( Parameter::UNIT_ENERGY_EV ), mat.property_set["Frequency"][i].getSI( Parameter::UNIT_WAVELENGTH_NM ) );
-                Log::L1( " - - Width: {} s - {:.8} ps\n", mat.property_set["Width"][i], mat.property_set["Width"][i].getSI( Parameter::UNIT_TIME_PS ) );
+                Log::L1( " - - Width: {} s - {:.8} ps - {:.8} mueV bandwith\n", mat.property_set["Width"][i], mat.property_set["Width"][i].getSI( Parameter::UNIT_TIME_PS ), Parameter(1.0/mat.property_set["Width"][i]).getSI( Parameter::UNIT_ENERGY_MUEV ) );
                 Log::L1( " - - Center: {} s - {:.8} ps\n", mat.property_set["Center"][i], mat.property_set["Center"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 if ( QDLC::Math::abs2( mat.property_set["ChirpRate"][i] != 0.0 ) )
                     Log::L1( " - - Chirp: {}\n", mat.property_set["ChirpRate"][i] );
@@ -715,6 +719,8 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             Log::L1( " - Iterator Stepsize: {}\n", numerics_subiterator_stepsize );
             Log::L1( " - Thresholds: Squared({}), SparsePrune({}), CutoffIterations({}), PropagatorMapping({})\n", numerics_pathintegral_squared_threshold, numerics_pathintegral_sparse_prune_threshold, numerics_pathintegral_dynamiccutoff_iterations_max, numerics_pathintegral_docutoff_propagator );
             Log::L1( " - Used partially summed algorithm?: {}\n", numerics_pathint_partially_summed ? "Yes" : "No" );
+            Log::L1( " - Will set the coupling elements to zero for correlation calculations?: {}\n", numerics_pathintegral_set_couplings_zero ? "Yes" : "No" );
+            Log::L1( " - Will use QRT for correlation calculations?: {}\n", numerics_pathintegral_use_qrt ? "Yes" : "No" );
         }
         Log::L1( "\n" );
     } else {

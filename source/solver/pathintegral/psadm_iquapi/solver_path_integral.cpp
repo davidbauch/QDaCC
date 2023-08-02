@@ -3,12 +3,6 @@
 // TODO: statt sparse -> dense am besten dense -> nonzeros zu indices appenden, ab punkt dann einfach nur noch über nonzero indices iterieren. dann kann man von anfang an multithreaded machen, irgendwann gucken was is ungleich null,
 // dann nur noch über diese indices summieren.
 
-// TODO
-// Nur eine Funktion für PI bzw weitestgehend aufteilen.
-// Unterfunktion für G1 und G2 die die selbe syntax wie die normalen funktionen haben.
-// PathInt wie RKXY nutzen. Dafür Tensor in T-Richtung auf Disk oder im Ram cachen wenn G1 oder G2 gerechnet werden.
-// Dann rechnen andere funktionen G1 und G2 aus. Dafür dann dort statt nur "calculate_runge_kutta" fallunterscheidung mit RK und PI.
-
 QDLC::Type::Sparse _reduce_adm_tensor( QDLC::Numerics::Tensor &tensor ) {
     const auto tensor_dim = tensor.primary_dimensions();
     QDLC::Type::Dense ret = QDLC::Type::Dense::Zero( tensor_dim, tensor_dim );
@@ -19,6 +13,32 @@ QDLC::Type::Sparse _reduce_adm_tensor( QDLC::Numerics::Tensor &tensor ) {
     }
     return ret.sparseView();
 }
+
+void _fill_tensor( QDLC::Numerics::Tensor &tensor, const QDLC::Type::Sparse &rho0 ) {
+    const auto tensor_dim = tensor.primary_dimensions();
+    for ( int i = 0; i < tensor_dim; i++ ) {
+        for ( int j = 0; j < tensor_dim; j++ ) {
+            if ( QDLC::Math::abs2( rho0.coeff( i, j ) ) == 0 )
+                continue;
+            QDLC::Numerics::Tensor::IndexVector index( tensor.index_size(), 0 );
+            index[0] = i;
+            index[1] = j;
+            tensor( index ) += rho0.coeff( i, j );
+        }
+    }
+}
+
+// for ( int i = 0; i < tensor_dim; i++ ) {
+//         for ( int j = 0; j < tensor_dim; j++ ) {
+//             if ( QDLC::Math::abs2( rho0.coeff( i, j ) ) == 0 )
+//                 continue;
+//             QDLC::Numerics::Tensor::IndexVector index( index_vector_length, 0 );
+//             index[0] = i;
+//             index[1] = j;
+//             adm_tensor( index ) += rho0.coeff( i, j );
+//             Log::L2( "[PathIntegral] Added element ({},{}) = {} to adm tensor\n", i, j, rho0.coeff( i, j ) );
+//         }
+//     }
 
 QDLC::Numerics::Tensor _generate_initial_tensor( QDLC::System &s, const QDLC::Type::Sparse &rho0 ) {
     // Gather unique Coupling indices, where the number of unique indices equals N(M)x for x >= 1
@@ -50,17 +70,7 @@ QDLC::Numerics::Tensor _generate_initial_tensor( QDLC::System &s, const QDLC::Ty
     Log::L2( "[PathIntegral] Fixed Tensor size will be {} MB.\n", adm_tensor.nonZeros(), adm_tensor.size() );
 
     // Fill initial Tensor
-    for ( int i = 0; i < tensor_dim; i++ ) {
-        for ( int j = 0; j < tensor_dim; j++ ) {
-            if ( QDLC::Math::abs2( rho0.coeff( i, j ) ) == 0 )
-                continue;
-            QDLC::Numerics::Tensor::IndexVector index( index_vector_length, 0 );
-            index[0] = i;
-            index[1] = j;
-            adm_tensor( index ) += rho0.coeff( i, j );
-            Log::L2( "[PathIntegral] Added element ({},{}) = {} to adm tensor\n", i, j, rho0.coeff( i, j ) );
-        }
-    }
+    _fill_tensor( adm_tensor, rho0 );
 
     return adm_tensor;
 }
@@ -149,8 +159,9 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     auto adm_tensor = _generate_initial_tensor( s, rho0 );
     const auto tensor_dim = adm_tensor.primary_dimensions();
     adm_tensor.save_to_file( 0 );
- 
-    const bool save_tensor = not s.parameters.input_correlation.empty();
+
+    // Only save the tensors to files if we calculate correlations AND if we do not use the QRT
+    const bool save_tensor = not s.parameters.input_correlation.empty() and not s.parameters.numerics_pathintegral_use_qrt;
 
     // First step is just rho0
     Sparse rho = rho0;
@@ -164,30 +175,43 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         // Calculate Propagators for current time
         auto &propagator = calculate_propagator_vector( s, tensor_dim, t_t, s.parameters.numerics_subiterator_stepsize, output );
         // Iterate the tensor
-        //adm_tensor = iterate_path_integral_gpu( s, adm_tensor, propagator, max_index );
+        // adm_tensor = iterate_path_integral_gpu( s, adm_tensor, propagator, max_index );
         adm_tensor = iterate_path_integral( s, adm_tensor, propagator, max_index );
         rho = _reduce_adm_tensor( adm_tensor );
         // Save Rho
         saveState( rho, t_t + s.parameters.t_step_pathint, output );
 
-        // Save ADM Tensor to file 
-        if (save_tensor){
+        // Save ADM Tensor to file
+        if ( save_tensor ) {
             const int tensor_int_time = std::floor( 1.001 * t_t / s.parameters.t_step_pathint + 1. );
             adm_tensor.save_to_file( tensor_int_time );
         }
- 
+
+        // Increase Tmax if required
+        if ( s.parameters.numerics_calculate_till_converged and t_t + s.parameters.t_step_pathint >= t_end and std::real( output.back().mat.coeff( s.parameters.numerics_groundstate, s.parameters.numerics_groundstate ) ) < 0.999 ) {
+            t_end += 10.0 * s.parameters.t_step_pathint;
+            Log::L3( "[PathIntegral] Adjusted Calculation end to {}\n", t_end );
+        }
+
         // If prune == auto: prune tensor if non_zero elements dont change below difference of 10 elements and NC > NC_max
         // if prune = manual: Xps:prune:[threshold];Yps:extend;Zps:prune:[threshold] where prune calls prune, extend cleas pruned vector.
-        // if prune is set to auto, automatically determine prunes and extends using the pulse, chirp 
+        // if prune is set to auto, automatically determine prunes and extends using the pulse, chirp
         // FOR NOW: disable it
-        //if (t_t / s.parameters.t_step_pathint > 6. and not adm_tensor.is_pruned()) 
-        //    adm_tensor.make_indices_sparse(); 
+        // if (t_t / s.parameters.t_step_pathint > 6. and not adm_tensor.is_pruned())
+        //    adm_tensor.make_indices_sparse();
 
         // Progress and time output
         rkTimer.iterate();
         if ( do_output )
             Timers::outputProgress( rkTimer, progressbar, rkTimer.getTotalIterationNumber(), total_progressbar_iterations, progressbar_name );
     }
+
+    if ( s.parameters.numerics_calculate_till_converged ) {
+        s.parameters.numerics_calculate_till_converged = false;
+        s.parameters.t_end = t_end;
+        Log::L1( "[PathIntegral] Adjusted t_end to {}.\n", s.parameters.t_end );
+    }
+
     return true;
 }
 
@@ -195,17 +219,25 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Sparse &rho
     output.reserve( s.parameters.iterations_t_max + 1 );
     const int tensor_int_time = std::floor( 1.001 * t_start / s.parameters.t_step_pathint ); // This assumes t_start for the main direction is zero!
     auto adm_correlation = Tensor( Tensor::max_size() );
-    adm_correlation.load_from_file( tensor_int_time );
+    if ( not s.parameters.numerics_pathintegral_use_qrt )
+        adm_correlation.load_from_file( tensor_int_time );
+    else
+        _fill_tensor( adm_correlation, rho0 );
     const auto tensor_dim = adm_correlation.primary_dimensions();
 
-    // Modify Initial Propagator
-    std::vector<std::vector<Sparse>> initial_propagator = calculate_propagator_vector( s, tensor_dim, t_start, s.parameters.numerics_subiterator_stepsize, output );
-    for ( auto &vec : initial_propagator )
-        for ( auto &el : vec )
-            el = s.dgl_timetrafo( op_l, t_start + s.parameters.t_step_pathint ) * el * s.dgl_timetrafo( op_i, t_start + s.parameters.t_step_pathint );
-
-    // Sparse rho = rho0;
     saveState( rho0, t_start, output );
+
+    // Modify Initial Propagator
+    if ( not s.parameters.numerics_pathintegral_use_qrt ) {
+        std::vector<std::vector<Sparse>> initial_propagator = calculate_propagator_vector( s, tensor_dim, t_start, s.parameters.numerics_subiterator_stepsize, output );
+        for ( auto &vec : initial_propagator )
+            for ( auto &el : vec )
+                el = s.dgl_timetrafo( op_l, t_start ) * el * s.dgl_timetrafo( op_i, t_start );
+        // First step by hand
+        adm_correlation = iterate_path_integral( s, adm_correlation, initial_propagator, 2 + std::min<int>( s.parameters.p_phonon_nc - 2, std::floor( 1.001 * t_start / s.parameters.t_step_pathint ) ) );
+        saveState( _reduce_adm_tensor( adm_correlation ), t_start + s.parameters.t_step_pathint, output );
+        t_start += s.parameters.t_step_pathint;
+    }
 
     // Iterate Path integral for further time steps
     for ( double t_t = t_start; t_t < t_end; t_t += s.parameters.t_step_pathint ) {
@@ -214,11 +246,10 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Sparse &rho
 
         // Calculate Propagators for current time
         auto &propagator = calculate_propagator_vector( s, tensor_dim, t_t, s.parameters.numerics_subiterator_stepsize, output );
+
         // Iterate the tensor
-        if ( t_t == t_start )
-            adm_correlation = iterate_path_integral( s, adm_correlation, initial_propagator, max_index );
-        else
-            adm_correlation = iterate_path_integral( s, adm_correlation, propagator, max_index );
+        adm_correlation = iterate_path_integral( s, adm_correlation, propagator, max_index );
+
         const auto rho = _reduce_adm_tensor( adm_correlation );
 
         // Save Rho
@@ -226,5 +257,6 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Sparse &rho
 
         rkTimer.iterate();
     }
+
     return true;
 }

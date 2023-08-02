@@ -90,8 +90,9 @@ Sparse System::dgl_phonons_integrated_contribution( const double t, const Sparse
                 Sparse chi_tau_back_adjoint = chi_tau_back.adjoint();
                 const auto& [X_tau_back_g, X_tau_back_u] = _chi_to_XG( chi_tau_back, chi_tau_back_adjoint );
                 auto thread = omp_get_thread_num();
-                threadmap_g[thread] += X_tau_back_g.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'g' ) );
-                threadmap_u[thread] += X_tau_back_u.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'u' ) );
+                // test:
+                threadmap_g[thread] += X_tau_back_g * dgl_phonons_greenf(tau, 'g');//.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'g' ) );
+                threadmap_u[thread] += X_tau_back_u * dgl_phonons_greenf(tau, 'u');//.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'u' ) );
             }
             // Sum all contributions from threadmaps into one coefficient
             std::tie( chi_tau_back_g, chi_tau_back_u ) = _get_thread_reduced_coefficients( threadmap_g, threadmap_u );

@@ -7,7 +7,8 @@ BUILD_DIR := ./build
 SRC_DIRS := ./source ./external/ALGLIB
 COMPILER = $(CXX)
 
-VERSION := 1.0.0
+VERSION ?= 1.0.0
+
 
 SRCS := $(shell find $(SRC_DIRS) -name "*.cpp")
 

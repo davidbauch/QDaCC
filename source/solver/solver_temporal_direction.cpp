@@ -11,6 +11,9 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     // Calculate Time evolution on time vector timestamps.
     if ( s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
         calculate_path_integral( rho, s.parameters.t_start, s.parameters.t_end, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
+        if (s.parameters.numerics_pathintegral_set_couplings_zero)
+            for (auto& el : s.operatorMatrices.phonon_group_index_to_coupling_value)
+                el = 0;
     } else {
         // If using RK45 and calculating correlation functions, disable USING cached functions while enabling caching them, then reenable using the cached matrices for Tau direction
         if ( s.parameters.numerics_rk_order == 45 and not s.parameters.input_correlation.empty() and s.parameters.numerics_use_saved_coefficients ) {

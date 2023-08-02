@@ -119,6 +119,10 @@ class Tensor {
         return different_dimensions;
     }
 
+    inline int index_size() const {
+        return index_flat_to_index_vector_struct.front().size();
+    }
+
     void save_to_file(const int index);
     void load_from_file(const int index);
     void make_indices_sparse(const double eps = 1E-15);

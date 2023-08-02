@@ -96,6 +96,9 @@ class Parameters {
     // PI Density Change Coefficients
     int numerics_dynamic_densitychange_limit = 3; // If fillrate doesnt change for this number of iterations, switch tensor to dense
 
+    bool numerics_pathintegral_use_qrt;
+    bool numerics_pathintegral_set_couplings_zero;
+
     // Cache Switches
     // Enables caching of the PME Coefficients
     bool numerics_use_saved_coefficients;

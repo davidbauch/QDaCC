@@ -169,6 +169,31 @@ CLA_ARGUMENT = {
 	}
 }
 CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'useQRT'
+	description = 'Use QRT in PathIntegral Method'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+CLA_ARGUMENT = {
+	type = '1hyphen'
+	key = 'setCouplingsZero'
+	description = 'Set Couplings to Zero in the tau-calculation of the Path Integral. Somehow, this agrees well with the PME.'
+	group = 'PhononParams'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = 'false'
+		datatype = 'bool'
+		description = ''
+	}
+}
+
+CLA_ARGUMENT = {
 	type = '2hyphen'
 	key = 'system'
 	description = 'All system parameters'
@@ -478,7 +503,7 @@ CLA_ARGUMENT = {
 CLA_ARGUMENT = {
 	type = '2hyphen'
 	key = 'output'
-	description = 'Dictionary of stuff to output. Possible values are: path,rkerror,detectortrafo,eigenvalues,greenf,phononJ,phononcoefficients,operators,conc (for concurrence eigenvalues),tpm'
+	description = 'Dictionary of stuff to output. Possible values are: path,rkerror,detectortrafo,eigenvalues,greenf,phononJ,phononcoefficients,operators,conc (for concurrence eigenvalues),tpm,photons'
 	group = 'General'
 	CLA_PARAMETER = {
 		subkey = ''

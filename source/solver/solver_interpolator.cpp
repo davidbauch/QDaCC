@@ -11,8 +11,8 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
     size_t num_of_points = (size_t)( t_values.size() - current_index );
     std::vector<QDLC::SaveState> ret;
     ret.reserve( num_of_points );
-    if ( order == 0 ) {
-        Log::L3( "Interpolating from {} to {} to vector of size {} with timevector of size {}, anticipaed return suize is {}\n", t_start, t_end, input.size(), t_values.size(), t_values.size() - current_index );
+    //if ( order == 0 ) {
+        Log::L3( "Interpolating from {} to {} to vector of size {} with timevector of size {}, anticipated return size is {}\n", t_start, t_end, input.size(), t_values.size(), t_values.size() - current_index );
         //  Do a very simple linear interpolation. Linear and monotone interpolation should be changed by paramter
         size_t i = 1;
         while ( current_index > 0 and t_values[current_index] > t_start ) {
@@ -40,7 +40,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
             current_index = std::min<size_t>( current_index + 1, t_values.size() - 1 );
             current_time = t_values.at( current_index );
         }
-    } else {
+    //} else {
         // // Cubic monotone with library
         // // Generate N^2 vectors from the initial density matrices
         // size_t matrix_dimension = input.front().mat.rows();
@@ -98,8 +98,8 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         //     ret.push_back( { cur.sparseView(), time_out[k] } );
         //     ret.back().mat.makeCompressed();
         // }
-    }
-    Log::L2("Done interpolating, returnign vector of size {}\n",ret.size());
+    //}
+    Log::L3("Done interpolating, returning vector of size {}\n",ret.size());
     return ret;
 }
 

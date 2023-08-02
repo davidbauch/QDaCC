@@ -29,6 +29,14 @@ std::tuple<Scalar, std::string> separate_state( const std::string &input ) {
     return { res, ":" + state };
 }
 
+void _leftmost_product(Sparse &mat, const Sparse& b_mat) {
+    for (int i = 0; i < mat.outerSize(); ++i) {
+        for (Sparse::InnerIterator it(mat, i); it; ++it) {
+            it.valueRef() *= b_mat.coeff(it.row(), it.col());
+        }
+    }
+}
+
 OperatorMatrices::OperatorMatrices( Parameters &p ) {
     Timer &timer_operatormatrices = Timers::create( "Operator Matrices", true, false ).start();
     Log::L2( "[System-OperatorMatrices] Generating operator matrices...\n" );
@@ -530,6 +538,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
 
         if ( output_operators )
             Log::L2( "[System-OperatorMatrices] <B>-Matrix:\n{}\n", Dense( b_matrix ).format( output_format ) );
+
+        // TODO: hier nur cwise product from the left. d.h., nur bei A*b_mat nur ausführen für =/= 0 einträge von a. ansonsten ist ganz a' = 0 wenn beide phonon couplings 0 sind.
 
         // H_I Scaled once by <B>
         H_I_a = H_I_a.cwiseProduct( b_matrix );

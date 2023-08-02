@@ -213,7 +213,7 @@ class ODESolver {
      * @brief Calculates rho0 from t_start to t_end incorporating the corresponding correlation modification.
      *
      */
-    bool calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDLC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores );
+    bool calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDLC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores);
 
     /**
      * @brief Creates a table file containing the available propagation paths in the .dot format
