@@ -10,8 +10,6 @@ class Pulse : public Evaluable {
     Pulse() : Evaluable(){};
     Pulse( Parameters::universal_config& config, Parameters& p );
     Scalar evaluate( double t );
-    Scalar evaluate_derivative( double t, double dt = 0 );
-    Scalar evaluate_integral( double t, double dt = 0 );
     void calculate_fourier( Parameters& p );
     void log();
 };

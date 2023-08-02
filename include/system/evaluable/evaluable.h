@@ -25,8 +25,18 @@ class Evaluable {
     Evaluable( Parameters::universal_config &inputs, Parameters &p ) = delete;
 
     virtual Scalar evaluate( double t ) = 0;
-    virtual Scalar evaluate_derivative( double t, double dt = 0 ) = 0;
-    virtual Scalar evaluate_integral( double t, double dt = 0 ) = 0;
+    Scalar evaluate_derivative( double t, double dt = 0 ) {
+        if ( dt <= 0 )
+            dt = get_approximated_dt();
+        return ( evaluate( t ) - evaluate( t - dt ) ) / dt;
+    };
+    Scalar evaluate_integral( double t, double dt = 0 ) {
+        if ( dt <= 0 )
+            dt = get_approximated_dt();
+        //dt = t - integral_array.rbegin()->first;
+        Scalar sum = integral_array.rbegin()->second + evaluate(t) * dt;
+        return sum;
+    };
     /**
      * @brief This function needs to precalculate f(t) for the desired time interval. generate() will then calculate
      * the integral, derivative and fourier transform accordingly.
@@ -65,8 +75,8 @@ class Evaluable {
         // This should work since the value array is an ordered map
         const auto dt_approx = get_approximated_dt();
         for ( const auto &[t, value] : value_array ) {
-            const auto deriv = derivative( t, dt_approx );
-            const auto integ = integral( t, dt_approx );
+            const auto deriv = evaluate_derivative( t, dt_approx );
+            const auto integ = evaluate_integral( t, dt_approx );
             if ( complex )
                 file << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t, std::real( value ), std::imag( value ), std::real( deriv ), std::imag( deriv ), std::real( integ ), std::imag( integ ) );
             else
@@ -109,6 +119,9 @@ class Evaluable {
     // Return Integral
     Scalar integral( const double t, const double dt = 0, const bool force_evaluate = false ) {
         if ( force_evaluate or not integral_array.contains( t ) ) {
+            if (integral_array.empty()) {
+                integral_array[0] = get(t);
+            }
 #pragma omp critical
             integral_array[t] = evaluate_integral( t, dt );
         }
@@ -176,7 +189,7 @@ class Evaluable {
      * @return std::pair<size_t ,size_t> Evaluated, Returned
      */
     std::pair<size_t, size_t> stats() const {
-        return { counter_evaluated, counter_returned };
+        return std::make_pair(counter_evaluated, counter_returned);
     }
 };
 } // namespace QDLC
