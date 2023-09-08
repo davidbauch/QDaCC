@@ -123,17 +123,18 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             if ( gs_s.string_v["Integrated"][i] == "time" || gs_s.string_v["Integrated"][i] == "both" ) {
                 Log::L2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
                 auto &f_gfunc = FileOutput::add_file( purpose );
-                f_gfunc << fmt::format( "Time\tAbs(g{0}(tau))\tReal(g{0}(tau))\tImag(g{0}(tau))\tAbs(g{0}(t,0))\tReal(g{0}(t,0))\tImag(g{0}(t,0))\tAbs(g{0}(0))\tReal(g{0}(0))\tImag(g{0}(0))\n", order );
+                f_gfunc << fmt::format( "Time\tReal(g{0}(tau))\tImag(g{0}(tau))\tReal(G{0}(t,0))\tImag(G{0}(t,0))\tReal(g{0}(0))\tImag(g{0}(0))\tReal(G2pop(t))\tImag(G2pop(t))\n", order );
                 for ( int l = 0; l < topv.size(); l++ ) {
-                    Scalar g2oftau = 0;
+                    Scalar g2oftau = 0; // integral_t G(t,tau) dt -> g(tau)
                     for ( int k = 0; k < gmat.dim(); k++ ) {
                         const auto dt = gmat.dt( l, k );
                         g2oftau += gmat( k, l ) * dt;
                     }
-                    const double t_tau = gmat.tau( l );
+                    const double t_tau = gmat.tau( l ); // t and tau here are actually the same value, because for tau -> t = 0
                     const auto tau_index = rho_index_map[t_tau];
-                    Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * creator * annihilator * annihilator, t_tau ); // / std::pow( s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( l ), creator * annihilator, get_time_at( l ) ), 2.0 );
-                    f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_tau, std::abs( g2oftau ), std::real( g2oftau ), std::imag( g2oftau ), std::abs( g2oft ), std::real( g2oft ), std::imag( g2oft ), std::abs( g2ofzero[l] ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ) );
+                    Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * creator * annihilator * annihilator, t_tau ); // G2(0)
+                    Scalar g2pop = std::pow(s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * annihilator, t_tau ),2.0); // Gpop(t,t+tau=0)
+                    f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_tau, std::real( g2oftau ), std::imag( g2oftau ), std::real( g2oft ), std::imag( g2oft ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ), std::real(g2pop), std::imag(g2pop) );
                 }
             }
         }
@@ -245,6 +246,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
                 for ( auto &[name, dat] : s.parameters.input_electronic )
                     for ( auto &[name2, dat2] : s.parameters.input_electronic )
                         f_wigner << fmt::format( "Im(|{}><{}|)\t", name, name2 );
+                f_wigner << "\n";
             } else {
                 for ( int i = 0; i < data[0].rows(); i++ )
                     for ( int j = 0; j < data[0].rows(); j++ )
