@@ -37,6 +37,18 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '2hyphen'
+	key = 'hardmax'
+	description = 'Maximum Calculation time for --tend -1'
+	group = 'Timeparameter'
+	CLA_PARAMETER = {
+		subkey = ''
+		value = '-1'
+		datatype = 'string'
+		description = 'Maximum Calculation time for --tend -1'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
 	key = 'groundstate'
 	description = 'Ground State Index'
 	group = 'Timeparameter'
@@ -150,10 +162,16 @@ CLA_ARGUMENT = {
 	description = 'Detector Settings'
 	group = 'Systemparameter'
 	CLA_PARAMETER = {
-		subkey = ''
+		subkey = 'temporalDetector'
 		value = 'none'
 		datatype = 'string'
-		description = 'Detector Settings. Syntax: [time_center:time_range:amp;spectral_range:spectral_center:amp:ft_points]'
+		description = 'Temporal Detector Settings. Syntax: [time_center:time_range:amp:mode;...]'
+	}
+	CLA_PARAMETER = {
+		subkey = 'spectralDetector'
+		value = 'none'
+		datatype = 'string'
+		description = 'Spectral Detector Settings: Syntax: [spectral_range:spectral_center:amp:ft_points:mode;...]'
 	}
 }
 CLA_ARGUMENT = {
@@ -382,20 +400,7 @@ CLA_ARGUMENT = {
 CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'pathIntForceDense'
-	description = 'Forces the use of a Dense Tensor for the PI evaluation'
-	group = 'PhononParams'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-# Deprecated
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'phonons'
-	description = 'DEPRECATED Enable general phonon contribution. Edit parameters via --phonons subkeys'
+	description = 'NOTIMPLEMENTED Forces the use of a Dense Tensor for the PI evaluation'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''
@@ -431,7 +436,7 @@ CLA_ARGUMENT = {
 CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'noMarkov'
-	description = 'Disable first Markov Approximation. Note: This slows down g1 and g2 calculation.'
+	description = 'NOTIMPLEMENTED Disable first Markov Approximation. Note: This slows down g1 and g2 calculation.'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''
@@ -440,18 +445,7 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'phononcoeffs'
-	description = 'NOTIMPLEMENTED Enable phonon Lindblad coefficient output.'
-	group = 'PhononParams'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
+
 CLA_ARGUMENT = {
 	type = '2hyphen'
 	key = 'phononAdjust'
@@ -478,20 +472,8 @@ CLA_ARGUMENT = {
 }
 CLA_ARGUMENT = {
 	type = '1hyphen'
-	key = 'noPhononAdjust'
-	description = 'DEPRECATED USE --phononAdjust instead. Disable the adjustments done on radiative decay if phonons are active.'
-	group = 'PhononParams'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
 	key = 'usePhononRK45'
-	description = 'Enables using RK45 for the phonon integral, will use constant timestep with passed dt instead.'
+	description = 'NOTIMPLEMENTED Enables using RK45 for the phonon integral, will use constant timestep with passed dt instead.'
 	group = 'PhononParams'
 	CLA_PARAMETER = {
 		subkey = ''
@@ -512,18 +494,7 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'oPath'
-	description = 'DEPRECATED (will be replaced by --output path) Outputs the Path of the Pathintegral Propagator for a single timestep using the .dot format.'
-	group = 'PhononParams'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
+
 CLA_ARGUMENT = {
 	type = '2hyphen'
 	key = 'rk'
@@ -560,45 +531,7 @@ CLA_ARGUMENT = {
 		description = 'Maximum value for delta t.'
 	}
 }
-# DEPRECATED
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'RK5'
-	description = 'DEPRECATED Use Runge Kutta of order 5 for all calculations'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-# DEPRECATED
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'RK5T'
-	description = 'DEPRECATED Use Runge Kutta of order 5 for all t-direction only'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-# DEPRECATED
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'RK5Tau'
-	description = 'DEPRECATED Use Runge Kutta of order 5 for all tau-direction only'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
+
 CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'noInteractionpic'
@@ -647,54 +580,7 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'outputDetector'
-	description = 'DEPRECATED Enables Output of the Detector transformed Matrices, e.g. the FT of the G_i functions.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'outputOp'
-	description = 'NOTIMPLEMENTED Enables outputting operators. Some Operators will also be output when using the -L3 Flag.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'outputHamiltons'
-	description = 'DEPRECATED NOTIMPLEMENTED Enables outputting Hamilton operators'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'outputOpStop'
-	description = 'DEPRECATED NOTIMPLEMENTED Enables outputting all operators, exitting the program afterwards'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
+
 CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'timeTrafoMatrixExponential'
@@ -707,42 +593,7 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'startCoherent'
-	description = 'DEPRECATED Start in a coherent state (broken). Use unitial state syntax instead.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'outputEigs'
-	description = 'DEPRECATED Output the Hamilton Eigenvalues.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'fullDM'
-	description = 'DEPRECATED Output full densitymatrix instead of only diagonal elements. Use DMmode instead.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
+
 CLA_ARGUMENT = {
 	type = '2hyphen'
 	key = 'DMconfig'
@@ -755,30 +606,7 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'noDM'
-	description = 'DEPRECATED Do not output densitymatrix. Use DMmode instead.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'scale'
-	description = 'DEPRECATED NOTIMPLEMENTED Enables parameter scaling (SI->scaled units)'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
+
 CLA_ARGUMENT = {
 	type = '1hyphen'
 	key = 'disableMatrixCaching'
@@ -827,42 +655,7 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'raman'
-	description = 'DEPRECATED Enables calculation of raman population. Use --G syntax instead.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'g2s'
-	description = 'DEPRECATED Enables simple g2 calculations.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'timedepInd'
-	description = 'DEPRECATED Enables time dependant output of indistinguishability. This increases calculation time by a lot.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
+
 CLA_ARGUMENT = {
 	type = '2hyphen'
 	key = 'lfc'
@@ -887,18 +680,7 @@ CLA_ARGUMENT = {
 		description = ''
 	}
 }
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'error'
-	description = 'DEPRECATED Output Numerical RK45 Error. Only works if no interpolation method for the main time calculations is used.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
-		description = ''
-	}
-}
+
 CLA_ARGUMENT = {
 	type = '2hyphen'
 	key = 'file'
@@ -908,18 +690,6 @@ CLA_ARGUMENT = {
 		subkey = ''
 		value = 'none'
 		datatype = 'string'
-		description = ''
-	}
-}
-CLA_ARGUMENT = {
-	type = '1hyphen'
-	key = 'oElec'
-	description = 'DEPRECATED Also output the electronic state emission through radiative decay. This is always enabled if radiative decay is enabled.'
-	group = 'General'
-	CLA_PARAMETER = {
-		subkey = ''
-		value = 'false'
-		datatype = 'bool'
 		description = ''
 	}
 }

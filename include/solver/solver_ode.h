@@ -41,8 +41,9 @@ class ODESolver {
     std::vector<int> pathint_tensor_dimensions;
 
     // Detector matrix
-    Dense detector_temporal_mask;
-    std::vector<std::tuple<double, double, double>> detector_frequency_mask;
+    std::map<std::string,dDense> detector_temporal_mask;
+    using t_detector_frequency_mask = std::vector<std::tuple<double, double, double>>;
+    std::map<std::string,t_detector_frequency_mask> detector_frequency_mask;
     // Dense detector_frequency_mask_cache;
 
     /**
@@ -237,7 +238,14 @@ class ODESolver {
      * @brief Applies the detector mapping function to a G1 or G2 correlation function.
      *
      */
-    void apply_detector_function( System &s, CacheMatrix &mat );
+    void apply_detector_function( System &s, CacheMatrix &mat, const std::string& mat_mode = "G" );
+
+    /**
+     * @brief Initializes the detector functions for G1 and G2 correlation functions.
+     * This function requireds a valid CacheMatrix object for the dimensions, so it can
+     * only be called after the CacheMatrix has been initialized.
+    */
+    void initialize_detector_functions(System& s, CacheMatrix &mat);
 
     /**
      * @brief Calculates the Eigenvalues of the Hamilton operators H_0, H_I and H_0+H_I and outputs them to "hamilton_eigenvalues.txt"

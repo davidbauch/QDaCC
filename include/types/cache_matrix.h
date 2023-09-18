@@ -15,6 +15,7 @@ class CacheMatrix {
     std::string m_name;
     Dense m_matrix;
     Dense m_time;
+    bool fft = false;
 
    public:
     // No Copying. This object is ususally only copied by mistake
@@ -72,6 +73,14 @@ class CacheMatrix {
     }
     const Dense& get_time() const {
         return m_time;
+    }
+
+    bool hasBeenFourierTransformed() {
+        if (not fft) {
+            fft = true;
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -140,7 +149,7 @@ class CacheMatrix {
     }
     Dense empty() const {
         const auto rc = dim();
-        return Dense( rc, rc );
+        return Dense::Zero( rc, rc );
     }
     void set_empty() {
         m_matrix = empty();

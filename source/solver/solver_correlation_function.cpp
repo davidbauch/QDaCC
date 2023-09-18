@@ -120,6 +120,10 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
     // Manually Apply the detector function
     for ( const auto &[eval, purpose] : eval_operators ) {
         auto &gmat = cache[purpose];
-        apply_detector_function( s, gmat );
+        if (gmat.hasBeenFourierTransformed()){ 
+            Log::L2( "[CorrelationFunction] Detector Function already applied to {}. Skipping!\n", purpose);
+            continue;
+        }
+        apply_detector_function( s, gmat, purpose );
     }
 }

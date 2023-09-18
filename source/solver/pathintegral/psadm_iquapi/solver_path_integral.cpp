@@ -188,7 +188,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
         }
 
         // Increase Tmax if required
-        if ( s.parameters.numerics_calculate_till_converged and t_t + s.parameters.t_step_pathint >= t_end and std::real( output.back().mat.coeff( s.parameters.numerics_groundstate, s.parameters.numerics_groundstate ) ) < 0.999 ) {
+        if ( s.parameters.numerics_calculate_till_converged and t_t + s.parameters.t_step_pathint >= t_end and t_t < s.parameters.numerics_hard_t_max and std::real( output.back().mat.coeff( s.parameters.numerics_groundstate, s.parameters.numerics_groundstate ) ) < 0.999 ) {
             t_end += 10.0 * s.parameters.t_step_pathint;
             Log::L3( "[PathIntegral] Adjusted Calculation end to {}\n", t_end );
         }

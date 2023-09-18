@@ -22,8 +22,9 @@ class Parameters {
     // Numerical Approximations
     bool numerics_use_interactionpicture, numerics_use_rwa;
 
-    // If True, the program will extend itself until the system converges into the defined groundstate
+    // If True, the program will extend itself until the system converges into the defined groundstate or t > numerics_hard_t_max.
     bool numerics_calculate_till_converged;
+    double numerics_hard_t_max;
 
     // Groundstate Parameters
     int numerics_groundstate;
@@ -108,6 +109,8 @@ class Parameters {
     bool numerics_use_saved_hamiltons;
     // Enables the caching of pulse- and chirp functions
     bool numerics_use_function_caching;
+
+    bool detector_normalize_functions = true;
 
     // Unique Identifier for a given set of parameters for later evaluation
     std::vector<double> logfilecounter;
@@ -256,7 +259,7 @@ class Parameters {
     std::string inputstring_pulse;
     std::string inputstring_chirp;
     std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_raman, inputstring_correlation_resolution, inputstring_SPconf;
-    std::string inputstring_detector;
+    std::string inputstring_detector_time,inputstring_detector_spectral;
     std::string inputstring_densitymatrix_config;
     std::string inputstring_rk45_config;
     // Input Maps. The Temporary Inputstrings will get verwurstet into these maps, such that their parameters are available via their corresponding string key.

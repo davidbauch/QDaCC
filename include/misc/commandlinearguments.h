@@ -21,6 +21,7 @@
 // V 1.2.2 - Constructor now also accepts argv in vecor format, and commandlinearguments vector get function
 // V 1.3 - Singleton class
 // V 1.4 Markup for filter, Markup for "DEPRECATED" and "NOTIMPLEMENTED"
+// V 1.5 Markup for general output
 
 // TODO: Parameter Subclass wegmachen, nur eine Datastructure Class, die dann subdatastructures vom selben typ kennt.
 
@@ -35,7 +36,20 @@ class CommandlineArguments {
     std::string cla_add_param = "add";
     std::string cla_remove_param = "rem"; // TODO
     std::string cla_edit_param = "mod";   // TODO
-    std::string version = "1.3";
+    std::string version = "1.5";
+
+    static constexpr std::string RED = "\033[31m";
+    static constexpr std::string GREEN = "\033[32m";
+    static constexpr std::string YELLOW = "\033[33m";
+    static constexpr std::string BLUE = "\033[34m";
+    static constexpr std::string MAGENTA = "\033[35m";
+    static constexpr std::string CYAN = "\033[36m";
+    static constexpr std::string WHITE = "\033[37m";
+    static constexpr std::string GREY = "\033[90m";
+    static constexpr std::string RESET = "\033[0m";
+    static constexpr std::string BOLD = "\033[1m";
+    static constexpr std::string UNDERLINE = "\033[4m";
+    static constexpr std::string REVERSED = "\033[7m";
 
     class Parameter {
        public:
@@ -196,7 +210,7 @@ class CommandlineArguments {
             }
             for ( const auto& param : parameter ) {
                 if ( param.datatype.compare( "bool" ) != 0 ) {
-                    std::string prefix = " | <" + param.datatype + "> Standard is " + param.value + ". ";
+                    std::string prefix = " | <" + param.datatype + ">" + (param.value.size() > 0 ? GREY+" Default is " + param.value +RESET+"." : "") + " ";
                     int newlen = len2 - prefix.size();
                     bool doneFirstOutput = false;
                     for ( int i = 0; i < (int)( param.description.size() / newlen ) + 1; i++ ) {
@@ -208,11 +222,11 @@ class CommandlineArguments {
             }
             for ( auto s : lines ) {
                 if ( s.find( "DEPRECATED" ) )
-                    s = QDLC::String::replace( s, "DEPRECATED", "\033[1m\033[31mDEPRECATED\033[0m" );
+                    s = QDLC::String::replace( s, "DEPRECATED", BOLD+RED+"DEPRECATED"+RESET );
                 if ( s.find( "NOTIMPLEMENTED" ) )
-                    s = QDLC::String::replace( s, "NOTIMPLEMENTED", "\033[1m\033[31mNOT\033[31mIMPLEMENTED\033[0m" );
+                    s = QDLC::String::replace( s, "NOTIMPLEMENTED", BOLD+RED+"NOTIMPLEMENTED"+RESET );
                 if ( markup.size() != 0 )
-                    s = QDLC::String::add_prefix_and_suffix( s, markup, "\033[32m", "\033[0m", true );
+                    s = QDLC::String::add_prefix_and_suffix( s, markup, GREEN+UNDERLINE, RESET, true );
                 out << s << std::endl;
             }
         }
@@ -329,7 +343,7 @@ class CommandlineArguments {
             detlen = std::max( detlen, detlen1 );
         }
         int len1 = std::max( (int)( cla_width / 3 ), detlen );
-        std::string div = "|     ";
+        std::string div = GREY+"|     "+RESET;
         int len2 = cla_width - len1 - div.size();
         std::cout << String::tail( "", cla_width, "=" ) << std::endl;
         std::string current_group = "";
@@ -339,10 +353,10 @@ class CommandlineArguments {
         for ( const auto& datastructure : cla_datastructures ) {
             if ( filter.size() > 0 && !datastructure.validfilter( filter ) ) continue;
             if ( datastructure.group.compare( current_group ) != 0 ) {
-                std::cout << String::tail( "", cla_width, "-" ) << std::endl;
+                std::cout << GREY+String::tail( "", cla_width, "-" )+RESET << std::endl;
                 current_group = datastructure.group;
             } else if ( !first ) {
-                std::cout << String::tail( "", len1 ) + "-" + String::tail( "", len2 + div.size() - 1 ) << std::endl; //<< String::tail( "", cla_width, " . " ) << std::endl;
+                std::cout << String::tail( "", len1 ) + GREY+"-"+RESET + String::tail( "", len2 + div.size() - 1 ) << std::endl; //<< String::tail( "", cla_width, " . " ) << std::endl;
             }
             datastructure.identify( len1, len2, div, filter );
             first = false;

@@ -46,25 +46,31 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
         for ( int i = 0; i < raman_s.string_v["ElMode1"].size(); i++ ) {
             calculate_raman_population( s, raman_s.string_v["ElMode1"][i], raman_s.string_v["ElMode2"][i], raman_s.string_v["OpMode"][i], raman_s.string_v["PMode"][i] );
         }
-    // Detector Matrix // Moved directly to where its calculated.
-    // if ( s.parameters.input_conf["Detector"].property_set["time_center"].size() > 0 ) {
-    //    Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask.txt...\n" );
-    //    auto &f_detector = FileOutput::add_file( "detector_temporal_mask" );
-    //    f_detector << "Time_index\ttau_index\tD(t)*D(t+tau)\n";
-    //    for ( int k = 0; k < detector_temporal_mask.rows(); k++ ) {
-    //        for ( int l = 0; l < detector_temporal_mask.cols(); l++ ) {
-    //            f_detector << fmt::format( "{}\t{}\t{:.8e}\n", k, l, std::real( detector_temporal_mask( k, l ) ) );
-    //        }
-    //        f_detector << "\n";
-    //    }
-    //}
-    if ( s.parameters.input_conf["Detector"].property_set["spectral_range"].size() > 0 ) {
-        Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_spectral_mask.txt...\n" );
-        auto &f_detector = FileOutput::add_file( "detector_spectral_mask" );
-        f_detector << "Omega\tAmp\tDelta\n";
-        for ( auto &[freq, amp, delta] : detector_frequency_mask ) {
-            f_detector << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", freq, amp, delta );
+    // Output Both masks to files
+    auto &gmat = cache.begin()->second;
+    for ( const auto &[mode, current_detector_temporal_mask] : detector_temporal_mask ) {
+        Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask_{}.txt...\n", mode );
+        auto &f_detector = FileOutput::add_file( "detector_temporal_mask_" + mode );
+        f_detector << "Time_index\ttau_index\tD(t)*D(t+tau)\n";
+        for ( int k = 0; k < current_detector_temporal_mask.rows(); k++ ) {
+            const auto t = gmat.t( k );
+            for ( int l = 0; l < current_detector_temporal_mask.cols(); l++ ) {
+                const auto tau = gmat.tau( l );
+                const auto val = std::real( current_detector_temporal_mask( k, l ) );
+                f_detector << fmt::format( "{}\t{}\t{:.8e}\n", t, tau, val );
+            }
+            f_detector << "\n";
         }
+        f_detector.close();
+    }
+    for ( auto &[mode, current_detector_frequency_mask] : detector_frequency_mask ) {
+        Log::L2( "[PhotonStatistics] Saving Spectral Detector to detector_spectral_mask_{}.txt...\n", mode );
+        auto &f_detector = FileOutput::add_file( "detector_spectral_mask_" + mode );
+        f_detector << "Omega\tD(omega)\n";
+        for ( const auto &[omega, amplitude, delta_omega] : current_detector_frequency_mask ) {
+            f_detector << fmt::format( "{:.8e}\t{:.8e}\n", omega, amplitude );
+        }
+        f_detector.close();
     }
     // Calculate G1/G2 functions
     auto &all_gfuncs = s.parameters.input_correlation["GFunc"];

@@ -9,7 +9,6 @@ QDLC::Numerics::ODESolver::ODESolver( System &s ) {
     auto size = savedStates.size();
     savedStates.clear();
     savedStates.reserve( size );
-    detector_frequency_mask.clear();
     Log::L2("[System] Allocated memory for {} states.\n",savedStates.size());
 }
 

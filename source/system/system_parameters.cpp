@@ -29,6 +29,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     t_start = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstart" );
     t_end = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tend" );
     t_step = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstep" );
+    numerics_hard_t_max = QDLC::CommandlineArguments::get_parameter<double>( "--hardmax" );
     numerics_groundstate_string = QDLC::CommandlineArguments::get_parameter( "--groundstate" );
 
     // Runge Kutta Parameters
@@ -50,7 +51,8 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     inputstring_wigner = QDLC::CommandlineArguments::get_parameter( "--G", "GW" );
     inputstring_raman = QDLC::CommandlineArguments::get_parameter( "--G", "GR" );
     inputstring_correlation_resolution = QDLC::CommandlineArguments::get_parameter( "--G", "grid" );
-    inputstring_detector = QDLC::CommandlineArguments::get_parameter( "--detector" );
+    inputstring_detector_time = QDLC::CommandlineArguments::get_parameter( "--detector", "temporalDetector" );
+    inputstring_detector_spectral = QDLC::CommandlineArguments::get_parameter( "--detector", "spectralDetector" );
     inputstring_densitymatrix_config = QDLC::CommandlineArguments::get_parameter( "--DMconfig" );
     inputstring_SPconf = QDLC::CommandlineArguments::get_parameter( "--SPconfig" );
 
@@ -117,7 +119,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     auto output_dict_vec = QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--output" ), ';' );
     // Move all elements into the set
     output_dict = std::set<std::string>( std::make_move_iterator( output_dict_vec.begin() ), std::make_move_iterator( output_dict_vec.end() ) );
-    
+
     numerics_custom_expectation_values = QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--expv" ), ';' );
 
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
@@ -266,7 +268,7 @@ void Parameters::pre_adjust_input() {
             }
         }
         if ( t_end < 0 )
-            t_end = std::max<double>( 1E-12, 10.0 * std::max<double>(t_step,t_step_pathint) );
+            t_end = std::max<double>( 1E-12, 10.0 * std::max<double>( t_step, t_step_pathint ) );
         Log::L2( "[System] Calculate till at least {} and adjust accordingly to guarantee convergence. The matrix index used is {}\n", t_end, numerics_groundstate );
     }
 
@@ -528,38 +530,50 @@ void Parameters::parse_system() {
             input_conf["PulseConf"] = conf_s;
         }
     }
-    // Detector Input. Split temporal and spectral filtering with ";"
+    // Detector Input.
     {
-        universal_config conf_s;
-        if ( inputstring_detector != "none" ) {
-            Log::L2( "[System-Parameters] Setting up detector using {}...\n", inputstring_detector );
-            auto conf_sep = QDLC::String::splitline( inputstring_detector, ';' );
-            if ( conf_sep[0] != "none" ) {
-                auto conf = QDLC::String::splitline( conf_sep[0], ':' );
-                conf_s.property_set["time_range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[0], ',' ) );
-                conf_s.property_set["time_center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );
-                conf_s.property_set["time_power_amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );
-                Log::L2( "[System-Parameters] Adding Temporal Detector mask using center = {}, range = {} and power_amp = {}.\n", conf_s.property_set["time_center"], conf_s.property_set["time_range"], conf_s.property_set["time_power_amplitude"] );
-            } else {
-                conf_s.property_set["time_center"] = {};
-                conf_s.property_set["time_range"] = {};
-                conf_s.property_set["time_power_amplitude"] = {};
+        if ( inputstring_detector_time != "none" ) {
+            universal_config conf_s;
+            Log::L2( "[System-Parameters] Setting up detector using {}...\n", inputstring_detector_time );
+            auto configs = QDLC::String::splitline( inputstring_detector_time, ';' );
+            conf_s.property_set["time_center"] = {};
+            conf_s.property_set["time_range"] = {};
+            conf_s.property_set["time_amplitude"] = {};
+            conf_s.property_set["time_power_amplitude"] = {};
+            conf_s.string_v["time_mode"] = {}; // Mode can be either G1,G2 or a specific name like G1-hbd-hb
+            for ( const auto &conf_sep : configs ) {
+                auto conf = QDLC::String::splitline( conf_sep, ':' );
+                conf_s.property_set["time_range"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[0] ) );
+                conf_s.property_set["time_center"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[1] ) );
+                conf_s.property_set["time_amplitude"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[2] ) );
+                conf_s.property_set["time_power_amplitude"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[3] ) );
+                conf_s.string_v["time_mode"].emplace_back( conf[4] );
+                Log::L2( "[System-Parameters] Adding Temporal Detector mask using center = {}, range = {}, ampltitude {} and power_amp = {} on mode(s) {}.\n", conf[1], conf[0], conf[2], conf[3], conf[4] );
             }
-            if ( conf_sep.size() > 1 and conf_sep[1] != "none" ) {
-                auto conf = QDLC::String::splitline( conf_sep[1], ':' );
-                conf_s.property_set["spectral_range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[0], ',' ) );
-                conf_s.property_set["spectral_center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );
-                conf_s.property_set["spectral_power_amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );
-                conf_s.property_set["spectral_number_points"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );
-                Log::L2( "[System-Parameters] Adding Spectral Detector mask using center = {}, range = {}, power_amp = {} and {} points for the Fourier Transformation.\n", conf_s.property_set["spectral_center"], conf_s.property_set["spectral_range"], conf_s.property_set["spectral_power_amplitude"], conf_s.property_set["spectral_number_points"] );
-            } else {
-                conf_s.property_set["spectral_range"] = {};
-                conf_s.property_set["spectral_center"] = {};
-                conf_s.property_set["spectral_power_amplitude"] = {};
-                conf_s.property_set["spectral_number_points"] = {};
-            }
+            input_conf["DetectorTime"] = conf_s;
         }
-        input_conf["Detector"] = conf_s;
+        if ( inputstring_detector_spectral != "none" ) {
+            universal_config conf_s;
+            Log::L2( "[System-Parameters] Setting up detector using {}...\n", inputstring_detector_spectral );
+            auto configs = QDLC::String::splitline( inputstring_detector_spectral, ';' );
+            conf_s.property_set["spectral_range"] = {};
+            conf_s.property_set["spectral_center"] = {};
+            conf_s.property_set["spectral_amplitude"] = {};
+            conf_s.property_set["spectral_power_amplitude"] = {};
+            conf_s.property_set["spectral_number_points"] = {};
+            conf_s.string_v["spectral_mode"] = {};
+            for ( const auto &conf_sep : configs ) {
+                auto conf = QDLC::String::splitline( conf_sep, ':' );
+                conf_s.property_set["spectral_range"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[0] ) );
+                conf_s.property_set["spectral_center"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[1] ) );
+                conf_s.property_set["spectral_amplitude"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[2] ) );
+                conf_s.property_set["spectral_power_amplitude"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[3] ) );
+                conf_s.property_set["spectral_number_points"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[4] ) );
+                conf_s.string_v["spectral_mode"].emplace_back( conf[5] );
+                Log::L2( "[System-Parameters] Adding Spectral Detector mask using center = {}, range = {}, amplitude {} power_amp = {} and {} points for the Fourier Transformation on mode(s) {}.\n", conf[1], conf[0], conf[2], conf[3], conf[4], conf[5] );
+            }
+            input_conf["DetectorSpectral"] = conf_s;
+        }
     }
     {
         universal_config conf_s;
@@ -644,7 +658,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                 Log::L1( " - Single Pulse:\n" );
                 Log::L1( " - - Amplitude: {} Hz - {:.8} mueV\n", mat.property_set["Amplitude"][i], mat.property_set["Amplitude"][i].getSI( Parameter::UNIT_ENERGY_MUEV ) );
                 Log::L1( " - - Frequency: {} Hz - {:.8} eV - {:.8} nm\n", mat.property_set["Frequency"][i], mat.property_set["Frequency"][i].getSI( Parameter::UNIT_ENERGY_EV ), mat.property_set["Frequency"][i].getSI( Parameter::UNIT_WAVELENGTH_NM ) );
-                Log::L1( " - - Width: {} s - {:.8} ps - {:.8} mueV bandwith\n", mat.property_set["Width"][i], mat.property_set["Width"][i].getSI( Parameter::UNIT_TIME_PS ), Parameter(1.0/mat.property_set["Width"][i]).getSI( Parameter::UNIT_ENERGY_MUEV ) );
+                Log::L1( " - - Width: {} s - {:.8} ps - {:.8} mueV bandwith\n", mat.property_set["Width"][i], mat.property_set["Width"][i].getSI( Parameter::UNIT_TIME_PS ), Parameter( 1.0 / mat.property_set["Width"][i] ).getSI( Parameter::UNIT_ENERGY_MUEV ) );
                 Log::L1( " - - Center: {} s - {:.8} ps\n", mat.property_set["Center"][i], mat.property_set["Center"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 if ( QDLC::Math::abs2( mat.property_set["ChirpRate"][i] != 0.0 ) )
                     Log::L1( " - - Chirp: {}\n", mat.property_set["ChirpRate"][i] );
@@ -652,8 +666,8 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                     Log::L1( " - - SUPER Amplitude: {} - {} meV\n", mat.property_set["SUPERDelta"][i], mat.property_set["SUPERDelta"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
                     Log::L1( " - - SUPER Frequency: {} - {} meV\n", mat.property_set["SUPERFreq"][i], mat.property_set["SUPERFreq"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
                 }
-                if ( QDLC::Math::abs2( mat.property_set["Phase"][i] != 0.0 ) ) 
-                    Log::L1( " - - Phase: {}pi\n", mat.property_set["Phase"][i]/QDLC::Math::PI );
+                if ( QDLC::Math::abs2( mat.property_set["Phase"][i] != 0.0 ) )
+                    Log::L1( " - - Phase: {}pi\n", mat.property_set["Phase"][i] / QDLC::Math::PI );
                 Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i], mat.string_v["Type"][i] == "gauss" ? fmt::format( " (Gaussian Amplitude: {})", mat.property_set["GaussAmp"][i] ) : "" );
             }
         }
@@ -731,13 +745,18 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "\n" );
     Log::Logger::wrapInBar( "Time", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     Log::L1( "Timeborder start: {:.8e} s - {:.2f} ps\n", t_start, t_start * 1E12 );
-    Log::L1( "Timeborder end: {:.8e} s - {:.2f} ps{}\n", t_end, t_end * 1E12, numerics_calculate_till_converged ? " (variable time end at 99.9\% convergence)" : "" );
+    Log::L1( "Timeborder end: {:.8e} s - {:.2f} ps\n", t_end, t_end * 1E12 );
+    if (numerics_calculate_till_converged) {
+    Log::L1( "Variable time end at 99.9\% convergence using dm index {} -> {}\n", numerics_groundstate_string, numerics_groundstate);
+    if (numerics_hard_t_max > 0)
+        Log::L1("Or until t > t_hard_max = {}\n", numerics_hard_t_max);
+    }
     Log::L1( "Timeborder delta: {:.8e} s - {:.2f} fs \n", t_step, t_step * 1E15 );
     Log::L1( "Subiterator delta: {:.8e} s - {:.2f} fs \n", numerics_subiterator_stepsize, numerics_subiterator_stepsize * 1E15 );
     if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
         Log::L1( "Timeborder delta path integral: {:.8e} s - {:.2f} ps\n", t_step_pathint, t_step_pathint * 1E12 );
     }
-    Log::L1("Output Timeframe: {}", input_conf["DMconfig"].string["interaction_picture"]);
+    Log::L1( "Output Timeframe: {}", input_conf["DMconfig"].string["interaction_picture"] );
     Log::L1( "\n" );
     Log::Logger::wrapInBar( "G-Function Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( input_correlation.size() > 0 ) {
@@ -760,23 +779,27 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             }
         Log::L1( "\n" );
         // Detector Stuff
-        if ( input_conf["Detector"].property_set["time_center"].size() > 0 ) {
-            Log::L1( "Using {} temporal detection windows with parameters:\n", input_conf["Detector"].property_set["time_center"].size() );
-            for ( int i = 0; i < input_conf["Detector"].property_set["time_center"].size(); i++ ) {
+        if ( input_conf["DetectorTime"].property_set["time_center"].size() > 0 ) {
+            Log::L1( "Using {} temporal detection windows with parameters:\n", input_conf["DetectorTime"].property_set["time_center"].size() );
+            for ( int i = 0; i < input_conf["DetectorTime"].property_set["time_center"].size(); i++ ) {
                 Log::L1( " - Temporal Detection Window {}:\n", i );
-                Log::L1( " - - Center: {} - {} ps\n", input_conf["Detector"].property_set["time_center"][i], input_conf["Detector"].property_set["time_center"][i].getSI( Parameter::UNIT_TIME_PS ) );
-                Log::L1( " - - Sigma: {} - {} ps\n", input_conf["Detector"].property_set["time_range"][i], input_conf["Detector"].property_set["time_range"][i].getSI( Parameter::UNIT_TIME_PS ) );
-                Log::L1( " - - Power: {}\n", input_conf["Detector"].property_set["time_power_amplitude"][i] );
+                Log::L1( " - - Center: {} - {} ps\n", input_conf["DetectorTime"].property_set["time_center"][i], input_conf["DetectorTime"].property_set["time_center"][i].getSI( Parameter::UNIT_TIME_PS ) );
+                Log::L1( " - - Sigma: {} - {} ps\n", input_conf["DetectorTime"].property_set["time_range"][i], input_conf["DetectorTime"].property_set["time_range"][i].getSI( Parameter::UNIT_TIME_PS ) );
+                Log::L1( " - - Amplitude: {}\n", input_conf["DetectorTime"].property_set["time_amplitude"][i] );
+                Log::L1( " - - Power: {}\n", input_conf["DetectorTime"].property_set["time_power_amplitude"][i] );
+                Log::L1( " - - Mode: {}\n", input_conf["DetectorTime"].string_v["time_mode"][i] );
             }
         }
-        if ( input_conf["Detector"].property_set["spectral_center"].size() > 0 ) {
-            Log::L1( "Using {} spectral detection windows with parameters:\n", input_conf["Detector"].property_set["spectral_center"].size() );
-            for ( int i = 0; i < input_conf["Detector"].property_set["spectral_center"].size(); i++ ) {
+        if ( input_conf["DetectorSpectral"].property_set["spectral_center"].size() > 0 ) {
+            Log::L1( "Using {} spectral detection windows with parameters:\n", input_conf["DetectorSpectral"].property_set["spectral_center"].size() );
+            for ( int i = 0; i < input_conf["DetectorSpectral"].property_set["spectral_center"].size(); i++ ) {
                 Log::L1( " - Spectral Detection Window {}:\n", i );
-                Log::L1( " - - Center: {} - {} eV\n", input_conf["Detector"].property_set["spectral_center"][i], input_conf["Detector"].property_set["spectral_center"][i].getSI( Parameter::UNIT_ENERGY_EV ) );
-                Log::L1( " - - Sigma: {} - {} meV\n", input_conf["Detector"].property_set["spectral_range"][i], input_conf["Detector"].property_set["spectral_range"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
-                Log::L1( " - - Power: {}\n", input_conf["Detector"].property_set["spectral_power_amplitude"][i] );
-                Log::L1( " - - FT Points: {}\n", input_conf["Detector"].property_set["spectral_number_points"][i] );
+                Log::L1( " - - Center: {} - {} eV\n", input_conf["DetectorSpectral"].property_set["spectral_center"][i], input_conf["DetectorSpectral"].property_set["spectral_center"][i].getSI( Parameter::UNIT_ENERGY_EV ) );
+                Log::L1( " - - Sigma: {} - {} meV\n", input_conf["DetectorSpectral"].property_set["spectral_range"][i], input_conf["DetectorSpectral"].property_set["spectral_range"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
+                Log::L1( " - - Amplitude: {}\n", input_conf["DetectorSpectral"].property_set["spectral_amplitude"][i] );
+                Log::L1( " - - Power: {}\n", input_conf["DetectorSpectral"].property_set["spectral_power_amplitude"][i] );
+                Log::L1( " - - FT Points: {}\n", input_conf["DetectorSpectral"].property_set["spectral_number_points"][i] );
+                Log::L1( " - - Mode: {}\n", input_conf["DetectorSpectral"].string_v["spectral_mode"][i] );
             }
         }
     } else {
