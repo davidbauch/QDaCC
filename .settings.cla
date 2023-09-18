@@ -42,7 +42,7 @@ CLA_ARGUMENT = {
 	group = 'Timeparameter'
 	CLA_PARAMETER = {
 		subkey = ''
-		value = '-1'
+		value = '1'
 		datatype = 'string'
 		description = 'Maximum Calculation time for --tend -1'
 	}
