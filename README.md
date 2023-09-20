@@ -15,7 +15,7 @@ Published Work using QDaCC:
 [![AQT](https://img.shields.io/badge/AQT-10.1002/qute.202300142-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734)
 
 
-There will be a GUI available soon at [gitub/QDaCC-GUI](https://github.com/davidbauch/QDaCC-GUI)
+There is a GUI available at [gitub/QDaCC-GUI](https://github.com/davidbauch/QDaCC-Tools/)
 
 # What does it do?
 
