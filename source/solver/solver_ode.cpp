@@ -73,6 +73,21 @@ std::tuple<std::string, std::string> QDLC::Numerics::ODESolver::get_operator_str
             s_creator += "+";
             s_annihilator += "+";
         }
+        // If there is a user provided creator-annihilator differentiation using the "=" operator, split at "="
+        if (split_s_op.contains("=")) {
+            auto ops = QDLC::String::splitline( split_s_op, '=' );
+            if ( s.operatorMatrices.el_transitions.contains( ops.at(0) ) )
+                s_creator += ops.at(0);
+            else
+                s_creator += ops.at(0) + "bd";
+            
+            if ( s.operatorMatrices.el_transitions.contains( ops.at(1) ) )
+                s_annihilator += ops.at(1);
+            else
+                s_annihilator += ops.at(1) + "b";
+            continue;
+        }
+        // Else, find the corresponding transposed operator
         if ( s.operatorMatrices.el_transitions.contains( split_s_op ) ) {
             s_annihilator += split_s_op;
             s_creator += s.operatorMatrices.el_transitions[split_s_op].name_transposed;

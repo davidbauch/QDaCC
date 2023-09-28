@@ -5,8 +5,8 @@
 /**
  * @brief Generating the Pauli matrices sigma_+ * sigma_+^t
  * The Spinmatrix
- * | ..  1 |
- * | -1 .. |
+ * | ..  i |
+ * | -i .. |
  * is tensored with itself to
  * | .. .. .. -1 |
  * | .. ..  1 .. |
@@ -138,7 +138,7 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
     std::string fout = s_op_creator_1 + "-" + s_op_annihilator_1 + "-" + s_op_creator_2 + "-" + s_op_annihilator_2;
     // Calculate G2(t,tau) with given operator matrices
     std::vector modes = { "1111", "1122", "2211", "2222" };
-    if ( matrix_priority_evaluation >= 2 )
+    if ( matrix_priority_evaluation == 2 )
         modes.insert( modes.end(), { "1212", "1221", "2112", "2121" } );
     if ( matrix_priority_evaluation == 3 )
         modes.insert( modes.end(), { "1211", "2122", "2111", "1222", "1112", "2221", "1121", "2212" } );
@@ -307,10 +307,10 @@ bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::str
         // Cache to output arrays
         output_eigenvalues.at( k ) = eigenvalues;
         output.at( k ) = conc;
-        output_simple.at( k ) = 2.0 * std::abs( rho_2phot( 0, 3 ) );
+        output_simple.at( k ) = std::abs( rho_2phot( 0, 3 ) ) + std::abs( rho_2phot( 3, 0 ) );
         output_fidelity.at( k ) = fidelity;
         output_g2zero.at( k ) = conc_g2zero;
-        output_g2zero_simple.at( k ) = 2.0 * std::abs( rho_2phot_g2zero( 0, 3 ) );
+        output_g2zero_simple.at( k ) = std::abs( rho_2phot_g2zero( 0, 3 ) ) + std::abs( rho_2phot_g2zero( 3, 0 ) );
         output_fidelity_g2zero.at( k ) = fidelity_g2zero;
         time.at( k ) = cache[mode_purpose.at( "1111" )].t( k );
         output_analytical.at( k ) = conc_analytical;

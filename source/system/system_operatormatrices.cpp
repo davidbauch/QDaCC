@@ -384,8 +384,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         for ( const auto &transition : param.string_v["CoupledTo"] ) {
             if ( not el_transitions.contains( transition ) )
                 continue;
-            Log::L2( "[System-PME] Adding Polaron Cavity Transition |{}><{}|b_{}\n", el_transitions[transition].to, el_transitions[transition].from, mode );
             auto transition_transposed = el_transitions[transition].name_transposed;
+            Log::L2( "[System-PME] Adding Polaron Cavity Transition {} coupled to b_{}\n", transition_transposed, mode );
             polaron_factors[0] += el_transitions[transition_transposed].hilbert * p.p_omega_coupling * param.get( "CouplingScaling", i ) * ph_transitions[mode + "b"].hilbert;
             i++;
         }

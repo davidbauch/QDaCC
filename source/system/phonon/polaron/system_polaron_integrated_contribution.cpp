@@ -9,7 +9,7 @@ using namespace QDLC;
  * @param chi_adjoint The adjoint of the initial Chi(t) matrix in the interaction frame.
  * @return A tuple containing the X_g and X_u matrices.
  */
-static inline std::tuple<Sparse, Sparse> _chi_to_XG( const auto& chi, const auto chi_adjoint ) {
+static inline std::tuple<Sparse, Sparse> _chi_to_XG( const auto& chi, const auto& chi_adjoint ) {
     return std::make_tuple( chi + chi_adjoint /* g */, 1.i * ( chi - chi_adjoint ) /* u */ );
 }
 
@@ -39,10 +39,10 @@ static inline std::tuple<Sparse, Sparse> _interpolate_cached_coefficient( const 
     const auto& greater_or_equal_than_t = saved_coefficients.lower_bound( t );
     const auto& smaller_than_t = std::prev( greater_or_equal_than_t );
     //  Interpolate
-    const auto& chi_tau_back_g = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat1, greater_or_equal_than_t->second.begin()->second.mat1, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
-    const auto& chi_tau_back_u = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat2, greater_or_equal_than_t->second.begin()->second.mat2, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
+    const auto& XGTau = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat1, greater_or_equal_than_t->second.begin()->second.mat1, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
+    const auto& XUTau = QDLC::Math::lerp( smaller_than_t->second.begin()->second.mat2, greater_or_equal_than_t->second.begin()->second.mat2, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
     Log::L3( "Returning interpolate coefficient for t = {} using t0 = {} and t1 = {}, where t1-t0 = {}\n", t, smaller_than_t->first * 1E12, greater_or_equal_than_t->first * 1E12, ( -smaller_than_t->first + greater_or_equal_than_t->first ) * 1E12 );
-    return std::make_tuple( chi_tau_back_g, chi_tau_back_u );
+    return std::make_tuple( XGTau, XUTau );
 }
 
 static inline std::tuple<Sparse, Sparse> _get_thread_reduced_coefficients( const auto& threadmap_g, const auto& threadmap_u ) {
@@ -65,15 +65,15 @@ Sparse System::dgl_phonons_integrated_contribution( const double t, const Sparse
     const auto& [XGT, XUT] = _chi_to_XG( chi, chi_adjoint );
     // Use markov approximation
     if ( parameters.numerics_phonon_approximation_markov1 ) {
-        Sparse chi_tau_back_g;
-        Sparse chi_tau_back_u;
+        Sparse XGTau;
+        Sparse XUTau;
         // Final Values for X_u and X_g
         // If we have saved coefficients, try to find the one for the current time, or interpolate between two saved ones.
         if ( parameters.numerics_use_saved_coefficients and savedCoefficients.contains( t ) ) {
-            std::tie( chi_tau_back_g, chi_tau_back_u ) = _get_cached_coefficient( t, savedCoefficients );
+            std::tie( XGTau, XUTau ) = _get_cached_coefficient( t, savedCoefficients );
             track_getcoefficient_read++;
         } else if ( parameters.numerics_use_saved_coefficients and savedCoefficients.size() > 2 and savedCoefficients.rbegin()->first > t ) {
-            std::tie( chi_tau_back_g, chi_tau_back_u ) = _interpolate_cached_coefficient( t, savedCoefficients );
+            std::tie( XGTau, XUTau ) = _interpolate_cached_coefficient( t, savedCoefficients );
             track_getcoefficient_read_interpolated++;
         }
         // Not using saved_coefficients or index wasn't found or interpolation wasn't succesfull, recalculating.
@@ -88,22 +88,21 @@ Sparse System::dgl_phonons_integrated_contribution( const double t, const Sparse
                 double tau = parameters.numerics_subiterator_stepsize * tau_index;
                 Sparse chi_tau_back = dgl_phonons_calculate_transformation( t, tau );
                 Sparse chi_tau_back_adjoint = chi_tau_back.adjoint();
-                const auto& [X_tau_back_g, X_tau_back_u] = _chi_to_XG( chi_tau_back, chi_tau_back_adjoint );
-                auto thread = omp_get_thread_num();
-                // test:
-                threadmap_g[thread] += X_tau_back_g * dgl_phonons_greenf(tau, 'g');//.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'g' ) );
-                threadmap_u[thread] += X_tau_back_u * dgl_phonons_greenf(tau, 'u');//.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'u' ) );
+                const auto& [x_tau_back_g, x_tau_back_u] = _chi_to_XG( chi_tau_back, chi_tau_back_adjoint );
+                const auto thread = omp_get_thread_num();
+                threadmap_g[thread] += x_tau_back_g.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'g' ) );
+                threadmap_u[thread] += x_tau_back_u.cwiseProduct( dgl_phonons_greenf_matrix( tau, 'u' ) );
             }
             // Sum all contributions from threadmaps into one coefficient
-            std::tie( chi_tau_back_g, chi_tau_back_u ) = _get_thread_reduced_coefficients( threadmap_g, threadmap_u );
+            std::tie( XGTau, XUTau ) = _get_thread_reduced_coefficients( threadmap_g, threadmap_u );
         }
         // Save coefficients
         if ( parameters.numerics_enable_saving_coefficients ) {
-            savedCoefficients[t][0.0] = QDLC::SaveStateTau( chi_tau_back_g, chi_tau_back_u, t, 0 );
+            savedCoefficients[t][0.0] = QDLC::SaveStateTau( XGTau, XUTau, t, 0 );
             track_getcoefficient_write++;
         }
         track_getcoefficient_calculate++;
-        integrant = parameters.numerics_subiterator_stepsize * ( dgl_kommutator( XGT, chi_tau_back_g * rho ) + dgl_kommutator( XUT, chi_tau_back_u * rho ) );
+        integrant = parameters.numerics_subiterator_stepsize * ( dgl_kommutator( XGT, XGTau * rho ) + dgl_kommutator( XUT, XUTau * rho ) );    
     }
     // Calculate phonon contributions from (saved/calculated) coefficients and rho(t)
     Sparse adjoint = integrant.adjoint();
@@ -123,15 +122,15 @@ Sparse System::dgl_phonons_integrated_contribution( const double t, const Sparse
 //    // Index not found, or no saving is used. Recalculate chi(t-tau).
 //    auto &chi_tau_back = chis_transformed.at( std::min<int>( chis_transformed.size() - 1, tau_index ) ).mat;
 //    Sparse chi_tau_back_adjoint = chi_tau_back.adjoint();
-//    auto chi_tau_back_g = chi_tau_back + chi_tau_back_adjoint;           // dgl_phonons_chiToX( chi_tau_back, 'u' );
-//    auto chi_tau_back_u = 1.i * ( chi_tau_back - chi_tau_back_adjoint ); // dgl_phonons_chiToX( chi_tau_back, 'g' );
+//    auto XGTau = chi_tau_back + chi_tau_back_adjoint;           // dgl_phonons_chiToX( chi_tau_back, 'u' );
+//    auto XUTau = 1.i * ( chi_tau_back - chi_tau_back_adjoint ); // dgl_phonons_chiToX( chi_tau_back, 'g' );
 //    // If saving is used, save current chi(t-tau).
 //    if ( parameters.numerics_use_saved_coefficients or parameters.numerics_enable_saving_coefficients ) {
 // #pragma omp critical
-//        savedCoefficients[t][tau] = QDLC::SaveStateTau( chi_tau_back_u, chi_tau_back_g, t, tau );
+//        savedCoefficients[t][tau] = QDLC::SaveStateTau( XUTau, XGTau, t, tau );
 //    }
-//    Sparse integrant = dgl_phonons_greenf_matrix( tau, 'u' ).cwiseProduct( dgl_kommutator( XUT, chi_tau_back_u * rho ) ); // FIXME: mit rk45 oder var gitter passt das rho hier nicht mehr! --> rho interpolieren!
-//    integrant += dgl_phonons_greenf_matrix( tau, 'g' ).cwiseProduct( dgl_kommutator( XGT, chi_tau_back_g * rho ) );       // FIXME: mit rk45 oder var gitter passt das rho hier nicht mehr! --> rho interpolieren!
+//    Sparse integrant = dgl_phonons_greenf_matrix( tau, 'u' ).cwiseProduct( dgl_kommutator( XUT, XUTau * rho ) ); // FIXME: mit rk45 oder var gitter passt das rho hier nicht mehr! --> rho interpolieren!
+//    integrant += dgl_phonons_greenf_matrix( tau, 'g' ).cwiseProduct( dgl_kommutator( XGT, XGTau * rho ) );       // FIXME: mit rk45 oder var gitter passt das rho hier nicht mehr! --> rho interpolieren!
 //    Sparse adjoint = integrant.adjoint();
 //    auto thread = omp_get_thread_num();
 //    threadmap_u[thread] += ( integrant + adjoint ) * parameters.t_step;

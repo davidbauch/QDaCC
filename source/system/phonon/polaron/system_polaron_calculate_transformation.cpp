@@ -7,7 +7,7 @@ Sparse System::dgl_phonons_calculate_transformation( double t, double tau ) {
     if ( parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::BackwardsIntegral ) {
         // TODO
         // return QDLC::Numerics::calculate_definite_integral_vec( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.numerics_subiterator_stepsize, std::get<1>( parameters.numerics_rk_tol.front() ), parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() );
-        auto chi = dgl_phonons_chi( t );
+        auto chi = dgl_phonons_chi( t - tau );
         // auto func = [this](const Sparse &chi, const double t){return this->dgl_phonons_rungefunc(chi,t);};
         return QDLC::Numerics::calculate_definite_integral( chi, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.numerics_subiterator_stepsize, std::get<1>( parameters.numerics_rk_tol.front() ), parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
     }
