@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 Scalar System::dgl_phonons_greenf( double tau, const char mode ) {
     if ( not phi_vector.contains( tau ) )

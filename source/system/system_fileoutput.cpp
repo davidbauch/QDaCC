@@ -1,6 +1,6 @@
 #include "system/fileoutput.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 std::ifstream FileOutput::load_file( const std::string &name, const std::string &file_ending ) {
     return Get().Iload_file( name, file_ending );

@@ -8,7 +8,7 @@
 #include "system/evaluable/pulse.h"
 #include "solver/solver.h"
 
-namespace QDLC {
+namespace QDACC {
 
 class System {
    public:
@@ -32,7 +32,7 @@ class System {
     // Vector of saved phonon-phi function
     std::vector<Scalar> phi_vector_int;
     // Vector of saved coefficients for e.g. phonon terms.
-    std::map<double, std::map<double, QDLC::SaveStateTau>> savedCoefficients;
+    std::map<double, std::map<double, QDACC::SaveStateTau>> savedCoefficients;
     // ##### Helper Variables #####
     std::map<std::string, double> emission_probabilities;
 
@@ -66,7 +66,7 @@ class System {
      *
      * @return Sparse Matrix Runge Function
      */
-    Sparse dgl_runge_function( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos );
+    Sparse dgl_runge_function( const Sparse &rho, const Sparse &H, const double t, std::vector<QDACC::SaveState> &past_rhos );
 
     /**
      * @brief Initializes all system parameters, cache variables and precalculates all functions that allow for caching
@@ -102,7 +102,7 @@ class System {
      * @brief Calculates and outputs expectation values for all available observables
      *
      */
-    void calculate_expectation_values( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer );
+    void calculate_expectation_values( const std::vector<QDACC::SaveState> &rhos, Timer &evalTimer );
 
     /**
      * @brief Calculates or returns the cached(if allowed) Hamiltonian for current time t.
@@ -175,7 +175,7 @@ class System {
     double dgl_phonons_lindblad_coefficients( const double energy, const double coupling, const Scalar pulse, const char mode = 'L', const double scaling = 1.0, const double sign = 1.0 );
 
     Sparse dgl_phonons_lindblad_contribution( const double t, const Sparse &rho );
-    Sparse dgl_phonons_integrated_contribution( const double t, const Sparse &rho, const std::vector<QDLC::SaveState> &past_rhos );
+    Sparse dgl_phonons_integrated_contribution( const double t, const Sparse &rho, const std::vector<QDACC::SaveState> &past_rhos );
 
     /**
      * @brief Initializes the Polaron Frame Functions by precalculating the Phi(tau) function and the corresponding Green functions
@@ -206,7 +206,7 @@ class System {
      *
      * @return Sparse Matrix to add onto the usual von-Neumann equatation / the runge function
      */
-    Sparse dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDLC::SaveState> &past_rhos );
+    Sparse dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDACC::SaveState> &past_rhos );
 
     /**
      * @brief Initializes the Path Integral Functions by precalculating the Kernel functions
@@ -350,4 +350,4 @@ class System {
     }
 };
 
-} // namespace QDLC
+} // namespace QDACC

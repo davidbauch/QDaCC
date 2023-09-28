@@ -3,10 +3,10 @@
 // TODO: statt sparse -> dense am besten dense -> nonzeros zu indices appenden, ab punkt dann einfach nur noch über nonzero indices iterieren. dann kann man von anfang an multithreaded machen, irgendwann gucken was is ungleich null,
 // dann nur noch über diese indices summieren.
 
-QDLC::Type::Sparse _reduce_adm_tensor( QDLC::Numerics::Tensor &tensor ) {
+QDACC::Type::Sparse _reduce_adm_tensor( QDACC::Numerics::Tensor &tensor ) {
     const auto tensor_dim = tensor.primary_dimensions();
-    QDLC::Type::Dense ret = QDLC::Type::Dense::Zero( tensor_dim, tensor_dim );
-    for ( QDLC::Numerics::Tensor::IndexVector &index : tensor.get_indices() ) {
+    QDACC::Type::Dense ret = QDACC::Type::Dense::Zero( tensor_dim, tensor_dim );
+    for ( QDACC::Numerics::Tensor::IndexVector &index : tensor.get_indices() ) {
         const int &i_n = index[0];
         const int &j_n = index[1];
         ret( i_n, j_n ) += tensor( index );
@@ -14,13 +14,13 @@ QDLC::Type::Sparse _reduce_adm_tensor( QDLC::Numerics::Tensor &tensor ) {
     return ret.sparseView();
 }
 
-void _fill_tensor( QDLC::Numerics::Tensor &tensor, const QDLC::Type::Sparse &rho0 ) {
+void _fill_tensor( QDACC::Numerics::Tensor &tensor, const QDACC::Type::Sparse &rho0 ) {
     const auto tensor_dim = tensor.primary_dimensions();
     for ( int i = 0; i < tensor_dim; i++ ) {
         for ( int j = 0; j < tensor_dim; j++ ) {
-            if ( QDLC::Math::abs2( rho0.coeff( i, j ) ) == 0 )
+            if ( QDACC::Math::abs2( rho0.coeff( i, j ) ) == 0 )
                 continue;
-            QDLC::Numerics::Tensor::IndexVector index( tensor.index_size(), 0 );
+            QDACC::Numerics::Tensor::IndexVector index( tensor.index_size(), 0 );
             index[0] = i;
             index[1] = j;
             tensor( index ) += rho0.coeff( i, j );
@@ -30,9 +30,9 @@ void _fill_tensor( QDLC::Numerics::Tensor &tensor, const QDLC::Type::Sparse &rho
 
 // for ( int i = 0; i < tensor_dim; i++ ) {
 //         for ( int j = 0; j < tensor_dim; j++ ) {
-//             if ( QDLC::Math::abs2( rho0.coeff( i, j ) ) == 0 )
+//             if ( QDACC::Math::abs2( rho0.coeff( i, j ) ) == 0 )
 //                 continue;
-//             QDLC::Numerics::Tensor::IndexVector index( index_vector_length, 0 );
+//             QDACC::Numerics::Tensor::IndexVector index( index_vector_length, 0 );
 //             index[0] = i;
 //             index[1] = j;
 //             adm_tensor( index ) += rho0.coeff( i, j );
@@ -40,7 +40,7 @@ void _fill_tensor( QDLC::Numerics::Tensor &tensor, const QDLC::Type::Sparse &rho
 //         }
 //     }
 
-QDLC::Numerics::Tensor _generate_initial_tensor( QDLC::System &s, const QDLC::Type::Sparse &rho0 ) {
+QDACC::Numerics::Tensor _generate_initial_tensor( QDACC::System &s, const QDACC::Type::Sparse &rho0 ) {
     // Gather unique Coupling indices, where the number of unique indices equals N(M)x for x >= 1
     std::set<int> set_different_dimensions;
     for ( int i = 0; i < s.operatorMatrices.phonon_hilbert_index_to_group_index.size(); i++ ) {
@@ -49,10 +49,10 @@ QDLC::Numerics::Tensor _generate_initial_tensor( QDLC::System &s, const QDLC::Ty
     const int different_dimensions = set_different_dimensions.size();
 
     // Alias tensor Dimension for readability
-    const QDLC::Numerics::Tensor::Index tensor_dim = rho0.rows();
+    const QDACC::Numerics::Tensor::Index tensor_dim = rho0.rows();
 
     // Build Tensor Dimensions. Structure is N0,M0,N1,M1,...,NN,MM
-    QDLC::Numerics::Tensor::IndexVector pathint_tensor_dimensions = { tensor_dim, tensor_dim }; // TODO Remove shadow?
+    QDACC::Numerics::Tensor::IndexVector pathint_tensor_dimensions = { tensor_dim, tensor_dim }; // TODO Remove shadow?
     for ( int i = 1; i < s.parameters.p_phonon_nc; i++ ) {
         pathint_tensor_dimensions.emplace_back( different_dimensions );
         pathint_tensor_dimensions.emplace_back( different_dimensions );
@@ -66,7 +66,7 @@ QDLC::Numerics::Tensor _generate_initial_tensor( QDLC::System &s, const QDLC::Ty
     Log::L2( "[PathIntegral] Using a maximum of #{} cpu cores for the ADM propagation.\n", s.parameters.numerics_maximum_secondary_threads );
 
     // Tensor Object
-    QDLC::Numerics::Tensor adm_tensor( pathint_tensor_dimensions );
+    QDACC::Numerics::Tensor adm_tensor( pathint_tensor_dimensions );
     Log::L2( "[PathIntegral] Fixed Tensor size will be {} MB.\n", adm_tensor.nonZeros(), adm_tensor.size() );
 
     // Fill initial Tensor
@@ -75,7 +75,7 @@ QDLC::Numerics::Tensor _generate_initial_tensor( QDLC::System &s, const QDLC::Ty
     return adm_tensor;
 }
 
-QDLC::Numerics::Tensor QDLC::Numerics::ODESolver::iterate_path_integral( System &s, QDLC::Numerics::Tensor &adm_tensor, std::vector<std::vector<Sparse>> &propagator, const int max_index ) {
+QDACC::Numerics::Tensor QDACC::Numerics::ODESolver::iterate_path_integral( System &s, QDACC::Numerics::Tensor &adm_tensor, std::vector<std::vector<Sparse>> &propagator, const int max_index ) {
     // Create New Tensor
     Tensor adm_tensor_next( adm_tensor.nonZeros() );
     const auto different_dimensions = adm_tensor.secondary_dimensions();
@@ -114,7 +114,7 @@ QDLC::Numerics::Tensor QDLC::Numerics::ODESolver::iterate_path_integral( System 
                 // Propagator value
                 Scalar propagator_value = propagator[i_n_m1][j_n_m1].coeff( i_n, j_n );
                 // If this propagation is not allowed, continue
-                if ( QDLC::Math::abs2( propagator_value ) == 0.0 )
+                if ( QDACC::Math::abs2( propagator_value ) == 0.0 )
                     continue;
                 // Sum over Groups lambda_n-n_m:
                 for ( int lambda_i = 0; lambda_i < different_dimensions; lambda_i++ ) {
@@ -151,7 +151,7 @@ QDLC::Numerics::Tensor QDLC::Numerics::ODESolver::iterate_path_integral( System 
     return adm_tensor_next;
 }
 
-bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output ) {
+bool QDACC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output ) {
     Log::L2( "[PathIntegral] Setting up Path-Integral Solver...\n" );
     output.reserve( s.parameters.iterations_t_max + 1 );
     const int total_progressbar_iterations = std::floor( ( s.parameters.t_end - s.parameters.t_start ) / s.parameters.t_step_pathint );
@@ -215,7 +215,7 @@ bool QDLC::Numerics::ODESolver::calculate_path_integral( Sparse &rho0, double t_
     return true;
 }
 
-bool QDLC::Numerics::ODESolver::calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDLC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores ) {
+bool QDACC::Numerics::ODESolver::calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDACC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores ) {
     output.reserve( s.parameters.iterations_t_max + 1 );
     const int tensor_int_time = std::floor( 1.001 * t_start / s.parameters.t_step_pathint ); // This assumes t_start for the main direction is zero!
     auto adm_correlation = Tensor( Tensor::max_size() );

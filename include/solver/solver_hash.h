@@ -4,7 +4,7 @@
 #include <functional>
 #include "typedef.h"
 
-namespace QDLC::Numerics {
+namespace QDACC::Numerics {
 
 /**
  * @brief Hash function for std::vector
@@ -61,4 +61,4 @@ struct iVector_compare {
 
 
 
-} // namespace QDLC::Numerics
+} // namespace QDACC::Numerics

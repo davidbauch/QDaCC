@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 Scalar System::dgl_phonons_kernel( const double t, const double t_step ) {
     Scalar integral = 0;

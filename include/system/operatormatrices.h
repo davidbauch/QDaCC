@@ -6,7 +6,7 @@
 #include "misc/timer.h"
 #include "system/parameters.h"
 
-namespace QDLC {
+namespace QDACC {
 
 /**
  * @brief This class stores all the State- and Transition Matrices.
@@ -72,7 +72,7 @@ class OperatorMatrices {
     // Cached PME Rates
     std::map<double, Sparse> pme_greenfunction_matrix_cache_u, pme_greenfunction_matrix_cache_g;
 
-    // QDLC 3.0 New System Matrices. Since Version 3.0, the electronic and optical system is not hardcoded into the program anymore. Instead, the state- and transition matrices get generated on startup and stored in these maps.
+    // QDACC 3.0 New System Matrices. Since Version 3.0, the electronic and optical system is not hardcoded into the program anymore. Instead, the state- and transition matrices get generated on startup and stored in these maps.
     std::map<std::string, matrix_s> el_states, ph_states, el_transitions, ph_transitions, extra_transitions;
     // PME precalculated Chi and partial chi / partial t sumands
     std::vector<Sparse> polaron_factors, polaron_pulse_factors_explicit_time;
@@ -117,17 +117,17 @@ class OperatorMatrices {
      * @return Either creation or annihilation matrix of type M
      */
     template <class M>
-    static M create_photonic_operator( const QDLC::PhotonicOperator &type, const int &maxPhotons ) {
+    static M create_photonic_operator( const QDACC::PhotonicOperator &type, const int &maxPhotons ) {
         M ret = M::Zero( maxPhotons + 1, maxPhotons + 1 );
         for ( int i = 0; i < maxPhotons; i++ ) {
-            if ( type == QDLC::PhotonicOperator::Create )
+            if ( type == QDACC::PhotonicOperator::Create )
                 ret( i + 1, i ) = sqrt( i + 1 );
-            else if ( type == QDLC::PhotonicOperator::Annihilate )
+            else if ( type == QDACC::PhotonicOperator::Annihilate )
                 ret( i, i + 1 ) = sqrt( i + 1 );
-            else if ( type == QDLC::PhotonicOperator::State )
+            else if ( type == QDACC::PhotonicOperator::State )
                 ret( i + 1, i + 1 ) = i + 1;
         }
         return ret;
     }
 };
-} // namespace QDLC
+} // namespace QDACC

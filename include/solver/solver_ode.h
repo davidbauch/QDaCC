@@ -6,7 +6,7 @@
 #include "solver/solver_tensor_map.h"
 #include "types/cache_matrix.h"
 
-namespace QDLC::Numerics {
+namespace QDACC::Numerics {
 
 // Description: ODESolver class provides both Runge-Kutta functions of different orders and functions for different numerical operations
 class ODESolver {
@@ -24,7 +24,7 @@ class ODESolver {
 
     // Cached Entries
     // Vector for saved matrix-time tuples for densitymatrix
-    std::vector<QDLC::SaveState> savedStates;
+    std::vector<QDACC::SaveState> savedStates;
     // Vector for saved matrix-time tuples for hamilton operators
     std::map<double, Sparse> savedHamiltons;
     // Propagators for the path integral. Used for their corresponding correlation functions.
@@ -50,7 +50,7 @@ class ODESolver {
      * @brief Saves a tuple of a complex (density-)matrix and time, ensuring times and matrices don't get mixed up
      *
      */
-    void saveState( const Sparse &mat, const double t, std::vector<QDLC::SaveState> &savedStates );
+    void saveState( const Sparse &mat, const double t, std::vector<QDACC::SaveState> &savedStates );
 
     /**
      * @brief Saves a tuple of a complex (Hamilton-)matrix and time, ensuring times and matrices don't get mixed up
@@ -62,19 +62,19 @@ class ODESolver {
      * @brief Iterates Runge-Kutta of order 4 at time t onto rho using the systems hamilton operator.
      *
      */
-    Sparse iterateRungeKutta4( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates );
+    Sparse iterateRungeKutta4( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
 
     /**
      * @brief Iterates Runge-Kutta of order 5 at time t onto rho using the systems hamilton operator.
      *
      */
-    Sparse iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates );
+    Sparse iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
 
     /**
      * @brief Iterates Runge-Kutta of order 5 at time t onto rho using the systems hamilton operator. Also returns the error.
      *
      */
-    std::pair<Sparse, double> iterateRungeKutta45( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates );
+    std::pair<Sparse, double> iterateRungeKutta45( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
 
     /**
      * @brief Get the Time at index i
@@ -117,7 +117,7 @@ class ODESolver {
      * @brief Iterates Runge-Kutta with given order depending on the systems settings.
      *
      */
-    Sparse iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates );
+    Sparse iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
 
     /**
      * @brief Calculates the normal t-direction via solving the von-Neumann equation for rho. May save some of the density matrices for later uses. Logs the calculation and outputs progress.
@@ -178,31 +178,31 @@ class ODESolver {
      * @brief Calculates a single Path Integral Propagator
      *
      */
-    Sparse calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<QDLC::SaveState> &output, const Sparse &one );
+    Sparse calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<QDACC::SaveState> &output, const Sparse &one );
 
     /**
      * @brief Calculates the Path Integral Propagator for all index combinations. This function also saves the resuling propagators and returns a reference to the cached object.
      *
      */
-    std::vector<std::vector<Sparse>> &calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<QDLC::SaveState> &output );
+    std::vector<std::vector<Sparse>> &calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<QDACC::SaveState> &output );
 
     /**
      * @brief Iterates rho0 from t_start to t_end using RK4, RK5 or RK45. If the order is 45, this function calls calculate_runge_kutta_45.
      *
      */
-    bool calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output = true );
+    bool calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output = true );
 
     /**
      * @brief Iterates rho0 from t_start to t_end using RK45. This function does NOT interpolate the result but instead returns all calculated densitymatrices as vector.
      *
      */
-    bool calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output = true );
+    bool calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output = true );
 
     /**
      * @brief Calculates rho0 from t_start to t_end using the Path Integral Method. If correlation functions are evaluated, this function calls calculate_path_integral_correlation multiple times per iteration.
      *
      */
-    bool calculate_path_integral( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output = true );
+    bool calculate_path_integral( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output = true );
     
     /**
      * @brief Iterates rho0 from t_start to t_end using the Path Integral Method. 
@@ -214,7 +214,7 @@ class ODESolver {
      * @brief Calculates rho0 from t_start to t_end incorporating the corresponding correlation modification.
      *
      */
-    bool calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDLC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores);
+    bool calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDACC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores);
 
     /**
      * @brief Creates a table file containing the available propagation paths in the .dot format
@@ -254,4 +254,4 @@ class ODESolver {
     void calculate_hamilton_eigenvalues( System &s, const int power = 1 );
 };
 
-} // namespace QDLC::Numerics
+} // namespace QDACC::Numerics

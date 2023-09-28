@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 Scalar System::dgl_phonons_phi( const double tau ) {
     Scalar integral = 0;

@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 void System::initialize_polaron_frame_functions() {
     if ( parameters.p_phonon_T >= 0 ) {
@@ -67,9 +67,9 @@ void System::initialize_polaron_frame_functions() {
  * @return Sparse
  */
 
-Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDLC::SaveState> &past_rhos ) {
+Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDACC::SaveState> &past_rhos ) {
     track_getcoefficient_calcattempt++;
-    if ( parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::LindbladRates ) {
+    if ( parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::LindbladRates ) {
         return dgl_phonons_lindblad_contribution( t, rho );
     }
         return dgl_phonons_integrated_contribution( t, rho, past_rhos );

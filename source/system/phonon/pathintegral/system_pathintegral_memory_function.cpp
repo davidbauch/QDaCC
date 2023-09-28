@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 Scalar System::dgl_phonon_memory_function( const int t_delta, const int i_n, const int j_n, const int i_nd, const int j_nd ) {
     Scalar result = 0.0;

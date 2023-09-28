@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
     // TODO Maybe? Cache explicit times?
@@ -33,5 +33,5 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
     }
 
     Sparse hamilton = dgl_get_hamilton( t );
-    return -1.0i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( QDLC::Matrix::sparse_projector( chi ) );
+    return -1.0i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( QDACC::Matrix::sparse_projector( chi ) );
 }

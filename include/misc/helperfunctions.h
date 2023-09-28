@@ -12,7 +12,7 @@ using namespace std::complex_literals;
 #include "misc/helperfunctions_string.h"
 #include "misc/helperfunctions_math.h"
 
-namespace QDLC {
+namespace QDACC {
 
 namespace Misc {
 
@@ -22,7 +22,7 @@ T convertParam( std::string input ) {
     T value = (T)0;
     T conversion = (T)1;
     bool complex = false;
-    if ( input.front() == 'i' and QDLC::Math::is_number( input.substr( 1, 1 ) ) ) {
+    if ( input.front() == 'i' and QDACC::Math::is_number( input.substr( 1, 1 ) ) ) {
         complex = true;
         input = input.substr( 1 );
     }
@@ -33,34 +33,34 @@ T convertParam( std::string input ) {
         index = input.size() - 1;
         if ( input.at( index - 1 ) == 'm' ) {
             Log::L3( "\tfrom mm to Hz...\n" );
-            value = QDLC::Math::wavelength_to_Hz( 1E-3 * std::stod( input.substr( 0, index - 1 ) ) );
+            value = QDACC::Math::wavelength_to_Hz( 1E-3 * std::stod( input.substr( 0, index - 1 ) ) );
         }
         if ( input.at( index - 2 ) == 'm' and input.at( index - 1 ) == 'u' ) {
             Log::L3( "\tfrom mum to Hz...\n" );
-            value = QDLC::Math::wavelength_to_Hz( 1E-6 * std::stod( input.substr( 0, index - 2 ) ) );
+            value = QDACC::Math::wavelength_to_Hz( 1E-6 * std::stod( input.substr( 0, index - 2 ) ) );
         }
         if ( input.at( index - 1 ) == 'n' ) {
             Log::L3( "\tfrom nm to Hz...\n" );
-            value = QDLC::Math::wavelength_to_Hz( 1E-9 * std::stod( input.substr( 0, index - 1 ) ) );
+            value = QDACC::Math::wavelength_to_Hz( 1E-9 * std::stod( input.substr( 0, index - 1 ) ) );
         }
     }
     // Electron Volt Scale
-    else if ( -1 != ( index = QDLC::String::instr( input, "eV" ) ) ) {
+    else if ( -1 != ( index = QDACC::String::instr( input, "eV" ) ) ) {
         // Found 'eV' as unit (energy), now check for scaling
         if ( input.at( index - 1 ) == 'm' ) {
             // meV
             Log::L3( "\tfrom meV to Hz...\n" );
-            value = QDLC::Math::eV_to_Hz( std::stod( input.substr( 0, index - 1 ) ) );
+            value = QDACC::Math::eV_to_Hz( std::stod( input.substr( 0, index - 1 ) ) );
             conversion = 1E-3;
         } else if ( int( index ) > 1 and input.at( index - 2 ) == 'm' and input.at( index - 1 ) == 'u' ) {
             // mueV
             Log::L3( "\tfrom mueV to Hz...\n" );
-            value = QDLC::Math::eV_to_Hz( std::stod( input.substr( 0, index - 2 ) ) );
+            value = QDACC::Math::eV_to_Hz( std::stod( input.substr( 0, index - 2 ) ) );
             conversion = 1E-6;
-        } else if ( QDLC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
+        } else if ( QDACC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
             // eV
             Log::L3( "\tfrom eV to Hz...\n" );
-            value = QDLC::Math::eV_to_Hz( std::stod( input.substr( 0, index ) ) );
+            value = QDACC::Math::eV_to_Hz( std::stod( input.substr( 0, index ) ) );
             conversion = 1.0;
         } else {
             Log::L3( "Conversion of input '{}' from eV failed!\n", input );
@@ -68,7 +68,7 @@ T convertParam( std::string input ) {
         }
     }
     // Second Scale
-    else if ( -1 != ( index = QDLC::String::instr( input, "s" ) ) ) {
+    else if ( -1 != ( index = QDACC::String::instr( input, "s" ) ) ) {
         // Found 's' as unit (time)
         // fmt::print("\n {} {} {} {}\n",index, input.at(index-1)=='n',input.compare(index-1,1,"n") ,input.at(index-1));
         if ( input.at( index - 1 ) == 'n' ) {
@@ -86,7 +86,7 @@ T convertParam( std::string input ) {
             Log::L3( "\tfrom fs to s...\n" );
             value = std::stod( input.substr( 0, index - 1 ) );
             conversion = 1E-15; // fmt::print("{} {} ... ", value, conversion);
-        } else if ( QDLC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
+        } else if ( QDACC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
             // s
             Log::L3( "\tfrom s to s...\n" );
             value = std::stod( input.substr( 0, index ) );
@@ -95,27 +95,27 @@ T convertParam( std::string input ) {
             Log::L3( "Conversion from input '{}' from time failed!\n", input );
             return (T)0.0;
         }
-    } else if ( -1 != ( index = QDLC::String::instr( input, "Hz" ) ) ) {
+    } else if ( -1 != ( index = QDACC::String::instr( input, "Hz" ) ) ) {
         // Found 'Hz' as unit (Frequency)
         Log::L3( "\tfrom Hz to Hz...\n" );
-        if ( QDLC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
+        if ( QDACC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
             value = std::stod( input.substr( 0, index - 1 ) );
             conversion = 1.0;
         } else {
             Log::L3( "Conversion from input '{}' from frequency failed!\n", input );
             return (T)0.0;
         }
-    } else if ( -1 != ( index = QDLC::String::instr( input, "pi" ) ) ) {
+    } else if ( -1 != ( index = QDACC::String::instr( input, "pi" ) ) ) {
         // Found 'Hz' as unit (Frequency)
         Log::L3( "\tfrom Xpi to rad...\n" );
-        if ( QDLC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
+        if ( QDACC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
             value = std::stod( input.substr( 0, index ) );
             conversion = 1.0;
         } else {
             Log::L3( "Conversion from input '{}' from frequency failed!\n", input );
             return (T)0.0;
         }
-    } else if ( QDLC::Math::is_number( input ) ) {
+    } else if ( QDACC::Math::is_number( input ) ) {
         // Assuming Frequency input
         Log::L3( "\tno conversion...\n" );
         value = std::stod( input );
@@ -170,4 +170,4 @@ std::string vec_to_str( const std::vector<T> &input ) {
 
 } // namespace Misc
 
-} // namespace QDLC
+} // namespace QDACC

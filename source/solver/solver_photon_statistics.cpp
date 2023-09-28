@@ -3,7 +3,7 @@
 #include <complex>
 // #include <specfunc.h>
 
-bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s ) {
+bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s ) {
     // Calculate Spectra
     auto &all_spectra = s.parameters.input_correlation["Spectrum"];
     for ( auto &spectrum_s : all_spectra )
@@ -27,7 +27,7 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
             const auto order = conc_s.string_v["Order"][i];
             const int matrix_priority_evaluation = orders.contains( order ) ? orders.at( order ) : 3;
             std::vector<std::string> s_creator, s_annihilator;
-            for ( auto &mode : QDLC::String::splitline( modes, '-' ) ) {
+            for ( auto &mode : QDACC::String::splitline( modes, '-' ) ) {
                 const auto &[ss_creator, ss_annihilator] = get_operator_strings( s, mode );
                 s_creator.emplace_back( ss_creator );
                 s_annihilator.emplace_back( ss_annihilator );
@@ -292,14 +292,14 @@ bool QDLC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s 
 }
 
 // electronic_transition1, electronic_transition2, optical_transition
-bool QDLC::Numerics::ODESolver::calculate_raman_population( System &s, const std::string &source_transitions, const std::string &raman_transition, const std::string &optical_transition, const std::string &pulse_mode ) {
+bool QDACC::Numerics::ODESolver::calculate_raman_population( System &s, const std::string &source_transitions, const std::string &raman_transition, const std::string &optical_transition, const std::string &pulse_mode ) {
     // auto [m_electronic_transition1, m_electronic_transition2] = get_operators_matrices( s, source_transitions, );
     // if ( s.operatorMatrices.el_transitions.count( raman_transition ) == 0 ) {
     //     auto ket = s.operatorMatrices.el_states[raman_transition.substr( 0, 1 )].ket;
     //     auto bra = s.operatorMatrices.el_states[raman_transition.substr( 1, 1 )].bra;
     //     auto current = s.operatorMatrices.base_selfhilbert;
     //     current.front() = ket * bra;
-    //     Sparse transition_hilbert = QDLC::Matrix::tensor( current ).sparseView();
+    //     Sparse transition_hilbert = QDACC::Matrix::tensor( current ).sparseView();
     //     {
     //         auto &state = s.operatorMatrices.extra_transitions[raman_transition];
     //         state.ket = ket;

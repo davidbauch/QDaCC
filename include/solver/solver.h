@@ -2,7 +2,7 @@
 #include "global.h"
 #include "misc/interpolant.h"
 
-namespace QDLC {
+namespace QDACC {
 
 namespace Numerics {
 
@@ -51,19 +51,19 @@ std::pair<Sparse, double> iterate_definite_integral( const Sparse &rho, std::fun
 
 // Description: Integrates rho from t0 to t1 via Rungefunc.
 // Type: Solver public function
-// @return: [vector<QDLC::SaveState>] Vector of save state tuples (matrix, time)
-std::vector<QDLC::SaveState> calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
+// @return: [vector<QDACC::SaveState>] Vector of save state tuples (matrix, time)
+std::vector<QDACC::SaveState> calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
 
 // Description: Integrates rho from t0 to t1 via Rungefunc.
 // Type: Solver public function
-// @return: [QDLC::SaveState] Save state tuple (matrix, time)
-QDLC::SaveState calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
+// @return: [QDACC::SaveState] Save state tuple (matrix, time)
+QDACC::SaveState calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
 
 // Description: Uses the interpolation class to monotone-cubic spline interpolate a given vector of saved states, resulting in much smoother output. Should probably not be used
 // Type: Solver public function
-// @return Returns a vector of interpolated QDLC::SaveStates
-std::vector<QDLC::SaveState> interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, double t_step, int threads, int order = 0, bool output_handler = false );
-std::vector<QDLC::SaveState> interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double, size_t> &t_index, int order = 0, bool output_handler = false );
+// @return Returns a vector of interpolated QDACC::SaveStates
+std::vector<QDACC::SaveState> interpolate_curve( const std::vector<QDACC::SaveState> &input, double t_start, double t_end, double t_step, int threads, int order = 0, bool output_handler = false );
+std::vector<QDACC::SaveState> interpolate_curve( const std::vector<QDACC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double, size_t> &t_index, int order = 0, bool output_handler = false );
 
 double get_tdelta( const Dense &gmat_time, size_t fixed_index, size_t var_index );
 double get_taudelta( const Dense &gmat_time, size_t fixed_index, size_t var_index );
@@ -71,4 +71,4 @@ double get_tdelta( const std::vector<SaveState> &savedStates, size_t var_index )
 
 } // namespace Numerics
 
-} // namespace QDLC
+} // namespace QDACC

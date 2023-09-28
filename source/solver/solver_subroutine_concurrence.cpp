@@ -127,7 +127,7 @@ Dense _concurrence_eigenvalues( const Dense &fidelity_matrix ) {
  * @param s_op_creator_2
  * @param s_op_annihilator_2
  */
-bool QDLC::Numerics::ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const int matrix_priority_evaluation, const double spec_center, const double spec_range, const double spec_res ) {
+bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const int matrix_priority_evaluation, const double spec_center, const double spec_range, const double spec_res ) {
     Log::L2( "[Concurrence] Conc for modes {} {} and {} {} with priority {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2, matrix_priority_evaluation );
 
     // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading

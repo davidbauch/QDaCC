@@ -1,6 +1,6 @@
 #include "system/parameters.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 Parameters::Parameters( const std::vector<std::string> &arguments ) {
     // Parsing input:
@@ -26,101 +26,101 @@ Parameters::Parameters( const std::vector<std::string> &arguments ) {
 void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     // Parse_Parameters params;
     //  Look for --time, if not found, standard values are used (t0 = 0, t1 = 1ns, deltaT = auto)
-    t_start = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstart" );
-    t_end = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tend" );
-    t_step = QDLC::CommandlineArguments::get_parameter<double>( "--time", "tstep" );
-    numerics_hard_t_max = QDLC::CommandlineArguments::get_parameter<double>( "--hardmax" );
-    numerics_groundstate_string = QDLC::CommandlineArguments::get_parameter( "--groundstate" );
+    t_start = QDACC::CommandlineArguments::get_parameter<double>( "--time", "tstart" );
+    t_end = QDACC::CommandlineArguments::get_parameter<double>( "--time", "tend" );
+    t_step = QDACC::CommandlineArguments::get_parameter<double>( "--time", "tstep" );
+    numerics_hard_t_max = QDACC::CommandlineArguments::get_parameter<double>( "--hardmax" );
+    numerics_groundstate_string = QDACC::CommandlineArguments::get_parameter( "--groundstate" );
 
     // Runge Kutta Parameters
-    numerics_rk_order = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkorder" );
-    inputstring_rk45_config = QDLC::CommandlineArguments::get_parameter( "--rk", "rktol" );
-    numerics_rk_stepdelta = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepdelta" );
-    numerics_rk_stepmin = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepmin" );
-    numerics_rk_stepmax = QDLC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepmax" );
+    numerics_rk_order = QDACC::CommandlineArguments::get_parameter<double>( "--rk", "rkorder" );
+    inputstring_rk45_config = QDACC::CommandlineArguments::get_parameter( "--rk", "rktol" );
+    numerics_rk_stepdelta = QDACC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepdelta" );
+    numerics_rk_stepmin = QDACC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepmin" );
+    numerics_rk_stepmax = QDACC::CommandlineArguments::get_parameter<double>( "--rk", "rkstepmax" );
     numerics_rk_usediscrete_timesteps = numerics_rk_stepdelta > 0 ? true : false;
 
-    inputstring_electronic = QDLC::CommandlineArguments::get_parameter( "--S", "SE" );
-    inputstring_photonic = QDLC::CommandlineArguments::get_parameter( "--S", "SO" );
-    inputstring_pulse = QDLC::CommandlineArguments::get_parameter( "--S", "SP" );
-    inputstring_chirp = QDLC::CommandlineArguments::get_parameter( "--S", "SC" );
-    inputstring_spectrum = QDLC::CommandlineArguments::get_parameter( "--G", "GS" );
-    inputstring_indist = QDLC::CommandlineArguments::get_parameter( "--G", "GI" );
-    inputstring_conc = QDLC::CommandlineArguments::get_parameter( "--G", "GC" );
-    inputstring_gfunc = QDLC::CommandlineArguments::get_parameter( "--G", "GF" );
-    inputstring_wigner = QDLC::CommandlineArguments::get_parameter( "--G", "GW" );
-    inputstring_raman = QDLC::CommandlineArguments::get_parameter( "--G", "GR" );
-    inputstring_correlation_resolution = QDLC::CommandlineArguments::get_parameter( "--G", "grid" );
-    inputstring_detector_time = QDLC::CommandlineArguments::get_parameter( "--detector", "temporalDetector" );
-    inputstring_detector_spectral = QDLC::CommandlineArguments::get_parameter( "--detector", "spectralDetector" );
-    inputstring_densitymatrix_config = QDLC::CommandlineArguments::get_parameter( "--DMconfig" );
-    inputstring_SPconf = QDLC::CommandlineArguments::get_parameter( "--SPconfig" );
+    inputstring_electronic = QDACC::CommandlineArguments::get_parameter( "--S", "SE" );
+    inputstring_photonic = QDACC::CommandlineArguments::get_parameter( "--S", "SO" );
+    inputstring_pulse = QDACC::CommandlineArguments::get_parameter( "--S", "SP" );
+    inputstring_chirp = QDACC::CommandlineArguments::get_parameter( "--S", "SC" );
+    inputstring_spectrum = QDACC::CommandlineArguments::get_parameter( "--G", "GS" );
+    inputstring_indist = QDACC::CommandlineArguments::get_parameter( "--G", "GI" );
+    inputstring_conc = QDACC::CommandlineArguments::get_parameter( "--G", "GC" );
+    inputstring_gfunc = QDACC::CommandlineArguments::get_parameter( "--G", "GF" );
+    inputstring_wigner = QDACC::CommandlineArguments::get_parameter( "--G", "GW" );
+    inputstring_raman = QDACC::CommandlineArguments::get_parameter( "--G", "GR" );
+    inputstring_correlation_resolution = QDACC::CommandlineArguments::get_parameter( "--G", "grid" );
+    inputstring_detector_time = QDACC::CommandlineArguments::get_parameter( "--detector", "temporalDetector" );
+    inputstring_detector_spectral = QDACC::CommandlineArguments::get_parameter( "--detector", "spectralDetector" );
+    inputstring_densitymatrix_config = QDACC::CommandlineArguments::get_parameter( "--DMconfig" );
+    inputstring_SPconf = QDACC::CommandlineArguments::get_parameter( "--SPconfig" );
 
-    p_omega_coupling = QDLC::CommandlineArguments::get_parameter<double>( "--system", "coupling" );
-    p_omega_cavity_loss = QDLC::CommandlineArguments::get_parameter<double>( "--system", "kappa" );
-    p_omega_pure_dephasing = QDLC::CommandlineArguments::get_parameter<double>( "--system", "gammapure" );
-    p_omega_decay = QDLC::CommandlineArguments::get_parameter<double>( "--system", "gamma" );
-    p_initial_state_s = QDLC::CommandlineArguments::get_parameter( "--R" );
+    p_omega_coupling = QDACC::CommandlineArguments::get_parameter<double>( "--system", "coupling" );
+    p_omega_cavity_loss = QDACC::CommandlineArguments::get_parameter<double>( "--system", "kappa" );
+    p_omega_pure_dephasing = QDACC::CommandlineArguments::get_parameter<double>( "--system", "gammapure" );
+    p_omega_decay = QDACC::CommandlineArguments::get_parameter<double>( "--system", "gamma" );
+    p_initial_state_s = QDACC::CommandlineArguments::get_parameter( "--R" );
 
-    grid_resolution = QDLC::CommandlineArguments::get_parameter<int>( "--G", "gridres" );
-    numerics_use_interactionpicture = not QDLC::CommandlineArguments::get_parameter_passed( "-noInteractionpic" );
-    numerics_use_rwa = not QDLC::CommandlineArguments::get_parameter_passed( "-noRWA" );
-    numerics_maximum_primary_threads = QDLC::CommandlineArguments::get_parameter<int>( "--Threads" );
+    grid_resolution = QDACC::CommandlineArguments::get_parameter<int>( "--G", "gridres" );
+    numerics_use_interactionpicture = not QDACC::CommandlineArguments::get_parameter_passed( "-noInteractionpic" );
+    numerics_use_rwa = not QDACC::CommandlineArguments::get_parameter_passed( "-noRWA" );
+    numerics_maximum_primary_threads = QDACC::CommandlineArguments::get_parameter<int>( "--Threads" );
     if ( numerics_maximum_primary_threads == -1 )
         numerics_maximum_primary_threads = omp_get_max_threads();
-    output_handlerstrings = QDLC::CommandlineArguments::get_parameter_passed( "-handler" );
-    numerics_order_timetrafo = QDLC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? QDLC::TransformationOrder::MatrixExponential : QDLC::TransformationOrder::Analytical;
-    numerics_use_saved_coefficients = not QDLC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
-    numerics_use_saved_hamiltons = not QDLC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
-    numerics_use_function_caching = not QDLC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
+    output_handlerstrings = QDACC::CommandlineArguments::get_parameter_passed( "-handler" );
+    numerics_order_timetrafo = QDACC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? QDACC::TransformationOrder::MatrixExponential : QDACC::TransformationOrder::Analytical;
+    numerics_use_saved_coefficients = not QDACC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
+    numerics_use_saved_hamiltons = not QDACC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
+    numerics_use_function_caching = not QDACC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
     numerics_enable_saving_coefficients = false; // If true, even if any saving was disabled internally (not by the user), the matrices will still be cached.
-    numerics_maximum_secondary_threads = ( !numerics_use_saved_coefficients || !QDLC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_primary_threads : 1;
-    logfilecounter = QDLC::Misc::convertParam<double>( QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
-    numerics_interpolate_outputs = QDLC::CommandlineArguments::get_parameter_passed( "-interpolate" );
-    s_numerics_interpolate = QDLC::CommandlineArguments::get_parameter( "--interpolateOrder" );
+    numerics_maximum_secondary_threads = ( !numerics_use_saved_coefficients || !QDACC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_primary_threads : 1;
+    logfilecounter = QDACC::Misc::convertParam<double>( QDACC::String::splitline( QDACC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
+    numerics_interpolate_outputs = QDACC::CommandlineArguments::get_parameter_passed( "-interpolate" );
+    s_numerics_interpolate = QDACC::CommandlineArguments::get_parameter( "--interpolateOrder" );
 
     // Phonon Parameters
-    p_phonon_alpha = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononalpha" );
-    p_phonon_ohm = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononohm" );
-    p_phonon_wcutoff = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononwcutoff" );
-    p_phonon_wcutoffdelta = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phononwcutoffdelta" );
-    p_phonon_tcutoff = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "phonontcutoff" );
-    p_phonon_T = QDLC::CommandlineArguments::get_parameter<double>( "--phonons", "temperature" );
-    numerics_phonon_approximation_order = (QDLC::PhononApproximation)QDLC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
-    numerics_phonon_approximation_markov1 = QDLC::CommandlineArguments::get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
-    numerics_phonon_nork45 = not QDLC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );               // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
-    p_phonon_adjust_rad = QDLC::CommandlineArguments::get_parameter<double>( "--phononAdjust", "pARad" );
-    p_phonon_adjust_dep = QDLC::CommandlineArguments::get_parameter<double>( "--phononAdjust", "pAPure" );
-    p_phonon_adjust_b = QDLC::CommandlineArguments::get_parameter<double>( "--phononAdjust", "pARescaling" );
-    p_phonon_pure_dephasing = QDLC::Misc::convertParam<double>( "1mueV" );
+    p_phonon_alpha = QDACC::CommandlineArguments::get_parameter<double>( "--phonons", "phononalpha" );
+    p_phonon_ohm = QDACC::CommandlineArguments::get_parameter<double>( "--phonons", "phononohm" );
+    p_phonon_wcutoff = QDACC::CommandlineArguments::get_parameter<double>( "--phonons", "phononwcutoff" );
+    p_phonon_wcutoffdelta = QDACC::CommandlineArguments::get_parameter<double>( "--phonons", "phononwcutoffdelta" );
+    p_phonon_tcutoff = QDACC::CommandlineArguments::get_parameter<double>( "--phonons", "phonontcutoff" );
+    p_phonon_T = QDACC::CommandlineArguments::get_parameter<double>( "--phonons", "temperature" );
+    numerics_phonon_approximation_order = (QDACC::PhononApproximation)QDACC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
+    numerics_phonon_approximation_markov1 = QDACC::CommandlineArguments::get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
+    numerics_phonon_nork45 = not QDACC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );               // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
+    p_phonon_adjust_rad = QDACC::CommandlineArguments::get_parameter<double>( "--phononAdjust", "pARad" );
+    p_phonon_adjust_dep = QDACC::CommandlineArguments::get_parameter<double>( "--phononAdjust", "pAPure" );
+    p_phonon_adjust_b = QDACC::CommandlineArguments::get_parameter<double>( "--phononAdjust", "pARescaling" );
+    p_phonon_pure_dephasing = QDACC::Misc::convertParam<double>( "1mueV" );
 
     // Phonon Quantum Dot Paramters. These are used to overwrite the wcutoff and alpha values if needed.
-    p_phonon_qd_de = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDDe" );
-    p_phonon_qd_dh = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDDh" );
-    p_phonon_qd_rho = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDrho" );
-    p_phonon_qd_cs = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDcs" );
-    p_phonon_qd_ratio = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDratio" );
-    p_phonon_qd_ae = QDLC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDae" );
+    p_phonon_qd_de = QDACC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDDe" );
+    p_phonon_qd_dh = QDACC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDDh" );
+    p_phonon_qd_rho = QDACC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDrho" );
+    p_phonon_qd_cs = QDACC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDcs" );
+    p_phonon_qd_ratio = QDACC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDratio" );
+    p_phonon_qd_ae = QDACC::CommandlineArguments::get_parameter<double>( "--quantumdot", "QDae" );
 
     // Path Integral Parameters
-    p_phonon_nc = QDLC::CommandlineArguments::get_parameter<int>( "--pathintegral", "NC" );
-    numerics_subiterator_stepsize = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
-    numerics_pathintegral_squared_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "squaredThreshold" );
-    numerics_pathintegral_sparse_prune_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "sparsePruneThreshold" );
-    numerics_pathintegral_dynamiccutoff_iterations_max = QDLC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "cutoffADM" ); // FIXME ????
-    numerics_pathintegral_sparse_to_dense_threshold = QDLC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "denseTensorThreshold" );
-    numerics_pathintegral_force_dense = QDLC::CommandlineArguments::get_parameter_passed( "-pathIntForceDense" );
-    numerics_pathintegral_docutoff_propagator = QDLC::CommandlineArguments::get_parameter_passed( "-cutoffPropagator" );
-    numerics_pathint_partially_summed = !QDLC::CommandlineArguments::get_parameter_passed( "-disablePSPath" );
-    t_step_pathint = QDLC::CommandlineArguments::get_parameter<double>( "--pathintegral", "tstepPath" );
-    numerics_pathintegral_use_qrt = QDLC::CommandlineArguments::get_parameter_passed( "-useQRT" );
-    numerics_pathintegral_set_couplings_zero = QDLC::CommandlineArguments::get_parameter_passed( "-setCouplingsZero" );
+    p_phonon_nc = QDACC::CommandlineArguments::get_parameter<int>( "--pathintegral", "NC" );
+    numerics_subiterator_stepsize = QDACC::CommandlineArguments::get_parameter<double>( "--pathintegral", "iteratorStepsize" );
+    numerics_pathintegral_squared_threshold = QDACC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "squaredThreshold" );
+    numerics_pathintegral_sparse_prune_threshold = QDACC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "sparsePruneThreshold" );
+    numerics_pathintegral_dynamiccutoff_iterations_max = QDACC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "cutoffADM" ); // FIXME ????
+    numerics_pathintegral_sparse_to_dense_threshold = QDACC::CommandlineArguments::get_parameter<double>( "--numericalpathintegral", "denseTensorThreshold" );
+    numerics_pathintegral_force_dense = QDACC::CommandlineArguments::get_parameter_passed( "-pathIntForceDense" );
+    numerics_pathintegral_docutoff_propagator = QDACC::CommandlineArguments::get_parameter_passed( "-cutoffPropagator" );
+    numerics_pathint_partially_summed = !QDACC::CommandlineArguments::get_parameter_passed( "-disablePSPath" );
+    t_step_pathint = QDACC::CommandlineArguments::get_parameter<double>( "--pathintegral", "tstepPath" );
+    numerics_pathintegral_use_qrt = QDACC::CommandlineArguments::get_parameter_passed( "-useQRT" );
+    numerics_pathintegral_set_couplings_zero = QDACC::CommandlineArguments::get_parameter_passed( "-setCouplingsZero" );
 
-    auto output_dict_vec = QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--output" ), ';' );
+    auto output_dict_vec = QDACC::String::splitline( QDACC::CommandlineArguments::get_parameter( "--output" ), ';' );
     // Move all elements into the set
     output_dict = std::set<std::string>( std::make_move_iterator( output_dict_vec.begin() ), std::make_move_iterator( output_dict_vec.end() ) );
 
-    numerics_custom_expectation_values = QDLC::String::splitline( QDLC::CommandlineArguments::get_parameter( "--expv" ), ';' );
+    numerics_custom_expectation_values = QDACC::String::splitline( QDACC::CommandlineArguments::get_parameter( "--expv" ), ';' );
 
     kb = 1.3806488E-23;   // J/K, scaling needs to be for energy
     hbar = 1.0545718E-34; // J/s, scaling will be 1
@@ -144,7 +144,7 @@ void Parameters::pre_adjust_input() {
     // Adjust pulse data
     // TODO: für complexe ampltiude is_imag in Parameters = true -> dann mit 1i multiplizeiren in get() funktion
     for ( auto &[name, mat] : input_pulse ) {
-        mat.property_set["Amplitude"] = QDLC::Misc::convertParam<Parameter>( mat.string_v["Amplitude"] );
+        mat.property_set["Amplitude"] = QDACC::Misc::convertParam<Parameter>( mat.string_v["Amplitude"] );
         // Set all optional parameters to default
         mat.property_set["ChirpRate"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
         mat.property_set["GaussAmp"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 2.0 );
@@ -154,7 +154,7 @@ void Parameters::pre_adjust_input() {
         mat.property_set["Phase"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
 
         for ( int i = 0; i < mat.string_v["Amplitude"].size(); i++ ) {
-            const auto type_params = QDLC::String::splitline( mat.string_v["Type"][i], '+' );
+            const auto type_params = QDACC::String::splitline( mat.string_v["Type"][i], '+' );
             // Extract optional Parameters
             for ( const auto &type : type_params ) {
                 if ( type.find( "cw" ) != std::string::npos )
@@ -166,25 +166,25 @@ void Parameters::pre_adjust_input() {
                 else if ( type.find( "lorentz" ) != std::string::npos )
                     mat.string_v["Type"][i] = "lorentz";
                 else {
-                    std::string param = QDLC::String::splitline( type, '(' ).back();
+                    std::string param = QDACC::String::splitline( type, '(' ).back();
                     param.pop_back();
                     if ( type.find( "chirped" ) != std::string::npos ) {
-                        mat.property_set["ChirpRate"][i] = QDLC::Misc::convertParam<Parameter>( param );
+                        mat.property_set["ChirpRate"][i] = QDACC::Misc::convertParam<Parameter>( param );
                     } else if ( type.find( "cutoff" ) != std::string::npos ) {
-                        mat.property_set["CutoffDelta"][i] = QDLC::Misc::convertParam<Parameter>( param );
+                        mat.property_set["CutoffDelta"][i] = QDACC::Misc::convertParam<Parameter>( param );
                     } else if ( type.find( "super" ) != std::string::npos ) {
-                        auto splitparam = QDLC::String::splitline( param, '_' );
-                        mat.property_set["SUPERDelta"][i] = QDLC::Misc::convertParam<Parameter>( splitparam[0] );
-                        mat.property_set["SUPERFreq"][i] = QDLC::Misc::convertParam<Parameter>( splitparam[1] );
+                        auto splitparam = QDACC::String::splitline( param, '_' );
+                        mat.property_set["SUPERDelta"][i] = QDACC::Misc::convertParam<Parameter>( splitparam[0] );
+                        mat.property_set["SUPERFreq"][i] = QDACC::Misc::convertParam<Parameter>( splitparam[1] );
                     } else if ( type.find( "exponent" ) != std::string::npos ) {
-                        mat.property_set["GaussAmp"][i] = QDLC::Misc::convertParam<Parameter>( param );
+                        mat.property_set["GaussAmp"][i] = QDACC::Misc::convertParam<Parameter>( param );
                     } else if ( type.find( "phase" ) != std::string::npos ) {
-                        mat.property_set["Phase"][i] = QDLC::Misc::convertParam<Parameter>( param ) * QDLC::Math::PI;
+                        mat.property_set["Phase"][i] = QDACC::Misc::convertParam<Parameter>( param ) * QDACC::Math::PI;
                     }
                 }
             }
             if ( mat.string_v["Amplitude"][i].find( "pi" ) != std::string::npos ) {
-                mat.property_set["Amplitude"][i] = mat.property_set["Amplitude"][i] * QDLC::Math::PI / ( std::sqrt( 2.0 * QDLC::Math::PI * mat.property_set["Width"][i] * std::sqrt( std::pow( mat.property_set["ChirpRate"][i] / mat.property_set["Width"][i], 2.0 ) + std::pow( mat.property_set["Width"][i], 2.0 ) ) ) ) / 2.0; // https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                mat.property_set["Amplitude"][i] = mat.property_set["Amplitude"][i] * QDACC::Math::PI / ( std::sqrt( 2.0 * QDACC::Math::PI * mat.property_set["Width"][i] * std::sqrt( std::pow( mat.property_set["ChirpRate"][i] / mat.property_set["Width"][i], 2.0 ) + std::pow( mat.property_set["Width"][i], 2.0 ) ) ) ) / 2.0; // https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
             }
         }
     }
@@ -198,7 +198,7 @@ void Parameters::pre_adjust_input() {
     }
 
     // Set interpolation order:
-    auto orders = QDLC::String::splitline( s_numerics_interpolate, ',' );
+    auto orders = QDACC::String::splitline( s_numerics_interpolate, ',' );
     std::map<std::string, int> methods = { { "cubic", 1 }, { "monotone", 2 }, { "linear", 0 } };
     std::string method_time = orders.front();
     std::string method_tau = orders.size() > 1 ? orders.back() : "linear";
@@ -206,7 +206,7 @@ void Parameters::pre_adjust_input() {
     numerics_interpolate_method_tau = methods[method_tau];
 
     // No phonon adjust if pathintegral is chosen
-    if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+    if ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
         p_phonon_adjust_b = 0;
         p_phonon_adjust_rad = 0;
         p_phonon_adjust_dep = 0;
@@ -273,7 +273,7 @@ void Parameters::pre_adjust_input() {
     }
 
     // Disable Hamilton Caching and RK45 for PI
-    if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+    if ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
         // numerics_use_saved_hamiltons = false;
         // Log::L2( "[System] Disabled Caching of Hamilton matrices" );
         if ( numerics_rk_order > 5 ) {
@@ -284,7 +284,7 @@ void Parameters::pre_adjust_input() {
 
     // Automatically determin subiterator stepsize
     if ( numerics_subiterator_stepsize < 0 ) {
-        if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+        if ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
             numerics_subiterator_stepsize = t_step_pathint / 5.0;
             Log::L2( "[System] Setting the subiterator stepsize to {}, according to a Path Integral stepsize of {}\n", numerics_subiterator_stepsize, t_step_pathint );
         } else {
@@ -317,9 +317,9 @@ void Parameters::post_adjust_input() {
     Log::L2( "[System] Adjusting Post-Mainloop Inputs...\n" );
 
     // Grid Resolution
-    if ( t_end >= 0 and ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) ) {
+    if ( t_end >= 0 and ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) ) {
         if ( iterations_t_max < 1 ) {
-            iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? t_step_pathint : t_step ) );
+            iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ? t_step_pathint : t_step ) );
             Log::L2( "[System] Set iterations_t_max to {}\n", iterations_t_max );
         }
         if ( grid_resolution < 1 and iterations_t_max > 0 ) {
@@ -343,9 +343,9 @@ void Parameters::post_adjust_grids() {
         Log::L2( "[System-Prameters] Grid was not again modified because the gridinput is fixed by the user.\n" );
         return;
     }
-    if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) {
+    if ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) {
         input_correlation_resolution["Standard"].property_set["Time"] = { t_end };
-        double time_delta = numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ? t_step_pathint : Parameter( ( t_end - t_start ) / ( 1. * grid_resolution ) );
+        double time_delta = numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ? t_step_pathint : Parameter( ( t_end - t_start ) / ( 1. * grid_resolution ) );
         input_correlation_resolution["Standard"].property_set["Delta"] = { time_delta };
         auto &settings = input_correlation_resolution.contains( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
         Log::L2( "[System] Initial Grid Timestep is {}.\n", settings.property_set["Delta"].front() );
@@ -375,25 +375,25 @@ void Parameters::post_adjust_grids() {
 
 void Parameters::parse_system() {
     // Generate the input variables for the electronic system:
-    for ( auto levels = QDLC::String::splitline( inputstring_electronic, ';' ); const std::string &level : levels ) {
-        auto conf = QDLC::String::splitline( level, ':' );
+    for ( auto levels = QDACC::String::splitline( inputstring_electronic, ';' ); const std::string &level : levels ) {
+        auto conf = QDACC::String::splitline( level, ':' );
         universal_config conf_s;
-        conf_s.property["Energy"] = QDLC::Misc::convertParam<Parameter>( conf[1] );           // Energy
-        conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[2], ',' );               // Coupled to Levels
-        conf_s.property["DecayScaling"] = QDLC::Misc::convertParam<Parameter>( conf[3] );     // Decay Scaling, Per Mode
-        conf_s.property["DephasingScaling"] = QDLC::Misc::convertParam<Parameter>( conf[4] ); // Dephasing Scaling
-        conf_s.property["PhononCoupling"] = QDLC::Misc::convertParam<Parameter>( conf[5] );   // Phonon Coupling
+        conf_s.property["Energy"] = QDACC::Misc::convertParam<Parameter>( conf[1] );           // Energy
+        conf_s.string_v["CoupledTo"] = QDACC::String::splitline( conf[2], ',' );               // Coupled to Levels
+        conf_s.property["DecayScaling"] = QDACC::Misc::convertParam<Parameter>( conf[3] );     // Decay Scaling, Per Mode
+        conf_s.property["DephasingScaling"] = QDACC::Misc::convertParam<Parameter>( conf[4] ); // Dephasing Scaling
+        conf_s.property["PhononCoupling"] = QDACC::Misc::convertParam<Parameter>( conf[5] );   // Phonon Coupling
         input_electronic[conf[0]] = conf_s;
     }
-    for ( auto cavities = QDLC::String::splitline( inputstring_photonic, ';' ); const std::string &cavity : cavities ) {
-        auto conf = QDLC::String::splitline( cavity, ':' );
+    for ( auto cavities = QDACC::String::splitline( inputstring_photonic, ';' ); const std::string &cavity : cavities ) {
+        auto conf = QDACC::String::splitline( cavity, ':' );
         universal_config conf_s;
-        conf_s.property["Energy"] = QDLC::Misc::convertParam<Parameter>( conf[1] );                                              // Energy
-        conf_s.property["MaxPhotons"] = QDLC::Misc::convertParam<Parameter>( conf[2] );                                          // Maximum Photons
-        conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[3], ',' );                                                  // Coupled to Transitions
-        conf_s.property_set["CouplingScaling"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) ); // Coupling Scaling, per transition INTO cavity
-        // conf_s.property_set["BackCouplingScaling"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) ); // BackCoupling Scaling, per transition from cavity back into the electronic system
-        conf_s.property["DecayScaling"] = QDLC::Misc::convertParam<Parameter>( conf[5] ); // Decay Scaling, for all transitions
+        conf_s.property["Energy"] = QDACC::Misc::convertParam<Parameter>( conf[1] );                                              // Energy
+        conf_s.property["MaxPhotons"] = QDACC::Misc::convertParam<Parameter>( conf[2] );                                          // Maximum Photons
+        conf_s.string_v["CoupledTo"] = QDACC::String::splitline( conf[3], ',' );                                                  // Coupled to Transitions
+        conf_s.property_set["CouplingScaling"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[4], ',' ) ); // Coupling Scaling, per transition INTO cavity
+        // conf_s.property_set["BackCouplingScaling"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[5], ',' ) ); // BackCoupling Scaling, per transition from cavity back into the electronic system
+        conf_s.property["DecayScaling"] = QDACC::Misc::convertParam<Parameter>( conf[5] ); // Decay Scaling, for all transitions
         input_photonic[conf[0]] = conf_s;
     }
 
@@ -401,29 +401,29 @@ void Parameters::parse_system() {
     // Type is cw or superposition (chained with '+', e.g. 'gauss+chirped(1E-24)' ) of gauss,cutoff,chirped(rate),super(delta),exponent(exponent),phase(angle)
     // p:TYPE:...parameters...
     int pindex = 0;
-    for ( auto pulses = QDLC::String::splitline( inputstring_pulse, ';' ); const std::string &pulse : pulses ) {
-        auto conf = QDLC::String::splitline( pulse, ':' );
+    for ( auto pulses = QDACC::String::splitline( inputstring_pulse, ';' ); const std::string &pulse : pulses ) {
+        auto conf = QDACC::String::splitline( pulse, ':' );
         universal_config conf_s;
-        conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[1], ',' );                                            // Coupled to Transitions
-        conf_s.string_v["Amplitude"] = QDLC::String::splitline( conf[2], ',' );                                            // Pulse Amp
-        conf_s.property_set["Frequency"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) ); // Frequency
-        conf_s.property_set["Width"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) );     // Width
-        conf_s.property_set["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) );    // Center
-        conf_s.string_v["Type"] = QDLC::String::splitline( conf[6], ',' );                                                 // Type
+        conf_s.string_v["CoupledTo"] = QDACC::String::splitline( conf[1], ',' );                                            // Coupled to Transitions
+        conf_s.string_v["Amplitude"] = QDACC::String::splitline( conf[2], ',' );                                            // Pulse Amp
+        conf_s.property_set["Frequency"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[3], ',' ) ); // Frequency
+        conf_s.property_set["Width"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[4], ',' ) );     // Width
+        conf_s.property_set["Center"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[5], ',' ) );    // Center
+        conf_s.string_v["Type"] = QDACC::String::splitline( conf[6], ',' );                                                 // Type
         // For counting purposes:
         conf_s.property["PulseIndex"] = pindex;
         pindex += 2;
         input_pulse[conf[0]] = conf_s;
     }
-    for ( auto chirps = QDLC::String::splitline( inputstring_chirp, ';' ); const std::string &chirp : chirps ) {
-        auto conf = QDLC::String::splitline( chirp, ':' );
+    for ( auto chirps = QDACC::String::splitline( inputstring_chirp, ';' ); const std::string &chirp : chirps ) {
+        auto conf = QDACC::String::splitline( chirp, ':' );
         universal_config conf_s;
-        conf_s.string_v["CoupledTo"] = QDLC::String::splitline( conf[1], ',' );                                            // Coupled to Transitions
-        conf_s.property_set["AmpFactor"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) ); // Amplitude Scaling for coupled_to
-        conf_s.property_set["Amplitude"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) ); // Amplitudes
-        conf_s.property_set["Times"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) );     // "Times"
+        conf_s.string_v["CoupledTo"] = QDACC::String::splitline( conf[1], ',' );                                            // Coupled to Transitions
+        conf_s.property_set["AmpFactor"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[2], ',' ) ); // Amplitude Scaling for coupled_to
+        conf_s.property_set["Amplitude"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[3], ',' ) ); // Amplitudes
+        conf_s.property_set["Times"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[4], ',' ) );     // "Times"
         if ( conf[5].find( "," ) != std::string::npos or conf.size() > 6 ) {
-            conf_s.property_set["ddt"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[5], ',' ) ); // "d/dt"
+            conf_s.property_set["ddt"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[5], ',' ) ); // "d/dt"
             conf_s.string["Type"] = conf[6];                                                                             // Type
         } else {
             conf_s.string["Type"] = conf[5];                                                                 // Type
@@ -431,76 +431,76 @@ void Parameters::parse_system() {
         }
         input_chirp[conf[0]] = conf_s;
     }
-    for ( const std::string &spectrum : QDLC::String::splitline( inputstring_spectrum, ';' ) ) {
-        auto conf = QDLC::String::splitline( spectrum, ':' );
+    for ( const std::string &spectrum : QDACC::String::splitline( inputstring_spectrum, ';' ) ) {
+        auto conf = QDACC::String::splitline( spectrum, ':' );
         universal_config conf_s;
-        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                                                                                                                 // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
-        conf_s.property_set["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );                                                                                     // Center
-        conf_s.property_set["Range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );                                                                                      // Range
-        conf_s.property_set["resW"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );                                                                                       // Resolution for w
-        conf_s.property_set["Order"] = conf.size() > 4 ? QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[4], ',' ) ) : std::vector<Parameter>( conf_s.property_set["Range"].size(), 1 ); // Order (1 or 2)?
-        conf_s.string_v["Normalize"] = conf.size() > 5 ? QDLC::String::splitline( conf[5], ',' ) : std::vector<std::string>( conf_s.property_set["Range"].size(), "False" );                                // Normalize?
+        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' );                                                                                                                                 // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
+        conf_s.property_set["Center"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) );                                                                                     // Center
+        conf_s.property_set["Range"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[2], ',' ) );                                                                                      // Range
+        conf_s.property_set["resW"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[3], ',' ) );                                                                                       // Resolution for w
+        conf_s.property_set["Order"] = conf.size() > 4 ? QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[4], ',' ) ) : std::vector<Parameter>( conf_s.property_set["Range"].size(), 1 ); // Order (1 or 2)?
+        conf_s.string_v["Normalize"] = conf.size() > 5 ? QDACC::String::splitline( conf[5], ',' ) : std::vector<std::string>( conf_s.property_set["Range"].size(), "False" );                                // Normalize?
         input_correlation["Spectrum"].emplace_back( conf_s );
     }
-    for ( std::string &indist : QDLC::String::splitline( inputstring_indist, ';' ) ) {
-        auto conf = QDLC::String::splitline( indist, ':' );
+    for ( std::string &indist : QDACC::String::splitline( inputstring_indist, ';' ) ) {
+        auto conf = QDACC::String::splitline( indist, ':' );
         universal_config conf_s;
-        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' ); // Modes to calculate Indistinguishgability for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
+        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' ); // Modes to calculate Indistinguishgability for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
         input_correlation["Indist"].emplace_back( conf_s );
     }
-    for ( std::string &conc : QDLC::String::splitline( inputstring_conc, ';' ) ) {
-        auto conf = QDLC::String::splitline( conc, ':' );
+    for ( std::string &conc : QDACC::String::splitline( inputstring_conc, ';' ) ) {
+        auto conf = QDACC::String::splitline( conc, ':' );
         universal_config conf_s;
-        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' ); // Modes to calculate Concurrence for
-        conf_s.string_v["Order"] = conf.size() > 1 ? QDLC::String::splitline( conf[1], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "full" );
+        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' ); // Modes to calculate Concurrence for
+        conf_s.string_v["Order"] = conf.size() > 1 ? QDACC::String::splitline( conf[1], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "full" );
         if ( conf.size() > 2 ) {
             // Experimental: Calculate spectrum for all matrix entries. Also outputs the non-normalized matrices
-            conf_s.property_set["Center"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) ); // Center
-            conf_s.property_set["Range"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[2], ',' ) );  // Range
-            conf_s.property_set["resW"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[3], ',' ) );   // Resolution for w
+            conf_s.property_set["Center"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) ); // Center
+            conf_s.property_set["Range"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[2], ',' ) );  // Range
+            conf_s.property_set["resW"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[3], ',' ) );   // Resolution for w
         }
         input_correlation["Conc"].emplace_back( conf_s );
     }
-    for ( std::string &g_func : QDLC::String::splitline( inputstring_gfunc, ';' ) ) {
-        auto conf = QDLC::String::splitline( g_func, ':' );
+    for ( std::string &g_func : QDACC::String::splitline( inputstring_gfunc, ';' ) ) {
+        auto conf = QDACC::String::splitline( g_func, ':' );
         auto n = conf.size();
         universal_config conf_s;
-        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                                                                    // Modes to calculate G1/G2 functions for
-        conf_s.property_set["Order"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );                                         // 1 or 2
-        conf_s.string_v["Integrated"] = n > 2 ? QDLC::String::splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "time" ); // time,matrix,both for false/true/both
+        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' );                                                                                    // Modes to calculate G1/G2 functions for
+        conf_s.property_set["Order"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) );                                         // 1 or 2
+        conf_s.string_v["Integrated"] = n > 2 ? QDACC::String::splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "time" ); // time,matrix,both for false/true/both
         input_correlation["GFunc"].emplace_back( conf_s );
     }
-    for ( std::string &wigner : QDLC::String::splitline( inputstring_wigner, ';' ) ) {
-        auto conf = QDLC::String::splitline( wigner, ':' );
+    for ( std::string &wigner : QDACC::String::splitline( inputstring_wigner, ';' ) ) {
+        auto conf = QDACC::String::splitline( wigner, ':' );
         auto n = conf.size();
         universal_config conf_s;
-        conf_s.string_v["Modes"] = QDLC::String::splitline( conf[0], ',' );                                                                                                                       // Modes to calculate Wigner function for
-        conf_s.property_set["X"] = QDLC::Misc::convertParam<Parameter>( QDLC::String::splitline( conf[1], ',' ) );                                                                                // -X to X
-        conf_s.property_set["Y"] = QDLC::Misc::convertParam<Parameter>( n > 2 ? QDLC::String::splitline( conf[2], ',' ) : QDLC::String::splitline( conf[1], ',' ) );                              // -Y to Y
-        conf_s.property_set["Res"] = QDLC::Misc::convertParam<Parameter>( n > 3 ? QDLC::String::splitline( conf[3], ',' ) : std::vector<std::string>( conf_s.property_set["X"].size(), "100" ) ); // Resolution
-        conf_s.property_set["Skip"] = QDLC::Misc::convertParam<Parameter>( n > 4 ? QDLC::String::splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.property_set["X"].size(), "1" ) );  // Skips in t-direction
+        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' );                                                                                                                       // Modes to calculate Wigner function for
+        conf_s.property_set["X"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) );                                                                                // -X to X
+        conf_s.property_set["Y"] = QDACC::Misc::convertParam<Parameter>( n > 2 ? QDACC::String::splitline( conf[2], ',' ) : QDACC::String::splitline( conf[1], ',' ) );                              // -Y to Y
+        conf_s.property_set["Res"] = QDACC::Misc::convertParam<Parameter>( n > 3 ? QDACC::String::splitline( conf[3], ',' ) : std::vector<std::string>( conf_s.property_set["X"].size(), "100" ) ); // Resolution
+        conf_s.property_set["Skip"] = QDACC::Misc::convertParam<Parameter>( n > 4 ? QDACC::String::splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.property_set["X"].size(), "1" ) );  // Skips in t-direction
         input_correlation["Wigner"].emplace_back( conf_s );
     }
-    for ( std::string &raman : QDLC::String::splitline( inputstring_raman, ';' ) ) {
-        auto conf = QDLC::String::splitline( raman, ':' );
+    for ( std::string &raman : QDACC::String::splitline( inputstring_raman, ';' ) ) {
+        auto conf = QDACC::String::splitline( raman, ':' );
         auto n = conf.size();
         universal_config conf_s;
-        conf_s.string_v["SourceModes"] = QDLC::String::splitline( conf[0], ',' );
-        conf_s.string_v["RamanMode"] = QDLC::String::splitline( conf[1], ',' );
-        conf_s.string_v["OpMode"] = QDLC::String::splitline( conf[2], ',' );
-        conf_s.string_v["PMode"] = QDLC::String::splitline( conf[3], ',' );
+        conf_s.string_v["SourceModes"] = QDACC::String::splitline( conf[0], ',' );
+        conf_s.string_v["RamanMode"] = QDACC::String::splitline( conf[1], ',' );
+        conf_s.string_v["OpMode"] = QDACC::String::splitline( conf[2], ',' );
+        conf_s.string_v["PMode"] = QDACC::String::splitline( conf[3], ',' );
         input_correlation["Raman"].emplace_back( conf_s );
     }
     // Correlation Grid
     if ( std::ranges::find( inputstring_correlation_resolution, ':' ) != inputstring_correlation_resolution.end() ) {
-        auto single = QDLC::String::splitline( inputstring_correlation_resolution, ';' );
+        auto single = QDACC::String::splitline( inputstring_correlation_resolution, ';' );
         universal_config conf_s;
         std::vector<Parameter> times, dts;
         for ( const auto &el : single ) {
             Log::L2( "[System-Parameters] Adding Grid Subspace {}\n", el );
-            auto cur = QDLC::String::splitline( el, ':' );
-            times.emplace_back( QDLC::Misc::convertParam<Parameter>( cur[0] ) );
-            dts.emplace_back( QDLC::Misc::convertParam<Parameter>( cur[1] ) );
+            auto cur = QDACC::String::splitline( el, ':' );
+            times.emplace_back( QDACC::Misc::convertParam<Parameter>( cur[0] ) );
+            dts.emplace_back( QDACC::Misc::convertParam<Parameter>( cur[1] ) );
         }
         conf_s.property_set["Time"] = times;
         conf_s.property_set["Delta"] = dts;
@@ -522,11 +522,11 @@ void Parameters::parse_system() {
             conf_s.property["dt"] = t_end / 200;
         } else if ( inputstring_SPconf.size() > 0 ) {
             Log::L2( "[System-Parameters] Generating Pulse Fourier Configuration from Parameters using {}.\n", inputstring_SPconf );
-            auto conf = QDLC::String::splitline( inputstring_SPconf, ':' );
-            conf_s.property["Center"] = conf.size() > 0 ? QDLC::Misc::convertParam<Parameter>( conf[0] ) : Parameter( 0.0 );
-            conf_s.property["Range"] = conf.size() > 1 ? QDLC::Misc::convertParam<Parameter>( conf[1] ) : Parameter( 0.0 );
-            conf_s.property["Res"] = conf.size() > 2 ? QDLC::Misc::convertParam<Parameter>( conf[2] ) : Parameter( 0.0 );
-            conf_s.property["dt"] = conf.size() > 3 ? QDLC::Misc::convertParam<Parameter>( conf[3] ) : Parameter( t_end / 200 );
+            auto conf = QDACC::String::splitline( inputstring_SPconf, ':' );
+            conf_s.property["Center"] = conf.size() > 0 ? QDACC::Misc::convertParam<Parameter>( conf[0] ) : Parameter( 0.0 );
+            conf_s.property["Range"] = conf.size() > 1 ? QDACC::Misc::convertParam<Parameter>( conf[1] ) : Parameter( 0.0 );
+            conf_s.property["Res"] = conf.size() > 2 ? QDACC::Misc::convertParam<Parameter>( conf[2] ) : Parameter( 0.0 );
+            conf_s.property["dt"] = conf.size() > 3 ? QDACC::Misc::convertParam<Parameter>( conf[3] ) : Parameter( t_end / 200 );
             input_conf["PulseConf"] = conf_s;
         }
     }
@@ -535,18 +535,18 @@ void Parameters::parse_system() {
         if ( inputstring_detector_time != "none" ) {
             universal_config conf_s;
             Log::L2( "[System-Parameters] Setting up detector using {}...\n", inputstring_detector_time );
-            auto configs = QDLC::String::splitline( inputstring_detector_time, ';' );
+            auto configs = QDACC::String::splitline( inputstring_detector_time, ';' );
             conf_s.property_set["time_center"] = {};
             conf_s.property_set["time_range"] = {};
             conf_s.property_set["time_amplitude"] = {};
             conf_s.property_set["time_power_amplitude"] = {};
             conf_s.string_v["time_mode"] = {}; // Mode can be either G1,G2 or a specific name like G1-hbd-hb
             for ( const auto &conf_sep : configs ) {
-                auto conf = QDLC::String::splitline( conf_sep, ':' );
-                conf_s.property_set["time_range"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[0] ) );
-                conf_s.property_set["time_center"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[1] ) );
-                conf_s.property_set["time_amplitude"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[2] ) );
-                conf_s.property_set["time_power_amplitude"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[3] ) );
+                auto conf = QDACC::String::splitline( conf_sep, ':' );
+                conf_s.property_set["time_range"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[0] ) );
+                conf_s.property_set["time_center"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[1] ) );
+                conf_s.property_set["time_amplitude"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[2] ) );
+                conf_s.property_set["time_power_amplitude"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[3] ) );
                 conf_s.string_v["time_mode"].emplace_back( conf[4] );
                 Log::L2( "[System-Parameters] Adding Temporal Detector mask using center = {}, range = {}, ampltitude {} and power_amp = {} on mode(s) {}.\n", conf[1], conf[0], conf[2], conf[3], conf[4] );
             }
@@ -555,7 +555,7 @@ void Parameters::parse_system() {
         if ( inputstring_detector_spectral != "none" ) {
             universal_config conf_s;
             Log::L2( "[System-Parameters] Setting up detector using {}...\n", inputstring_detector_spectral );
-            auto configs = QDLC::String::splitline( inputstring_detector_spectral, ';' );
+            auto configs = QDACC::String::splitline( inputstring_detector_spectral, ';' );
             conf_s.property_set["spectral_range"] = {};
             conf_s.property_set["spectral_center"] = {};
             conf_s.property_set["spectral_amplitude"] = {};
@@ -563,12 +563,12 @@ void Parameters::parse_system() {
             conf_s.property_set["spectral_number_points"] = {};
             conf_s.string_v["spectral_mode"] = {};
             for ( const auto &conf_sep : configs ) {
-                auto conf = QDLC::String::splitline( conf_sep, ':' );
-                conf_s.property_set["spectral_range"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[0] ) );
-                conf_s.property_set["spectral_center"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[1] ) );
-                conf_s.property_set["spectral_amplitude"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[2] ) );
-                conf_s.property_set["spectral_power_amplitude"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[3] ) );
-                conf_s.property_set["spectral_number_points"].emplace_back( QDLC::Misc::convertParam<Parameter>( conf[4] ) );
+                auto conf = QDACC::String::splitline( conf_sep, ':' );
+                conf_s.property_set["spectral_range"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[0] ) );
+                conf_s.property_set["spectral_center"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[1] ) );
+                conf_s.property_set["spectral_amplitude"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[2] ) );
+                conf_s.property_set["spectral_power_amplitude"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[3] ) );
+                conf_s.property_set["spectral_number_points"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[4] ) );
                 conf_s.string_v["spectral_mode"].emplace_back( conf[5] );
                 Log::L2( "[System-Parameters] Adding Spectral Detector mask using center = {}, range = {}, amplitude {} power_amp = {} and {} points for the Fourier Transformation on mode(s) {}.\n", conf[1], conf[0], conf[2], conf[3], conf[4], conf[5] );
             }
@@ -578,7 +578,7 @@ void Parameters::parse_system() {
     {
         universal_config conf_s;
         Log::L2( "[System-Parameters] Setting up density matrix output using {}...\n", inputstring_densitymatrix_config );
-        auto conf = QDLC::String::splitline( inputstring_densitymatrix_config, ':' );
+        auto conf = QDACC::String::splitline( inputstring_densitymatrix_config, ':' );
         conf_s.string["output_mode"] = conf[0];
         conf_s.string["interaction_picture"] = conf.size() > 1 ? conf[1] : "schroedinger";
         input_conf["DMconfig"] = conf_s;
@@ -586,13 +586,13 @@ void Parameters::parse_system() {
     // RK 45 Tolerance Vector
     {
         if ( std::ranges::find( inputstring_rk45_config.begin(), inputstring_rk45_config.end(), ':' ) == inputstring_rk45_config.end() ) {
-            numerics_rk_tol.emplace_back( 1.0, QDLC::Misc::convertParam<double>( inputstring_rk45_config ) );
+            numerics_rk_tol.emplace_back( 1.0, QDACC::Misc::convertParam<double>( inputstring_rk45_config ) );
             Log::L2( "[System-Parameters] Set fixed RK45 Tolerance to {}.\n", std::get<1>( numerics_rk_tol.back() ) );
         } else {
             Log::L2( "[System-Parameters] Setting up multiple tolerances...\n" );
-            for ( const auto &partial : QDLC::String::splitline( inputstring_rk45_config, ';' ) ) {
-                auto tuple = QDLC::String::splitline( partial, ':' );
-                numerics_rk_tol.emplace_back( std::make_tuple( QDLC::Misc::convertParam<double>( tuple.front() ), QDLC::Misc::convertParam<double>( tuple.back() ) ) );
+            for ( const auto &partial : QDACC::String::splitline( inputstring_rk45_config, ';' ) ) {
+                auto tuple = QDACC::String::splitline( partial, ':' );
+                numerics_rk_tol.emplace_back( std::make_tuple( QDACC::Misc::convertParam<double>( tuple.front() ), QDACC::Misc::convertParam<double>( tuple.back() ) ) );
                 Log::L2( "[System-Parameters] Set RK45 Tolerance to {} (from {}).\n", std::get<1>( numerics_rk_tol.back() ), partial );
             }
         }
@@ -625,7 +625,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         for ( auto &[name, mat] : input_photonic ) {
             Log::L1( "Cavity: {} with energy {:.8e} Hz - {:.8e} eV - {:.8f} nm\n", name, mat.property["Energy"], mat.property["Energy"].getSI( Parameter::UNIT_ENERGY_EV ), mat.property["Energy"].getSI( Parameter::UNIT_WAVELENGTH_NM ) );
             for ( auto i = 0; i < mat.string_v["CoupledTo"].size(); i++ ) {
-                auto [from, to] = QDLC::String::split_pair( mat.string_v["CoupledTo"][i], transition_delimiter );
+                auto [from, to] = QDACC::String::split_pair( mat.string_v["CoupledTo"][i], transition_delimiter );
                 double purcell = ( 2.0 * p_omega_coupling * p_omega_coupling * mat.property_set["CouplingScaling"][i] * mat.property_set["CouplingScaling"][i] / p_omega_cavity_loss / p_omega_decay ) * ( p_omega_cavity_loss * p_omega_cavity_loss / ( std::pow( mat.property["Energy"] - ( input_electronic[to].property["Energy"] - input_electronic[from].property["Energy"] ), 2 ) + p_omega_cavity_loss * p_omega_cavity_loss ) );
                 Log::L1( " - Coupled to electronic transition {} (Purcell Enhancement: {}) \n", mat.string_v["CoupledTo"][i], purcell );
                 Log::L1( " - - Coupling Scaling: {}\n", mat.property_set["CouplingScaling"][i] );
@@ -660,14 +660,14 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                 Log::L1( " - - Frequency: {} Hz - {:.8} eV - {:.8} nm\n", mat.property_set["Frequency"][i], mat.property_set["Frequency"][i].getSI( Parameter::UNIT_ENERGY_EV ), mat.property_set["Frequency"][i].getSI( Parameter::UNIT_WAVELENGTH_NM ) );
                 Log::L1( " - - Width: {} s - {:.8} ps - {:.8} mueV bandwith\n", mat.property_set["Width"][i], mat.property_set["Width"][i].getSI( Parameter::UNIT_TIME_PS ), Parameter( 1.0 / mat.property_set["Width"][i] ).getSI( Parameter::UNIT_ENERGY_MUEV ) );
                 Log::L1( " - - Center: {} s - {:.8} ps\n", mat.property_set["Center"][i], mat.property_set["Center"][i].getSI( Parameter::UNIT_TIME_PS ) );
-                if ( QDLC::Math::abs2( mat.property_set["ChirpRate"][i] != 0.0 ) )
+                if ( QDACC::Math::abs2( mat.property_set["ChirpRate"][i] != 0.0 ) )
                     Log::L1( " - - Chirp: {}\n", mat.property_set["ChirpRate"][i] );
-                if ( QDLC::Math::abs2( mat.property_set["SUPERDelta"][i] != 0.0 ) ) {
+                if ( QDACC::Math::abs2( mat.property_set["SUPERDelta"][i] != 0.0 ) ) {
                     Log::L1( " - - SUPER Amplitude: {} - {} meV\n", mat.property_set["SUPERDelta"][i], mat.property_set["SUPERDelta"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
                     Log::L1( " - - SUPER Frequency: {} - {} meV\n", mat.property_set["SUPERFreq"][i], mat.property_set["SUPERFreq"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
                 }
-                if ( QDLC::Math::abs2( mat.property_set["Phase"][i] != 0.0 ) )
-                    Log::L1( " - - Phase: {}pi\n", mat.property_set["Phase"][i] / QDLC::Math::PI );
+                if ( QDACC::Math::abs2( mat.property_set["Phase"][i] != 0.0 ) )
+                    Log::L1( " - - Phase: {}pi\n", mat.property_set["Phase"][i] / QDACC::Math::PI );
                 Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i], mat.string_v["Type"][i] == "gauss" ? fmt::format( " (Gaussian Amplitude: {})", mat.property_set["GaussAmp"][i] ) : "" );
             }
         }
@@ -727,7 +727,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         Log::L1( "First Markov approximation used? (rho(t) = rho(t-tau)) - {}\n", ( numerics_phonon_approximation_markov1 ? "Yes" : "No" ) );
         Log::L1( "Transformation approximation used: {} - {}\n", (int)numerics_phonon_approximation_order, approximations.at( (int)numerics_phonon_approximation_order ) );
         // Pathintegral
-        if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+        if ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
             Log::L1( " - Path Integral Settings:\n" );
             Log::L1( " - Backsteps NC: {}\n", p_phonon_nc );
             Log::L1( " - Iterator Stepsize: {}\n", numerics_subiterator_stepsize );
@@ -753,7 +753,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     }
     Log::L1( "Timeborder delta: {:.8e} s - {:.2f} fs \n", t_step, t_step * 1E15 );
     Log::L1( "Subiterator delta: {:.8e} s - {:.2f} fs \n", numerics_subiterator_stepsize, numerics_subiterator_stepsize * 1E15 );
-    if ( numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+    if ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
         Log::L1( "Timeborder delta path integral: {:.8e} s - {:.2f} ps\n", t_step_pathint, t_step_pathint * 1E12 );
     }
     Log::L1( "Output Timeframe: {}", input_conf["DMconfig"].string["interaction_picture"] );
@@ -813,7 +813,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         Log::L1( "Will NOT use RK45 for the phonon backwards integral!\n" );
     Log::L1( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
     Log::L1( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture ) ? "YES" : "NO" ) );
-    Log::L1( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == QDLC::TransformationOrder::Analytical ) ? "Analytic" : "Matrix Exponential" ) );
+    Log::L1( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == QDACC::TransformationOrder::Analytical ) ? "Analytic" : "Matrix Exponential" ) );
     Log::L1( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\nThreads used by Eigen: {}\n", numerics_maximum_secondary_threads, numerics_maximum_primary_threads, Eigen::nbThreads() );
     if ( p_phonon_T )
         Log::L1( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? "Yes" : "No" ) );

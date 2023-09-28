@@ -1,6 +1,6 @@
 #include "solver/solver_ode.h"
 
-bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
+bool QDACC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Sparse rho = s.operatorMatrices.rho;
 
     Timer &rkTimer = Timers::create( "RungeKutta-Main-Loop" ).start();
@@ -9,7 +9,7 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Log::L2( "[Solver] Calculating t-direction from {} to {} at stepsize {}...\n", s.parameters.t_start, s.parameters.t_end, s.parameters.t_step );
 
     // Calculate Time evolution on time vector timestamps.
-    if ( s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+    if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
         calculate_path_integral( rho, s.parameters.t_start, s.parameters.t_end, rkTimer, progressbar, "T-Direction: ", s, savedStates, true );
         if (s.parameters.numerics_pathintegral_set_couplings_zero)
             for (auto& el : s.operatorMatrices.phonon_group_index_to_coupling_value)
@@ -42,7 +42,7 @@ bool QDLC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     Log::L2( "[Solver] Saved {} states.\n", savedStates.size() );
     Log::L2( "[Solver] Hamiltons: Attempts w/r: {}, Write: {}, Calc: {}, Read: {}.\n", track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_read );
     size_t sum = 0;
-    std::ranges::for_each( s.savedCoefficients.begin(), s.savedCoefficients.end(), [&]( const std::pair<double, std::map<double, QDLC::SaveStateTau>> &m ) { sum += m.second.size(); } );
+    std::ranges::for_each( s.savedCoefficients.begin(), s.savedCoefficients.end(), [&]( const std::pair<double, std::map<double, QDACC::SaveStateTau>> &m ) { sum += m.second.size(); } );
     Log::L2( "[Solver] Cached {} phonon matrices.\n", sum );
 
     // Interpolate Outputstates with spline interpolation

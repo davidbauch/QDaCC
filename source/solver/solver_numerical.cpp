@@ -1,6 +1,6 @@
 #include "solver/solver_ode.h"
 
-void QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( System &s, const int power ) {
+void QDACC::Numerics::ODESolver::calculate_hamilton_eigenvalues( System &s, const int power ) {
     bool did_title = false;
     const std::string filename = "eigenvalues" + ( power > 1 ? "_" + std::to_string( power ) : "" );
     Log::L2( "[Solver] Calculating Hamilton Eigenvalues using H{}(t), saving to {}.txt\n", power > 1 ? fmt::format( "^{}", power ) : "", filename );
@@ -11,7 +11,7 @@ void QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( System &s, const
         if ( power > 1 )
             hamilton = hamilton.pow( power ).eval();
         // Eigen::EigenSolver<Dense> eigensolver( hamilton );
-        auto eigs = hamilton.eigenvalues() * QDLC::Math::ev_conversion;
+        auto eigs = hamilton.eigenvalues() * QDACC::Math::ev_conversion;
         if ( not did_title ) {
             file << "Time";
             for ( int i = 0; i < eigs.size(); i++ )
@@ -30,7 +30,7 @@ void QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( System &s, const
     }
 }
 
-bool QDLC::Numerics::ODESolver::output_numerical_data( System &s ) {
+bool QDACC::Numerics::ODESolver::output_numerical_data( System &s ) {
     // Output Numerical RK Error
     if ( s.parameters.output_dict.contains( "rkerror" ) ) { // Chain...
         Log::L2( "[Solver] Outputting Numerical RK45 error...\n" );
@@ -52,10 +52,10 @@ bool QDLC::Numerics::ODESolver::output_numerical_data( System &s ) {
     }
     // TODO: putput list als dict, dann if "eigenvalues" in outputdict
     if ( s.parameters.output_dict.contains( "eigenvalues" ) ) {
-        QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( s );
+        QDACC::Numerics::ODESolver::calculate_hamilton_eigenvalues( s );
     }
     if ( s.parameters.output_dict.contains( "eigenvalues2" ) ) {
-        QDLC::Numerics::ODESolver::calculate_hamilton_eigenvalues( s, 2 );
+        QDACC::Numerics::ODESolver::calculate_hamilton_eigenvalues( s, 2 );
     }
     return true;
 }

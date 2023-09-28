@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 Sparse System::dgl_phonons_chi( const double t ) {
     Log::L3( "[System-PME] Generating Chi({})...\n", t );

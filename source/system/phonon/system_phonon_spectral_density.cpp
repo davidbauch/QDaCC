@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 double System::dgl_phonons_spectral_density( const double w ) {
     if ( parameters.p_phonon_qd_ae == 0.0 ) {

@@ -1,6 +1,6 @@
 #include "solver/solver_ode.h"
 
-QDLC::Numerics::ODESolver::ODESolver( System &s ) {
+QDACC::Numerics::ODESolver::ODESolver( System &s ) {
     Log::L2( "[System] Creating ODESolver Class...\n" );
     track_gethamilton_read = 0;
     track_gethamilton_write = 0;
@@ -13,7 +13,7 @@ QDLC::Numerics::ODESolver::ODESolver( System &s ) {
 }
 
 // TODO: interpolation für tau direction, dann wieder cachen in t wie mit phononen
-Sparse QDLC::Numerics::ODESolver::getHamilton( System &s, const double t ) {
+Sparse QDACC::Numerics::ODESolver::getHamilton( System &s, const double t ) {
     // Don't use saved Hamiltons, instead just calculate new Operator
     if ( not s.parameters.numerics_use_saved_hamiltons ) {
         track_gethamilton_calc++;
@@ -45,37 +45,37 @@ Sparse QDLC::Numerics::ODESolver::getHamilton( System &s, const double t ) {
     const auto &smaller_than_t = std::prev( greater_or_equal_than_t );
     //  Interpolate
     track_gethamilton_read++;
-    return QDLC::Math::lerp( smaller_than_t->second, greater_or_equal_than_t->second, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
+    return QDACC::Math::lerp( smaller_than_t->second, greater_or_equal_than_t->second, ( t - smaller_than_t->first ) / ( greater_or_equal_than_t->first - smaller_than_t->first ) );
 }
 
-void QDLC::Numerics::ODESolver::saveState( const Sparse &mat, const double t, std::vector<QDLC::SaveState> &savedStates ) {
+void QDACC::Numerics::ODESolver::saveState( const Sparse &mat, const double t, std::vector<QDACC::SaveState> &savedStates ) {
     savedStates.emplace_back( mat, t );
 }
 
-void QDLC::Numerics::ODESolver::save_hamilton( const Sparse &mat, const double t ) {
+void QDACC::Numerics::ODESolver::save_hamilton( const Sparse &mat, const double t ) {
 #pragma omp critical
     savedHamiltons[t] = mat;
 }
 
-double &QDLC::Numerics::ODESolver::get_time_at( int i ) {
+double &QDACC::Numerics::ODESolver::get_time_at( int i ) {
     return savedStates.at( i ).t;
 }
 
-Sparse &QDLC::Numerics::ODESolver::get_rho_at( int i ) {
+Sparse &QDACC::Numerics::ODESolver::get_rho_at( int i ) {
     return savedStates.at( i ).mat;
 }
 
-std::tuple<std::string, std::string> QDLC::Numerics::ODESolver::get_operator_strings( System &s, const std::string &operators ) {
+std::tuple<std::string, std::string> QDACC::Numerics::ODESolver::get_operator_strings( System &s, const std::string &operators ) {
     std::string s_creator = "";
     std::string s_annihilator = "";
-    for ( auto split_s_op : QDLC::String::splitline( operators, '+' ) ) {
+    for ( auto split_s_op : QDACC::String::splitline( operators, '+' ) ) {
         if ( s_creator.size() > 0 ) {
             s_creator += "+";
             s_annihilator += "+";
         }
         // If there is a user provided creator-annihilator differentiation using the "=" operator, split at "="
         if (split_s_op.contains("=")) {
-            auto ops = QDLC::String::splitline( split_s_op, '=' );
+            auto ops = QDACC::String::splitline( split_s_op, '=' );
             if ( s.operatorMatrices.el_transitions.contains( ops.at(0) ) )
                 s_creator += ops.at(0);
             else
@@ -99,7 +99,7 @@ std::tuple<std::string, std::string> QDLC::Numerics::ODESolver::get_operator_str
     return std::make_tuple( s_creator, s_annihilator );
 }
 
-std::string QDLC::Numerics::ODESolver::get_operators_purpose( const std::vector<std::string> &operators ) {
+std::string QDACC::Numerics::ODESolver::get_operators_purpose( const std::vector<std::string> &operators ) {
     const int order = operators.size() / 2;
     std::string ret = "G" + std::to_string( order );
     for ( auto &el : operators )
@@ -107,16 +107,16 @@ std::string QDLC::Numerics::ODESolver::get_operators_purpose( const std::vector<
     return ret;
 }
 
-Sparse QDLC::Numerics::ODESolver::get_operators_matrix( System &s, const std::string &s_op ) {
+Sparse QDACC::Numerics::ODESolver::get_operators_matrix( System &s, const std::string &s_op ) {
     if ( s_op == "internal_identitymatrix" ) {
         return s.operatorMatrices.identity;
     }
     Sparse ret( s.parameters.maxStates, s.parameters.maxStates );
-    for ( auto &split_s_op : QDLC::String::splitline( s_op, '+' ) )
+    for ( auto &split_s_op : QDACC::String::splitline( s_op, '+' ) )
         ret += s.operatorMatrices.el_transitions.contains( split_s_op ) ? s.operatorMatrices.el_transitions[split_s_op].hilbert : s.operatorMatrices.ph_transitions[split_s_op].hilbert;
     return ret;
 }
-std::tuple<Sparse, Sparse> QDLC::Numerics::ODESolver::get_operators_matrices( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
+std::tuple<Sparse, Sparse> QDACC::Numerics::ODESolver::get_operators_matrices( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
     const auto op_creator = get_operators_matrix( s, s_op_creator );
     const auto op_annihilator = get_operators_matrix( s, s_op_annihilator );
     return std::make_tuple( op_creator, op_annihilator );

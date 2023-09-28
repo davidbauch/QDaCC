@@ -25,7 +25,7 @@
 
 // TODO: Parameter Subclass wegmachen, nur eine Datastructure Class, die dann subdatastructures vom selben typ kennt.
 
-namespace QDLC {
+namespace QDACC {
 
 class CommandlineArguments {
    private:
@@ -165,10 +165,10 @@ class CommandlineArguments {
         // Checks if key used comparse to this datastructure. if use_hyphens is True, it is assumed that kk is passed as with either - or -- prefix
         bool validkey( std::string kk, bool use_hyphens = false, bool lowercase = false ) const {
             if ( lowercase )
-                kk = QDLC::String::to_lower( kk );
+                kk = QDACC::String::to_lower( kk );
             for ( auto k : key ) {
                 if ( lowercase )
-                    k = QDLC::String::to_lower( k );
+                    k = QDACC::String::to_lower( k );
                 if ( kk.compare( ( use_hyphens ? ( type.compare( "1hyphen" ) == 0 ? "-" : "--" ) : "" ) + k ) == 0 ) return true;
             }
             return false;
@@ -176,18 +176,18 @@ class CommandlineArguments {
 
         // Looks for keyword filter
         bool validfilter( std::string filter ) const {
-            filter = QDLC::String::to_lower( filter );
-            if ( validkey( filter ) || QDLC::String::to_lower( key.at( 0 ) ).find( filter ) != std::string::npos ) return true;
+            filter = QDACC::String::to_lower( filter );
+            if ( validkey( filter ) || QDACC::String::to_lower( key.at( 0 ) ).find( filter ) != std::string::npos ) return true;
             if ( group.compare( filter ) == 0 || group.find( filter ) != std::string::npos ) return true;
             for ( auto word : String::split( description ) ) {
-                word = QDLC::String::to_lower( word );
+                word = QDACC::String::to_lower( word );
                 if ( word.compare( filter ) == 0 || word.find( filter ) != std::string::npos ) return true;
             }
-            if ( QDLC::String::to_lower( description ).find( filter ) != std::string::npos ) return true;
+            if ( QDACC::String::to_lower( description ).find( filter ) != std::string::npos ) return true;
             for ( const auto& param : parameter ) {
                 if ( param.validkey( filter ) || param.subkey.find( filter ) != std::string::npos ) return true;
                 if ( param.datatype.compare( filter ) == 0 || param.datatype.find( filter ) != std::string::npos ) return true;
-                for ( const auto& word : String::split( QDLC::String::to_lower( param.description ) ) ) {
+                for ( const auto& word : String::split( QDACC::String::to_lower( param.description ) ) ) {
                     if ( word.compare( filter ) == 0 || word.find( filter ) != std::string::npos ) return true;
                 }
             }
@@ -222,11 +222,11 @@ class CommandlineArguments {
             }
             for ( auto s : lines ) {
                 if ( s.find( "DEPRECATED" ) )
-                    s = QDLC::String::replace( s, "DEPRECATED", BOLD+RED+"DEPRECATED"+RESET );
+                    s = QDACC::String::replace( s, "DEPRECATED", BOLD+RED+"DEPRECATED"+RESET );
                 if ( s.find( "NOTIMPLEMENTED" ) )
-                    s = QDLC::String::replace( s, "NOTIMPLEMENTED", BOLD+RED+"NOTIMPLEMENTED"+RESET );
+                    s = QDACC::String::replace( s, "NOTIMPLEMENTED", BOLD+RED+"NOTIMPLEMENTED"+RESET );
                 if ( markup.size() != 0 )
-                    s = QDLC::String::add_prefix_and_suffix( s, markup, GREEN+UNDERLINE, RESET, true );
+                    s = QDACC::String::add_prefix_and_suffix( s, markup, GREEN+UNDERLINE, RESET, true );
                 out << s << std::endl;
             }
         }
@@ -661,7 +661,7 @@ class CommandlineArguments {
     template <class T>
     static T get_parameter( const std::string& key, const std::string& subkey = "" ) {
         std::string arg = Get().get( key, subkey );
-        return QDLC::Misc::convertParam<T>( arg );
+        return QDACC::Misc::convertParam<T>( arg );
     }
     static std::string get_parameter( const std::string& key, const std::string& subkey = "" ) {
         std::string arg = Get().get( key, subkey );
@@ -669,4 +669,4 @@ class CommandlineArguments {
     }
 };
 
-} // namespace QDLC
+} // namespace QDACC

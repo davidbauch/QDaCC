@@ -1,35 +1,35 @@
 #include "solver/solver_ode.h"
 
-double QDLC::Numerics::get_tdelta( const Dense &gmat_time, size_t fixed_index, size_t var_index ) {
+double QDACC::Numerics::get_tdelta( const Dense &gmat_time, size_t fixed_index, size_t var_index ) {
     return var_index == 0 ? std::real( gmat_time( var_index + 1, fixed_index ) - gmat_time( var_index, fixed_index ) ) : std::real( gmat_time( var_index, fixed_index ) - gmat_time( var_index - 1, fixed_index ) );
 }
-double QDLC::Numerics::get_taudelta( const Dense &gmat_time, size_t fixed_index, size_t var_index ) {
+double QDACC::Numerics::get_taudelta( const Dense &gmat_time, size_t fixed_index, size_t var_index ) {
     return var_index == 0 ? std::imag( gmat_time( fixed_index, var_index + 1 ) - gmat_time( fixed_index, var_index ) ) : std::imag( gmat_time( fixed_index, var_index ) - gmat_time( fixed_index, var_index - 1 ) );
 }
-double QDLC::Numerics::get_tdelta( const std::vector<SaveState> &savedStates, size_t var_index ) {
+double QDACC::Numerics::get_tdelta( const std::vector<SaveState> &savedStates, size_t var_index ) {
     return var_index == 0 ? savedStates[var_index + 1].t - savedStates[var_index].t : savedStates[var_index].t - savedStates[var_index - 1].t;
 }
 
-void QDLC::Numerics::ODESolver::calculate_g1( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &purpose ) {
+void QDACC::Numerics::ODESolver::calculate_g1( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &purpose ) {
     if ( cache.contains( purpose ) ) {
         Log::L2( "[CorrelationFunction] G1(tau) for {} already exists.\n", purpose );
     }
     calculate_g1( s, std::vector<std::string>{ s_op_i }, s_op_j, { purpose } );
 }
 
-void QDLC::Numerics::ODESolver::calculate_g1( System &s, const std::vector<std::string> &s_op_i, const std::string &s_op_j, const std::vector<std::string> &purposes ) {
+void QDACC::Numerics::ODESolver::calculate_g1( System &s, const std::vector<std::string> &s_op_i, const std::string &s_op_j, const std::vector<std::string> &purposes ) {
     const auto size = s_op_i.size();
     calculate_g2( s, "internal_identitymatrix", std::vector<std::string>{ size, "internal_identitymatrix" }, s_op_i, s_op_j, purposes );
 }
 
-void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose ) {
+void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose ) {
     if ( cache.contains( purpose ) ) {
         Log::L2( "[CorrelationFunction] G2(tau) for {} already exists.\n", purpose );
     }
     calculate_g2( s, s_op_i, std::vector<std::string>{ s_op_j }, { s_op_k }, s_op_l, { purpose } );
 }
 
-void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::string &s_op_l, const std::vector<std::string> &purposes ) {
+void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::string &s_op_l, const std::vector<std::string> &purposes ) {
     Log::L2( "[CorrelationFunction] Preparing to calculate Correlation function\n" );
     Log::L2( "[CorrelationFunction] Generating Sparse Operator Matrices from String input...\n" );
 
@@ -86,13 +86,13 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( size_t i = 0; i < std::min<size_t>( matdim, savedStates.size() ); i++ ) {
         // Create and reserve past rho's vector
-        std::vector<QDLC::SaveState> savedRhos;
+        std::vector<QDACC::SaveState> savedRhos;
         // Get Time from saved State
         double t_t = get_time_at( i );
         // Calculate New Modified Density Matrix
         Sparse rho_tau = s.dgl_calc_rhotau_2( get_rho_at( i ), op_l, op_i, t_t );
         // Calculate Runge Kutta or PI
-        if ( s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+        if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
             calculate_path_integral_correlation( rho_tau, t_t, s.parameters.t_end, timer, s, savedRhos, op_l, op_i, 1 /*ADM Cores*/ );
         } else {
             calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, super_purpose, s, savedRhos, false /*Output*/ );
@@ -103,7 +103,7 @@ void QDLC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op
             auto &gmat = cache[purpose];
             for ( size_t j = 0; j < savedRhos.size(); j++ ) {
                 const double t_tau = savedRhos.at( j ).t;
-                //if ( s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+                //if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
                 //    gmat( i, j ) = s.get_trace<Scalar>( eval.cwiseProduct(savedRhos.at( j ).mat).eval());
                 //}else {
                 gmat( i, j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, eval, t_tau );

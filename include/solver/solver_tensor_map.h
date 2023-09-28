@@ -22,7 +22,7 @@
 #    define u_int64_t uint64_t
 #endif
 
-namespace QDLC::Numerics {
+namespace QDACC::Numerics {
 
 // TODO:
 //  Switch iVector index to plain c++ vector
@@ -46,8 +46,8 @@ class Tensor {
     using Index = uint16_t;
     // Tensor Rank indices (N0,N1,...,NN,M0,M1,...,MM)
     using IndexVector = std::vector<Index>;
-    // QDLC::Type::Scalar QDLC::Type::Scalar type
-    using Value = QDLC::Type::Scalar;
+    // QDACC::Type::Scalar QDACC::Type::Scalar type
+    using Value = QDACC::Type::Scalar;
     using ValueVector = std::vector<Value>;
     using IndexMap = std::map<IndexVector, IndexFlat, vector_compare<Index>>;
     using IndexRefVector = std::vector<IndexVector>;
@@ -136,4 +136,4 @@ class Tensor {
     }
 };
 
-} // namespace QDLC::Numerics
+} // namespace QDACC::Numerics

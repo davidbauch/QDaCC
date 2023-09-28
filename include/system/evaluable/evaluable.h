@@ -3,7 +3,7 @@
 #include "system/fileoutput.h"
 #include "misc/log.h"
 
-namespace QDLC {
+namespace QDACC {
 
 class Evaluable {
    private:
@@ -192,4 +192,4 @@ class Evaluable {
         return std::make_pair(counter_evaluated, counter_returned);
     }
 };
-} // namespace QDLC
+} // namespace QDACC

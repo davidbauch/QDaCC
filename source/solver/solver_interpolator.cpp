@@ -6,10 +6,10 @@
 
 // TODO: implement monotone interpolation of vector here.
 // FIXME: das hier ist iwie falsch und fuckt dasgitter ab!
-std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double, size_t> &t_index, int order, bool output_handler ) {
+std::vector<QDACC::SaveState> QDACC::Numerics::interpolate_curve( const std::vector<QDACC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double, size_t> &t_index, int order, bool output_handler ) {
     size_t current_index = std::min<size_t>( size_t( std::lower_bound( t_values.begin(), t_values.end(), t_start ) - t_values.begin() ), t_values.size() - 2 ); // t_index.at(t_start);
     size_t num_of_points = (size_t)( t_values.size() - current_index );
-    std::vector<QDLC::SaveState> ret;
+    std::vector<QDACC::SaveState> ret;
     ret.reserve( num_of_points );
     //if ( order == 0 ) {
         Log::L3( "Interpolating from {} to {} to vector of size {} with timevector of size {}, anticipated return size is {}\n", t_start, t_end, input.size(), t_values.size(), t_values.size() - current_index );
@@ -21,7 +21,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
         while ( current_index < t_values.size() - 1 and t_values[current_index] < t_start ) {
             current_index++;
         }
-        if ( QDLC::Math::abs2( t_values[current_index] - t_start ) > 0.01 * t_values[current_index] )
+        if ( QDACC::Math::abs2( t_values[current_index] - t_start ) > 0.01 * t_values[current_index] )
             Log::L2( "Error: t_values.at({}) = {} != start = {}. Previous value would be {}\n", current_index, t_values.at( current_index ), t_start, current_index > 0 ? t_values.at( current_index - 1 ) : -1 );
 
         double current_time = t_values.at( current_index );
@@ -103,9 +103,9 @@ std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vecto
     return ret;
 }
 
-std::vector<QDLC::SaveState> QDLC::Numerics::interpolate_curve( const std::vector<QDLC::SaveState> &input, double t_start, double t_end, double t_step, int threads, int order, bool output_handler ) {
+std::vector<QDACC::SaveState> QDACC::Numerics::interpolate_curve( const std::vector<QDACC::SaveState> &input, double t_start, double t_end, double t_step, int threads, int order, bool output_handler ) {
     size_t num_of_points = (size_t)( ( t_end - t_start ) / t_step );
-    std::vector<QDLC::SaveState> ret;
+    std::vector<QDACC::SaveState> ret;
     Log::L2( "[Interpolator] Interpolation order = {}. Reserving for {} points.\n", order, num_of_points );
     if ( order == 0 ) {
         // Linear Interpolation

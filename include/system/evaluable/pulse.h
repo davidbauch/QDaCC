@@ -3,7 +3,7 @@
 #include "system/parameters.h"
 #include "system/evaluable/evaluable.h"
 
-namespace QDLC {
+namespace QDACC {
 
 class Pulse : public Evaluable {
    public:
@@ -13,4 +13,4 @@ class Pulse : public Evaluable {
     void calculate_fourier( Parameters& p );
     void log();
 };
-} // namespace QDLC
+} // namespace QDACC

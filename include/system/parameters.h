@@ -9,7 +9,7 @@
 #define GLOBAL_PROGRAM_VERSION "4.0.0"
 #define GLOBAL_PROGRAM_LASTCHANGE ""
 
-namespace QDLC {
+namespace QDACC {
 
 class Parameters {
    public:
@@ -31,7 +31,7 @@ class Parameters {
     std::string numerics_groundstate_string;
 
     // Order of the Timetransformation. Can be Analytical or Numerical
-    QDLC::TransformationOrder numerics_order_timetrafo;
+    QDACC::TransformationOrder numerics_order_timetrafo;
 
     // Advanced Output Settings for Debugging
     int output_advanced_log, output_handlerstrings, output_coefficients;
@@ -66,7 +66,7 @@ class Parameters {
     // Enables the first Markov Approximation
     bool numerics_phonon_approximation_markov1;
     // Defines the Approximation Method used for the Polaron Timetransformation
-    QDLC::PhononApproximation numerics_phonon_approximation_order;
+    QDACC::PhononApproximation numerics_phonon_approximation_order;
     // Quantum Dot / Phonon Parameters
     Parameter p_phonon_b, p_phonon_ohm, p_phonon_alpha, p_phonon_wcutoff, p_phonon_T, p_phonon_tcutoff, p_phonon_wcutoffdelta, p_phonon_pure_dephasing;
     Parameter p_phonon_qd_de, p_phonon_qd_dh, p_phonon_qd_rho, p_phonon_qd_cs, p_phonon_qd_ratio, p_phonon_qd_ae;
@@ -297,4 +297,4 @@ class Parameters {
     void post_adjust_input();
     void post_adjust_grids();
 };
-} // namespace QDLC
+} // namespace QDACC

@@ -1,6 +1,6 @@
 #include "system/evaluable/pulse.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 Pulse::Pulse( Parameters::universal_config &config, Parameters &p ) : Evaluable( config ) {
     Log::L2( "[System-Pulse] Creating total pulse with {} individual pulses...\n", config.property_set.at( "Amplitude" ).size() );

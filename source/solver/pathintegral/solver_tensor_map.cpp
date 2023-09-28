@@ -2,20 +2,20 @@
 #include "system/fileoutput.h"
 #include "misc/helperfunctions_math.h"
 
-using namespace QDLC::Numerics;
+using namespace QDACC::Numerics;
 
-QDLC::Numerics::Tensor::IndexMap QDLC::Numerics::Tensor::index_vector_to_index_flat_struct{};
-QDLC::Numerics::Tensor::IndexRefVector QDLC::Numerics::Tensor::index_flat_to_index_vector_struct{};
-QDLC::Numerics::Tensor::IndexRefVector QDLC::Numerics::Tensor::index_flat_to_index_vector_struct_pruned{};
-int QDLC::Numerics::Tensor::tensor_dimensions{};
-int QDLC::Numerics::Tensor::different_dimensions{};
-int QDLC::Numerics::Tensor::tensor_size{};
+QDACC::Numerics::Tensor::IndexMap QDACC::Numerics::Tensor::index_vector_to_index_flat_struct{};
+QDACC::Numerics::Tensor::IndexRefVector QDACC::Numerics::Tensor::index_flat_to_index_vector_struct{};
+QDACC::Numerics::Tensor::IndexRefVector QDACC::Numerics::Tensor::index_flat_to_index_vector_struct_pruned{};
+int QDACC::Numerics::Tensor::tensor_dimensions{};
+int QDACC::Numerics::Tensor::different_dimensions{};
+int QDACC::Numerics::Tensor::tensor_size{};
 
-Tensor::Tensor( const IndexFlat num, const QDLC::Type::Scalar &init_value ) {
+Tensor::Tensor( const IndexFlat num, const QDACC::Type::Scalar &init_value ) {
     values = Tensor::ValueVector( num, init_value );
 }
 
-Tensor::Tensor( const IndexVector &dimensions, QDLC::Type::Scalar init_value ) {
+Tensor::Tensor( const IndexVector &dimensions, QDACC::Type::Scalar init_value ) {
     // Set dimensions
     tensor_dimensions = dimensions[0];
     different_dimensions = dimensions[2];
@@ -45,7 +45,7 @@ static inline std::string _get_tensor_name( const int index ) {
 
 void Tensor::save_to_file( const int index ) {
     const std::string file_name = _get_tensor_name( index );
-    auto &f_adm = QDLC::FileOutput::add_file( file_name, "adm" );
+    auto &f_adm = QDACC::FileOutput::add_file( file_name, "adm" );
     for ( auto i = 0; i < values.size(); i++ ) {
         const auto real = values[i].real();
         const auto imag = values[i].real();
@@ -79,7 +79,7 @@ void Tensor::make_indices_sparse(const double eps ) {
     const auto max_size = index_flat_to_index_vector_struct.size();
     index_flat_to_index_vector_struct_pruned.reserve( max_size );
     for (auto i = 0; i < values.size(); i++) {
-        if (QDLC::Math::abs2(values[i]) < eps) 
+        if (QDACC::Math::abs2(values[i]) < eps) 
             continue;
         non_zeros++;
         index_flat_to_index_vector_struct_pruned.push_back(index_flat_to_index_vector_struct[i]);

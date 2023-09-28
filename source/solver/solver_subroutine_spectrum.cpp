@@ -6,7 +6,7 @@
 // @param fileOutputName: [std::string] Name of output file
 // @return: [bool] True if calculations were sucessfull, else false
 
-bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution, int order, bool normalize, std::string s_g ) {
+bool QDACC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator, double frequency_center, double frequency_range, int resolution, int order, bool normalize, std::string s_g ) {
     // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading
     // s.parameters.numerics_maximum_secondary_threads = 1;
     // Calculate G1/2(t,tau) with given operator matrices
@@ -54,8 +54,8 @@ bool QDLC::Numerics::ODESolver::calculate_spectrum( System &s, const std::string
     }
     // Normalize
     if ( normalize ) {
-        Scalar vec_min = QDLC::Misc::vec_filter( out, []( const Scalar &a, const Scalar &b ) { return std::real( a ) < std::real( b ); } );
-        Scalar vec_max = QDLC::Misc::vec_filter( out, []( const Scalar &a, const Scalar &b ) { return std::real( a ) > std::real( b ); } );
+        Scalar vec_min = QDACC::Misc::vec_filter( out, []( const Scalar &a, const Scalar &b ) { return std::real( a ) < std::real( b ); } );
+        Scalar vec_max = QDACC::Misc::vec_filter( out, []( const Scalar &a, const Scalar &b ) { return std::real( a ) > std::real( b ); } );
         std::ranges::for_each( out, [&]( Scalar &val ) { val = ( val - vec_min ) / ( vec_max - vec_min ); } );
     }
     // Final output and timer end

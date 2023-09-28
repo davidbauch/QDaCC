@@ -3,7 +3,7 @@
 #include "system/operatormatrices.h"
 #include "system/parameters.h"
 
-namespace QDLC {
+namespace QDACC {
 
 class FileOutput {
    private:
@@ -31,4 +31,4 @@ class FileOutput {
     static void init( Parameters &p, OperatorMatrices &op );
 };
 
-} // namespace QDLC
+} // namespace QDACC

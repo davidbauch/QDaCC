@@ -1,6 +1,6 @@
 #include "solver/solver.h"
 
-std::pair<Sparse, double> QDLC::Numerics::iterate_definite_integral( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t, const double t_step, const int order ) {
+std::pair<Sparse, double> QDACC::Numerics::iterate_definite_integral( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t, const double t_step, const int order ) {
     if ( order == 4 ) {
         Sparse rk1 = rungefunction( rho, t );
         Sparse rk2 = rungefunction( rho + t_step * 0.5 * rk1, t + t_step * 0.5 );
@@ -30,10 +30,10 @@ std::pair<Sparse, double> QDLC::Numerics::iterate_definite_integral( const Spars
     return std::make_pair( ret, err );
 }
 
-std::vector<QDLC::SaveState> QDLC::Numerics::calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
+std::vector<QDACC::SaveState> QDACC::Numerics::calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
     double t_step = step;
-    std::vector<QDLC::SaveState> ret;
-    ret.emplace_back( QDLC::SaveState( rho, t0 ) );
+    std::vector<QDACC::SaveState> ret;
+    ret.emplace_back( QDACC::SaveState( rho, t0 ) );
 
     double t_t = t0;
     while ( t0 < t1 ? t_t <= t1 : t_t >= t1 ) {
@@ -68,7 +68,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::calculate_definite_integral_vec( co
         }
         if ( accept ) {
             t_t += t0 < t1 ? t_step : -t_step;
-            ret.emplace_back( QDLC::SaveState( rkret.first, t_t ) );
+            ret.emplace_back( QDACC::SaveState( rkret.first, t_t ) );
         }
         if ( order == 45 )
             t_step = t_step_new;
@@ -76,7 +76,7 @@ std::vector<QDLC::SaveState> QDLC::Numerics::calculate_definite_integral_vec( co
     return ret;
 }
 
-QDLC::SaveState QDLC::Numerics::calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
+QDACC::SaveState QDACC::Numerics::calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
     double t_step = step;
     double t_t = t0;
 

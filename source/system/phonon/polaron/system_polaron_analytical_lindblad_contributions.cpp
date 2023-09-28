@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 static double _expt_b_squared(const double phonon_b, const double scaling, const Scalar current_pulse) {
     return std::pow( std::abs( phonon_b * scaling * current_pulse ), 2.0 );

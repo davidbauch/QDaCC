@@ -3,7 +3,7 @@
 #include <Eigen/Dense>
 #include "typedef.h"
 
-namespace QDLC::Numerics {
+namespace QDACC::Numerics {
 
 /**
  * @brief Matrix Wrapper Class to save time-value pairs
@@ -166,4 +166,4 @@ class CacheMatrix {
     }
 };
 
-} // namespace QDLC::Numerics
+} // namespace QDACC::Numerics

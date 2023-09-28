@@ -2,7 +2,7 @@
 #include "solver/solver.h"
 #include "system/fileoutput.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 Chirp::Chirp( Parameters::universal_config &config, Parameters &p ) : Evaluable( config ) {
     const std::string type = config.string.at( "Type" );

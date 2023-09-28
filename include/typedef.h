@@ -5,7 +5,7 @@
 
 using namespace std::complex_literals;
 
-namespace QDLC::Type {
+namespace QDACC::Type {
 
 using Scalar = std::complex<double>;
 using Dense = Eigen::MatrixXcd;
@@ -21,9 +21,9 @@ using Index = uint64_t;
 
 template <typename T>
 using NestedVector = std::vector<std::vector<T>>;
-} // namespace QDLC::Type
+} // namespace QDACC::Type
 
-namespace QDLC::Message::Prefix {
+namespace QDACC::Message::Prefix {
 
 // TODO: remove handler output, deprecated!
 const std::string PERCENT = "@#PERCENT#@";
@@ -35,6 +35,6 @@ const std::string DEBUG = "@#DEBUG#@";
 const std::string OUTPUT = "@#OUTPUT#@";
 const std::string SUFFIX = "@#SUFFIX#@";
 
-} // namespace QDLC::Message::Prefix
+} // namespace QDACC::Message::Prefix
 
-// namespace QDLC
+// namespace QDACC

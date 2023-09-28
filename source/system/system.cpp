@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 System::System( const std::vector<std::string> &input ) {
     Log::L2( "[System] Creating System Class\n" );
@@ -41,7 +41,7 @@ bool System::init_system() {
     //     savedCoefficients.reserve( parameters.numerics_saved_coefficients_max_size );
 
     // Output Phonon functions if phonons are active
-    if ( parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral ) {
+    if ( parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
         initialize_path_integral_functions();
     } else {
         initialize_polaron_frame_functions();
@@ -57,7 +57,7 @@ bool System::init_system() {
     return true;
 }
 
-Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const double t, std::vector<QDLC::SaveState> &past_rhos ) {
+Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const double t, std::vector<QDACC::SaveState> &past_rhos ) {
     std::vector<Sparse> ret( 5, Sparse( rho.rows(), rho.cols() ) );
     // #pragma omp parallel sections num_threads( parameters.numerics_maximum_secondary_threads )
     {
@@ -107,7 +107,7 @@ Sparse System::dgl_runge_function( const Sparse &rho, const Sparse &H, const dou
             Log::L3( "[System] Pure Dephasing:\n{}\n", Dense( ret[3] ).format( operatorMatrices.output_format ) );
         }
     }
-    if ( parameters.numerics_phonon_approximation_order != QDLC::PhononApproximation::PathIntegral && parameters.p_phonon_T >= 0.0 ) {
+    if ( parameters.numerics_phonon_approximation_order != QDACC::PhononApproximation::PathIntegral && parameters.p_phonon_T >= 0.0 ) {
         ret[4] = dgl_phonons_pmeq( rho, t, past_rhos );
         Log::L3( "[System] Phonons PME:\n{}\n", Dense( ret[4] ).format( operatorMatrices.output_format ) );
     }
@@ -118,7 +118,7 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
     if ( parameters.numerics_use_interactionpicture ) {
         Log::L3( "[System] Time Transforming at t = {}, initial Matrix:\n{}\n", t, Dense( ret ).format( operatorMatrices.output_format ) );
         // TIMETRANSFORMATION_ANALYTICAL
-        if ( parameters.numerics_order_timetrafo == QDLC::TransformationOrder::Analytical ) {
+        if ( parameters.numerics_order_timetrafo == QDACC::TransformationOrder::Analytical ) {
             // std::vector<Eigen::Triplet<Scalar>> ret_v;
             for ( int k = 0; k < ret.outerSize(); ++k ) {
                 for ( Sparse::InnerIterator it( ret, k ); it; ++it ) {
@@ -130,8 +130,8 @@ Sparse System::dgl_timetrafo( Sparse ret, const double t ) {
                 }
             }
         }
-        // QDLC::TransformationOrder::MatrixExponential
-        else if ( parameters.numerics_order_timetrafo == QDLC::TransformationOrder::MatrixExponential ) {
+        // QDACC::TransformationOrder::MatrixExponential
+        else if ( parameters.numerics_order_timetrafo == QDACC::TransformationOrder::MatrixExponential ) {
             Sparse U = ( Dense( 1.i * operatorMatrices.H_0 * t ).exp() ).sparseView();
             ret = ( U * ret * U.adjoint() ).eval(); // aliasing?
         }
@@ -160,7 +160,7 @@ Sparse System::dgl_pulse( const double t ) {
     return ret;
 }
 
-void System::calculate_expectation_values( const std::vector<QDLC::SaveState> &rhos, Timer &evalTimer ) {
+void System::calculate_expectation_values( const std::vector<QDACC::SaveState> &rhos, Timer &evalTimer ) {
     // Output expectation Values
     double t_pre = rhos.front().t;
     for ( auto &tup : rhos ) {
@@ -263,7 +263,7 @@ bool System::trace_valid( Sparse &rho, double t_hit, bool force ) {
     parameters.trace.emplace_back( trace );
     if ( trace < 0.99 || trace > 1.01 || force ) {
         if ( force )
-            fmt::print( "[System] {} Error -> trace check failed at t = {} with trace(rho) = {}\n", QDLC::Message::Prefix::PERROR, t_hit, trace );
+            fmt::print( "[System] {} Error -> trace check failed at t = {} with trace(rho) = {}\n", QDACC::Message::Prefix::PERROR, t_hit, trace );
         auto &fp_trace = FileOutput::add_file( "trace" );
         for ( int i = 0; i < (int)parameters.trace.size() && parameters.t_step * 1.0 * i < t_hit; i++ ) {
             fp_trace << fmt::format( "{:.10e} {:.15e}\n", parameters.t_step * 1.0 * ( i + 1 ), parameters.trace.at( i ) );

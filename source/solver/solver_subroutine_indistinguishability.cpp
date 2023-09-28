@@ -1,6 +1,6 @@
 #include "solver/solver_ode.h"
 
-bool QDLC::Numerics::ODESolver::calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
+bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator ) {
     // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading
     s.parameters.numerics_maximum_secondary_threads = 1;
     // Progress

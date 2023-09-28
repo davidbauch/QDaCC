@@ -4,7 +4,7 @@
 #include <vector>
 #include <algorithm>
 
-namespace QDLC {
+namespace QDACC {
 
 namespace String {
 
@@ -55,4 +55,4 @@ std::string add_prefix_and_suffix( std::string input, const std::string &tochang
 
 } // namespace String
 
-} // namespace QDLC
+} // namespace QDACC

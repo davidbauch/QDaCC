@@ -12,7 +12,7 @@ Let Mode be G1-hbd-vb: Do not apply Mask
 ...
 */
 
-void QDLC::Numerics::ODESolver::initialize_detector_functions( System &s, CacheMatrix &mat ) {
+void QDACC::Numerics::ODESolver::initialize_detector_functions( System &s, CacheMatrix &mat ) {
     const auto dim = mat.dim();
     auto &config_time = s.parameters.input_conf["DetectorTime"];
     // Initialize Temporal Mask
@@ -115,7 +115,7 @@ void QDLC::Numerics::ODESolver::initialize_detector_functions( System &s, CacheM
     }
 }
 
-void QDLC::Numerics::ODESolver::apply_detector_function( System &s, CacheMatrix &mat, const std::string &mat_mode ) {
+void QDACC::Numerics::ODESolver::apply_detector_function( System &s, CacheMatrix &mat, const std::string &mat_mode ) {
     // If both masks are empty, calculate them
     if ( detector_temporal_mask.empty() and detector_frequency_mask.empty() )
         initialize_detector_functions( s, mat );

@@ -1,7 +1,7 @@
 #include "solver/solver_ode.h"
 
 // TODO: maybe we can only evaluate the oupper triangle matrix, then write a getter function that checks if j>i, return mat[i,j].dagger(). Test with samples if (i,j) = (j,i).dagger()!!
-std::vector<std::vector<Sparse>> &QDLC::Numerics::ODESolver::calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<QDLC::SaveState> &output ) {
+std::vector<std::vector<Sparse>> &QDACC::Numerics::ODESolver::calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<QDACC::SaveState> &output ) {
     if ( pathint_propagator.contains( t0 ) ) {
         return pathint_propagator[t0];
     }

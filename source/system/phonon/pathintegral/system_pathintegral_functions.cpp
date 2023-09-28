@@ -1,6 +1,6 @@
 #include "system/system.h"
 
-using namespace QDLC;
+using namespace QDACC;
 
 void System::initialize_path_integral_functions() {
     Log::L2( "[System-Path-Integral] Initializing Path-Integral functions...\n" );

@@ -1,8 +1,8 @@
 #include "solver/solver_ode.h"
 
-bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
+bool QDACC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
     Log::L2("[Dot-Visualizer] Starting to output dot file to path.dot\n");
-    std::vector<QDLC::SaveState> dummy{ { rho0, 0.0 } };
+    std::vector<QDACC::SaveState> dummy{ { rho0, 0.0 } };
     auto &fp_dot = FileOutput::add_file( "path", "dot" );
     fp_dot << "digraph G{{\ngraph [pad=\"0.5\", nodesep=\"0.1\", ranksep=\"3\", rankdir=\"TB\"]\n";
 
@@ -115,7 +115,7 @@ bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
 
     // Path Integral Mappings
     try {
-        if ( s.parameters.p_phonon_T < 0 or s.parameters.numerics_phonon_approximation_order != QDLC::PhononApproximation::PathIntegral )
+        if ( s.parameters.p_phonon_T < 0 or s.parameters.numerics_phonon_approximation_order != QDACC::PhononApproximation::PathIntegral )
             throw std::runtime_error( "Phonon Path Integral Kernel is only available for Path Integral Phonons." );
         fp_dot << fmt::format( "\n\"Phonon Kernel\" [pos=\"0,-1!\", color=\"dodgerblue2\"]\n" );
         // Phonon correlation function:
@@ -140,7 +140,7 @@ bool QDLC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
     }
     // Polaron Frame Mapping
     try {
-        if ( s.parameters.p_phonon_T < 0 or s.parameters.numerics_phonon_approximation_order == QDLC::PhononApproximation::PathIntegral )
+        if ( s.parameters.p_phonon_T < 0 or s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral )
             throw std::runtime_error( "Phonon PME Kernel is only available for PME Phonons." );
         s.initialize_polaron_frame_functions();
         fp_dot << fmt::format( "\n\"Polaron Mapping\" [pos=\"3,-1!\", color=\"firebrick4\"]\n" );

@@ -56,12 +56,12 @@ std::ostream &operator<<( std::ostream &os, const std::vector<T> &v ) {
 #include "solver/solver_tensor_map.h"
 
 #include "typedef.h"
-using namespace QDLC::Type;
+using namespace QDACC::Type;
 
 #include "system/savestate.h"
 
 // Global Enums
-namespace QDLC {
+namespace QDACC {
 
 // Time Transformation order including analytical and matrix exponential
 enum class TransformationOrder {
@@ -86,4 +86,4 @@ enum class PhononApproximation {
     PathIntegral
 };
 
-} // namespace QDLC
+} // namespace QDACC

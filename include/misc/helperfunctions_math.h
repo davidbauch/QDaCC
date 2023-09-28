@@ -6,7 +6,7 @@
 #include "misc/helperfunctions_math.h"
 #include "typedef.h"
 
-namespace QDLC {
+namespace QDACC {
 
 namespace Math {
 
@@ -36,11 +36,11 @@ double factorial( double n );
 
 double factorial_range( double upper, double lower );
 
-QDLC::Type::Scalar getCoherent( QDLC::Type::Scalar alpha, double N );
+QDACC::Type::Scalar getCoherent( QDACC::Type::Scalar alpha, double N );
 
-QDLC::Type::Scalar getThermal( QDLC::Type::Scalar alpha, double N );
+QDACC::Type::Scalar getThermal( QDACC::Type::Scalar alpha, double N );
 
-QDLC::Type::Scalar getSqueezed( double r, double phi, double N );
+QDACC::Type::Scalar getSqueezed( double r, double phi, double N );
 
 bool is_number( const std::string &s );
 bool is_number( const char &s );
@@ -52,4 +52,4 @@ double abs2( const T &v1 ) {
 
 } // namespace Math
 
-} // namespace QDLC
+} // namespace QDACC

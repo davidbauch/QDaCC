@@ -1,7 +1,7 @@
 #include "solver/solver_ode.h"
 #include "solver/solver.h"
 
-Sparse QDLC::Numerics::ODESolver::iterateRungeKutta4( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates ) {
+Sparse QDACC::Numerics::ODESolver::iterateRungeKutta4( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-4 ausrechnen
     Sparse H_calc_k1 = getHamilton( s, t );
     Sparse H_calc_k23 = getHamilton( s, t + t_step * 0.5 );
@@ -15,7 +15,7 @@ Sparse QDLC::Numerics::ODESolver::iterateRungeKutta4( const Sparse &rho, System 
     return rho + t_step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
 } 
 
-Sparse QDLC::Numerics::ODESolver::iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates ) {
+Sparse QDACC::Numerics::ODESolver::iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-6 ausrechnen
     Sparse H_calc_k1 = getHamilton( s, t );
     Sparse H_calc_k2 = getHamilton( s, t + RKCoefficients::a2 * t_step );
@@ -34,7 +34,7 @@ Sparse QDLC::Numerics::ODESolver::iterateRungeKutta5( const Sparse &rho, System 
     return rho + t_step * ( RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6 );
 }
 
-std::pair<Sparse, double> QDLC::Numerics::ODESolver::iterateRungeKutta45( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates ) {
+std::pair<Sparse, double> QDACC::Numerics::ODESolver::iterateRungeKutta45( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-6 ausrechnen
     Sparse H_calc_k1 = getHamilton( s, t );
     Sparse H_calc_k2 = getHamilton( s, t + RKCoefficients::a2 * t_step );
@@ -62,13 +62,13 @@ std::pair<Sparse, double> QDLC::Numerics::ODESolver::iterateRungeKutta45( const 
     return std::make_pair( ret, err );
 }
 
-Sparse QDLC::Numerics::ODESolver::iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDLC::SaveState> &savedStates ) {
+Sparse QDACC::Numerics::ODESolver::iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
     if ( s.parameters.numerics_rk_order == 4 )
         return iterateRungeKutta4( rho, s, t, t_step, savedStates );
     return iterateRungeKutta5( rho, s, t, t_step, savedStates );
 }
 
-bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output ) {
+bool QDACC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output ) {
     if ( s.parameters.numerics_rk_order == 45 ) {
         return calculate_runge_kutta_45( rho0, t_start, t_end, rkTimer, progressbar, progressbar_name, s, output, do_output );
     }
@@ -117,7 +117,7 @@ bool QDLC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_st
     return true;
 }
 
-bool QDLC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDLC::SaveState> &output, bool do_output ) {
+bool QDACC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output ) {
     double t_step = s.parameters.numerics_rk_stepmin;
     auto numerics_output_rkerror = s.parameters.output_dict.contains( "rkerror" );
     // Find local tolerance
