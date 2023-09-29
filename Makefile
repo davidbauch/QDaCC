@@ -12,7 +12,7 @@ VERSION ?= 1.0.0
 
 SRCS := $(shell find $(SRC_DIRS) -name "*.cpp")
 
-INC_DIRS := include/ external/ #$(shell find $(SRC_DIRS) -type d)
+INC_DIRS := include/ external/ submodules/Eigen/ #$(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 LIB_DIRS :=  #$(shell find $(SRC_DIRS) -type d)
@@ -28,7 +28,7 @@ endif
 # ADjust os dependent stuff
 ifeq ($(OS),Windows_NT)
 	LIB_FLAGS += -std=c++2b
-	TARGET_DIR = ../../Threadhandler
+	TARGET_DIR = ../Threadhandler
 	TARGET_EXEC := QDaCC-$(VERSION).exe
 	TARGET_EXEC_LATEST := QDaCC.exe
 	BUILD_DIR = ./build/win
