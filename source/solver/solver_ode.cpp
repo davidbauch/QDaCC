@@ -73,8 +73,8 @@ std::tuple<std::string, std::string> QDACC::Numerics::ODESolver::get_operator_st
             s_creator += "+";
             s_annihilator += "+";
         }
-        // If there is a user provided creator-annihilator differentiation using the "=" operator, split at "="
-        if (split_s_op.contains("=")) {
+        // If there is a user provided creator-annihilator differentiation using the "," operator, split at ","
+        if (split_s_op.contains(",")) {
             auto ops = QDACC::String::splitline( split_s_op, '=' );
             if ( s.operatorMatrices.el_transitions.contains( ops.at(0) ) )
                 s_creator += ops.at(0);
