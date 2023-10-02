@@ -57,7 +57,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
             for ( int l = 0; l < current_detector_temporal_mask.cols(); l++ ) {
                 const auto tau = gmat.tau( l );
                 const auto val = std::real( current_detector_temporal_mask( k, l ) );
-                f_detector << fmt::format( "{}\t{}\t{:.8e}\n", t, tau, val );
+                f_detector << std::format( "{}\t{}\t{:.8e}\n", t, tau, val );
             }
             f_detector << "\n";
         }
@@ -68,7 +68,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
         auto &f_detector = FileOutput::add_file( "detector_spectral_mask_" + mode );
         f_detector << "Omega\tD(omega)\n";
         for ( const auto &[omega, amplitude, delta_omega] : current_detector_frequency_mask ) {
-            f_detector << fmt::format( "{:.8e}\t{:.8e}\n", omega, amplitude );
+            f_detector << std::format( "{:.8e}\t{:.8e}\n", omega, amplitude );
         }
         f_detector.close();
     }
@@ -100,7 +100,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                     for ( int l = 0; l < dim; l++ ) {
                         double t_tau = gmat.tau( l, k );
                         const auto el = gmat( k, l );
-                        f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_t, t_tau, std::abs( el ), std::real( el ), std::imag( el ) );
+                        f_gfunc << std::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_t, t_tau, std::abs( el ), std::real( el ), std::imag( el ) );
                     }
                     f_gfunc << "\n";
                 }
@@ -129,7 +129,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
             if ( gs_s.string_v["Integrated"][i] == "time" || gs_s.string_v["Integrated"][i] == "both" ) {
                 Log::L2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
                 auto &f_gfunc = FileOutput::add_file( purpose );
-                f_gfunc << fmt::format( "Time\tReal(g{0}(tau))\tImag(g{0}(tau))\tReal(G{0}(t,0))\tImag(G{0}(t,0))\tReal(g{0}(0))\tImag(g{0}(0))\tReal(G2pop(t))\tImag(G2pop(t))\n", order );
+                f_gfunc << std::format( "Time\tReal(g{0}(tau))\tImag(g{0}(tau))\tReal(G{0}(t,0))\tImag(G{0}(t,0))\tReal(g{0}(0))\tImag(g{0}(0))\tReal(G2pop(t))\tImag(G2pop(t))\n", order );
                 for ( int l = 0; l < topv.size(); l++ ) {
                     Scalar g2oftau = 0; // integral_t G(t,tau) dt -> g(tau)
                     for ( int k = 0; k < gmat.dim(); k++ ) {
@@ -140,7 +140,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                     const auto tau_index = rho_index_map[t_tau];
                     Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * creator * annihilator * annihilator, t_tau ); // G2(0)
                     Scalar g2pop = std::pow(s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * annihilator, t_tau ),2.0); // Gpop(t,t+tau=0)
-                    f_gfunc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_tau, std::real( g2oftau ), std::imag( g2oftau ), std::real( g2oft ), std::imag( g2oft ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ), std::real(g2pop), std::imag(g2pop) );
+                    f_gfunc << std::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_tau, std::real( g2oftau ), std::imag( g2oftau ), std::real( g2oft ), std::imag( g2oft ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ), std::real(g2pop), std::imag(g2pop) );
                 }
             }
         }
@@ -155,9 +155,9 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
     for ( auto &[mode, data] : to_output["Spectrum"] ) {
         Log::L2( "[PhotonStatistics] Saving Emission Spectrum to spectrum_" + mode + ".txt...\n" );
         auto &f_spectrum = FileOutput::add_file( "spectrum_" + mode );
-        f_spectrum << fmt::format( "Omega\t{}\n", mode );
+        f_spectrum << std::format( "Omega\t{}\n", mode );
         for ( int i = 0; i < to_output["Spectrum"][mode].size(); i++ ) {
-            f_spectrum << fmt::format( "{:.8e}\t{:.8e}\n", std::real( to_output["Spectrum_frequency"][mode][i] ), std::real( to_output["Spectrum"][mode][i] ) );
+            f_spectrum << std::format( "{:.8e}\t{:.8e}\n", std::real( to_output["Spectrum_frequency"][mode][i] ), std::real( to_output["Spectrum"][mode][i] ) );
         }
     }
     for ( auto &[mode, data] : to_output["Indist"] ) {
@@ -165,9 +165,9 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
             continue;
         Log::L2( "[PhotonStatistics] Saving Indistinguishability and Visibility to indist_" + mode + ".txt...\n" );
         auto &f_indist = FileOutput::add_file( "indist_" + mode );
-        f_indist << fmt::format( "Time\tIndist_{}\tVisibility_{}\n", mode, mode );
+        f_indist << std::format( "Time\tIndist_{}\tVisibility_{}\n", mode, mode );
         for ( int i = 0; i < to_output["Indist"][mode].size(); i++ ) {
-            f_indist << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Indist"]["Time"][i] ), std::real( to_output["Indist"][mode][i] ), std::real( to_output["Visibility"][mode][i] ) );
+            f_indist << std::format( "{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Indist"]["Time"][i] ), std::real( to_output["Indist"][mode][i] ), std::real( to_output["Visibility"][mode][i] ) );
         }
     }
     for ( auto &[mode, data] : to_output["Conc"] ) {
@@ -175,15 +175,15 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
             continue;
         Log::L2( "[PhotonStatistics] Saving Concurrence to conc_" + mode + ".txt...\n" );
         auto &f_conc = FileOutput::add_file( "conc_" + mode );
-        f_conc << fmt::format( "Time\t{0}\t{0}_simple\t{0}_analytical\t{0}_fidelity\t{0}(g2(0))\t{0}_simple(g2(0))\t{0}_fidelity(g2(0))\n", mode );
+        f_conc << std::format( "Time\t{0}\t{0}_simple\t{0}_analytical\t{0}_fidelity\t{0}(g2(0))\t{0}_simple(g2(0))\t{0}_fidelity(g2(0))\n", mode );
         for ( int i = 0; i < to_output["Conc"][mode].size(); i++ ) {
-            f_conc << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ), std::real( to_output["Conc_analytical"][mode][i] ), std::real( to_output["Conc_fidelity"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ), std::real( to_output["Conc_g2zero_fidelity"][mode][i] ) );
+            f_conc << std::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output["Conc"][mode][i] ), std::real( to_output["Conc_simple"][mode][i] ), std::real( to_output["Conc_analytical"][mode][i] ), std::real( to_output["Conc_fidelity"][mode][i] ), std::real( to_output["Conc_g2zero"][mode][i] ), std::real( to_output["Conc_g2zero_simple"][mode][i] ), std::real( to_output["Conc_g2zero_fidelity"][mode][i] ) );
         }
         if ( s.parameters.output_dict.contains( "conc" ) ) {
             auto &f_ev = FileOutput::add_file( "conc_eigenvalues_" + mode );
-            f_ev << fmt::format( "Time\tRe({0})_0\tRe({0})_1\tRe({0})_2\tRe({0})_3\tIm({0})_0\tIm({0})_1\tIm({0})_2\tIm({0})_3\n", mode );
+            f_ev << std::format( "Time\tRe({0})_0\tRe({0})_1\tRe({0})_2\tRe({0})_3\tIm({0})_0\tIm({0})_1\tIm({0})_2\tIm({0})_3\n", mode );
             for ( int i = 0; i < to_output["Conc"][mode].size(); i++ ) {
-                f_ev << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 0 ) ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 1 ) ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 2 ) ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 3 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 0 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 1 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 2 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 3 ) ) );
+                f_ev << std::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( to_output["Conc"]["Time"][i] ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 0 ) ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 1 ) ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 2 ) ), std::real( to_output_m["ConcEV"][mode + "_EV"][i]( 3 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 0 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 1 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 2 ) ), std::imag( to_output_m["ConcEV"][mode + "_EV"][i]( 3 ) ) );
             }
         }
     }
@@ -192,9 +192,9 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
             continue;
         Log::L2( "[PhotonStatistics] Saving Raman Population to raman_" + mode + ".txt...\n" );
         auto &f_raman = FileOutput::add_file( "raman_" + mode );
-        f_raman << fmt::format( "Time\t{0}\tEM({0})\n", mode );
+        f_raman << std::format( "Time\t{0}\tEM({0})\n", mode );
         for ( int i = 0; i < to_output["Raman"][mode].size(); i++ ) {
-            f_raman << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", get_time_at( i ), std::real( to_output["Raman"][mode][i] ), std::real( to_output["RamanEmProb"][mode][i] ) );
+            f_raman << std::format( "{:.8e}\t{:.8e}\t{:.8e}\n", get_time_at( i ), std::real( to_output["Raman"][mode][i] ), std::real( to_output["RamanEmProb"][mode][i] ) );
         }
     }
     if ( s.parameters.output_dict.contains( "tpm" ) )
@@ -207,26 +207,26 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
             std::vector<std::string> modes = { "11", "12", "21", "22" };
             for ( int k = 0; k < 4; k++ ) {
                 for ( int l = 0; l < 4; l++ ) {
-                    f_twophot << fmt::format( "Re({}{})\t", modes[k], modes[l] );
+                    f_twophot << std::format( "Re({}{})\t", modes[k], modes[l] );
                 }
             }
             for ( int k = 0; k < 4; k++ ) {
                 for ( int l = 0; l < 4; l++ ) {
-                    f_twophot << fmt::format( "Im({}{})\t", modes[k], modes[l] );
+                    f_twophot << std::format( "Im({}{})\t", modes[k], modes[l] );
                 }
             }
             f_twophot << "\n";
             for ( int i = 0; i < to_output_m["TwoPMat"][mode].size(); i++ ) {
-                fmt::print( f_twophot, "{:.8e}\t", std::real( to_output["Conc"]["Time"][i] ) );
+                f_twophot << std::format("{:.8e}\t", std::real( to_output["Conc"]["Time"][i] ) );
                 auto &mat = to_output_m["TwoPMat"][mode][i];
                 for ( int k = 0; k < 4; k++ ) {
                     for ( int l = 0; l < 4; l++ ) {
-                        f_twophot << fmt::format( "{:.8e}\t", std::real( mat( k, l ) ) );
+                        f_twophot << std::format( "{:.8e}\t", std::real( mat( k, l ) ) );
                     }
                 }
                 for ( int k = 0; k < 4; k++ ) {
                     for ( int l = 0; l < 4; l++ ) {
-                        f_twophot << fmt::format( "{:.8e}", std::imag( mat( k, l ) ) );
+                        f_twophot << std::format( "{:.8e}", std::imag( mat( k, l ) ) );
                         if ( k == 3 && l == 3 )
                             f_twophot << "\n";
                         else
@@ -248,18 +248,18 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
             if ( base == 0 ) {
                 for ( auto &[name, dat] : s.parameters.input_electronic )
                     for ( auto &[name2, dat2] : s.parameters.input_electronic )
-                        f_wigner << fmt::format( "Re(|{}><{}|)\t", name, name2 );
+                        f_wigner << std::format( "Re(|{}><{}|)\t", name, name2 );
                 for ( auto &[name, dat] : s.parameters.input_electronic )
                     for ( auto &[name2, dat2] : s.parameters.input_electronic )
-                        f_wigner << fmt::format( "Im(|{}><{}|)\t", name, name2 );
+                        f_wigner << std::format( "Im(|{}><{}|)\t", name, name2 );
                 f_wigner << "\n";
             } else {
                 for ( int i = 0; i < data[0].rows(); i++ )
                     for ( int j = 0; j < data[0].rows(); j++ )
-                        f_wigner << fmt::format( "Re(|{}_{}><{}_{}|)\t", smode, i, smode, j );
+                        f_wigner << std::format( "Re(|{}_{}><{}_{}|)\t", smode, i, smode, j );
                 for ( int i = 0; i < data[0].rows(); i++ )
                     for ( int j = 0; j < data[0].rows(); j++ ) {
-                        f_wigner << fmt::format( "Im(|{}_{}><{}_{}|)", smode, i, smode, j );
+                        f_wigner << std::format( "Im(|{}_{}><{}_{}|)", smode, i, smode, j );
                         if ( i == data[0].rows() - 1 && j == data[0].rows() - 1 )
                             f_wigner << "\n";
                         else
@@ -267,19 +267,19 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                     }
             }
         } else {
-            f_wigner << fmt::format( "Time\t{}\n", mode );
+            f_wigner << std::format( "Time\t{}\n", mode );
         }
         for ( int i = 0; i < data.size(); i++ ) {
-            f_wigner << fmt::format( "{:.8e}\t", std::real( to_output["Wigner"]["Time"][i] ) );
+            f_wigner << std::format( "{:.8e}\t", std::real( to_output["Wigner"]["Time"][i] ) );
             auto &currentwigner = data[i];
             for ( int k = 0; k < currentwigner.rows(); k++ ) {
                 for ( int l = 0; l < currentwigner.cols(); l++ ) {
-                    f_wigner << fmt::format( "{:.8e}\t", std::real( currentwigner( k, l ) ) );
+                    f_wigner << std::format( "{:.8e}\t", std::real( currentwigner( k, l ) ) );
                 }
             }
             for ( int k = 0; k < currentwigner.rows(); k++ ) {
                 for ( int l = 0; l < currentwigner.cols(); l++ ) {
-                    f_wigner << fmt::format( "{:.8e}", std::imag( currentwigner( k, l ) ) );
+                    f_wigner << std::format( "{:.8e}", std::imag( currentwigner( k, l ) ) );
                     if ( k == currentwigner.rows() - 1 && l == currentwigner.cols() - 1 )
                         f_wigner << "\n";
                     else

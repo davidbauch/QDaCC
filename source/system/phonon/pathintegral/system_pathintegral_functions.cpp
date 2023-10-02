@@ -38,9 +38,9 @@ void System::initialize_path_integral_functions() {
     // Output Phonon Functions
     if ( parameters.output_dict.contains( "PIkernel" ) ) {
         auto &file = FileOutput::add_file( "phonon_PI" );
-        file << fmt::format( "t\tabs(K(t))\treal(K(t))\timag(K(t))\tabs(K(t))\treal(K(t))\timag(K(t))\n" );
+        file << std::format( "t\tabs(K(t))\treal(K(t))\timag(K(t))\tabs(K(t))\treal(K(t))\timag(K(t))\n" );
         for ( int i = 0; i < phi_vector_int.size(); i++ ) {
-            file << fmt::format( "{}\t{}\t{}\t{}\n", parameters.t_step_pathint * i, std::abs( phi_vector_int[i] ), std::real( phi_vector_int[i] ), std::imag( phi_vector_int[i] ) );
+            file << std::format( "{}\t{}\t{}\t{}\n", parameters.t_step_pathint * i, std::abs( phi_vector_int[i] ), std::real( phi_vector_int[i] ), std::imag( phi_vector_int[i] ) );
         }
         file.close();
     }

@@ -103,7 +103,7 @@ std::string Timer::format( double in ) {
     int m = std::floor( ( in - 3600. * h ) / 60 );
     int s = std::floor( ( in - 3600 * h - 60 * m ) );
     double ms = ( in - std::floor( in ) ) * 1000;
-    return fmt::format( "{}{}{}{}{}{}{:.3f}{}", h > 0 ? std::to_string( h ) : "", h > 0 ? "h:" : "", m > 0 ? std::to_string( m ) : "", m > 0 ? "m:" : "", s > 0 ? std::to_string( s ) : "", s > 0 ? "s:" : "", ms, "ms" );
+    return std::format( "{}{}{}{}{}{}{:.3f}{}", h > 0 ? std::to_string( h ) : "", h > 0 ? "h:" : "", m > 0 ? std::to_string( m ) : "", m > 0 ? "m:" : "", s > 0 ? std::to_string( s ) : "", s > 0 ? "s:" : "", ms, "ms" );
 }
 
 // returns total time taken
@@ -147,18 +147,18 @@ void Timers::IoutputProgressBar( Timer &t, ProgressBar &p, const unsigned int cu
         if ( state == WAITING ) {
             p.wait( "", suffix );
         } else if ( state == PROGRESS_FORCE_OUTPUT ) {
-            p.print( max_iter_total, max_iter_total, fmt::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
-            fmt::print( "\n" );
+            p.print( max_iter_total, max_iter_total, std::format( "T: {}", Timer::format( t.getWallTime() ) ), suffix );
+            std::cout << std::format( "\n" );
         } else {
             const double time_remaining = t.getWallTimeOnce() / current_iter * ( max_iter_total - current_iter );
-            p.print( current_iter, max_iter_total, fmt::format( "T - {}", Timer::format( time_remaining ) ), suffix );
+            p.print( current_iter, max_iter_total, std::format( "T - {}", Timer::format( time_remaining ) ), suffix );
         }
     }
 }
 void Timers::IoutputTimeStrings( Timer &t, const unsigned int current_iter, const unsigned int max_iter_total, const std::string &suffix, bool final ) {
     if ( t.doOutput() || final ) {
-        fmt::print( "{0}\t{1:.2f}\n", QDACC::Message::Prefix::PERCENT, ( current_iter / (double)max_iter_total * 100. ) );
-        fmt::print( "{0}\t{1:.0f}\n", QDACC::Message::Prefix::PERCENT_TIME, 1.0 * max_iter_total / current_iter * t.getWallTimeOnce() );
-        fmt::print( "{0}\t{1}\n", QDACC::Message::Prefix::SUFFIX, suffix );
+        std::cout << std::format( "{0}\t{1:.2f}\n", QDACC::Message::Prefix::PERCENT, ( current_iter / (double)max_iter_total * 100. ) );
+        std::cout << std::format( "{0}\t{1:.0f}\n", QDACC::Message::Prefix::PERCENT_TIME, 1.0 * max_iter_total / current_iter * t.getWallTimeOnce() );
+        std::cout << std::format( "{0}\t{1}\n", QDACC::Message::Prefix::SUFFIX, suffix );
     }
 }

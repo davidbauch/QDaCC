@@ -3,7 +3,50 @@
 // --> no 2d interpolation needed then
 
 #include "solver/solver.h"
+/*
+void monotone_cubic_interpolation(const std::vector<double>& x, const std::vector<double>& y, int N, std::vector<double>& xi, std::vector<double>& yi) {
+    int n = x.size();
+    std::vector<double> h(n), alpha(n), l(n), mu(n), z(n), c(n), b(n), d(n);
 
+    for (int i = 0; i < n-1; i++) {
+        h[i] = x[i+1] - x[i];
+    }
+
+    for (int i = 1; i < n-1; i++) {
+        alpha[i] = 3/h[i]*(y[i+1]-y[i]) - 3/h[i-1]*(y[i]-y[i-1]);
+    }
+
+    l[0] = 1;
+    mu[0] = z[0] = 0;
+
+    for (int i = 1; i < n-1; i++) {
+        l[i] = 2*(x[i+1]-x[i-1]) - h[i-1]*mu[i-1];
+        mu[i] = h[i]/l[i];
+        z[i] = (alpha[i]-h[i-1]*z[i-1])/l[i];
+    }
+
+    l[n-1] = 1;
+    z[n-1] = c[n-1] = 0;
+
+    for (int i = n-2; i >= 0; i--) {
+        c[i] = z[i] - mu[i]*c[i+1];
+        b[i] = (y[i+1]-y[i])/h[i] - h[i]*(c[i+1]+2*c[i])/3;
+        d[i] = (c[i+1]-c[i])/(3*h[i]);
+    }
+
+    xi.resize(N);
+    yi.resize(N);
+
+    for (int i = 0; i < N; i++) {
+        double t = (x[n-1]-x[0])/(N-1)*i + x[0];
+        int j = 0;
+        while (j < n-1 && t > x[j+1]) j++;
+        double dx = t - x[j];
+        xi[i] = t;
+        yi[i] = y[j] + b[j]*dx + c[j]*dx*dx + d[j]*dx*dx*dx;
+    }
+}
+*/
 // TODO: implement monotone interpolation of vector here.
 // FIXME: das hier ist iwie falsch und fuckt dasgitter ab!
 std::vector<QDACC::SaveState> QDACC::Numerics::interpolate_curve( const std::vector<QDACC::SaveState> &input, double t_start, double t_end, const std::vector<double> &t_values, const std::vector<double> &t_steps, const std::map<double, size_t> &t_index, int order, bool output_handler ) {
@@ -123,7 +166,7 @@ std::vector<QDACC::SaveState> QDACC::Numerics::interpolate_curve( const std::vec
             Sparse mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
             ret.push_back( { mat, t_t } );
         }
-    } else if ( order == 1 ) {
+    } /*else if ( order == 1 ) {
         // Quintic Hermite Interpolation
         Log::L2( "[Interpolator] Using Quintic Hermite Interpolation...\n" );
         // Derivatives
@@ -248,7 +291,7 @@ std::vector<QDACC::SaveState> QDACC::Numerics::interpolate_curve( const std::vec
         }
         interpolateTimer.end();
         Timers::outputProgress( interpolateTimer, progressbar, interpolateTimer.getTotalIterationNumber(), interpolateTimer.getTotalIterationNumber(), "Monotone Spline Interpolation", true );
-    }
+    }*/
     Log::L3( "[Interpolator] Done Interpolating!\n" );
     return ret;
 }

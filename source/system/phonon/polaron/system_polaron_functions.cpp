@@ -27,18 +27,18 @@ void System::initialize_polaron_frame_functions() {
         // Output Phonon Functions.
         if ( parameters.output_dict.contains( "greenf" ) ) {
             auto &file = FileOutput::add_file( "phonon_greenfunctions" );
-            file << fmt::format( "t\treal(phi(t))\timag(phi(t))\treal(g_u(t))\timag(g_u(t))\treal(g_g(t))\timag(g_g(t))\n" );
+            file << std::format( "t\treal(phi(t))\timag(phi(t))\treal(g_u(t))\timag(g_u(t))\treal(g_g(t))\timag(g_g(t))\n" );
             for ( double t = parameters.t_start; t <= parameters.p_phonon_tcutoff; t += parameters.numerics_subiterator_stepsize ) {
                 auto greenu = dgl_phonons_greenf( t, 'u' );
                 auto greeng = dgl_phonons_greenf( t, 'g' );
-                file << fmt::format( "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi_vector[t] ), std::imag( phi_vector[t] ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
+                file << std::format( "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi_vector[t] ), std::imag( phi_vector[t] ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
             }
         }
         if ( parameters.output_dict.contains( "phononJ" ) ) {
             auto &file = FileOutput::add_file( "phonon_spectral" );
-            file << fmt::format( "omega\tJ(omega)\n" );
+            file << std::format( "omega\tJ(omega)\n" );
             for ( double w = parameters.p_phonon_wcutoffdelta; w < 10.0 * parameters.p_phonon_wcutoff; w += parameters.p_phonon_wcutoffdelta ) {
-                file << fmt::format( "{}\t{}\n", w, std::real( dgl_phonons_spectral_density( w ) ) );
+                file << std::format( "{}\t{}\n", w, std::real( dgl_phonons_spectral_density( w ) ) );
             }
         }
         if ( parameters.output_dict.contains( "phononcoefficients" ) ) {

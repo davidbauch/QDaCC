@@ -76,15 +76,15 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
         if ( p.input_conf["DMconfig"].string["output_mode"] == "full" ) {
             for ( int i = 0; i < op.base.size(); i++ )
                 for ( int j = 0; j < op.base.size(); j++ ) {
-                    fp_densitymatrix << fmt::format( "Re(|{}><{}|)\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
+                    fp_densitymatrix << std::format( "Re(|{}><{}|)\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
                 }
             for ( int i = 0; i < op.base.size(); i++ )
                 for ( int j = 0; j < op.base.size(); j++ ) {
-                    fp_densitymatrix << fmt::format( "Im(|{}><{}|)\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
+                    fp_densitymatrix << std::format( "Im(|{}><{}|)\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
                 }
         } else {
             for ( int i = 0; i < op.base.size(); i++ )
-                fp_densitymatrix << fmt::format( "|{0}><{0}|\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ) );
+                fp_densitymatrix << std::format( "|{0}><{0}|\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ) );
         }
         fp_densitymatrix << "\n";
     }
@@ -94,11 +94,11 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
         auto &fp_electronic = add_file( "electronic" );
         fp_electronic << "t\t";
         for ( auto &[name, rem] : p.input_electronic )
-            fp_electronic << fmt::format( "|{}><{}|\t", name, name );
+            fp_electronic << std::format( "|{}><{}|\t", name, name );
         if ( p.p_omega_decay > 0.0 )
             for ( auto &[name, rem] : p.input_electronic )
                 if ( rem.property["DecayScaling"] != 0.0 )
-                    fp_electronic << fmt::format( "EM(|{}><{}|)\t", name, name );
+                    fp_electronic << std::format( "EM(|{}><{}|)\t", name, name );
         fp_electronic << "\n";
     }
 
@@ -107,10 +107,10 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
         auto &fp_photonic = add_file( "photonic" );
         fp_photonic << "t\t";
         for ( auto &[name, rem] : p.input_photonic )
-            fp_photonic << fmt::format( "|{}><{}|\t", name, name );
+            fp_photonic << std::format( "|{}><{}|\t", name, name );
         if ( p.p_omega_cavity_loss > 0.0 )
             for ( auto &[name, rem] : p.input_photonic )
-                fp_photonic << fmt::format( "EM(|{}><{}|)\t", name, name );
+                fp_photonic << std::format( "EM(|{}><{}|)\t", name, name );
         fp_photonic << "\n";
     }
     // Photon Expv
@@ -119,7 +119,7 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
             add_file( "photons_" + mode ) << "t";
             for ( int i = 0; i < state.self_hilbert.rows(); i++ )
                 for ( int j = 0; j < state.self_hilbert.cols(); j++ )
-                    get_file( "photons_" + mode ) << fmt::format( "\t|{}><{}|", i, j );
+                    get_file( "photons_" + mode ) << std::format( "\t|{}><{}|", i, j );
             get_file( "photons_" + mode ) << "\n";
         }
     }
@@ -127,7 +127,7 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
     if (not p.numerics_custom_expectation_values.empty()) {
         add_file( "custom_expectation_values" ) << "t";
         for (auto i = 0;  i < p.numerics_custom_expectation_values.size(); i++)
-            get_file( "custom_expectation_values" ) << fmt::format( "\tCustom_{}", i );
+            get_file( "custom_expectation_values" ) << std::format( "\tCustom_{}", i );
         get_file( "custom_expectation_values" ) << "\n";
     }
 }

@@ -78,9 +78,9 @@ class Evaluable {
             const auto deriv = evaluate_derivative( t, dt_approx );
             const auto integ = evaluate_integral( t, dt_approx );
             if ( complex )
-                file << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t, std::real( value ), std::imag( value ), std::real( deriv ), std::imag( deriv ), std::real( integ ), std::imag( integ ) );
+                file << std::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t, std::real( value ), std::imag( value ), std::real( deriv ), std::imag( deriv ), std::real( integ ), std::imag( integ ) );
             else
-                file << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t, std::real( value ), std::real( deriv ), std::real( integ ) );
+                file << std::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t, std::real( value ), std::real( deriv ), std::real( integ ) );
         }
         file.close();
         if ( not spectrum )
@@ -88,7 +88,7 @@ class Evaluable {
         // Output Spectral
         auto &sfile = FileOutput::add_file( name + "_fourier" );
         for ( const auto &[w, value] : fourier_value_array ) {
-            sfile << fmt::format( "{:.8e}\t{:.8e}\t{:.8e}\n", w, std::real( value ), std::imag( value ) );
+            sfile << std::format( "{:.8e}\t{:.8e}\t{:.8e}\n", w, std::real( value ), std::imag( value ) );
         }
     }
 

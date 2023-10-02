@@ -1,6 +1,5 @@
 #pragma once
 #include "global.h"
-#include "misc/interpolant.h"
 
 namespace QDACC {
 

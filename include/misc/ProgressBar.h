@@ -8,11 +8,9 @@
 #include <string>
 #include <iostream>
 #include <omp.h>      // -fopenmp
-#include <fmt/core.h> // -DFMT_HEADER_ONLY
-#include <fmt/format.h>
-#include <fmt/ostream.h>
 #include <vector>
 #include <numeric> // accumulate
+#include <format>
 
 #define BAR_HORIZONTAL 0
 #define BAR_VERTICAL 1
@@ -90,12 +88,11 @@ class ProgressBar {
             lastSpin = omp_get_wtime();
             c++;
         }
-        ret = "\033[2K\033[38;2;255;255;255m" + strBarStart + "\033[0m" + ret + "\033[38;2;255;255;255m" + strBarEnd + ( decimalPoints >= 0 ? fmt::format( " {:.{}f}\%", 1.0 * currentIterations / maximumIterations * 100, decimalPoints ) : "" ) + ( ( isSpinning && currentIterations < maximumIterations ) ? fmt::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + ( currentIterations < maximumIterations ? barSuffix : barSuffix + " - " + barEnd ) + " - " + barPrefix + "\033[0m";
+        ret = "\033[2K\033[38;2;255;255;255m" + strBarStart + "\033[0m" + ret + "\033[38;2;255;255;255m" + strBarEnd + ( decimalPoints >= 0 ? std::format( " {:.{}f}\%", 1.0 * currentIterations / maximumIterations * 100, decimalPoints ) : "" ) + ( ( isSpinning && currentIterations < maximumIterations ) ? std::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + ( currentIterations < maximumIterations ? barSuffix : barSuffix + " - " + barEnd ) + " - " + barPrefix + "\033[0m";
         maxSize = ( (int)ret.size() > maxSize ) ? (int)ret.size() : maxSize;
-        // fmt::print( "{:<{}}\r", ret, maxSize );
         if ( bold )
             ret = "\033[1m" + ret + "\033[0m";
-        fmt::print( "{}\r", ret );
+        std::cout << std::format( "{}\r", ret );
         return ret;
     }
     // Uses the "spin" component to animate a waiting position
@@ -108,12 +105,11 @@ class ProgressBar {
         if ( position < 0 )
             position = -position;
         std::string ret = addstr( barLength, sym.at( position ) );
-        ret = "\033[2K\033[38;2;255;255;255m" + strBarStart + "\033[0m" + ret + "\033[38;2;255;255;255m" + strBarEnd + " Waiting" + ( isSpinning ? fmt::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + barSuffix + " - " + barPrefix + "\033[0m";
+        ret = "\033[2K\033[38;2;255;255;255m" + strBarStart + "\033[0m" + ret + "\033[38;2;255;255;255m" + strBarEnd + " Waiting" + ( isSpinning ? std::format( " [{}] ", spin.at( c % spin.size() ) ) : " " ) + barSuffix + " - " + barPrefix + "\033[0m";
         maxSize = ( (int)ret.size() > maxSize ) ? (int)ret.size() : maxSize;
-        // fmt::print( "{:<{}}\r", ret, maxSize );
         if ( bold )
             ret = "\033[1m" + ret + "\033[0m";
-        fmt::print( "{}\r", ret );
+        std::cout << std::format( "{}\r", ret );
         return ret;
     }
 };

@@ -2,7 +2,6 @@
 
 #include "global.h"
 #include "system/system.h"
-#include "misc/interpolant.h"
 #include "solver/solver_tensor_map.h"
 #include "types/cache_matrix.h"
 

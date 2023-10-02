@@ -643,7 +643,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "RAD rate gamma: {:.8e} Hz - {:.8} mueV\n\n", p_omega_decay, p_omega_decay.getSI( Parameter::UNIT_ENERGY_MUEV ) );
 
     Log::Logger::wrapInBar( "Initial System Parameters", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
-    Log::L1( "Initial state rho0 = [{}]\n\n", initial_state_vector_ket.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ) );
+    //Log::L1( "Initial state rho0 = [{}]\n\n", initial_state_vector_ket.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ) );
     Log::L1( "Matrix Groundstate Index = {}\n\n", numerics_groundstate );
 
     Log::Logger::wrapInBar( "Pulse", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
@@ -668,7 +668,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                 }
                 if ( QDACC::Math::abs2( mat.property_set["Phase"][i] != 0.0 ) )
                     Log::L1( " - - Phase: {}pi\n", mat.property_set["Phase"][i] / QDACC::Math::PI );
-                Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i], mat.string_v["Type"][i] == "gauss" ? fmt::format( " (Gaussian Amplitude: {})", mat.property_set["GaussAmp"][i] ) : "" );
+                Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i], mat.string_v["Type"][i] == "gauss" ? std::format( " (Gaussian Amplitude: {})", mat.property_set["GaussAmp"][i] ) : "" );
             }
         }
         Log::L1( "\n" );
@@ -761,7 +761,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::Logger::wrapInBar( "G-Function Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     if ( input_correlation.size() > 0 ) {
         // TODO: print grid resolution later
-        Log::L1( "Tau-grid resolution is {}\n", numerics_calculate_till_converged ? "to be determined." : fmt::format( "{}x{}", grid_values.size(), grid_values.size() ) );
+        Log::L1( "Tau-grid resolution is {}\n", numerics_calculate_till_converged ? "to be determined." : std::format( "{}x{}", grid_values.size(), grid_values.size() ) );
         Log::L1( "Interpolator used: {}\n", _get_interpolator_name( numerics_interpolate_method_tau ) );
         Log::L1( "Calculating:\n" );
         for ( auto &[name, all_correlations] : input_correlation )
@@ -808,7 +808,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
     Log::L1( "\n" );
 
     Log::Logger::wrapInBar( "Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
-    Log::L1( "Solver used: RK{}{}\n", numerics_rk_order, numerics_rk_order != 45 ? "" : fmt::format( " (Tolerance: {}, Stepdelta: {}, Steplimits: [{},{}])", inputstring_rk45_config, numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax ) );
+    Log::L1( "Solver used: RK{}{}\n", numerics_rk_order, numerics_rk_order != 45 ? "" : std::format( " (Tolerance: {}, Stepdelta: {}, Steplimits: [{},{}])", inputstring_rk45_config, numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax ) );
     if ( numerics_rk_order == 45 and numerics_phonon_nork45 )
         Log::L1( "Will NOT use RK45 for the phonon backwards integral!\n" );
     Log::L1( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );

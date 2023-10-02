@@ -111,6 +111,12 @@ class OperatorMatrices {
     void output_operators( Parameters &p );
 
     /**
+     * @brief Output Matrix using the global output format
+     *
+     */
+    std::string matrixToString(const Dense& mat);
+
+    /**
      * @brief Creates a bosonic creation or annihilation operator matrix
      * The Type can be either PhotonicOperator::Create or PhotonicOperator::Annihilate
      * The maximum number of photons is given by maxPhotons; The resulting matrix will have dimension (maxPhotons+1)*(maxPhotons+1)

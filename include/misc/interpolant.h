@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <vector>
-#include <fmt/core.h> // -DFMT_HEADER_ONLY
-#include <fmt/format.h>
 #include "ALGLIB/interpolation.h"
 
 class Interpolant {

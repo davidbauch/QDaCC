@@ -168,49 +168,49 @@ void System::calculate_expectation_values( const std::vector<QDACC::SaveState> &
         double t = tup.t;
         double dt = t - t_pre;
         t_pre = t;
-        std::string el_out = fmt::format( "{:.5e}", t );
-        std::string ph_out = fmt::format( "{:.5e}", t );
+        std::string el_out = std::format( "{:.5e}", t );
+        std::string ph_out = std::format( "{:.5e}", t );
         std::string el_em = "";
         std::string ph_em = "";
         // Output State Populations and Calculate Emission Probabilities from all radiative transitions:
         for ( auto &[mode, state] : operatorMatrices.ph_states ) {
             double expval = std::real( dgl_expectationvalue<Sparse, Scalar>( rho, state.hilbert, t ) );
-            ph_out = fmt::format( "{:}\t{:.6e}", ph_out, expval );
+            ph_out = std::format( "{:}\t{:.6e}", ph_out, expval );
             if ( parameters.p_omega_cavity_loss > 0.0 ) {
                 emission_probabilities[mode] += expval * dt;
-                ph_em = fmt::format( "{:}\t{:.6e}", ph_em, parameters.p_omega_cavity_loss * parameters.input_photonic[mode].property["DecayScaling"] * emission_probabilities[mode] );
+                ph_em = std::format( "{:}\t{:.6e}", ph_em, parameters.p_omega_cavity_loss * parameters.input_photonic[mode].property["DecayScaling"] * emission_probabilities[mode] );
             }
         }
         for ( auto &[mode, state] : operatorMatrices.el_states ) {
             double expval = std::real( dgl_expectationvalue<Sparse, Scalar>( rho, state.hilbert, t ) );
-            el_out = fmt::format( "{:}\t{:.6e}", el_out, expval );
+            el_out = std::format( "{:}\t{:.6e}", el_out, expval );
             if ( parameters.p_omega_decay > 0.0 and parameters.input_electronic[mode].property["DecayScaling"] != 0.0 ) {
                 emission_probabilities[mode] += expval * dt;
-                el_em = fmt::format( "{:}\t{:.6e}", el_em, parameters.p_omega_decay * parameters.input_electronic[mode].property["DecayScaling"] * emission_probabilities[mode] );
+                el_em = std::format( "{:}\t{:.6e}", el_em, parameters.p_omega_decay * parameters.input_electronic[mode].property["DecayScaling"] * emission_probabilities[mode] );
             }
         }
         // Output
         if ( not operatorMatrices.ph_states.empty() )
-            FileOutput::get_file( "photonic" ) << fmt::format( "{:}{:}\n", ph_out, ph_em );
+            FileOutput::get_file( "photonic" ) << std::format( "{:}{:}\n", ph_out, ph_em );
         if ( not operatorMatrices.el_states.empty() )
-            FileOutput::get_file( "electronic" ) << fmt::format( "{:}{:}\n", el_out, el_em );
+            FileOutput::get_file( "electronic" ) << std::format( "{:}{:}\n", el_out, el_em );
 
         if ( parameters.input_conf["DMconfig"].string["output_mode"] != "none" ) {
-            FileOutput::get_file( "densitymatrix" ) << fmt::format( "{:.5e}", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
+            FileOutput::get_file( "densitymatrix" ) << std::format( "{:.5e}", t ); //, rho.nonZeros(), rho.rows() * rho.cols() - rho.nonZeros() );
             if ( parameters.input_conf["DMconfig"].string["interaction_picture"] != "int" )
                 rho = dgl_timetrafo( rho, t );
             if ( parameters.input_conf["DMconfig"].string["output_mode"] == "full" ) {
                 for ( int i = 0; i < parameters.maxStates; i++ )
                     for ( int j = 0; j < parameters.maxStates; j++ ) {
-                        FileOutput::get_file( "densitymatrix" ) << fmt::format( "\t{:.10e}", std::real( rho.coeff( i, j ) ) );
+                        FileOutput::get_file( "densitymatrix" ) << std::format( "\t{:.10e}", std::real( rho.coeff( i, j ) ) );
                     }
                 for ( int i = 0; i < parameters.maxStates; i++ )
                     for ( int j = 0; j < parameters.maxStates; j++ ) {
-                        FileOutput::get_file( "densitymatrix" ) << fmt::format( "\t{:.10e}", std::imag( rho.coeff( i, j ) ) );
+                        FileOutput::get_file( "densitymatrix" ) << std::format( "\t{:.10e}", std::imag( rho.coeff( i, j ) ) );
                     }
             } else
                 for ( int j = 0; j < parameters.maxStates; j++ )
-                    FileOutput::get_file( "densitymatrix" ) << fmt::format( "\t{:.5e}", std::real( rho.coeff( j, j ) ) );
+                    FileOutput::get_file( "densitymatrix" ) << std::format( "\t{:.5e}", std::real( rho.coeff( j, j ) ) );
             FileOutput::get_file( "densitymatrix" ) << "\n";
         }
 
@@ -222,21 +222,21 @@ void System::calculate_expectation_values( const std::vector<QDACC::SaveState> &
                 const auto base_index = state.base;
                 auto current = partial_trace( int_trafo ? rho : dgl_timetrafo( rho, t ), base_index );
                 // Output Partial Trace Matrix to File
-                FileOutput::get_file( "photons_" + mode ) << fmt::format( "{:.5e}", t );
+                FileOutput::get_file( "photons_" + mode ) << std::format( "{:.5e}", t );
                 for ( int i = 0; i < current.rows(); i++ )
                     for ( int j = 0; j < current.cols(); j++ )
-                        FileOutput::get_file( "photons_" + mode ) << fmt::format( "\t{:.5e}", std::real( current.coeff( i, j ) ) );
+                        FileOutput::get_file( "photons_" + mode ) << std::format( "\t{:.5e}", std::real( current.coeff( i, j ) ) );
 
                 FileOutput::get_file( "photons_" + mode ) << "\n";
             }
         }
         // Output Custom Expectation values
         if ( not operatorMatrices.numerics_custom_expectation_values_operators.empty() ) {
-            FileOutput::add_file( "custom_expectation_values" ) << fmt::format( "{:.5e}", t );
+            FileOutput::add_file( "custom_expectation_values" ) << std::format( "{:.5e}", t );
             for ( auto &mat : operatorMatrices.numerics_custom_expectation_values_operators ) {
-                FileOutput::get_file( "custom_expectation_values" ) << fmt::format( "\t{:.5e}", std::real( dgl_expectationvalue<Sparse, Scalar>( rho, mat, t ) ) );
+                FileOutput::get_file( "custom_expectation_values" ) << std::format( "\t{:.5e}", std::real( dgl_expectationvalue<Sparse, Scalar>( rho, mat, t ) ) );
             }
-            FileOutput::get_file( "custom_expectation_values" ) << fmt::format( "\n" );
+            FileOutput::get_file( "custom_expectation_values" ) << std::format( "\n" );
         }
         evalTimer.iterate();
     }
@@ -263,10 +263,10 @@ bool System::trace_valid( Sparse &rho, double t_hit, bool force ) {
     parameters.trace.emplace_back( trace );
     if ( trace < 0.99 || trace > 1.01 || force ) {
         if ( force )
-            fmt::print( "[System] {} Error -> trace check failed at t = {} with trace(rho) = {}\n", QDACC::Message::Prefix::PERROR, t_hit, trace );
+            std::cout << std::format( "[System] {} Error -> trace check failed at t = {} with trace(rho) = {}\n", QDACC::Message::Prefix::PERROR, t_hit, trace );
         auto &fp_trace = FileOutput::add_file( "trace" );
         for ( int i = 0; i < (int)parameters.trace.size() && parameters.t_step * 1.0 * i < t_hit; i++ ) {
-            fp_trace << fmt::format( "{:.10e} {:.15e}\n", parameters.t_step * 1.0 * ( i + 1 ), parameters.trace.at( i ) );
+            fp_trace << std::format( "{:.10e} {:.15e}\n", parameters.t_step * 1.0 * ( i + 1 ), parameters.trace.at( i ) );
         }
         FileOutput::close_file( "trace" );
         return false;

@@ -1,8 +1,5 @@
 #pragma once
 #include <omp.h>
-#include <fmt/core.h>
-#include <fmt/format.h>
-#include <fmt/ostream.h>
 #include "misc/ProgressBar.h"
 #include "misc/log.h"
 #include "typedef.h"

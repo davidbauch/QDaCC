@@ -1,5 +1,5 @@
 #include "misc/interpolant.h"
-
+#include <format>
 // 1D
 
 // Takes X,Y[,Z], Values to return evaluations at
@@ -7,8 +7,8 @@ Interpolant::Interpolant( const std::vector<double> &interpolationPointsX, const
     X = "[";
     Y = "[";
     for ( unsigned long i = 0; i < interpolationPointsX.size(); i++ ) {
-        X += fmt::format( "{:.15e}", interpolationPointsX.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
-        Y += fmt::format( "{:.15e}", interpolationPointsY.at( i ) ) + ( i < interpolationPointsY.size() - 1 ? "," : "" );
+        X += std::format( "{:.15e}", interpolationPointsX.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
+        Y += std::format( "{:.15e}", interpolationPointsY.at( i ) ) + ( i < interpolationPointsY.size() - 1 ? "," : "" );
     }
     X += "]";
     Y += "]";
@@ -24,9 +24,9 @@ Interpolant::Interpolant( const std::vector<double> &interpolationPointsX, const
     Y = "[";
     Z = "[";
     for ( unsigned long i = 0; i < interpolationPointsX.size(); i++ ) {
-        X += fmt::format( "{:.15e}", interpolationPointsX.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
-        Y += fmt::format( "{:.15e}", interpolationPointsY.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
-        Z += fmt::format( "{:.15e}", interpolationPointsZ.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
+        X += std::format( "{:.15e}", interpolationPointsX.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
+        Y += std::format( "{:.15e}", interpolationPointsY.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
+        Z += std::format( "{:.15e}", interpolationPointsZ.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
     }
     X += "]";
     Y += "]";
@@ -74,12 +74,12 @@ Interpolant2d<T>::Interpolant2d( std::vector<double> &interpolationPointsX, std:
     Y = "[";
     Z = "[";
     for ( unsigned long i = 0; i < interpolationPointsX.size(); i++ ) {
-        X += fmt::format( "{:.15e}", interpolationPointsX.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
-        Y += fmt::format( "{:.15e}", interpolationPointsY.at( i ) ) + ( i < interpolationPointsY.size() - 1 ? "," : "" );
+        X += std::format( "{:.15e}", interpolationPointsX.at( i ) ) + ( i < interpolationPointsX.size() - 1 ? "," : "" );
+        Y += std::format( "{:.15e}", interpolationPointsY.at( i ) ) + ( i < interpolationPointsY.size() - 1 ? "," : "" );
     }
     for ( unsigned long i = 0; i < interpolationPointsY.size(); i++ ) {
         for ( unsigned long j = 0; j < interpolationPointsX.size(); j++ ) {
-            Z += fmt::format( "{:.15e},", interpolationPointsZ( j, i ) );
+            Z += std::format( "{:.15e},", interpolationPointsZ( j, i ) );
         }
     }
     X += "]";

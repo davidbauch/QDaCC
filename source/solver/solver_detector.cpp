@@ -164,16 +164,16 @@ void QDACC::Numerics::ODESolver::apply_detector_function( System &s, CacheMatrix
             // Output.
             if ( s.parameters.output_dict.contains( "detectortrafo" ) ) {
                 Log::L2( "[PhotonStatistics] Outputting FT({})...\n", purpose );
-                FILE *f_gfunc = std::fopen( ( s.parameters.working_directory + purpose + "_FTm.txt" ).c_str(), "w" );
-                fmt::print( f_gfunc, "Time\tOmega_tau\tAbs\tReal\tImag\n" );
+                auto &f_gfunc = FileOutput::add_file( purpose + "_FTm.txt" );
+                f_gfunc << "Time\tOmega_tau\tAbs\tReal\tImag\n" ;
                 for ( int k = 0; k < dim; k++ ) {
                     for ( int l = 0; l < current_detector_frequency_mask.size(); l++ ) {
                         const auto &[frequency_w_l, frequency_amp_l, frequency_delta_l] = current_detector_frequency_mask[l];
-                        fmt::print( f_gfunc, "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( mat.t( k ) ), frequency_w_l, std::abs( mat_transformed( k, l ) ), std::real( mat_transformed( k, l ) ), std::imag( mat_transformed( k, l ) ) );
+                        f_gfunc << std::format("{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", std::real( mat.t( k ) ), frequency_w_l, std::abs( mat_transformed( k, l ) ), std::real( mat_transformed( k, l ) ), std::imag( mat_transformed( k, l ) ) );
                     }
-                    fmt::print( f_gfunc, "\n" );
+                    f_gfunc << "\n";
                 }
-                std::fclose( f_gfunc );
+                f_gfunc.close();
             }
             // Transform Back
             Log::L2( "[PhotonStatistics] Calculating iFT({})...\n", purpose );

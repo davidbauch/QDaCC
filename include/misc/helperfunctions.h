@@ -70,7 +70,6 @@ T convertParam( std::string input ) {
     // Second Scale
     else if ( -1 != ( index = QDACC::String::instr( input, "s" ) ) ) {
         // Found 's' as unit (time)
-        // fmt::print("\n {} {} {} {}\n",index, input.at(index-1)=='n',input.compare(index-1,1,"n") ,input.at(index-1));
         if ( input.at( index - 1 ) == 'n' ) {
             // ns
             Log::L3( "\tfrom ns to s...\n" );
@@ -80,12 +79,12 @@ T convertParam( std::string input ) {
             // ps
             Log::L3( "\tfrom ps to s...\n" );
             value = std::stod( input.substr( 0, index - 1 ) );
-            conversion = 1E-12; // fmt::print("{} {} ... ", value, conversion);
+            conversion = 1E-12;
         } else if ( input.at( index - 1 ) == 'f' ) {
             // fs
             Log::L3( "\tfrom fs to s...\n" );
             value = std::stod( input.substr( 0, index - 1 ) );
-            conversion = 1E-15; // fmt::print("{} {} ... ", value, conversion);
+            conversion = 1E-15;
         } else if ( QDACC::Math::is_number( input.substr( index - 1, 1 ) ) ) {
             // s
             Log::L3( "\tfrom s to s...\n" );

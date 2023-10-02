@@ -3,6 +3,7 @@
 #include <complex>
 #include <cmath>
 #include "typedef.h"
+#include <format>
 
 class Parameter {
    private:
@@ -180,3 +181,14 @@ inline std::complex<T> operator/( const std::complex<T> &p1, const Parameter &p2
 // T std::min( const Parameter &p1, const T &p2 ) {
 //     return std::min( p2, p1.get() );
 // }
+
+template<class CharT>
+struct std::formatter<Parameter, CharT> : std::formatter<double, CharT>
+{
+    // Define format() by calling the base class implementation with the wrapped value
+    template<class FormatContext>
+    auto format(Parameter t, FormatContext& fc) const
+    {
+        return std::formatter<double, CharT>::format(t.get(), fc);
+    }
+};

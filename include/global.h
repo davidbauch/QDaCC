@@ -6,9 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string>
-#include <fmt/core.h> // -DFMT_HEADER_ONLY
-#include <fmt/format.h>
-#include <fmt/ostream.h>
 #include <vector>
 template <class T>
 std::ostream &operator<<( std::ostream &os, const std::vector<T> &v ) {
@@ -24,6 +21,7 @@ std::ostream &operator<<( std::ostream &os, const std::vector<T> &v ) {
 }
 // #define EIGEN_DEFAULT_DENSE_INDEX_TYPE int
 //#define EIGEN_NO_DEBUG
+//#define EIGEN_USE_BLAS
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/MatrixFunctions>
@@ -39,6 +37,14 @@ std::ostream &operator<<( std::ostream &os, const std::vector<T> &v ) {
 #include <unordered_map>
 #include <filesystem>
 #include <ranges>
+#include <format>
+template<typename T>
+struct std::formatter<std::complex<T>> : std::formatter<std::string> {
+    auto format(const std::complex<T>& c, std::format_context& ctx) {
+        return std::formatter<std::string>::format(
+            std::format("({},{})", c.real(), c.imag()), ctx);
+    }
+};
 //#include <experimental/filesystem>
 // namespace std {
 // namespace filesystem = std::experimental::filesystem::v1;

@@ -4,12 +4,11 @@
 #include <string>
 #include <iostream>
 #include <unordered_map>
-#include <fmt/core.h> // -DFMT_HEADER_ONLY
-#include <fmt/format.h>
-#include <fmt/ostream.h>
-
+#include <format>
+#include <fstream>
 // TODO: fix vector overload
 #include <sstream>
+#include <algorithm>    
 
 namespace Log {
 
@@ -47,38 +46,38 @@ class Logger {
     }
     template <typename... Args>
     static void L1( const std::string &msg, const Args &...args ) {
-        return Get().Ilevel1_log( msg, true, fmt::make_format_args( args... ) );
+        return Get().Ilevel1_log( msg, true, std::make_format_args( args... ) );
     }
     template <typename... Args>
     static void P1( const std::string &msg, const Args &...args ) {
-        return Get().Ilevel1_log( msg, false, fmt::make_format_args( args... ) );
+        return Get().Ilevel1_log( msg, false, std::make_format_args( args... ) );
     }
     template <typename... Args>
     static void L2( const std::string &msg, const Args &...args ) {
-        return Get().Ilevel2_log( msg, true, true, fmt::make_format_args( args... ) );
+        return Get().Ilevel2_log( msg, true, true, std::make_format_args( args... ) );
     }
     // ?????
     template <typename T>
     static void L2( const std::string &msg, const std::vector<T> &vec ) {
         std::stringstream kekw;
         std::ranges::for_each( vec.begin(), vec.end(), [&kekw]( const auto &el ) { kekw << el << ","; } );
-        return Get().Ilevel2_log( msg, true, true, fmt::make_format_args( kekw.str() ) );
+        return Get().Ilevel2_log( msg, true, true, std::make_format_args( kekw.str() ) );
     }
     template <typename... Args>
     static void L3( const std::string &msg, const Args &...args ) {
-        return Get().Ilevel3_log( msg, true, true, fmt::make_format_args( args... ) );
+        return Get().Ilevel3_log( msg, true, true, std::make_format_args( args... ) );
     }
     // ?????
     template <typename T>
     static void L3( const std::string &msg, const std::vector<T> &vec ) {
         std::stringstream kekw;
         std::ranges::for_each( vec.begin(), vec.end(), [&kekw]( const auto &el ) { kekw << el << ","; } );
-        return Get().Ilevel3_log( msg, true, true, fmt::make_format_args( kekw.str() ) );
+        return Get().Ilevel3_log( msg, true, true, std::make_format_args( kekw.str() ) );
     }
 
     template <typename... Args>
     static void Error( const std::string &file, const std::string &function, int line, const std::string &msg, const Args &...args ) {
-        return Get().Ierror_log( file, function, line, msg, fmt::make_format_args( args... ) );
+        return Get().Ierror_log( file, function, line, msg, std::make_format_args( args... ) );
     }
 
     static void Bar( int size = Log::BAR_SIZE_FULL, int level = Log::LEVEL_1, int _bar = Log::BAR_0 ) {
@@ -107,7 +106,7 @@ class Logger {
     int max_loglevel;
     int debug_counter;
     std::unordered_map<std::string, std::string> colormap;
-    FILE *file;
+    std::fstream file;
     std::vector<std::string> bars;
     Logger(){};
     std::string repeat( std::string s, int n ) {
@@ -117,10 +116,13 @@ class Logger {
         return s;
     }
     void Iinit( const std::string &filepath, int max_log_level ) {
-        file = std::fopen( filepath.c_str(), "w" );
-        assert( file );
-        std::setbuf( file, NULL );
-        std::setbuf( stdout, NULL );
+        file.open( filepath, std::ios::out );
+        if (not file.is_open()){
+            std::cout << "Could not open file '" << filepath << "' for logging!\n";
+            exit(1);
+        }
+        //std::setbuf( file, NULL );
+        //std::setbuf( stdout, NULL );
         max_loglevel = max_log_level;
         debug_counter = 0;
         bars = { repeat( "=", Log::BAR_SIZE_FULL ),
@@ -131,14 +133,14 @@ class Logger {
                  repeat( "+", Log::BAR_SIZE_FULL ),
                  repeat( "*", Log::BAR_SIZE_FULL ) };
         if ( max_loglevel >= 2 ) {
-            fmt::print( file, "Succesfully created logfile '{}'!\n", filepath );
+            file << std::format( "Succesfully created logfile '{}'!\n", filepath );
         }
     }
     template <class Args>
     void Ilevel1_log( const std::string &msg, bool to_file, const Args &args ) {
-        fmt::vprint( msg, args );
+        std::cout << std::vformat( msg, args );
         if ( to_file )
-            fmt::vprint( file, msg, args );
+            file << std::vformat( msg, args );
     }
     template <class Args>
     void Ilevel2_log( const std::string &msg, bool use_colormap, bool to_file, const Args &args ) {
@@ -153,13 +155,13 @@ class Logger {
                     if ( not colormap.contains( mid ) )
                         colormap[mid] = "\033[38;5;" + std::to_string( colormap.size() + 2 ) + "m";
                     auto color = colormap[mid];
-                    fmt::vprint( "| \033[38;2;100;100;100m" + msg.substr( 0, p1 ) + color + mid + "\033[38;2;100;100;100m" + msg.substr( p2 ) + "\033[0m", args );
+                    std::cout << std::vformat( "| \033[38;2;100;100;100m" + msg.substr( 0, p1 ) + color + mid + "\033[38;2;100;100;100m" + msg.substr( p2 ) + "\033[0m", args );
                 }
             }
             if ( not use_colormap )
-                fmt::vprint( "| \033[38;2;100;100;100m" + msg + "\033[0m", args );
+                std::cout << std::vformat( "| \033[38;2;100;100;100m" + msg + "\033[0m", args );
             if ( to_file )
-                fmt::vprint( file, " | " + msg, args );
+                file << std::vformat( " | " + msg, args );
         }
     }
     template <class Args>
@@ -175,20 +177,20 @@ class Logger {
                     if ( not colormap.contains( mid ) )
                         colormap[mid] = "\033[38;5;" + std::to_string( colormap.size() + 2 ) + "m";
                     auto color = colormap[mid];
-                    fmt::vprint( " | \033[31m- \033[93m" + msg.substr( 0, p1 ) + color + mid + "\033[38;2;100;100;100m" + msg.substr( p2 ) + "\033[0m", args );
+                    std::cout << std::vformat( " | \033[31m- \033[93m" + msg.substr( 0, p1 ) + color + mid + "\033[38;2;100;100;100m" + msg.substr( p2 ) + "\033[0m", args );
                 }
             }
             if ( not use_colormap )
-                fmt::vprint( " | \033[31m- \033[93m" + msg + "\033[0m", args );
+                std::cout << std::vformat( " | \033[31m- \033[93m" + msg + "\033[0m", args );
             if ( to_file )
-                fmt::vprint( file, " | - " + msg, args );
+                file << std::vformat( " | - " + msg, args );
         }
     }
     template <class Args>
     void Ierror_log( const std::string &in_file, const std::string &function, int line, const std::string &msg, const Args &args ) {
-        std::string error_message = fmt::format( "On line {} in function {} in file {} -- ", line, function, in_file );
-        fmt::vprint( "\033[31m[ERROR]\033[93m " + error_message + msg + "\033[0m", args );
-        fmt::vprint( file, "[ERROR] " + error_message + msg, args );
+        std::string error_message = std::format( "On line {} in function {} in file {} -- ", line, function, in_file );
+        std::cout << std::vformat( "\033[31m[ERROR]\033[93m " + error_message + msg + "\033[0m", args );
+        file << std::vformat( "[ERROR] " + error_message + msg, args );
     }
     void Ibar( int size, int level, int _bar ) {
         size = std::min( std::max( size, 0 ), Log::BAR_SIZE_FULL );
@@ -226,11 +228,11 @@ class Logger {
         Bar( size, level, _barOut );
     }
     void Idebug( const std::string &msg ) {
-        L1( "[\033[31mDEBUG\033[0m] {}{}\n", fmt::format( "({}) ", debug_counter++ ), msg );
+        L1( "[\033[31mDEBUG\033[0m] {}{}\n", std::format( "({}) ", debug_counter++ ), msg );
     }
     void Iclose() {
         L1( "[END OF LOGFILE]" );
-        std::fclose( file );
+        file.close();
     }
     int Iget_max_loglevel() {
         return max_loglevel;

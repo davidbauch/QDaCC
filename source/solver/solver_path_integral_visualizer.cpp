@@ -78,7 +78,7 @@ bool QDACC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
                     for ( Sparse::InnerIterator M( propagator[i][j], l ); M; ++M ) {
                         int i_n = M.row();
                         int j_n = M.col();
-                        std::string name = fmt::format( "{},{}->{},{}", i, j, i_n, j_n );
+                        std::string name = std::format( "{},{}->{},{}", i, j, i_n, j_n );
                         if ( !( total_weights.contains( name ) ) )
                             total_weights[name] = 0.0;
                         total_weights[name] += std::abs( M.value() );
@@ -88,26 +88,26 @@ bool QDACC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
     }
     // Output Propagator Mappings
     for ( size_t k = 0; k < propagators.size(); k++ ) {
-        fp_dot << fmt::format( "\n{} [pos=\"0,{}!\", color=\"{}\"]\n", names[k], 5 - k, colors[k] );
+        fp_dot << std::format( "\n{} [pos=\"0,{}!\", color=\"{}\"]\n", names[k], 5 - k, colors[k] );
         auto &propagator = propagators[k];
         auto &color = colors[k];
         for ( auto i = 0; i < propagator.size(); i++ ) {
             for ( auto j = 0; j < propagator.size(); j++ ) {
-                if ( !labels.contains( fmt::format( "{}_0,{}_0", i, j ) ) ) {
-                    fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\" [label=\"|{3}><{4}|\" pos=\"{5},{6}!\"];\n", 0, i, j, s.operatorMatrices.base.at( i ).substr( 1, s.operatorMatrices.base.at( i ).size() - 2 ), s.operatorMatrices.base.at( j ).substr( 1, s.operatorMatrices.base.at( j ).size() - 2 ), i * propagator.size() * 2 + j * 2 + 3, 5 );
-                    labels.emplace( fmt::format( "{}_0,{}_0", i, j ) );
+                if ( !labels.contains( std::format( "{}_0,{}_0", i, j ) ) ) {
+                    fp_dot << std::format( "\"{1}_{0},{2}_{0}\" [label=\"|{3}><{4}|\" pos=\"{5},{6}!\"];\n", 0, i, j, s.operatorMatrices.base.at( i ).substr( 1, s.operatorMatrices.base.at( i ).size() - 2 ), s.operatorMatrices.base.at( j ).substr( 1, s.operatorMatrices.base.at( j ).size() - 2 ), i * propagator.size() * 2 + j * 2 + 3, 5 );
+                    labels.emplace( std::format( "{}_0,{}_0", i, j ) );
                 }
                 for ( int l = 0; l < propagator[i][j].outerSize(); ++l )
                     for ( Sparse::InnerIterator M( propagator[i][j], l ); M; ++M ) {
                         int i_n = M.row();
                         int j_n = M.col();
-                        if ( !labels.contains( fmt::format( "{}_1,{}_1", i_n, j_n ) ) ) {
-                            fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\" [label=\"|{3}><{4}|\" pos=\"{5},{6}!\"];\n", 1, i_n, j_n, s.operatorMatrices.base.at( i_n ).substr( 1, s.operatorMatrices.base.at( i_n ).size() - 2 ), s.operatorMatrices.base.at( j_n ).substr( 1, s.operatorMatrices.base.at( j_n ).size() - 2 ), i_n * propagator.size() * 2 + j_n * 2 + 3, 0 );
-                            labels.emplace( fmt::format( "{}_1,{}_1", i_n, j_n ) );
+                        if ( !labels.contains( std::format( "{}_1,{}_1", i_n, j_n ) ) ) {
+                            fp_dot << std::format( "\"{1}_{0},{2}_{0}\" [label=\"|{3}><{4}|\" pos=\"{5},{6}!\"];\n", 1, i_n, j_n, s.operatorMatrices.base.at( i_n ).substr( 1, s.operatorMatrices.base.at( i_n ).size() - 2 ), s.operatorMatrices.base.at( j_n ).substr( 1, s.operatorMatrices.base.at( j_n ).size() - 2 ), i_n * propagator.size() * 2 + j_n * 2 + 3, 0 );
+                            labels.emplace( std::format( "{}_1,{}_1", i_n, j_n ) );
                         }
-                        double stroke = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.2 : 2.0; // std::min( 2.0, std::max( 0.2, std::abs( M.value() ) / total_weights[fmt::format( "{},{}->{},{}", i, j, i_n, j_n )] ) );
+                        double stroke = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.2 : 2.0; // std::min( 2.0, std::max( 0.2, std::abs( M.value() ) / total_weights[std::format( "{},{}->{},{}", i, j, i_n, j_n )] ) );
                         double arrowsize = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.05 : 0.1;
-                        fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( M.value() ), std::imag( M.value() ), color, stroke, arrowsize, names[k] );
+                        fp_dot << std::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( M.value() ), std::imag( M.value() ), color, stroke, arrowsize, names[k] );
                     }
             }
         }
@@ -117,7 +117,7 @@ bool QDACC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
     try {
         if ( s.parameters.p_phonon_T < 0 or s.parameters.numerics_phonon_approximation_order != QDACC::PhononApproximation::PathIntegral )
             throw std::runtime_error( "Phonon Path Integral Kernel is only available for Path Integral Phonons." );
-        fp_dot << fmt::format( "\n\"Phonon Kernel\" [pos=\"0,-1!\", color=\"dodgerblue2\"]\n" );
+        fp_dot << std::format( "\n\"Phonon Kernel\" [pos=\"0,-1!\", color=\"dodgerblue2\"]\n" );
         // Phonon correlation function:
         if ( s.phi_vector_int.size() == 0 )
             s.initialize_path_integral_functions();
@@ -132,7 +132,7 @@ bool QDACC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
                             else
                                 val += s.dgl_phonon_memory_function( tau, i, j, i_n, j_n );
                         if ( std::abs( val ) > 1E-15 )
-                            fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( val ), std::imag( val ), "dodgerblue2", 1.0, 0.1, "Phonon Kernel" );
+                            fp_dot << std::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( val ), std::imag( val ), "dodgerblue2", 1.0, 0.1, "Phonon Kernel" );
                         // fmt::print( "i = {}, j = {}, id = {}, jd = {} --> converted i = {}, j = {}, id = {}, jd = {} --> {}\n", i, j, i_n, j_n, s.operatorMatrices.phonon_hilbert_index_to_group_index[i], s.operatorMatrices.phonon_hilbert_index_to_group_index[j], s.operatorMatrices.phonon_hilbert_index_to_group_index[i_n], s.operatorMatrices.phonon_hilbert_index_to_group_index[j_n], val );
                     }
     } catch ( const std::exception &e ) {
@@ -143,7 +143,7 @@ bool QDACC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
         if ( s.parameters.p_phonon_T < 0 or s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral )
             throw std::runtime_error( "Phonon PME Kernel is only available for PME Phonons." );
         s.initialize_polaron_frame_functions();
-        fp_dot << fmt::format( "\n\"Polaron Mapping\" [pos=\"3,-1!\", color=\"firebrick4\"]\n" );
+        fp_dot << std::format( "\n\"Polaron Mapping\" [pos=\"3,-1!\", color=\"firebrick4\"]\n" );
         std::vector<std::vector<Sparse>> polaron( (size_t)rho0.rows(), { (size_t)rho0.rows(), Sparse( rho0.rows(), rho0.rows() ) } );
         // Calculate the remaining propagators
         for ( int i = 0; i < rho0.rows(); i++ ) {
@@ -159,9 +159,9 @@ bool QDACC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
                     for ( Sparse::InnerIterator M( polaron[i][j], l ); M; ++M ) {
                         int i_n = M.row();
                         int j_n = M.col();
-                        double stroke = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.2 : 1.0; // std::min( 2.0, std::max( 0.2, std::abs( M.value() ) / total_weights[fmt::format( "{},{}->{},{}", i, j, i_n, j_n )] ) );
+                        double stroke = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.2 : 1.0; // std::min( 2.0, std::max( 0.2, std::abs( M.value() ) / total_weights[std::format( "{},{}->{},{}", i, j, i_n, j_n )] ) );
                         double arrowsize = ( i == i_n and j == j_n and std::real( M.value() ) == 1.0 ) ? 0.05 : 0.1;
-                        fp_dot << fmt::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( M.value() ), std::imag( M.value() ), "firebrick4", stroke, arrowsize, "Polaron Mapping" );
+                        fp_dot << std::format( "\"{1}_{0},{2}_{0}\"->\"{4}_{3},{5}_{3}\" [color=\"{8}\" penwidth=\"{9}\" arrowsize=\"{10}\" edgetooltip=\"{11} Value: ({6},{7})\" fontsize=\"5\"];\n", 0, i, j, 1, i_n, j_n, std::real( M.value() ), std::imag( M.value() ), "firebrick4", stroke, arrowsize, "Polaron Mapping" );
                     }
     } catch ( const std::exception &e ) {
         Log::L2( "[Dot-Visualizer] Error when calculating and outputting PME Kernel.\n" );
@@ -173,10 +173,10 @@ bool QDACC::Numerics::ODESolver::visualize_path( Sparse &rho0, System &s ) {
     // RIP. TODO: no system call; for now dont care
     Log::L2("[Dot-Visualizer] Outputting dot file to path.dot\n");
     Log::L2("[Dot-Visualizer] dot -v -Kneato -Tsvg \"{0}path.dot\" -o \"{0}path.svg\"\n",s.parameters.working_directory);
-    Log::L2("[Dot-Visualizer] Return value: {}\n",std::system( fmt::format( "dot -v -Kneato -Tsvg \"{0}path.dot\" -o \"{0}path.svg\"", s.parameters.working_directory ).c_str() ) );
+    Log::L2("[Dot-Visualizer] Return value: {}\n",std::system( std::format( "dot -v -Kneato -Tsvg \"{0}path.dot\" -o \"{0}path.svg\"", s.parameters.working_directory ).c_str() ) );
     Log::L2("[Dot-Visualizer] dot -v -Kneato -Tpng \"{0}path.dot\" -o \"{0}path.png\"\n",s.parameters.working_directory);
-    Log::L2("[Dot-Visualizer] Return value: {}\n",std::system( fmt::format( "dot -v -Kneato -Tpng \"{0}path.dot\" -o \"{0}path.png\"", s.parameters.working_directory ).c_str() ) );
+    Log::L2("[Dot-Visualizer] Return value: {}\n",std::system( std::format( "dot -v -Kneato -Tpng \"{0}path.dot\" -o \"{0}path.png\"", s.parameters.working_directory ).c_str() ) );
     Log::L2("[Dot-Visualizer] dot -v -Tsvg \"{0}path.dot\" -o \"{0}path_unordered.svg\"\n",s.parameters.working_directory);
-    Log::L2("[Dot-Visualizer] Return value: {}\n",std::system( fmt::format( "dot -v -Tsvg \"{0}path.dot\" -o \"{0}path_unordered.svg\"", s.parameters.working_directory ).c_str() ) );
+    Log::L2("[Dot-Visualizer] Return value: {}\n",std::system( std::format( "dot -v -Tsvg \"{0}path.dot\" -o \"{0}path_unordered.svg\"", s.parameters.working_directory ).c_str() ) );
     return true;
 }
