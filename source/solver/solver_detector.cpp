@@ -12,14 +12,14 @@ Let Mode be G1-hbd-vb: Do not apply Mask
 ...
 */
 
-void QDACC::Numerics::ODESolver::initialize_detector_functions( System &s, CacheMatrix &mat ) {
+void QDACC::Numerics::ODESolver::initialize_detector_functions( System &s, MultidimensionalCacheMatrix &mat ) {
     const auto dim = mat.dim();
     auto &config_time = s.parameters.input_conf["DetectorTime"];
     // Initialize Temporal Mask
     for ( const auto &mode : config_time.string_v["time_mode"] ) {
         if ( not detector_temporal_mask.contains( mode ) ) {
             Log::L2( "[PhotonStatistics] Initializing Detector Temporal Mask for mode {}...\n", mode );
-            detector_temporal_mask[mode] = dDense::Zero( dim, dim );
+            detector_temporal_mask[mode] = MultidimensionalCacheMatrix( {dim, dim}, "detector_envelope" );
         }
     }
     // Calculate Temporal Mask
@@ -35,7 +35,7 @@ void QDACC::Numerics::ODESolver::initialize_detector_functions( System &s, Cache
             double time = mat.t( i );
             for ( int j = 0; j < dim - i; j++ ) {
                 double tau = mat.tau( j, i );
-                current_detector_temporal_mask( i, j ) += t_amp * std::exp( -std::pow( ( time - t_center ) / t_range, power ) ) * std::exp( -std::pow( ( tau - t_center ) / t_range, power ) );
+                current_detector_temporal_mask.get( i, j ) += t_amp * std::exp( -std::pow( ( time - t_center ) / t_range, power ) ) * std::exp( -std::pow( ( tau - t_center ) / t_range, power ) );
             }
         }
     }
@@ -43,9 +43,7 @@ void QDACC::Numerics::ODESolver::initialize_detector_functions( System &s, Cache
     if ( s.parameters.detector_normalize_functions )
         for ( auto &[mode, mask] : detector_temporal_mask ) {
             const auto max_coeff = mask.maxCoeff();
-            const auto min_coeff = mask.minCoeff();
-            // mask = ( mask.array() - min_coeff ) / ( max_coeff - min_coeff );
-            mask /= max_coeff;
+            mask.multiplyScalar( 1.0 / max_coeff );
         }
 
     auto &config_spectral = s.parameters.input_conf["DetectorSpectral"];
@@ -115,7 +113,7 @@ void QDACC::Numerics::ODESolver::initialize_detector_functions( System &s, Cache
     }
 }
 
-void QDACC::Numerics::ODESolver::apply_detector_function( System &s, CacheMatrix &mat, const std::string &mat_mode ) {
+void QDACC::Numerics::ODESolver::apply_detector_function( System &s, MultidimensionalCacheMatrix &mat, const std::string &mat_mode ) {
     // If both masks are empty, calculate them
     if ( detector_temporal_mask.empty() and detector_frequency_mask.empty() )
         initialize_detector_functions( s, mat );
@@ -130,7 +128,7 @@ void QDACC::Numerics::ODESolver::apply_detector_function( System &s, CacheMatrix
         // Apply Mask if mode is contained in mat_mode
         Log::L2( "[PhotonStatistics] Applying Detector Temporal Mask to {}... \n", purpose );
         if ( mat_mode.find( mode ) != std::string::npos )
-            mat.get() = mat.get().cwiseProduct( detector_temporal_mask[mode] );
+            mat.multiplyMatrix( detector_temporal_mask[mode] );
     }
 
     auto &spectralconfig = s.parameters.input_conf["DetectorSpectral"];
@@ -147,6 +145,7 @@ void QDACC::Numerics::ODESolver::apply_detector_function( System &s, CacheMatrix
             Log::L2( "[PhotonStatistics] Calculating FT({})...\n", purpose );
             // Calculate main fourier transform integral with spectral amplitude in tau direction.
             // Transform Tau Direction for every t_i
+            // Note, that currently the transformation is only available in 2D.
             Dense mat_transformed = Dense::Zero( dim, current_detector_frequency_mask.size() );
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
             for ( int i = 0; i < dim; i++ ) {
@@ -155,7 +154,7 @@ void QDACC::Numerics::ODESolver::apply_detector_function( System &s, CacheMatrix
                     for ( int j = 0; j < dim; j++ ) {   // -i because of triangular grid
                         double tau = mat.tau( j, i );   // std::imag( timemat( i, j ) ) - std::real( timemat( i, j ) );
                         double dtau = mat.dtau( j, i ); // Numerics::get_taudelta( timemat, i, j );
-                        mat_transformed( i, v ) += frequency_amp * std::exp( -1.0i * frequency_v * tau ) * mat( i, j ) * dtau / 2.0 / 3.1415;
+                        mat_transformed( i, v ) += frequency_amp * std::exp( -1.0i * frequency_v * tau ) * mat.get( i, j ) * dtau / 2.0 / 3.1415;
                     }
                 }
                 Timers::outputProgress( timer, progressbar, i, dim, "Detector FT tau (" + purpose + "): " );
@@ -177,15 +176,14 @@ void QDACC::Numerics::ODESolver::apply_detector_function( System &s, CacheMatrix
             }
             // Transform Back
             Log::L2( "[PhotonStatistics] Calculating iFT({})...\n", purpose );
-            mat.set_empty();
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
             for ( int i = 0; i < dim; i++ ) {
                 for ( int j = 0; j < dim; j++ ) {
                     double tau = mat.tau( j, i );
-                    // double dtau = Numerics::get_taudelta( timemat, i, j );
+                    mat.get( i, j ) = 0;
                     for ( int v = 0; v < current_detector_frequency_mask.size(); v++ ) {
                         const auto &[frequency_v, frequency_amp, frequency_delta] = current_detector_frequency_mask[v];
-                        mat( i, j ) += std::exp( 1.0i * frequency_v * tau ) * mat_transformed( i, v ) * frequency_delta;
+                        mat.get( i, j ) += std::exp( 1.0i * frequency_v * tau ) * mat_transformed( i, v ) * frequency_delta;
                     }
                 }
                 Timers::outputProgress( timer, progressbar, i, mat.dim(), "Detector iFT t (" + purpose + "): " );

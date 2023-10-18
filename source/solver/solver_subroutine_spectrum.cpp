@@ -23,7 +23,7 @@ bool QDACC::Numerics::ODESolver::calculate_spectrum( System &s, const std::strin
 
     // Create Timer and Progressbar for the spectrum loop
     Timer &timer = Timers::create( "Spectrum (" + s_g + ")" );
-    int totalIterations = resolution;
+    int totalIterations = akf_mat.dim();
     auto progressbar = ProgressBar();
     timer.start();
     Log::L2( "[Spectrum] Calculating spectrum... Calculating frequencies...\n" );
@@ -39,17 +39,17 @@ bool QDACC::Numerics::ODESolver::calculate_spectrum( System &s, const std::strin
     Log::L2( "[Spectrum] Matrix Size = {0} x {0}\n", akf_mat.dim() );
     // Calculate main fourier transform integral
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
-    for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
-        for ( long unsigned int i = 0; i < akf_mat.dim(); i++ ) {
-            double dt = akf_mat.dt( i );
-            for ( int j = 0; j < akf_mat.dim() - i; j++ ) { // -i because of triangular grid
-                double tau = akf_mat.tau( j, i );
-                double dtau = akf_mat.dtau( j, i );
-                out.at( spec_w ) += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * akf_mat( i, j ) * dtau * dt;
+    for ( long unsigned int i = 0; i < akf_mat.dim(); i++ ) {
+        double dt = akf_mat.dt( i );
+        for ( int j = 0; j < akf_mat.dim() - i; j++ ) { // -i because of triangular grid
+            double tau = akf_mat.tau( j, i );
+            double dtau = akf_mat.dtau( j, i );
+            Scalar current_akf_value = akf_mat.get( i, j );
+            for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
+                out.at( spec_w ) += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * current_akf_value * dtau * dt;
             }
         }
         Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g + "): " );
-        out.at( spec_w ) = std::real( out.at( spec_w ) );
         timer.iterate();
     }
     // Normalize
@@ -62,8 +62,8 @@ bool QDACC::Numerics::ODESolver::calculate_spectrum( System &s, const std::strin
     timer.end();
     Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g + ")", Timers::PROGRESS_FORCE_OUTPUT );
     // Save output
-    to_output["Spectrum_frequency"][s_g] = spectrum_frequency_w;
-    to_output["Spectrum"][s_g] = out;
+    add_to_output( "Spectrum_frequency", s_g, spectrum_frequency_w, to_output );
+    add_to_output( "Spectrum", s_g, out, to_output );
 
     // Sucessfull
     return true;

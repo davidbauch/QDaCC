@@ -30,8 +30,6 @@ T lerp( T a, T b, double c ) {
     return ( 1.0 - c ) * a + c * b;
 }
 
-bool is_number( const std::string &s );
-
 double factorial( double n );
 
 double factorial_range( double upper, double lower );

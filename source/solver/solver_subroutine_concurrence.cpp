@@ -188,15 +188,20 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
     // cache[s_g2_2211] = cache[s_g2_1122].conjugate( s_g2_2211 );
     // cache[s_g2_1212] = cache[s_g2_2121].conjugate( s_g2_1212 );
     // Note: This will probably be either removed completely, or implemented correctly.
+    auto& first_matrix = cache[mode_purpose.at( "1111" )];
     if ( spec_range > 0 ) {
-        const auto matrix_dim = cache[mode_purpose.at( "1111" )].dim();
-        // Don't use accumulate here, because the Dense Matrix in cache is hiding behind the .get() call.
-        Dense combined = Dense::Zero( matrix_dim, matrix_dim );
-        for ( const auto &mode : modes ) {
-            combined += cache[mode_purpose[mode]].get();
-        }
+        const auto matrix_dim = first_matrix.dim();
+    
         const std::string combined_name = "concurrence_total_" + fout;
-        cache[combined_name] = CacheMatrix( combined, cache[mode_purpose.at( "1111" )].get_time(), combined_name );
+        cache[combined_name] = MultidimensionalCacheMatrix( {matrix_dim, matrix_dim}, combined_name );
+        auto& combined = cache[combined_name];
+
+        // Sum Matrix and set Time Matrix
+        for (auto time_index = 0; time_index < first_matrix.size(); time_index++) {
+            combined.get_time(time_index) = first_matrix.get_time(time_index);
+            for ( const auto &mode : modes ) 
+                combined.get(time_index) += cache[mode_purpose[mode]].get(time_index);
+        }
         calculate_spectrum( s, "none", "none", spec_center, spec_range, (int)spec_res, 2, false, combined_name );
         for ( const auto &[n, mode] : mode_purpose ) {
             calculate_spectrum( s, "none", "none", spec_center, spec_range, (int)spec_res, 2, false, mode );
@@ -204,12 +209,12 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
     }
 
     // Cache Progressbar Size
-    int pbsize = 2 * cache[mode_purpose.at( "1111" )].dim();
+    int pbsize = 2 * first_matrix.dim();
 
     Timer &timer_c = Timers::create( "Concurrence (" + fout + ")" ).start();
 
     // Maximum Time / Dimension of the cache matrices
-    auto T = std::min<size_t>( cache[mode_purpose.at( "1111" )].dim(), savedStates.size() );
+    auto T = std::min<size_t>( first_matrix.dim(), savedStates.size() );
 
     // Generate DM cache matrices
     using tpdm_t = std::map<std::string, std::vector<Scalar>>;
@@ -235,7 +240,7 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
                 int tau = t - i;
                 // for ( int tau = 0; tau < T - i; tau++ ) {
                 double dtau = gmat.dtau( tau, i ); // FIXED: dtau instead of dt!
-                rho[mode][t] += gmat( i, tau ) * dt * dtau;
+                rho[mode][t] += gmat.get( i, tau ) * dt * dtau;
             }
             // G2(t,0) - No Triangular Integral
             double dt = gmat.dt( t );
@@ -248,31 +253,18 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
         }
     }
 
-    // Generate Cache Vectors
-    to_output["Conc"]["Time"] = std::vector<Scalar>( T, 0 );
-    to_output["Conc"][fout] = std::vector<Scalar>( T, 0 );
-    to_output["Conc_simple"][fout] = std::vector<Scalar>( T, 0 );
-    to_output["Conc_analytical"][fout] = std::vector<Scalar>( T, 0 );
-    to_output["Conc_fidelity"][fout] = std::vector<Scalar>( T, 0 );
-    to_output["Conc_g2zero"][fout] = std::vector<Scalar>( T, 0 );
-    to_output["Conc_g2zero_simple"][fout] = std::vector<Scalar>( T, 0 );
-    to_output["Conc_g2zero_fidelity"][fout] = std::vector<Scalar>( T, 0 );
-    to_output_m["TwoPMat"][fout] = std::vector<Dense>( T, Dense::Zero( 4, 4 ) );
-    to_output_m["TwoPMat"][fout + "_g2zero"] = std::vector<Dense>( T, Dense::Zero( 4, 4 ) );
-    to_output_m["ConcEV"][fout + "_EV"] = std::vector<Dense>( T, Vector::Zero( 4 ) );
-
     // Generate Referenced Shortcuts
-    auto &time = to_output["Conc"]["Time"];
-    auto &output = to_output["Conc"][fout];
-    auto &output_simple = to_output["Conc_simple"][fout];
-    auto &output_analytical = to_output["Conc_analytical"][fout];
-    auto &output_fidelity = to_output["Conc_fidelity"][fout];
-    auto &output_g2zero = to_output["Conc_g2zero"][fout];
-    auto &output_g2zero_simple = to_output["Conc_g2zero_simple"][fout];
-    auto &output_fidelity_g2zero = to_output["Conc_g2zero_fidelity"][fout];
-    auto &twophotonmatrix = to_output_m["TwoPMat"][fout];
-    auto &twophotonmatrix_g2zero = to_output_m["TwoPMat"][fout + "_g2zero"];
-    auto &output_eigenvalues = to_output_m["ConcEV"][fout + "_EV"];
+    auto &time = add_to_output("Conc","Time", std::vector<Scalar>(T,0), to_output, true /* Overwrite Existing */);
+    auto &output = add_to_output("Conc",fout, std::vector<Scalar>(T,0), to_output);
+    auto &output_simple = add_to_output("Conc_simple",fout, std::vector<Scalar>(T,0), to_output);
+    auto &output_analytical = add_to_output("Conc_analytical",fout, std::vector<Scalar>(T,0), to_output);
+    auto &output_fidelity = add_to_output("Conc_fidelity",fout, std::vector<Scalar>(T,0), to_output);
+    auto &output_g2zero = add_to_output("Conc_g2zero",fout, std::vector<Scalar>(T,0), to_output);
+    auto &output_g2zero_simple = add_to_output("Conc_g2zero_simple",fout, std::vector<Scalar>(T,0), to_output);
+    auto &output_fidelity_g2zero = add_to_output("Conc_g2zero_fidelity",fout, std::vector<Scalar>(T,0), to_output);
+    auto &twophotonmatrix = add_to_output("TwoPMat",fout,std::vector<Dense>( T, Dense::Zero( 4, 4 ) ) , to_output_m);
+    auto &twophotonmatrix_g2zero = add_to_output("TwoPMat",fout + "_g2zero",std::vector<Dense>( T, Dense::Zero( 4, 4 ) ) , to_output_m);
+    auto &output_eigenvalues = add_to_output("ConcEV",fout + "_EV", std::vector<Dense>( T, Vector::Zero( 4 ) ), to_output_m);
 
     // Generate spinflip matrix
     const Dense spinflip = _generate_spinflip();
@@ -312,7 +304,7 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
         output_g2zero.at( k ) = conc_g2zero;
         output_g2zero_simple.at( k ) = std::abs( rho_2phot_g2zero( 0, 3 ) ) + std::abs( rho_2phot_g2zero( 3, 0 ) );
         output_fidelity_g2zero.at( k ) = fidelity_g2zero;
-        time.at( k ) = cache[mode_purpose.at( "1111" )].t( k );
+        time.at( k ) = first_matrix.t( k );
         output_analytical.at( k ) = conc_analytical;
         twophotonmatrix.at( k ) = rho_2phot;
         twophotonmatrix_g2zero.at( k ) = rho_2phot_g2zero;

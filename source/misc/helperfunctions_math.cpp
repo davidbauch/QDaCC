@@ -49,3 +49,8 @@ QDACC::Type::Scalar QDACC::Math::getSqueezed( double r, double phi, double N ) {
 bool QDACC::Math::is_number( const std::string &s ) {
     return !s.empty() && std::find_if( s.begin(), s.end(), []( char c ) { return ( !( std::isdigit( c ) || c == 'e' || c == 'E' || c == '-' || c == '+' || c == '.' ) ); } ) == s.end();
 }
+
+bool QDACC::Math::is_number( const char& s) {
+    return std::isdigit( s ) || s == 'e' || s == 'E' || s == '-' || s == '+' || s == '.';
+}
+

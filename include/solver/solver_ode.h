@@ -15,11 +15,14 @@ class ODESolver {
     int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
 
     // Matrix Cache Map
-    std::map<std::string, CacheMatrix> cache;
+    std::map<std::string, MultidimensionalCacheMatrix> cache;
+
+    template <typename T>
+    using t_output_type = std::map<std::string, std::map<std::string, std::vector<T>>>;
     // Vector Cache Map which are output to file
-    std::map<std::string, std::map<std::string, std::vector<Scalar>>> to_output;
+    t_output_type<Scalar> to_output;
     // Matrix Cache Map which are output to file
-    std::map<std::string, std::map<std::string, std::vector<Dense>>> to_output_m;
+    t_output_type<Dense> to_output_m;
 
     // Cached Entries
     // Vector for saved matrix-time tuples for densitymatrix
@@ -40,9 +43,9 @@ class ODESolver {
     std::vector<int> pathint_tensor_dimensions;
 
     // Detector matrix
-    std::map<std::string,dDense> detector_temporal_mask;
+    std::map<std::string, MultidimensionalCacheMatrix> detector_temporal_mask;
     using t_detector_frequency_mask = std::vector<std::tuple<double, double, double>>;
-    std::map<std::string,t_detector_frequency_mask> detector_frequency_mask;
+    std::map<std::string, t_detector_frequency_mask> detector_frequency_mask;
     // Dense detector_frequency_mask_cache;
 
     /**
@@ -107,6 +110,8 @@ class ODESolver {
      */
     void calculate_g2( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose = "unknown" );
     void calculate_g2( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::string &s_op_l, const std::vector<std::string> &purposes );
+
+    void calculate_g3( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::vector<std::string> &s_op_l, const std::vector<std::string> &s_op_m, const std::string &s_op_n, const std::vector<std::string> &purposes );
 
    public:
     ODESolver(){};
@@ -202,18 +207,18 @@ class ODESolver {
      *
      */
     bool calculate_path_integral( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output = true );
-    
+
     /**
-     * @brief Iterates rho0 from t_start to t_end using the Path Integral Method. 
-    */
-    Tensor iterate_path_integral( System &s, Tensor &adm_tensor, std::vector<std::vector<Sparse>>& propagator, const int max_index );
-    Tensor iterate_path_integral_gpu( System &s, Tensor &adm_tensor, std::vector<std::vector<Sparse>>& propagator, const int max_index );
-    
+     * @brief Iterates rho0 from t_start to t_end using the Path Integral Method.
+     */
+    Tensor iterate_path_integral( System &s, Tensor &adm_tensor, std::vector<std::vector<Sparse>> &propagator, const int max_index );
+    Tensor iterate_path_integral_gpu( System &s, Tensor &adm_tensor, std::vector<std::vector<Sparse>> &propagator, const int max_index );
+
     /**
      * @brief Calculates rho0 from t_start to t_end incorporating the corresponding correlation modification.
      *
      */
-    bool calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDACC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores);
+    bool calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDACC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores );
 
     /**
      * @brief Creates a table file containing the available propagation paths in the .dot format
@@ -237,20 +242,39 @@ class ODESolver {
      * @brief Applies the detector mapping function to a G1 or G2 correlation function.
      *
      */
-    void apply_detector_function( System &s, CacheMatrix &mat, const std::string& mat_mode = "G" );
+    void apply_detector_function( System &s, MultidimensionalCacheMatrix &mat, const std::string &mat_mode = "G" );
 
     /**
      * @brief Initializes the detector functions for G1 and G2 correlation functions.
-     * This function requireds a valid CacheMatrix object for the dimensions, so it can
-     * only be called after the CacheMatrix has been initialized.
-    */
-    void initialize_detector_functions(System& s, CacheMatrix &mat);
+     * This function requireds a valid MultidimensionalCacheMatrix object for the dimensions, so it can
+     * only be called after the MultidimensionalCacheMatrix has been initialized.
+     */
+    void initialize_detector_functions( System &s, MultidimensionalCacheMatrix &mat );
 
     /**
      * @brief Calculates the Eigenvalues of the Hamilton operators H_0, H_I and H_0+H_I and outputs them to "hamilton_eigenvalues.txt"
      *
      */
     void calculate_hamilton_eigenvalues( System &s, const int power = 1 );
+
+    /**
+    * @brief Adds value to the output vector for name using key as the individual dataset name.
+    * If to_output[name] already contains key, then key is appended with a number to avoid overwriting.
+    * @param name: [std::string] Name of the dataset
+    * @param key: [std::string] Name of the individual dataset
+    * @param value: [T] Value to be added to the dataset
+    * @param where: [t_output_type<T>] Reference to the output vector
+    * @param overwrite: [bool] If true, overwrites the dataset if it already exists anyways
+    */
+    template <typename T>
+    std::vector<T> &add_to_output( const std::string &name, std::string key, const std::vector<T> &value, t_output_type<T> &where, bool overwrite = false ) {
+        int count;
+        if ( not overwrite and where.contains( name ) and ( count = where[name].count( key ) ) > 0 ) {
+            key += "_" + std::to_string( count );
+        }
+        where[name][key] = value;
+        return where[name][key];
+    }
 };
 
 } // namespace QDACC::Numerics

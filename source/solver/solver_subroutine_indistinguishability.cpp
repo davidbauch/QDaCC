@@ -29,16 +29,10 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
 
     size_t T = std::min<size_t>( pbsize, savedStates.size() );
 
-    std::vector<Scalar> top, bottom, topv, outp, outpv, time;
-
-    for ( int i = 0; i < T; i++ ) {
-        outp.emplace_back( 0 );
-        outpv.emplace_back( 0 );
-        top.emplace_back( 0 );
-        bottom.emplace_back( 0 );
-        topv.emplace_back( 0 );
+    std::vector<Scalar> top( T, 0 ), bottom( T, 0 ), topv( T, 0 ), outp( T, 0 ), outpv( T, 0 );
+    std::vector<Scalar> time;
+    for ( int i = 0; i < T; i++ ) // This could also be a row extraction using Eigen
         time.emplace_back( akf_mat_g1.t( i ) );
-    }
 
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
@@ -52,18 +46,16 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
             Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t_t );
             double dt = akf_mat_g1.dt( i );
             double dtau = akf_mat_g1.dtau( j, i );
-            top[upper_limit] += ( gpop + akf_mat_g2( i, j ) - akf_mat_g1( i, j ) * std::conj( akf_mat_g1( i, j ) ) ) * dt * dtau;
+            top[upper_limit] += ( gpop + akf_mat_g2.get( i, j ) - akf_mat_g1.get( i, j ) * std::conj( akf_mat_g1.get( i, j ) ) ) * dt * dtau;
             bottom[upper_limit] += ( 2.0 * gpop - gbot * std::conj( gbot ) ) * dt * dtau;
-            topv[upper_limit] += std::pow( std::abs( akf_mat_g1( i, j ) ), 2.0 ) * dt * dtau;
+            topv[upper_limit] += std::pow( std::abs( akf_mat_g1.get( i, j ) ), 2.0 ) * dt * dtau;
         }
         Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), pbsize, "Indistinguishability (Simplified) (" + fout + "): " );
         timer.iterate();
     }
 
-    Scalar topsum = 0;
-    Scalar bottomsum = 0;
-    Scalar topsumv = 0;
-    Scalar bottomsumv = 0;
+    Scalar topsum = 0, bottomsum = 0, topsumv = 0, bottomsumv = 0;
+
     for ( int i = 0; i < top.size(); i++ ) {
         double dt = akf_mat_g1.dt( i );
         double t_t = akf_mat_g1.t( i );
@@ -80,10 +72,12 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
 
     // Add to Fileoutput:
     if ( to_output["Indist"].size() == 0 )
-        to_output["Indist"]["Time"] = time;
-    to_output["Indist"][fout] = outp;
-    to_output["Visibility"][fout] = outpv;
+        add_to_output( "Indist", "Time", time, to_output );
+    add_to_output( "Indist", fout, outp, to_output );
+    add_to_output( "Visibility", fout, outpv, to_output );
+
     Log::L1( "Final Indistinguishability: {} {}\n", std::real( outp.back() ), fout );
     Log::L1( "Final Visibility: {} {}\n", std::real( outpv.back() ), fout );
+
     return true;
 }

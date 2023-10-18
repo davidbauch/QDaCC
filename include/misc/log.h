@@ -45,6 +45,10 @@ class Logger {
         return Get().Iinit( filepath, max_log_level );
     }
     template <typename... Args>
+    static void Warning( const std::string &msg, const Args &...args ) {
+        return Get().Ilevel1_log( YELLOW+BOLD+msg+RESET, true, std::make_format_args( args... ) );
+    }
+    template <typename... Args>
     static void L1( const std::string &msg, const Args &...args ) {
         return Get().Ilevel1_log( msg, true, std::make_format_args( args... ) );
     }
@@ -56,7 +60,6 @@ class Logger {
     static void L2( const std::string &msg, const Args &...args ) {
         return Get().Ilevel2_log( msg, true, true, std::make_format_args( args... ) );
     }
-    // ?????
     template <typename T>
     static void L2( const std::string &msg, const std::vector<T> &vec ) {
         std::stringstream kekw;
@@ -67,7 +70,6 @@ class Logger {
     static void L3( const std::string &msg, const Args &...args ) {
         return Get().Ilevel3_log( msg, true, true, std::make_format_args( args... ) );
     }
-    // ?????
     template <typename T>
     static void L3( const std::string &msg, const std::vector<T> &vec ) {
         std::stringstream kekw;
@@ -252,6 +254,12 @@ class Logger {
 #    define L1( fmt, ... ) Logger::Nothing()
 #else
 #    define L1( fmt, ... ) Logger::L1( fmt, ##__VA_ARGS__ )
+#endif
+
+#ifdef LOG_DISABLE_L1
+#    define Warning( fmt, ... ) Logger::Nothing()
+#else
+#    define Warning( fmt, ... ) Logger::Warning( fmt, ##__VA_ARGS__ )
 #endif
 
 #ifdef LOG_DISABLE_L2

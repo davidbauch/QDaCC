@@ -52,11 +52,11 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
         Log::L2( "[PhotonStatistics] Saving Detector Matrix to detector_temporal_mask_{}.txt...\n", mode );
         auto &f_detector = FileOutput::add_file( "detector_temporal_mask_" + mode );
         f_detector << "Time_index\ttau_index\tD(t)*D(t+tau)\n";
-        for ( int k = 0; k < current_detector_temporal_mask.rows(); k++ ) {
+        for ( int k = 0; k < current_detector_temporal_mask.dim(); k++ ) {
             const auto t = gmat.t( k );
-            for ( int l = 0; l < current_detector_temporal_mask.cols(); l++ ) {
+            for ( int l = 0; l < current_detector_temporal_mask.dim(); l++ ) {
                 const auto tau = gmat.tau( l );
-                const auto val = std::real( current_detector_temporal_mask( k, l ) );
+                const auto val = std::real( current_detector_temporal_mask.get( k, l ) );
                 f_detector << std::format( "{}\t{}\t{:.8e}\n", t, tau, val );
             }
             f_detector << "\n";
@@ -99,7 +99,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                     double t_t = gmat.t( k );
                     for ( int l = 0; l < dim; l++ ) {
                         double t_tau = gmat.tau( l, k );
-                        const auto el = gmat( k, l );
+                        const auto el = gmat.get( k, l );
                         f_gfunc << std::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_t, t_tau, std::abs( el ), std::real( el ), std::imag( el ) );
                     }
                     f_gfunc << "\n";
@@ -113,7 +113,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
             for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
                 for ( int i = 0; i <= upper_limit; i++ ) {
                     int j = upper_limit - i;
-                    topv[upper_limit] += gmat( i, j );
+                    topv[upper_limit] += gmat.get( i, j );
                 }
             }
             Scalar topsumv = 0;
@@ -134,7 +134,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                     Scalar g2oftau = 0; // integral_t G(t,tau) dt -> g(tau)
                     for ( int k = 0; k < gmat.dim(); k++ ) {
                         const auto dt = gmat.dt( l, k );
-                        g2oftau += gmat( k, l ) * dt;
+                        g2oftau += gmat.get( k, l ) * dt;
                     }
                     const double t_tau = gmat.tau( l ); // t and tau here are actually the same value, because for tau -> t = 0
                     const auto tau_index = rho_index_map[t_tau];
