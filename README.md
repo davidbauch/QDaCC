@@ -12,7 +12,7 @@ Published Work using QDaCC:
 
 ["On-demand indistinguishable and entangled photons at telecom frequencies using tailored cavity designs" (arXiv)](https://arxiv.org/abs/2303.13871)
 
-[![AQT](https://img.shields.io/badge/AQT-10.1002/qute.202300142-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734)
+[![AQT](https://img.shields.io/badge/AQT-10.1002/qute.202300142-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.48550/arXiv.2303.13871)](https://arxiv.org/abs/2303.13871)
 
 
 There is a GUI available at [gitub/QDaCC-GUI](https://github.com/davidbauch/QDaCC-Tools/)
