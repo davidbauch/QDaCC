@@ -5,7 +5,7 @@ TARGET_EXEC_LATEST := a.out
 TARGET_DIR := ./build
 BUILD_DIR := ./build
 SRC_DIRS := ./source ./external/ALGLIB
-COMPILER = $(CXX)
+COMPILER = $(CXX) # -pg -g -no-pie
 
 VERSION ?= 1.0.0
 
@@ -17,18 +17,18 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 LIB_DIRS :=  #$(shell find $(SRC_DIRS) -type d)
 LIB_FLAGS := $(addprefix -L,$(LIB_DIRS)) -O3 -D_GLIBCXX_PARALLEL 
-LIB_LINKS := -lOpenCL #-lblas
+LIB_LINKS :=
 
 ifneq ($(COMPILER), /opt/intel/oneapi/compiler/latest/mac/bin/intel64/icpc)
-	LIB_FLAGS += -fopenmp -Wno-volatile -lstdc++fs
+	LIB_FLAGS += -fopenmp -Wno-volatile -lstdc++fs # -march=native
 else
 	LIB_FLAGS += -qopenmp -w0 -static-intel
 endif
 
 # ADjust os dependent stuff
 ifeq ($(OS),Windows_NT)
-	LIB_FLAGS += -std=c++2b
-	TARGET_DIR = ../Threadhandler
+	LIB_FLAGS += -std=c++23
+	TARGET_DIR = ../QDaCC_Work
 	TARGET_EXEC := QDaCC-$(VERSION).exe
 	TARGET_EXEC_LATEST := QDaCC.exe
 	BUILD_DIR = ./build/win
@@ -62,25 +62,19 @@ CPPFLAGS := $(INC_FLAGS) $(LIB_FLAGS) $(UFLAG)
 main: $(OBJS)
 	@echo Compiling Main Program into $(TARGET_DIR)/$(TARGET_EXEC), compiler is $(COMPILER), libs are $(LIB_FLAGS)
 	@echo User Flags: $(UFLAG)
-	@$(COMPILER) main.cpp -o $(TARGET_DIR)/$(TARGET_EXEC) $(OBJS) $(LIB_LINKS) $(CPPFLAGS)
-	# ln -sf $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/QDaCC
+	@$(COMPILER) main.cpp -o $(TARGET_DIR)/$(TARGET_EXEC) $(OBJS) $(LIB_LINKS) $(CPPFLAGS) 
 	cp $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/$(TARGET_EXEC_LATEST)
-maindebug: $(OBJS)g
-	@echo Compiling Main Program into $(TARGET_DIR)/$(TARGET_EXEC), compiler is $(COMPILER), libs are $(LIB_FLAGS)
-	@echo User Flags: $(UFLAG)
-	@$(COMPILER) main.cpp -g -o $(TARGET_DIR)/$(TARGET_EXEC) $(OBJS) $(LIB_LINKS) $(CPPFLAGS)
-	# ln -sf $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/QDaCC
-	cp $(TARGET_DIR)/$(TARGET_EXEC) $(TARGET_DIR)/$(TARGET_EXEC_LATEST)
+	cp .settings.cla $(TARGET_DIR)/.settings.cla
 
 # Build step for C++ source
 $(BUILD_DIR)/%.cpp.o: %.cpp
 	@echo Compiling $@
 	@mkdir -p $(dir $@)
-	@$(COMPILER) $(CPPFLAGS) -c $< -o $@
+	@$(COMPILER) $(CPPFLAGS) -c $< -o $@ 
 $(BUILD_DIR)/%.cpp.og: %.cpp
 	@echo Compiling $@
 	@mkdir -p $(dir $@)
-	@$(COMPILER) $(CPPFLAGS) -g -c $< -o $@
+	@$(COMPILER) $(CPPFLAGS) -c $< -o $@
 
 # .PHONY: clean
 clean:

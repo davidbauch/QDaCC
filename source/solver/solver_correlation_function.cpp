@@ -10,6 +10,36 @@ double QDACC::Numerics::get_tdelta( const std::vector<SaveState> &savedStates, s
     return var_index == 0 ? savedStates[var_index + 1].t - savedStates[var_index].t : savedStates[var_index].t - savedStates[var_index - 1].t;
 }
 
+/**
+ * These functions calculate the n-Dimensional G^(n) correlation function.
+ *
+ * The n-th order correlation function is defined as:
+ * `G^(n)(t1,...,tn) = < a_1^d(t1) * a_2^d(t2) * ... * a_n^d(tn) * a_n+1(tn) * a_n+2(tn-1) * ... * a_2n(t) >`
+ * `= Tr( rho * a_1^d(t1) * a_2^d(t2) * ... * a_n^d(tn) * a_n+1(tn) * a_n+2(tn-1) * ... * a_2n(t) )`
+ *
+ * The most used correlation functions are G^(1), G^(2) and G^(3). Using the unitary
+ * time transformation `U(t0,t1) = exp(-i int_t0^t1 H(t) dt)` and the Quantum
+ * Regression Theorem, we can rewrite the correlation functions as:
+ *
+ * `G^(1)(t,tau) = < a_1^d(t) * a_2(t+tau) >`
+ * `             = Tr (rho * a_1^d(t) * a_2(t+tau) )`
+ * `             = Tr( [a_2 * rho(t)]->tau * a_1^d )`
+ * `G^(2)(t,tau) = < a_1^d(t) * a_2^d(t+tau) * a_3(t+tau) * a_4(t) >`
+ * `             = Tr( rho * a_1^d(t) * a_2^d(t+tau) * a_3(t+tau) * a_4(t))`
+ * `             = Tr( [a_4 * rho(t) * a_1^d]->tau * a_2^d * a_3 )`
+ * `G^(3)(t,tau1,tau2) = < a_1^d(t) * a_2^d(t+tau1) * a_3^d(t+tau2) * a_4(t+tau2) * a_5(t+tau1) * a_6(t) >`
+ * `                   = Tr( rho * a_1^d(t) * a_2^d(t+tau1) * a_3^d(t+tau2) * a_4(t+tau2) * a_5(t+tau1) * a_6(t) )`
+ * `                   = Tr ( [ [ a_6 * rho(t) * a_1^d ]->tau1 a_2^d * a_5 ]->tau2 * a_3^d * a_4 ) )`
+ * ...
+ * `G^(n)(t,tau1,...,taun-1) = < a_1^d(t) * a_2^d(t+tau1) * ... * a_n^d(t+tau_n-1) * a_n+1(t+tau_n-1) * ... * a_2n(t) >`
+ * `                         = Tr( rho * a_1^d(t) * a_2^d(t+tau1) * ... * a_n^d(t+tau_n-1) * a_n+1(t+tau_n-1) * ... * a_2n(t) )`
+ * `                         = Tr( [ [ [ [ [ a_2n * rho(t) * a_1^d ]->tau1 * a_2^d * a_2n-1 ]->tau2 ] * a_3^d * a_2n-2 ]->tau3 ... * a_n-1^d a_n+2 ]->taun-1 * a_n^d * a_n+1 )`
+ *
+ * Effectively, we are chaining regular G(2) correlation calculations together.
+ * With the MultidimensionalCacheMatrix, we can, in theory, calculate any G^(n)
+ * as long as we have enough memory to save the resulting N^n matrices.
+ */
+
 void QDACC::Numerics::ODESolver::calculate_g1( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &purpose ) {
     if ( cache.contains( purpose ) ) {
         Log::L2( "[CorrelationFunction] G1(tau) for {} already exists.\n", purpose );
@@ -29,15 +59,22 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
     calculate_g2( s, s_op_i, std::vector<std::string>{ s_op_j }, { s_op_k }, s_op_l, { purpose } );
 }
 
+void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &s_op_m, const std::string &s_op_n, const std::string &purpose ) {
+    if ( cache.contains( purpose ) ) {
+        Log::L2( "[CorrelationFunction] G2(tau) for {} already exists.\n", purpose );
+    }
+    calculate_g3( s, s_op_i, std::vector<std::string>{ s_op_j }, { s_op_k }, {s_op_l}, {s_op_m}, s_op_n, { purpose } );
+}
+
 void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::string &s_op_l, const std::vector<std::string> &purposes ) {
     Log::L2( "[CorrelationFunction] Preparing to calculate Correlation function\n" );
     Log::L2( "[CorrelationFunction] Generating Sparse Operator Matrices from String input...\n" );
-   
+
     // Find Operator Matrices
     const auto op_i = get_operators_matrix( s, s_op_i );
     const auto op_l = get_operators_matrix( s, s_op_l );
     Log::L2( "[CorrelationFunction] Iterated Operators are op_i = {} and op_l = {}\n", s_op_i, s_op_l );
-    
+
     // Matrix Dimension
     const size_t matdim = s.parameters.grid_values.size(); // int( savedStates.size() / s.parameters.iterations_t_skip );
 
@@ -45,9 +82,6 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
     std::string super_purpose = std::accumulate( std::next( purposes.begin() ), purposes.end(), purposes.front(), []( const std::string &a, const std::string &b ) { return a + " and " + b; } );
 
     std::vector<std::pair<Sparse, std::string>> eval_operators;
-    
-    // TEST:
-    MultidimensionalCacheMatrix cache_test( {(int)matdim,(int)matdim}, "test" );
 
     // Preconstruct
     for ( auto current = 0; current < s_op_k.size(); current++ ) {
@@ -63,7 +97,7 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
         eval_operators.emplace_back( op_j * op_k, purpose );
 
         Log::L2( "[CorrelationFunction] Preparing Cache Matrices for {}. Using Eval Operators op_j = {}, op_k = {}\n", purpose, s_op_j[current], s_op_k[current] );
-        cache[purpose] = MultidimensionalCacheMatrix( {(int)matdim, (int)matdim}, purpose );
+        cache[purpose] = MultidimensionalCacheMatrix( { (int)matdim, (int)matdim }, purpose );
         auto &mat = cache[purpose];
         // Fill Time Matrix
 #pragma omp parallel for collapse( 2 ) schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
@@ -89,9 +123,9 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( size_t i = 0; i < std::min<size_t>( matdim, savedStates.size() ); i++ ) {
         // Create and reserve past rho's vector
-        std::vector<QDACC::SaveState> savedRhos;
+        std::vector<QDACC::SaveState> savedRhos; 
         // Get Time from saved State
-        double t_t = get_time_at( i );
+        double t_t = get_time_at( i ); 
         // Calculate New Modified Density Matrix
         Sparse rho_tau = s.dgl_calc_rhotau_2( get_rho_at( i ), op_l, op_i, t_t );
         // Calculate Runge Kutta or PI
@@ -107,12 +141,11 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
             for ( size_t j = 0; j < savedRhos.size(); j++ ) {
                 const double t_tau = savedRhos.at( j ).t;
                 gmat.get( i, j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, eval, t_tau );
-            } 
+            }
         }
         Timers::outputProgress( timer, progressbar, i, savedStates.size(), super_purpose );
     }
 
- 
     timer.end();
     Timers::outputProgress( timer, progressbar, savedStates.size(), savedStates.size(), super_purpose, Timers::PROGRESS_FORCE_OUTPUT );
     Log::L2( "[CorrelationFunction] G ({}) Hamilton Statistics: Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", super_purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
@@ -120,70 +153,141 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
     // Manually Apply the detector function
     for ( const auto &[eval, purpose] : eval_operators ) {
         auto &gmat = cache[purpose];
-        if (gmat.hasBeenFourierTransformed()){ 
-            Log::L2( "[CorrelationFunction] Detector Function already applied to {}. Skipping!\n", purpose);
+        if ( gmat.hasBeenFourierTransformed() ) {
+            Log::L2( "[CorrelationFunction] Detector Function already applied to {}. Skipping!\n", purpose );
             continue;
         }
         apply_detector_function( s, gmat, purpose );
     }
 }
 
-// Future TODO: am besten sollte es nur eine funktion geben, die (a rho b)t->t+tau ausrechnet, und das speichert. dann können calculate_g_i functionen nur noch die summation übernehmen. but idk.
-// Dafür: cachematrix_matrix klasser, die vector von rho matrices speichert.
-
+// G3 will NOT be cached like G1 and G2, because it is too memory intensive. Additionally,
+// it is not required, because no other function depends on it / needs G3s (yet...).
 void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::vector<std::string> &s_op_l, const std::vector<std::string> &s_op_m, const std::string &s_op_n, const std::vector<std::string> &purposes ) {
+    Log::L2( "[CorrelationFunction] Preparing to calculate Correlation function\n" );
+    Log::L2( "[CorrelationFunction] Generating Sparse Operator Matrices from String input...\n" );
 
-/*
-    für G3 auch relevant:
-    time shifted operators.
-    dafür soll es möglich sein, ein t_min und t_max der korrelationsfunktion zu definieren
-    und dann soll die korrelationsfunktion nur für diese zeiten berechnet werden.
-    ein operator kann dann einen timeshift haben, beispielsweise wenn die dynamiken ungefär periodisch sein sollen
+    // Find Operator Matrices
+    const auto op_i = get_operators_matrix( s, s_op_i );
+    const auto op_n = get_operators_matrix( s, s_op_n );
+    //Log::L2( "[CorrelationFunction] Iterated Operators are op_i = {} and op_l = {}\n", s_op_i, s_op_l );
 
-*/
+    // Matrix Dimension
+    const size_t matdim = s.parameters.grid_values.size(); // int( savedStates.size() / s.parameters.iterations_t_skip );
 
-/*
-    vorgehen:
-    in verschachteltem loops: 
-    für jedes rho in rho(t):
-        a_n rho(t) a_i^d nehmen und zu R(tau_1) integrieren
-        dabei entstehen tau_1/dt matritzen, die in einem vector gespeichert werden
+    // Generator super-purpose
+    std::string super_purpose = std::accumulate( std::next( purposes.begin() ), purposes.end(), purposes.front(), []( const std::string &a, const std::string &b ) { return a + " and " + b; } );
 
-        for jedes r in R(tau_1):
-            r*a_j^d*a_l nehmen und zu Q(tau_2) integrieren
-            dabei entstehen tau_2/dt matritzen, die wieder in einem vector gespeichert werden
-            
-            für jedes q in Q(tau_1):
-                erwartungswert von q*a_k^d*a_l ausrechnen und in g(tau_1,tau_2) speichern
-                hierfür benötigen wir eine cacheMatrix klasse, die t,tau_1,tau_2 triplets speichern kann.
-    
-    am besten speichern wir die werte nicht mehr in eigen matritzen, sondern in einem (indexvector->index),value array.
-    da G^n dense ist, sind die indices einfach ordered nach t,tau,tau2,...
-    so können wir später auch noch G^N implementieren, wenn wir das wollen, indem wir den obigen loop einfach rekusiv aufrufen.
+    std::vector<std::tuple<Sparse, std::vector<Sparse>, std::vector<std::string>>> eval_operators;
 
-    TODO: cacheMatrixVec implementieren. statt Eigen matrix als m_matrix, ein vector
-            getter und setter anpassen. getter und setter. vorher planen wie das interface funktionieren soll!
-            getter(i,j) sollen weiterhin existieren, so müssen indist, conc, etc. nicht geändert werden.
-            vector soll dann i->(a,b,c,d,..) mappen (t,tau,tau2,tau3,...). für G1 und G2 2D, für den rest nD
-    TODO: loop implmenentieren
-    TODO: testen, gucken ob sinnvoll.
-            was geändert werden muss:
-            - hier wie Gn gespeichert wird
-            - wie Gn ausgegeben wird. indist,conc etc. können ihre syntax dank getter und setter behalten, aber 
-                die outputfunktionen für Gn müssen angepasst werden um die weiteren indices zu berücksichtigen.
-                dabei können einfach alle elemente ordered nach index ausgegeben werden, da der index eines elements nach
-                t,tau,tau2,... sortiert ist, wobei t,tau,tau2,... von links angefangen inkrementiert sein sollen.
+    // Preconstruct
+    // We dont calculate a time matrix here, because we store the time as a complex number,
+    // which we cannot do for nD with n > 2
+    // In the future, we should change the time tracking to the following:
+    // save t_i_min and t_i_max for each i, and then calculate the time on the fly
+    // I will try this in the output of G3 and then move it to G1 and G2 too.
 
+    // Looping works as follows:
+    // We pass fixed operators like in G1/2, which have the index i and n.
+    // We pass the outermost operators, which have the index j and m.
+    // We pass the innermost operators, which have the index k and l.
+    // We then loop over the outermost operators, and for each outermost operator,
+    // we loop over the innermost operators.
+    // This way, we can calculate the G3 function for each combination of outermost
+    // and innermost operators.
+    // The purpose vector is REQUIRED to pass purposes in this order too.
+    // This means, purposes for the input i, [j1,j2], [k1,k2], [l1,l2], [m1,m2], n should be as follows:
+    // P(i,j1,k1,l1,m1,n), P(i,j1,k2,l2,m1), P(i,j2,k1,l1,m2), P(i,j2,k2,l2,m2)
+    for ( auto outer = 0; outer < s_op_j.size(); outer++ ) {
+        const auto &op_j = get_operators_matrix( s, s_op_j[outer] );
+        const auto &op_m = get_operators_matrix( s, s_op_m[outer] );
+        std::vector<Sparse> inners;
+        std::vector<std::string> inner_purposes;
+        for ( auto inner = 0; inner < s_op_k.size(); inner++ ) {
+            auto current = outer * s_op_j.size() + inner;
+            const auto &purpose = purposes[current];
+            // Cancel if Purpose already exists. This should never be true for the current implmentation.
+            if ( cache.contains( purpose ) ) {
+                Log::L2( "[CorrelationFunction] Matrix for {} already exists! Skipping!\n", purpose );
+                continue;
+            }
+            Log::L2( "[CorrelationFunction] Preparing Cache Matrices for {}.", purpose );
+            const auto &op_k = get_operators_matrix( s, s_op_k[current] );
+            const auto &op_l = get_operators_matrix( s, s_op_l[current] );
+            inners.emplace_back( op_k * op_l );
+            inner_purposes.emplace_back( purpose );
+            // Construct Evaluation Operators
+            cache[purpose] = MultidimensionalCacheMatrix( { (int)matdim, (int)matdim, (int)matdim }, purpose );
+            // Preconstruct t,tau time. 
+            auto& mat = cache[purpose];
+            // Fill Time Matrix
+#pragma omp parallel for collapse( 2 ) schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
+            for ( size_t i = 0; i < matdim; i++ ) {
+                for ( size_t j = 0; j < matdim; j++ ) {
+                    double tau = i + j < matdim ? s.parameters.grid_values[i + j] : s.parameters.grid_values.back() + s.parameters.grid_steps.back() * ( i + j - matdim + 1 );
+                    mat.get_time( i, j ) = s.parameters.grid_values[i] + 1.0i * tau;
+                }
+            }
+        }
+        eval_operators.emplace_back( op_j * op_m, inners, inner_purposes );
+    }
 
-    TODO after: loop rekursiv umschreiben; nur nohc calculate_g_n haben, die für alles nehmen
-                G1 wird dann wie jetzt als G2 mit einheitsmatritzen berechnet. 
-                G2 ist dann die erste richtige korrelationsfunktion
-                G(n>2) dann rekursiv. bei G2 sollte die rekursion schon nach einer iteration beendet sein,
-                und das finale summieren in einen erwartungswert passieren. die indices sind dann nur 2D, wobei die
-                indices für G(n>2) dann nD sind.
-                wenn das funktioniert, mit vorheriger G3 vergleichen.
-            hier stellt sich mir die frage, ob das überhaupt richtig ist lmao. weil so G1 ein spezialfall von G2 ist, aber alle höheren Gn sind 
-            nur verschachtelte G2
-*/
+    // Create Timer and Progresbar
+    Timer &timer = Timers::create( "Correlation-Loop (" + super_purpose + ")" ).start();
+    auto progressbar = ProgressBar();
 
+    // Calculate G3 Function
+    Log::L2( "[CorrelationFunction] Calculating G3(tau)... purpose: {}, saving to matrix of size {}x{}x{}, iterating over {} saved states...\n", super_purpose, matdim, matdim, matdim, std::min<size_t>( matdim, savedStates.size() ) );
+    // Main G3 Loop
+#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
+    for ( int i = 0; i < std::min<int>( matdim, savedStates.size() ); i++ ) {
+        // Create and reserve past rho's vector.
+        std::vector<QDACC::SaveState> savedRhos_tau1, savedRhos_tau2;
+        // Get Time from saved State
+        double t_t = get_time_at( i );
+        // Calculate New Modified Density Matrix
+        Sparse rho_tau = s.dgl_calc_rhotau_2( get_rho_at( i ), op_n, op_i, t_t );
+        // Calculate Runge Kutta or PI
+        if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
+            calculate_path_integral_correlation( rho_tau, t_t, s.parameters.t_end, timer, s, savedRhos_tau1, op_n, op_i, 1 /*ADM Cores*/ );
+        } else {
+            calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, super_purpose, s, savedRhos_tau1, false /*Output*/ );
+        } 
+        // Interpolate saved states to equidistant timestep
+        savedRhos_tau1 = Numerics::interpolate_curve( savedRhos_tau1, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
+        // Iterate through all outermost operators
+        for ( const auto &[outer, inner_vec, purpose_vec] : eval_operators ) {
+            auto &op_j_times_op_m = outer;
+            for ( int tau1 = 0; tau1 < savedRhos_tau1.size(); tau1++ ) {
+                const double t_tau_1 = savedRhos_tau1.at( tau1 ).t;
+                Sparse rho_tau_2 = savedRhos_tau1.at( tau1 ).mat * op_j_times_op_m;
+                // In a G1 or G2 loop, we would start calculating expectation values. Here, for G3, we instead iterate the resulting matrix again.
+                if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
+                    Sparse unity_matrix = Dense::Identity( matdim, matdim ).sparseView();
+                    calculate_path_integral_correlation( rho_tau_2, t_tau_1, s.parameters.t_end, timer, s, savedRhos_tau2, unity_matrix, unity_matrix, 1 /*ADM Cores*/ );
+                } else {
+                    calculate_runge_kutta( rho_tau, t_tau_1, s.parameters.t_end, timer, progressbar, super_purpose, s, savedRhos_tau2, false /*Output*/ );
+                }
+                // Interpolate saved states to equidistant timestep
+                savedRhos_tau2 = Numerics::interpolate_curve( savedRhos_tau2, t_tau_1, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
+                // Iterate through all innermost operators
+                for ( int inner_index = 0; inner_index < inner_vec.size(); inner_index++ ) {
+                    auto &inner_purpose = purpose_vec[inner_index];
+                    auto &op_k_times_op_l = inner_vec[inner_index];
+                    auto &gmat = cache[inner_purpose];
+                    for ( int tau2 = 0; tau2 < std::min<int>( matdim, savedRhos_tau2.size() ); tau2++ ) {
+                        const double t_tau_2 = savedRhos_tau2.at( tau2 ).t;
+                        gmat.get( { i, tau1, tau2 } ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos_tau2.at( tau2 ).mat, op_k_times_op_l, t_tau_2 );
+                    }
+                }
+            }
+        }
+        Timers::outputProgress( timer, progressbar, i, savedStates.size() * eval_operators.size(), super_purpose );
+    }
+
+    timer.end();
+    Timers::outputProgress( timer, progressbar, savedStates.size(), savedStates.size(), super_purpose, Timers::PROGRESS_FORCE_OUTPUT );
+    Log::L2( "[CorrelationFunction] G^(3) ({}) Hamilton Statistics: Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", super_purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
+
+    // Don't Apply any detector function for now.
 }

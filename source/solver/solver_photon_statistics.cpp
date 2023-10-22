@@ -1,6 +1,7 @@
 #include "solver/solver_ode.h"
 #include <cmath>
 #include <complex>
+#include <ranges>
 // #include <specfunc.h>
 
 bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s ) {
@@ -73,74 +74,135 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
         f_detector.close();
     }
     // Calculate G1/G2 functions
+    // TODO: implement paramter input to calculate arbitrary G1/G2/G3 by just passing all of the corresponding operators
     auto &all_gfuncs = s.parameters.input_correlation["GFunc"];
+    Log::L2("[PhotonStatistics] Calculating G1/G2/G3 functions...\n");
     for ( auto &gs_s : all_gfuncs )
         for ( int i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
-            /// TODO : in funktion
             auto modes = gs_s.string_v["Modes"][i];
             int order = std::abs( gs_s.property_set["Order"][i] );
             const auto &[s_creator, s_annihilator] = get_operator_strings( s, modes );
-            std::string purpose = order == 1 ? get_operators_purpose( { s_creator, s_annihilator } ) : get_operators_purpose( { s_creator, s_creator, s_annihilator, s_annihilator } );
+            std::string purpose;
             const auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
-            if ( order == 1 ) {
-                calculate_g1( s, s_creator, s_annihilator, purpose );
-            } else {
-                calculate_g2( s, s_creator, s_creator, s_annihilator, s_annihilator, purpose );
+            switch ( order ) {
+                case 1:
+                    purpose = get_operators_purpose( { s_creator, s_annihilator } );
+                    calculate_g1( s, s_creator, s_annihilator, purpose );
+                    break;
+                case 2:
+                    purpose = get_operators_purpose( { s_creator, s_creator, s_annihilator, s_annihilator } );
+                    calculate_g2( s, s_creator, s_creator, s_annihilator, s_annihilator, purpose );
+                    break;
+                case 3:
+                    purpose = get_operators_purpose( { s_creator, s_creator, s_creator, s_annihilator, s_annihilator, s_annihilator } );
+                    calculate_g3( s, s_creator, s_creator, s_creator, s_annihilator, s_annihilator, s_annihilator, purpose );
+                    break;
+                default:
+                    Log::Warning( "[PhotonStatistics] G^({}) function order not implemented!\n", order );
+                    break;
             }
-            // Directly output corresponding matrix here so G1/2 functions calculated by other function calls are not output if they are not demanded.
+  
+            // Directly output corresponding matrix here so G1/2/3 functions calculated by other function calls are not output if they are not demanded.
             auto &gmat = cache[purpose];
             const auto dim = gmat.dim();
-            // G2(t,tau)
+            // G^(n)(t,tau)
             if ( gs_s.string_v["Integrated"][i] == "matrix" || gs_s.string_v["Integrated"][i] == "both" ) {
                 Log::L2( "[PhotonStatistics] Saving G{} function matrix to {}_m.txt...\n", order, purpose );
                 auto &f_gfunc = FileOutput::add_file( purpose + "_m" );
-                f_gfunc << "Time\tTau\tAbs\tReal\tImag\n";
-                for ( int k = 0; k < dim; k++ ) {
-                    double t_t = gmat.t( k );
-                    for ( int l = 0; l < dim; l++ ) {
-                        double t_tau = gmat.tau( l, k );
-                        const auto el = gmat.get( k, l );
-                        f_gfunc << std::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_t, t_tau, std::abs( el ), std::real( el ), std::imag( el ) );
-                    }
-                    f_gfunc << "\n";
+                
+                // Build G function header.
+                f_gfunc << "Time\tTau"; 
+                for ( int tau = 0; tau < gmat.getOrder() - 2; tau++ )
+                    f_gfunc << "\tTau_" << tau;
+                f_gfunc << "\tAbs\tReal\tImag\n";
+
+                // Output G function matrix.
+                for ( auto i = 0; i < gmat.size(); i++ ) {
+                    // Get index vector corresponding to the flat index i
+                    auto index_vector = gmat.get_index( i );
+                    // Calculate times using gmat.getTimeOf
+                    auto times = std::views::iota(0, int(index_vector.size())) 
+                    | std::views::transform( [&]( int a ) { return gmat.getTimeOf( a, index_vector, s.parameters.grid_values ); } );
+                    // When index vector is nan, and the order is > 2, we dont output the matrix element.
+                    // For order <= 2, we do output nans, because gnuplot. If no time elemen is nan, we output the matrix element.
+                    // This part of the code allows us to not save nonexistent matrix elements, which would be all zeros.
+                    Scalar el;
+                    if ( std::ranges::any_of( times, []( double a ) { return std::isnan( a ); } ) ){
+                        if (order > 2)
+                            continue;
+                        el = 0.0;
+                    } else
+                        el = gmat.get( i );
+                    // Output Times
+                    for (const double time : times)
+                        f_gfunc << std::format("{:.8e}\t", time );
+                    // Output Element
+                    f_gfunc << std::format("{:.8e}\t{:.8e}\t{:.8e}",std::abs( el ), std::real( el ), std::imag( el )) << std::endl;
+                    // Force linebreak after each row. This is only required when using gnuplot.
+                    if (i % dim == dim - 1)
+                        f_gfunc << std::endl;
                 }
             }
-            // G2(0)
-            int T = std::min<int>( dim, savedStates.size() );
-            std::vector<Scalar> topv( T, 0 );
-            std::vector<Scalar> g2ofzero( T, 0 );
-#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
-            for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
-                for ( int i = 0; i <= upper_limit; i++ ) {
-                    int j = upper_limit - i;
-                    topv[upper_limit] += gmat.get( i, j );
-                }
-            }
-            Scalar topsumv = 0;
-            Scalar bottomsumv = 0;
-            for ( int k = 0; k < topv.size(); k++ ) {
-                double t_t = gmat.t( k );
-                int t = rho_index_map[t_t];
-                topsumv += topv[k];
-                bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( t ), creator * annihilator, t_t );
-                g2ofzero[k] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 );
-            }
-            // G2(t,0) and G2(tau)
+            // G(t, integral tau, ...), G( integral t, tau, ...), ..., G(0), Gpop(t). g(0) then is G(0)/Gpop
             if ( gs_s.string_v["Integrated"][i] == "time" || gs_s.string_v["Integrated"][i] == "both" ) {
                 Log::L2( "[PhotonStatistics] Saving G{} integrated function to {}.txt...\n", order, purpose );
                 auto &f_gfunc = FileOutput::add_file( purpose );
-                f_gfunc << std::format( "Time\tReal(g{0}(tau))\tImag(g{0}(tau))\tReal(G{0}(t,0))\tImag(G{0}(t,0))\tReal(g{0}(0))\tImag(g{0}(0))\tReal(G2pop(t))\tImag(G2pop(t))\n", order );
-                for ( int l = 0; l < topv.size(); l++ ) {
-                    Scalar g2oftau = 0; // integral_t G(t,tau) dt -> g(tau)
-                    for ( int k = 0; k < gmat.dim(); k++ ) {
-                        const auto dt = gmat.dt( l, k );
-                        g2oftau += gmat.get( k, l ) * dt;
+                
+                // Integral buffers; index:buffer. Initially filled with all zeros.
+                auto num_buffers = std::max<int>(2, order);
+                std::vector<std::vector<Scalar>> result_buffer( num_buffers, std::vector<Scalar>( dim, {0.0, 0.0} ) );
+                
+                // Integrate the Gn matrix elements.
+                //auto threads = s.parameters.numerics_maximum_primary_threads;
+                //#pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( threads )
+                for (int i = 0; i < gmat.size(); i++) {
+                    // Thread index
+                    auto thread = omp_get_thread_num();
+                    // Get index vector corresponding to the flat index i. Don't calculate times, we don't need them.
+                    auto index_vector = gmat.get_index( i );
+                    // Instead, calculate dts
+                    auto dts = std::views::iota(0, int(index_vector.size())) 
+                    | std::views::transform( [&]( int a ) { return gmat.getDeltaTimeOf( a, index_vector, s.parameters.grid_steps ); } );
+                    // Convert dts into a std::vector
+                    std::vector<double> dts_vec( dts.begin(), dts.end() );
+                    // Calculate the product of all dts.
+                    double dt = std::accumulate( dts_vec.begin(), dts_vec.end(), 1.0, std::multiplies<double>() );
+                    // Calculate the sum reduction of the Gn matrix element over all indices.
+                    for (int tau_index = 0; tau_index < index_vector.size(); tau_index++) {
+                        auto time_index = index_vector[tau_index];
+                        result_buffer[tau_index][time_index] += gmat.get( i ) * dt / dts_vec[tau_index];
                     }
-                    const double t_tau = gmat.tau( l ); // t and tau here are actually the same value, because for tau -> t = 0
-                    const auto tau_index = rho_index_map[t_tau];
-                    Scalar g2oft = s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * creator * annihilator * annihilator, t_tau ); // G2(0)
-                    Scalar g2pop = std::pow(s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( tau_index ), creator * annihilator, t_tau ),2.0); // Gpop(t,t+tau=0)
-                    f_gfunc << std::format( "{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", t_tau, std::real( g2oftau ), std::imag( g2oftau ), std::real( g2oft ), std::imag( g2oft ), std::real( g2ofzero[l] ), std::imag( g2ofzero[l] ), std::real(g2pop), std::imag(g2pop) );
+                }
+
+                // Create fixed creator and annihilator chains (because std::pow isnt working for Eigen matrices)
+                Sparse super_creator = creator;
+                Sparse super_annihilator = annihilator;
+                for (int i = 1; i < order; i++) {
+                    super_creator = (super_creator * creator).eval();
+                    super_annihilator = (super_annihilator * annihilator).eval();
+                }
+                Sparse creator_annihilator = creator * annihilator;
+                Sparse super_creator_annihilator = super_creator * super_annihilator;
+                
+                // Output file headers
+                f_gfunc << "Time";
+                for ( int tau_i = 0; tau_i < result_buffer.size(); tau_i++ )
+                    f_gfunc << std::format("\tRe(G^{0}(tau_{1}))\tIm(G^{0}(tau_{1}))", order, tau_i);
+                f_gfunc << std::format("\tRe(G^{0}(0))\tIm(G^{0}(0))\tRe(G^{0}_pop)\tIm(G^{0}_pop)\n", order);
+                
+                // Output elements
+                Log::L2( "[PhotonStatistics] Outputting G{} integrated function to {}.txt, iterating over {}({}) states...\n", order, purpose, savedStates.size(), result_buffer.front().size() );
+                for (int t = 0; t < std::min(savedStates.size(),result_buffer.front().size()); t++) {
+                    const double t_t = s.parameters.grid_values.at(t);
+                    const auto& rho = get_rho_at(t);
+                    // Gi of zero
+                    Scalar g_n_of_order = s.dgl_expectationvalue<Sparse, Scalar>( rho, creator_annihilator, t_t );
+                    Scalar g_n_pop = std::pow( s.dgl_expectationvalue<Sparse, Scalar>( rho, creator_annihilator, t_t ), order );
+                    f_gfunc << std::format("{:.8}\t", t_t);
+                    for ( int tau_i = 0; tau_i < result_buffer.size(); tau_i++ ) {
+                        f_gfunc << std::format("{:.8}\t{:.8}\t", std::real( result_buffer[tau_i][t] ), std::imag( result_buffer[tau_i][t] ) );
+                    }
+                    f_gfunc << std::format("{:.8}\t{:.8}\t{:.8}\t{:.8}\n", std::real( g_n_of_order ), std::imag( g_n_of_order ), std::real( g_n_pop ), std::imag( g_n_pop ) );
                 }
             }
         }
@@ -217,7 +279,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
             }
             f_twophot << "\n";
             for ( int i = 0; i < to_output_m["TwoPMat"][mode].size(); i++ ) {
-                f_twophot << std::format("{:.8e}\t", std::real( to_output["Conc"]["Time"][i] ) );
+                f_twophot << std::format( "{:.8e}\t", std::real( to_output["Conc"]["Time"][i] ) );
                 auto &mat = to_output_m["TwoPMat"][mode][i];
                 for ( int k = 0; k < 4; k++ ) {
                     for ( int l = 0; l < 4; l++ ) {

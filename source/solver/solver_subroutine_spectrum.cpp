@@ -30,28 +30,34 @@ bool QDACC::Numerics::ODESolver::calculate_spectrum( System &s, const std::strin
 
     // Calculate frequencies:
     std::vector<Scalar> spectrum_frequency_w;
-    std::vector<Scalar> out;
-    for ( int w = 0; w < resolution; w++ ) {
+    std::vector<std::vector<Scalar>> thread_outputs;
+    for ( int w = 0; w < resolution; w++ )
         spectrum_frequency_w.push_back( frequency_center - frequency_range + w / ( (double)resolution ) * ( 2. * frequency_range ) );
-        out.push_back( 0 );
-    }
+    for ( int thread = 0; thread < s.parameters.numerics_maximum_primary_threads; thread++)
+        thread_outputs.emplace_back( std::vector<Scalar>( resolution, {0.0, 0.0 }) );
+
     Log::L2( "[Spectrum] Done, calculating fourier transform via direct integral...\n" );
     Log::L2( "[Spectrum] Matrix Size = {0} x {0}\n", akf_mat.dim() );
     // Calculate main fourier transform integral
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
-    for ( long unsigned int i = 0; i < akf_mat.dim(); i++ ) {
+    for ( int i = 0; i < akf_mat.dim(); i++ ) {
+        auto thread = omp_get_thread_num();
         double dt = akf_mat.dt( i );
         for ( int j = 0; j < akf_mat.dim() - i; j++ ) { // -i because of triangular grid
             double tau = akf_mat.tau( j, i );
-            double dtau = akf_mat.dtau( j, i );
-            Scalar current_akf_value = akf_mat.get( i, j );
+            double dtau = akf_mat.dtau( j, i ); 
+            const Scalar current_akf_value = akf_mat.get( i, j ); 
             for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
-                out.at( spec_w ) += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * current_akf_value * dtau * dt;
+                thread_outputs[thread][spec_w] += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * current_akf_value * dtau * dt;
             }
         }
         Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g + "): " );
         timer.iterate();
     }
+    // Reduce thread outs into one out
+    for ( int thread = 1; thread < s.parameters.numerics_maximum_primary_threads; thread++ )
+        std::transform( thread_outputs[0].begin(), thread_outputs[0].end(), thread_outputs[thread].begin(), thread_outputs[0].begin(), std::plus<>() );
+    auto& out = thread_outputs[0];
     // Normalize
     if ( normalize ) {
         Scalar vec_min = QDACC::Misc::vec_filter( out, []( const Scalar &a, const Scalar &b ) { return std::real( a ) < std::real( b ); } );
