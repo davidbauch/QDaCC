@@ -10,8 +10,9 @@ bool QDACC::Numerics::ODESolver::calculate_wigner( System &s, const std::string 
     bool int_trafo = s.parameters.input_conf["DMconfig"].string["interaction_picture"] == "int";
     Log::L2( "[Wigner] Output Matrix format will be {}\n", int_trafo ? "in the interaction frame." : "in the Schrödinger frame." );
     for ( int i = 0; i < savedStates.size(); i += skips ) {
-        reduced_rho.emplace_back( s.partial_trace( int_trafo ? get_rho_at( i ) : s.dgl_timetrafo( get_rho_at( i ), get_time_at( i ) ), base ) );
-        time.emplace_back( get_time_at( i ) );
+        const auto& current_state = savedStates.at( i );
+        reduced_rho.emplace_back( s.partial_trace( int_trafo ? current_state.mat : s.dgl_timetrafo( current_state.mat, current_state.t ), base ) );
+        time.emplace_back( current_state.t );
     }
 
     double g = std::sqrt( 2 );

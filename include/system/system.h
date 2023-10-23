@@ -239,22 +239,12 @@ class System {
     }
 
     /**
-     * @brief Calculates the transformed two-time density matrix for the first order correlation function
-     *
-     * @return T op*rho
-     */
-    template <typename T>
-    inline T dgl_calc_rhotau( const T &rho, const T &op, const double t ) {
-        return op * rho; // dgl_timetrafo( op, t ) * rho;
-    }
-
-    /**
      * @brief Calculates the transformed two-time density matrix for the second order correlation function.
      *
      * @return op1*rho*op2
      */
     template <typename T>
-    inline T dgl_calc_rhotau_2( const T &rho, const T &op1, const T &op2, const double t ) {
+    inline T dgl_calc_rhotau( const T &rho, const T &op1, const T &op2, const double t ) {
         // return op1 * rho * op2; // dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
         return dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
     }

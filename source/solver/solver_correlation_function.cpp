@@ -122,12 +122,13 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
     // Main G2 Loop
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( size_t i = 0; i < std::min<size_t>( matdim, savedStates.size() ); i++ ) {
+        const auto& current_state = savedStates.at( i );
         // Create and reserve past rho's vector
         std::vector<QDACC::SaveState> savedRhos; 
         // Get Time from saved State
-        double t_t = get_time_at( i ); 
+        double t_t = current_state.t; 
         // Calculate New Modified Density Matrix
-        Sparse rho_tau = s.dgl_calc_rhotau_2( get_rho_at( i ), op_l, op_i, t_t );
+        Sparse rho_tau = s.dgl_calc_rhotau( current_state.mat, op_l, op_i, t_t );
         // Calculate Runge Kutta or PI
         if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
             calculate_path_integral_correlation( rho_tau, t_t, s.parameters.t_end, timer, s, savedRhos, op_l, op_i, 1 /*ADM Cores*/ );
@@ -243,10 +244,12 @@ void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_o
     for ( int i = 0; i < std::min<int>( matdim, savedStates.size() ); i++ ) {
         // Create and reserve past rho's vector.
         std::vector<QDACC::SaveState> savedRhos_tau1, savedRhos_tau2;
+        // Get state corresponding to i
+        const auto& current_state = savedStates.at( i );
         // Get Time from saved State
-        double t_t = get_time_at( i );
+        double t_t = current_state.t;
         // Calculate New Modified Density Matrix
-        Sparse rho_tau = s.dgl_calc_rhotau_2( get_rho_at( i ), op_n, op_i, t_t );
+        Sparse rho_tau = s.dgl_calc_rhotau( current_state.mat, op_n, op_i, t_t );
         // Calculate Runge Kutta or PI
         if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
             calculate_path_integral_correlation( rho_tau, t_t, s.parameters.t_end, timer, s, savedRhos_tau1, op_n, op_i, 1 /*ADM Cores*/ );

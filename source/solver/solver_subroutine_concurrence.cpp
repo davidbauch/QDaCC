@@ -245,7 +245,9 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
             // G2(t,0) - No Triangular Integral
             double dt = gmat.dt( t );
             double t_t = gmat.t( t ); // std::real( gmat_time( t, 0 ) ); // Note: all correlation functions have to have the same times. cache[purpose+"_time"] else.
-            rho_g2zero[mode][t] = t > 0 ? rho_g2zero[mode][t - 1] + s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( rho_index_map[t_t] ), mode_matrix[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( 0 ), mode_matrix[mode], get_time_at( 0 ) ) * dt;
+            const auto time_index = rho_index_map[t_t];
+            const auto& current_state = savedStates.at( time_index );
+            rho_g2zero[mode][t] = t > 0 ? rho_g2zero[mode][t - 1] + s.dgl_expectationvalue<Sparse, Scalar>( current_state.mat, mode_matrix[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( savedStates.at( 0 ).mat, mode_matrix[mode], savedStates.at( 0 ).t ) * dt;
             if ( mode == "1111" ) {
                 timer_c.iterate();
                 Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + "): " );

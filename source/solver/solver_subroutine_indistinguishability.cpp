@@ -38,10 +38,14 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
     for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
         for ( int i = 0; i <= upper_limit; i++ ) {
             double t_t = akf_mat_g1.t( i );
-            auto rho = get_rho_at( rho_index_map[t_t] );
+            const auto current_time = rho_index_map[t_t];
+            const auto& current_state = savedStates.at( current_time );
+            auto& rho = current_state.mat;
             int j = upper_limit - i;
             double t_tau = akf_mat_g1.t( i + j );
-            auto rho_tau = get_rho_at( rho_index_map[t_tau] );
+            const auto current_tau = rho_index_map[t_tau];
+            const auto& current_tau_state = savedStates.at( current_tau );
+            auto& rho_tau = current_tau_state.mat;
             Scalar gpop = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
             Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t_t );
             double dt = akf_mat_g1.dt( i );
@@ -62,7 +66,9 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
         topsum += top[i];
         bottomsum += bottom[i];
         topsumv += topv[i];
-        bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( get_rho_at( rho_index_map[t_t] ), M1, t_t ) * dt;
+        const auto current_time = rho_index_map[t_t];
+        const auto& current_state = savedStates.at( current_time );
+        bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( current_state.mat, M1, t_t ) * dt;
         outpv[i] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 );
         outp[i] = 1.0 - std::abs( topsum / bottomsum );
     }

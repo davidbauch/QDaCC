@@ -58,7 +58,8 @@ bool QDACC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     if (savedStates.size() > 20000)
         Log::L2("[Solver] WARNING Size of saved states is very large! It may be advisable to interpolate to lower dimensions.\n");
     for ( int i = 0; i < savedStates.size(); i++ ) {
-        rho_index_map[get_time_at( i )] = i;
+        const auto current_time = savedStates.at( i ).t;
+        rho_index_map[current_time] = i;
     }
     Log::L2( "[Solver] Saved {} t-index pairs.\n", rho_index_map.size() );
 

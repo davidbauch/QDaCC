@@ -57,14 +57,6 @@ void QDACC::Numerics::ODESolver::save_hamilton( const Sparse &mat, const double 
     savedHamiltons[t] = mat;
 }
 
-double &QDACC::Numerics::ODESolver::get_time_at( int i ) {
-    return savedStates.at( i ).t;
-}
-
-Sparse &QDACC::Numerics::ODESolver::get_rho_at( int i ) {
-    return savedStates.at( i ).mat;
-}
-
 std::tuple<std::string, std::string> QDACC::Numerics::ODESolver::get_operator_strings( System &s, const std::string &operators ) {
     std::string s_creator = "";
     std::string s_annihilator = "";

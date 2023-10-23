@@ -188,7 +188,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                 Log::L2( "[PhotonStatistics] Outputting G{} integrated function to {}.txt, iterating over {}({}) states...\n", order, purpose, savedStates.size(), result_buffer.front().size() );
                 for (int t = 0; t < std::min(savedStates.size(),result_buffer.front().size()); t++) {
                     const double t_t = s.parameters.grid_values.at(t);
-                    const auto& rho = get_rho_at(t);
+                    const auto& rho = savedStates.at(t).mat;
                     // Gi of zero
                     Scalar g_n_of_order = s.dgl_expectationvalue<Sparse, Scalar>( rho, creator_annihilator, t_t );
                     Scalar g_n_pop = std::pow( s.dgl_expectationvalue<Sparse, Scalar>( rho, creator_annihilator, t_t ), order );
@@ -250,7 +250,8 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
         auto &f_raman = FileOutput::add_file( "raman_" + mode );
         f_raman << std::format( "Time\t{0}\tEM({0})\n", mode );
         for ( int i = 0; i < to_output["Raman"][mode].size(); i++ ) {
-            f_raman << std::format( "{:.8e}\t{:.8e}\t{:.8e}\n", get_time_at( i ), std::real( to_output["Raman"][mode][i] ), std::real( to_output["RamanEmProb"][mode][i] ) );
+            const auto& current_state = savedStates.at( i );
+            f_raman << std::format( "{:.8e}\t{:.8e}\t{:.8e}\n", current_state.t, std::real( to_output["Raman"][mode][i] ), std::real( to_output["RamanEmProb"][mode][i] ) );
         }
     }
     if ( s.parameters.output_dict.contains( "tpm" ) )
