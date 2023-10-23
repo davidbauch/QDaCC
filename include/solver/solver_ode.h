@@ -79,18 +79,6 @@ class ODESolver {
     std::pair<Sparse, double> iterateRungeKutta45( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
 
     /**
-     * @brief Get the Time at index i
-     *
-     */
-    double &get_time_at( int i );
-
-    /**
-     * @brief Get the Density Matrix at index i
-     *
-     */
-    Sparse &get_rho_at( int i );
-
-    /**
      * @brief Gatheres the Hamiltonoperator for time t using a systems get_hamilton() function. This workaround enables the saving of already calculated matrices for dublicate uses.
      *
      */
