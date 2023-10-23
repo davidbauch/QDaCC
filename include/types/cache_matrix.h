@@ -230,7 +230,7 @@ class MultidimensionalCacheMatrix {
 
         m_matrix.reserve( max_number_of_values );
         m_time.reserve( max_number_of_values );
-        // Initialize the vector if desired
+        // Initialize the vector if desired. Only initialize the "upper tringular matrix"
         if (initialize) {
             m_matrix = std::vector<Scalar>( max_number_of_values, initial_value );
             m_time = std::vector<Scalar>( max_number_of_values, initial_value );
@@ -298,23 +298,27 @@ class MultidimensionalCacheMatrix {
     }
 
     // Some helper functions
-    int dim() const {
+    inline int dim() const {
         return m_reduction_map.at(1);
     }
-    Index size() const {
+    inline Index size() const {
         return m_matrix.size();
     }
-    Index size_time() const {
+    inline Index size_time() const {
         return m_time.size();
     }
-    std::string get_name() const {
+    inline std::string get_name() const {
         return m_name;
     }
-    Scalar maxCoeff() const {
+    inline Scalar maxCoeff() const {
         return *std::ranges::max_element(m_matrix, [](const Scalar& a, const Scalar& b) { return std::real(a) < std::real(b); });
     }
-    Scalar minCoeff() const {
+    inline Scalar minCoeff() const {
         return *std::ranges::min_element(m_matrix, [](const Scalar& a, const Scalar& b) { return std::real(a) < std::real(b); });
+    }
+    // If sum(index) > dim, we are outside the triangular matrix
+    inline bool insideTriangular(const IndexVector index) const {
+        return std::accumulate(index.begin(), index.end(), 0) < dim();
     }
 
     // TODO: Move these to the system class
@@ -325,7 +329,7 @@ class MultidimensionalCacheMatrix {
         // Edge case, we are at the end of the time vector. here, we just extrapolate the time
         const auto final_index = total_index+index_vector[index];
         if (final_index >= time_vector.size())
-            return NAN; // ... for now
+            return NAN; // ... for now. after moving this function to the system class, it can just extrapolate the time
         return time_vector[total_index+index_vector[index]] - time_vector[total_index];
     }
     inline double getDeltaTimeOf(int index, const IndexVector& index_vector, const std::vector<double>& delta_time_vector) {

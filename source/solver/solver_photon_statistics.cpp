@@ -73,8 +73,8 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
         }
         f_detector.close();
     }
-    // Calculate G1/G2 functions
-    // TODO: implement paramter input to calculate arbitrary G1/G2/G3 by just passing all of the corresponding operators
+
+    // Calculate G1/G2/G3 functions
     auto &all_gfuncs = s.parameters.input_correlation["GFunc"];
     Log::L2("[PhotonStatistics] Calculating G1/G2/G3 functions...\n");
     for ( auto &gs_s : all_gfuncs )
@@ -120,19 +120,13 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                 for ( auto i = 0; i < gmat.size(); i++ ) {
                     // Get index vector corresponding to the flat index i
                     auto index_vector = gmat.get_index( i );
+                    Scalar el;
+                    if ( not gmat.insideTriangular(index_vector) )
+                         continue;
+                    el = gmat.get( i );
                     // Calculate times using gmat.getTimeOf
                     auto times = std::views::iota(0, int(index_vector.size())) 
                     | std::views::transform( [&]( int a ) { return gmat.getTimeOf( a, index_vector, s.parameters.grid_values ); } );
-                    // When index vector is nan, and the order is > 2, we dont output the matrix element.
-                    // For order <= 2, we do output nans, because gnuplot. If no time elemen is nan, we output the matrix element.
-                    // This part of the code allows us to not save nonexistent matrix elements, which would be all zeros.
-                    Scalar el;
-                    if ( std::ranges::any_of( times, []( double a ) { return std::isnan( a ); } ) ){
-                        if (order > 2)
-                            continue;
-                        el = 0.0;
-                    } else
-                        el = gmat.get( i );
                     // Output Times
                     for (const double time : times)
                         f_gfunc << std::format("{:.8e}\t", time );

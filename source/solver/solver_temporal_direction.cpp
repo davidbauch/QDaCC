@@ -45,11 +45,10 @@ bool QDACC::Numerics::ODESolver::calculate_t_direction( System &s ) {
     std::ranges::for_each( s.savedCoefficients.begin(), s.savedCoefficients.end(), [&]( const std::pair<double, std::map<double, QDACC::SaveStateTau>> &m ) { sum += m.second.size(); } );
     Log::L2( "[Solver] Cached {} phonon matrices.\n", sum );
 
-    // Interpolate Outputstates with spline interpolation
+    // Interpolate Outputstates with (spline) interpolation. We interpolate seperately from the grid interpolation to allow for different user options.
     auto output_states = s.parameters.numerics_interpolate_outputs ? Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_primary_threads, s.parameters.numerics_interpolate_method_time ) : savedStates;
-    // Interpolate savedStates if RK45 was used or grid was modified
-    if ( s.parameters.numerics_rk_order == 45 )
-        savedStates = Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau ); // Numerics::interpolate_curve(savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_primary_threads, 0);
+    // Interpolate savedStates to the grid
+    savedStates = Numerics::interpolate_curve( savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau ); // Numerics::interpolate_curve(savedStates, s.parameters.t_start, s.parameters.t_end, s.parameters.t_step, s.parameters.numerics_maximum_primary_threads, 0);
 
     s.parameters.iterations_t_max = savedStates.size();
 

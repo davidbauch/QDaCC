@@ -11,14 +11,25 @@ bool QDACC::Numerics::ODESolver::calculate_spectrum( System &s, const std::strin
     // s.parameters.numerics_maximum_secondary_threads = 1;
     // Calculate G1/2(t,tau) with given operator matrices
     if ( s_g.size() == 0 ) {
-        if ( order == 1 ) {
+        switch (order) {
+        case 1: 
             s_g = get_operators_purpose( { s_op_creator, s_op_annihilator } );
             calculate_g1( s, s_op_creator, s_op_annihilator, s_g );
-        } else {
+            break;
+        case 2: 
             s_g = get_operators_purpose( { s_op_creator, s_op_creator, s_op_annihilator, s_op_annihilator } );
             calculate_g2( s, s_op_creator, s_op_creator, s_op_annihilator, s_op_annihilator, s_g );
+            break;
+        case 3:
+            s_g = get_operators_purpose( { s_op_creator, s_op_creator, s_op_creator, s_op_annihilator, s_op_annihilator, s_op_annihilator } );
+            calculate_g3( s, s_op_creator, s_op_creator, s_op_creator, s_op_annihilator, s_op_annihilator, s_op_annihilator, s_g );
+            break;
+        default:
+            Log::L1( "[Spectrum] Invalid order given. Please use 1, 2 or 3.\n" );
+            break;
         }
     }
+    
     auto &akf_mat = cache[s_g];
 
     // Create Timer and Progressbar for the spectrum loop
@@ -38,35 +49,42 @@ bool QDACC::Numerics::ODESolver::calculate_spectrum( System &s, const std::strin
 
     Log::L2( "[Spectrum] Done, calculating fourier transform via direct integral...\n" );
     Log::L2( "[Spectrum] Matrix Size = {0} x {0}\n", akf_mat.dim() );
+
     // Calculate main fourier transform integral
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
-    for ( int i = 0; i < akf_mat.dim(); i++ ) {
+    for ( int i = 0; i < akf_mat.size(); i++ ) {
         auto thread = omp_get_thread_num();
-        double dt = akf_mat.dt( i );
-        for ( int j = 0; j < akf_mat.dim() - i; j++ ) { // -i because of triangular grid
-            double tau = akf_mat.tau( j, i );
-            double dtau = akf_mat.dtau( j, i ); 
-            const Scalar current_akf_value = akf_mat.get( i, j ); 
-            for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
-                thread_outputs[thread][spec_w] += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * current_akf_value * dtau * dt;
-            }
+        auto index_vec = akf_mat.get_index( i );
+
+        if ( not akf_mat.insideTriangular(index_vec) ) 
+            continue; 
+
+        double tau = akf_mat.getTimeOf( 1, index_vec, s.parameters.grid_values );
+        double dt = akf_mat.getDeltaTimeOf( 0, index_vec, s.parameters.grid_steps );
+        double dtau = akf_mat.getDeltaTimeOf( 1, index_vec, s.parameters.grid_steps );
+        const Scalar current_akf_value = akf_mat.get( i ); 
+        for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
+            thread_outputs[thread][spec_w] += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * current_akf_value * dtau * dt;
         }
-        Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g + "): " );
         timer.iterate();
     }
+
     // Reduce thread outs into one out
     for ( int thread = 1; thread < s.parameters.numerics_maximum_primary_threads; thread++ )
         std::transform( thread_outputs[0].begin(), thread_outputs[0].end(), thread_outputs[thread].begin(), thread_outputs[0].begin(), std::plus<>() );
     auto& out = thread_outputs[0];
+    
     // Normalize
     if ( normalize ) {
         Scalar vec_min = QDACC::Misc::vec_filter( out, []( const Scalar &a, const Scalar &b ) { return std::real( a ) < std::real( b ); } );
         Scalar vec_max = QDACC::Misc::vec_filter( out, []( const Scalar &a, const Scalar &b ) { return std::real( a ) > std::real( b ); } );
         std::ranges::for_each( out, [&]( Scalar &val ) { val = ( val - vec_min ) / ( vec_max - vec_min ); } );
     }
+
     // Final output and timer end
     timer.end();
     Timers::outputProgress( timer, progressbar, timer.getTotalIterationNumber(), totalIterations, "Spectrum (" + s_g + ")", Timers::PROGRESS_FORCE_OUTPUT );
+    
     // Save output
     add_to_output( "Spectrum_frequency", s_g, spectrum_frequency_w, to_output );
     add_to_output( "Spectrum", s_g, out, to_output );
