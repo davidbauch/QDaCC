@@ -2,7 +2,7 @@
 
 I created this program throughout my Bachelor's, Master's and my time as an ongoing PHD Student at the University of Paderborn.
 
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/7118c9d79bb5421392acac8d2da8e56a)](https://www.codacy.com/gh/davidbauch/QDaCC-C/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=davidbauch/QDaCC-C&amp;utm_campaign=Badge_Grade) [![DOI](https://zenodo.org/badge/190289483.svg)](https://zenodo.org/badge/latestdoi/190289483) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/davidbauch)
+[![DOI](https://zenodo.org/badge/190289483.svg)](https://zenodo.org/badge/latestdoi/190289483) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/davidbauch)
 
 Published Work using QDaCC:
 
@@ -12,7 +12,7 @@ Published Work using QDaCC:
 
 ["On-demand indistinguishable and entangled photons at telecom frequencies using tailored cavity designs" (arXiv)](https://arxiv.org/abs/2303.13871)
 
-[![AQT](https://img.shields.io/badge/AQT-10.1002/qute.202300142-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.48550/arXiv.2303.13871)](https://scholar.google.de/scholar?cites=7707864479180431104&as_sdt=2005&sciodt=0,5&hl=de)
+[![AQT](https://img.shields.io/badge/AQT-10.1002/qute.202300142-b31b1b.svg)](https://onlinelibrary.wiley.com/doi/10.1002/qute.202300142) [![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1002/qute.202300142)](https://scholar.google.de/scholar?cites=7707864479180431104&as_sdt=2005&sciodt=0,5&hl=de)
 
 
 There is a GUI available at [gitub/QDaCC-GUI](https://github.com/davidbauch/QDaCC-Tools/)
