@@ -46,6 +46,16 @@ bool System::init_system() {
     } else {
         initialize_polaron_frame_functions();
     }
+
+    // Output Phonon J
+    if ( parameters.output_dict.contains( "phononJ" ) ) {
+        auto &file = FileOutput::add_file( "phonon_spectral" );
+        file << std::format( "omega\tJ(omega)\n" );
+        for ( double w = parameters.p_phonon_wcutoffdelta; w < 10.0 * parameters.p_phonon_wcutoff; w += parameters.p_phonon_wcutoffdelta ) {
+            file << std::format( "{}\t{}\n", w, std::real( dgl_phonons_spectral_density( w ) ) );
+        }
+    }
+
     // Time Transformation
     timeTrafoMatrix = ( Dense( 1.0i * operatorMatrices.H_0 ).exp() ).sparseView(); //.pruned();
     // Check time trafo

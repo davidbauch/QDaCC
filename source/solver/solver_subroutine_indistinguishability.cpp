@@ -31,25 +31,27 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
 
     std::vector<Scalar> top( T, 0 ), bottom( T, 0 ), topv( T, 0 ), outp( T, 0 ), outpv( T, 0 );
     std::vector<Scalar> time;
-    for ( int i = 0; i < T; i++ ) // This could also be a row extraction using Eigen
-        time.emplace_back( akf_mat_g1.t( i ) );
+    for ( int i = 0; i < T; i++ ) {
+        double t_t = s.getTimeOf(0, {i, 0});
+        time.emplace_back( t_t );
+    }
 
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( int upper_limit = 0; upper_limit < T; upper_limit++ ) {
         for ( int i = 0; i <= upper_limit; i++ ) {
-            double t_t = akf_mat_g1.t( i );
+            double t_t = s.getTimeOf(0, {i, 0});
             const auto current_time = rho_index_map[t_t];
             const auto& current_state = savedStates.at( current_time );
             auto& rho = current_state.mat;
             int j = upper_limit - i;
-            double t_tau = akf_mat_g1.t( i + j );
+            double t_tau = s.getTimeOf(0, {i+j, 0});// akf_mat_g1.t( i + j );
             const auto current_tau = rho_index_map[t_tau];
             const auto& current_tau_state = savedStates.at( current_tau );
             auto& rho_tau = current_tau_state.mat;
             Scalar gpop = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
             Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t_t );
-            double dt = akf_mat_g1.dt( i );
-            double dtau = akf_mat_g1.dtau( j, i );
+            double dt = s.getDeltaTimeOf(0, {i,j});
+            double dtau = s.getDeltaTimeOf(1, {i,j});
             top[upper_limit] += ( gpop + akf_mat_g2.get( i, j ) - akf_mat_g1.get( i, j ) * std::conj( akf_mat_g1.get( i, j ) ) ) * dt * dtau;
             bottom[upper_limit] += ( 2.0 * gpop - gbot * std::conj( gbot ) ) * dt * dtau;
             topv[upper_limit] += std::pow( std::abs( akf_mat_g1.get( i, j ) ), 2.0 ) * dt * dtau;
@@ -61,8 +63,8 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
     Scalar topsum = 0, bottomsum = 0, topsumv = 0, bottomsumv = 0;
 
     for ( int i = 0; i < top.size(); i++ ) {
-        double dt = akf_mat_g1.dt( i );
-        double t_t = akf_mat_g1.t( i );
+        double dt = s.getDeltaTimeOf(0, {i,0});
+        double t_t = s.getTimeOf(0, {i,0});
         topsum += top[i];
         bottomsum += bottom[i];
         topsumv += topv[i];

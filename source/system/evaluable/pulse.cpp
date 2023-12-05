@@ -28,7 +28,7 @@ Scalar Pulse::evaluate( double t ) {
                 shape = std::exp( -0.5 * std::pow( centered_time / amplitude, config.property_set.at( "GaussAmp" )[i] ) );
             } else if ( config.string_v.at( "Type" )[i] == "sech" ) {
                 const double amplitude = std::sqrt( std::pow( config.property_set.at( "ChirpRate" )[i] / config.property_set.at( "Width" )[i], 2.0 ) + std::pow( config.property_set.at( "Width" )[i], 2.0 ) );
-                shape = 1./std::cosh(  centered_time / amplitude );
+                shape = 1./std::cosh(  std::pow(centered_time / amplitude, config.property_set.at( "GaussAmp" )[i] ) );
             } else if (config.string_v.at( "Type" )[i] == "lorentz") {
                 const auto x = centered_time / config.property_set.at( "Width" )[i];
                 shape = 1./(1. + std::pow( x, config.property_set.at( "GaussAmp" )[i] ));

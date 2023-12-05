@@ -48,6 +48,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     inputstring_indist = QDACC::CommandlineArguments::get_parameter( "--G", "GI" );
     inputstring_conc = QDACC::CommandlineArguments::get_parameter( "--G", "GC" );
     inputstring_gfunc = QDACC::CommandlineArguments::get_parameter( "--G", "GF" );
+    inputstring_timebins = QDACC::CommandlineArguments::get_parameter( "--G", "GT" );
     inputstring_wigner = QDACC::CommandlineArguments::get_parameter( "--G", "GW" );
     inputstring_raman = QDACC::CommandlineArguments::get_parameter( "--G", "GR" );
     inputstring_correlation_resolution = QDACC::CommandlineArguments::get_parameter( "--G", "grid" );
@@ -469,6 +470,16 @@ void Parameters::parse_system() {
         conf_s.property_set["Order"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) );                                         // 1 or 2
         conf_s.string_v["Integrated"] = n > 2 ? QDACC::String::splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "time" ); // time,matrix,both for false/true/both
         input_correlation["GFunc"].emplace_back( conf_s );
+    }
+    for ( std::string &g_func : QDACC::String::splitline( inputstring_timebins, ';' ) ) {
+        auto conf = QDACC::String::splitline( g_func, ':' );
+        auto n = conf.size();
+        universal_config conf_s;
+        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' );                                                                                    // Modes to calculate G1/G2 functions for
+        conf_s.property_set["Start"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) );
+        conf_s.property_set["BinLength"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[2], ',' ) );
+        conf_s.string_v["Integrated"] = n > 2 ? QDACC::String::splitline( conf[3], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "time" ); // time,matrix,both for false/true/both
+        input_correlation["GFuncTimeBins"].emplace_back( conf_s );
     }
     for ( std::string &wigner : QDACC::String::splitline( inputstring_wigner, ';' ) ) {
         auto conf = QDACC::String::splitline( wigner, ':' );

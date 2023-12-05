@@ -120,6 +120,12 @@ CLA_ARGUMENT = {
 		description = 'G1/2 func. Syntax: [Mode:Order:Integration]. Order can be either 1 or 2, Integration can be either of time,matrix,both.'
 	}
 	CLA_PARAMETER = {
+		subkey = 'GT'
+		value = ''
+		datatype = 'string'
+		description = 'G2 time bin coherence func. Syntax: [Mode:start:timebin_length:Integration]. Integration can be either of time,matrix,both.'
+	}
+	CLA_PARAMETER = {
 		subkey = 'GW'
 		value = ''
 		datatype = 'string'

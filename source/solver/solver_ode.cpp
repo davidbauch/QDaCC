@@ -91,9 +91,9 @@ std::tuple<std::string, std::string> QDACC::Numerics::ODESolver::get_operator_st
     return std::make_tuple( s_creator, s_annihilator );
 }
 
-std::string QDACC::Numerics::ODESolver::get_operators_purpose( const std::vector<std::string> &operators ) {
+std::string QDACC::Numerics::ODESolver::get_operators_purpose( const std::vector<std::string> &operators, const std::string& prefix ) {
     const int order = operators.size() / 2;
-    std::string ret = "G" + std::to_string( order );
+    std::string ret = prefix + std::to_string( order );
     for ( auto &el : operators )
         ret += "-" + el;
     return ret;

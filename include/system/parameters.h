@@ -258,7 +258,7 @@ class Parameters {
     std::string inputstring_photonic;
     std::string inputstring_pulse;
     std::string inputstring_chirp;
-    std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_raman, inputstring_correlation_resolution, inputstring_SPconf;
+    std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_raman, inputstring_correlation_resolution, inputstring_SPconf, inputstring_timebins;
     std::string inputstring_detector_time,inputstring_detector_spectral;
     std::string inputstring_densitymatrix_config;
     std::string inputstring_rk45_config;

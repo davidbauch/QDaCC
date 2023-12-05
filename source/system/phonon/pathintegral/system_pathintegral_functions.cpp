@@ -36,7 +36,7 @@ void System::initialize_path_integral_functions() {
 
     Log::L2( "[PathIntegral] Outputting phonon functions to phonons.txt from phi_vector({})...\n", phi_vector.size() );
     // Output Phonon Functions
-    if ( parameters.output_dict.contains( "PIkernel" ) ) {
+    if ( parameters.output_dict.contains( "PIkernel" ) or parameters.output_dict.contains( "phononcoefficients" ) ) {
         auto &file = FileOutput::add_file( "phonon_PI" );
         file << std::format( "t\tabs(K(t))\treal(K(t))\timag(K(t))\tabs(K(t))\treal(K(t))\timag(K(t))\n" );
         for ( int i = 0; i < phi_vector_int.size(); i++ ) {

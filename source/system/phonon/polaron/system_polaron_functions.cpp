@@ -34,13 +34,6 @@ void System::initialize_polaron_frame_functions() {
                 file << std::format( "{}\t{}\t{}\t{}\t{}\t{}\t{}\n", t, std::real( phi_vector[t] ), std::imag( phi_vector[t] ), std::real( greenu ), std::imag( greenu ), std::real( greeng ), std::imag( greeng ) );
             }
         }
-        if ( parameters.output_dict.contains( "phononJ" ) ) {
-            auto &file = FileOutput::add_file( "phonon_spectral" );
-            file << std::format( "omega\tJ(omega)\n" );
-            for ( double w = parameters.p_phonon_wcutoffdelta; w < 10.0 * parameters.p_phonon_wcutoff; w += parameters.p_phonon_wcutoffdelta ) {
-                file << std::format( "{}\t{}\n", w, std::real( dgl_phonons_spectral_density( w ) ) );
-            }
-        }
         if ( parameters.output_dict.contains( "phononcoefficients" ) ) {
             // fp_phonons = std::fopen( ( parameters.working_directory + "phonons_lb.txt" ).c_str(), "w" );
             // fmt::print( fp_phonons, "t\tL_a_+\tL_a_-\tL_c_+\tL_c_-\n" );
