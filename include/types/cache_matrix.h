@@ -1,171 +1,9 @@
 #pragma once
 
-#include <Eigen/Dense>
 #include "typedef.h"
 #include <ranges>
 
 namespace QDACC::Numerics {
-
-/**
- * @brief Matrix Wrapper Class to save time-value pairs
- * get() and set() functions for two-dimensional time and timedeltas are provided
- * DEPRECATED: Use MultidimensionalCacheMatrix instead
- */
-class CacheMatrix {
-   private:
-    std::string m_name;
-    Dense m_matrix;
-    Dense m_time;
-    bool fft = false;
-
-   public:
-    // No Copying. This object is ususally only copied by mistake
-    CacheMatrix( const CacheMatrix& other ) = delete;
-    CacheMatrix() = default;
-    CacheMatrix( const Dense& matrix, const Dense& time, const std::string& name ) : m_matrix( matrix ), m_time( time ), m_name( name ){};
-    CacheMatrix( const Dense::Index& dim, const std::string& name ) : m_name( name ) {
-        Log::L2( "[CacheMatrix] Created Empty Cache Matrix {0} with dimensions {1}x{1}\n", name, dim );
-        m_matrix = Dense::Zero( dim, dim );
-        m_time = Dense::Zero( dim, dim );
-    }
-
-    /**
-     * @brief Getter function for the matrix element. Also available through the () operator
-     *
-     * @param i Row
-     * @param j Column
-     * @return Dense&
-     */
-    Scalar& get( const Dense::Index i, const Dense::Index j ) {
-        // No range check because Eigen does that for us
-        return m_matrix( i, j );
-    }
-    const Scalar& get( const Dense::Index i, const Dense::Index j ) const {
-        // No range check because Eigen does that for us
-        return m_matrix( i, j );
-    }
-    Scalar& operator()( const Dense::Index i, const Dense::Index j ) {
-        return get( i, j );
-    }
-    const Scalar& operator()( const Dense::Index i, const Dense::Index j ) const {
-        return get( i, j );
-    }
-    Scalar& get_time( const Dense::Index i, const Dense::Index j ) {
-        // No range check because Eigen does that for us
-        return m_time( i, j );
-    }
-    const Scalar& get_time( const Dense::Index i, const Dense::Index j ) const {
-        // No range check because Eigen does that for us
-        return m_time( i, j );
-    }
-    /**
-     * @brief Getter function for the whole matrix.
-     *
-     * @return Dense&
-     */
-    Dense& get() {
-        return m_matrix;
-    }
-    const Dense& get() const {
-        return m_matrix;
-    }
-    Dense& get_time() {
-        return m_time;
-    }
-    const Dense& get_time() const {
-        return m_time;
-    }
-
-    bool hasBeenFourierTransformed() {
-        if (not fft) {
-            fft = true;
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * @brief Getter for the t-time at a specific index
-     *
-     * @param index Row == Time
-     * @param fixed Column
-     * @return Scalar
-     */
-    double t( const Dense::Index& index, const Dense::Index& fixed = 0 ) const {
-        const auto& el = m_time( index, fixed );
-        return std::real( el );
-    }
-    double dt( const Dense::Index& index, const Dense::Index& fixed = 0 ) const {
-        if ( index == 0 )
-            return std::real( m_time( index + 1, fixed ) - m_time( index, fixed ) );
-        return std::real( m_time( index, fixed ) - m_time( index - 1, fixed ) );
-    }
-    Dense t() {
-        return m_time.real();
-    }
-    Dense t() const {
-        return m_time.real();
-    }
-    /**
-     * @brief Getter for the tau-time at a specific index
-     *
-     * @param index Col == Tau
-     * @param fixed Row
-     * @return Scalar
-     */
-    double tau( const Dense::Index& index, const Dense::Index& fixed = 0 ) const {
-        const auto& el = m_time( fixed, index );
-        return std::imag( el ) - std::real( el );
-    }
-    double dtau( const Dense::Index& index, const Dense::Index& fixed = 0 ) const {
-        if ( index == 0 )
-            return std::imag( m_time( fixed, index + 1 ) - m_time( fixed, index ) );
-        return std::imag( m_time( fixed, index ) - m_time( fixed, index - 1 ) );
-    }
-    Dense tau() {
-        return m_time.imag();
-    }
-    Dense tau() const {
-        return m_time.imag();
-    }
-
-    /**
-     * @brief Getter for name
-     *
-     * @return std::string&
-     */
-    std::string& get_name() {
-        return m_name;
-    }
-    const std::string& get_name() const {
-        return m_name;
-    }
-    /**
-     * @brief Return Inner Matrix Dimensions. Matrices in this case are always square.
-     *
-     * @return Dense::Index
-     */
-    Dense::Index dim() const {
-        return m_matrix.rows();
-    }
-    Dense empty() const {
-        const auto rc = dim();
-        return Dense::Zero( rc, rc );
-    }
-    void set_empty() {
-        m_matrix = empty();
-    }
-
-    /**
-     * @brief Returns this object with a conjugated matrix. This will leave the time matrix unchanged.
-     *
-     * @return CacheMatrix
-     */
-    CacheMatrix conjugate( const std::string& purpose = "" ) {
-        std::string new_purpose = purpose.size() > 1 ? purpose : m_name;
-        return { m_matrix.conjugate(), m_time, new_purpose };
-    }
-};
 
 /**
 * This function is supposed to work like the CacheMatrix class, but for multidimensional matrices.
@@ -178,7 +16,6 @@ class MultidimensionalCacheMatrix {
     private:
     std::string m_name;
     std::vector<Scalar> m_matrix;
-    std::vector<Scalar> m_time;
     Index max_number_of_values;
     using IndexVector = std::vector<int>;
     IndexVector m_reduction_map;
@@ -229,11 +66,9 @@ class MultidimensionalCacheMatrix {
         }
 
         m_matrix.reserve( max_number_of_values );
-        m_time.reserve( max_number_of_values );
         // Initialize the vector if desired. Only initialize the "upper tringular matrix"
         if (initialize) {
             m_matrix = std::vector<Scalar>( max_number_of_values, initial_value );
-            m_time = std::vector<Scalar>( max_number_of_values, initial_value );
         }
     }
 
@@ -241,17 +76,9 @@ class MultidimensionalCacheMatrix {
         const auto index = reduceIndex(current_vector_index);
         return m_matrix[index];
     }
-    Scalar& get_time( const std::vector<int>& current_vector_index ) {
-        const auto index = reduceIndex(current_vector_index);
-        return m_time[index];
-    }
     void set( const std::vector<int>& current_vector_index, const Scalar& value ) {
         const auto index = reduceIndex(current_vector_index);
         m_matrix[index] = value;
-    }
-    void set_time( const std::vector<int>& current_vector_index, const Scalar& value ) {
-        const auto index = reduceIndex(current_vector_index);
-        m_time[index] = value;
     }
 
     // Special Get and Set methods for 2D case, which is G1 and G2:
@@ -259,39 +86,21 @@ class MultidimensionalCacheMatrix {
         const auto index = reduceIndex({row_index, col_index});
         return m_matrix[index];
     }
-    Scalar& get_time( const int row_index, const int col_index ) {
-        const auto index = reduceIndex({row_index, col_index});
-        return m_time[index];
-    }
     Scalar get( const int row_index, const int col_index ) const {
         const auto index = reduceIndex({row_index, col_index});
         return m_matrix[index];
     }
-    Scalar get_time( const int row_index, const int col_index ) const {
-        const auto index = reduceIndex({row_index, col_index});
-        return m_time[index];
-    }
     void set( const int row_index, const int col_index, const Scalar& value ) {
         const auto index = reduceIndex({row_index, col_index});
         m_matrix[index] = value;
-    }
-    void set_time( const int row_index, const int col_index, const Scalar& value ) {
-        const auto index = reduceIndex({row_index, col_index});
-        m_time[index] = value;
     }
 
     // Single int Get and Set methods without calling reduceIndex
     Scalar& get( const int index ) {
         return m_matrix[index];
     }
-    Scalar& get_time( const int index ) {
-        return m_time[index];
-    }
     Scalar get( const int index ) const {
         return m_matrix[index];
-    }
-    Scalar get_time( const int index ) const {
-        return m_time[index];
     }
     IndexVector get_index( const int index ) const {
         return expandIndex(index);
@@ -304,9 +113,7 @@ class MultidimensionalCacheMatrix {
     inline Index size() const {
         return m_matrix.size();
     }
-    inline Index size_time() const {
-        return m_time.size();
-    }
+
     inline std::string get_name() const {
         return m_name;
     }
@@ -316,26 +123,19 @@ class MultidimensionalCacheMatrix {
     inline Scalar minCoeff() const {
         return *std::ranges::min_element(m_matrix, [](const Scalar& a, const Scalar& b) { return std::real(a) < std::real(b); });
     }
+    inline Scalar maxAbsCoeff() const {
+        return *std::ranges::max_element(m_matrix, [](const Scalar& a, const Scalar& b) { return std::abs(a) < std::abs(b); });
+    }
+    inline Scalar minAbsCoeff() const {
+        return *std::ranges::min_element(m_matrix, [](const Scalar& a, const Scalar& b) { return std::abs(a) < std::abs(b); });
+    }
+    inline Scalar sum() const {
+        return std::accumulate(m_matrix.begin(), m_matrix.end(), Scalar{0,0});
+    }
+
     // If sum(index) > dim, we are outside the triangular matrix
     inline bool insideTriangular(const IndexVector index) const {
         return std::accumulate(index.begin(), index.end(), 0) < dim();
-    }
-
-    // TODO: Move these to the system class
-    // TODO: these dont work; fix them and remove m_time from the program.
-    // maybe write a getTime and getDeltaTime function in the system class that just regenerates the correct time
-    inline double getTimeOf(int index, const IndexVector& index_vector, const std::vector<double>& time_vector) {
-        const int total_index = std::accumulate(index_vector.begin(), index_vector.begin() + index, 0);
-        // Edge case, we are at the end of the time vector. here, we just extrapolate the time
-        const auto final_index = total_index+index_vector[index];
-        if (final_index >= time_vector.size())
-            return NAN; // ... for now. after moving this function to the system class, it can just extrapolate the time
-        return time_vector[total_index+index_vector[index]] - time_vector[total_index];
-    }
-    inline double getDeltaTimeOf(int index, const IndexVector& index_vector, const std::vector<double>& delta_time_vector) {
-        int total_index = std::accumulate(index_vector.begin(), index_vector.end()-1, 0);
-        total_index = std::max<int>(total_index , delta_time_vector.size()-1);
-        return delta_time_vector[total_index];
     }
 
     // Math Helper functions
@@ -365,39 +165,6 @@ class MultidimensionalCacheMatrix {
     }
     void multiplyMatrix(const MultidimensionalCacheMatrix& other_matrix) {
         transformFunction([](const Scalar& a, const Scalar& b) { return a * b; }, other_matrix);
-    }
-
-    /**
-     * @brief Getter for the t-time at a specific index
-     *
-     * @param index Row == Time
-     * @param fixed Column
-     * @return Scalar
-     */
-    double t( const int index, const int fixed = 0 ) const {
-        const auto& el = get_time( index, fixed );
-        return std::real( el );
-    }
-    double dt( const int index, const int fixed = 0 ) const {
-        if ( index == 0 )
-            return std::real( get_time( index + 1, fixed ) - get_time( index, fixed ) );
-        return std::real( get_time( index, fixed ) - get_time( index - 1, fixed ) );
-    }
-    /**
-     * @brief Getter for the tau-time at a specific index
-     *
-     * @param index Col == Tau
-     * @param fixed Row
-     * @return Scalar
-     */
-    double tau( const int index, const int fixed = 0 ) const {
-        const auto& el = get_time( fixed, index );
-        return std::imag( el ) - std::real( el );
-    }
-    double dtau( const int index, const int fixed = 0 ) const {
-        if ( index == 0 )
-            return std::imag( get_time( fixed, index + 1 ) - get_time( fixed, index ) );
-        return std::imag( get_time( fixed, index ) - get_time( fixed, index - 1 ) );
     }
 
     // FFT tracker

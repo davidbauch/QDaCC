@@ -102,6 +102,8 @@ class ODESolver {
     void calculate_g3( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &s_op_m, const std::string &s_op_n, const std::string &purpose = "unknown" );
     void calculate_g3( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::vector<std::string> &s_op_l, const std::vector<std::string> &s_op_m, const std::string &s_op_n, const std::vector<std::string> &purposes );
 
+    void calculate_timebin_coherence( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose, const double t_start, const double time_bin_length );
+
    public:
     ODESolver(){};
     ODESolver( System &s );
@@ -128,7 +130,7 @@ class ODESolver {
      * @brief Returns an intentifier string for a combination of G-function order and a superposition of operators
      *
      */
-    std::string get_operators_purpose( const std::vector<std::string> &operators );
+    std::string get_operators_purpose( const std::vector<std::string> &operators, const std::string& prefix = "G" );
 
     /**
      * @brief Returns a tuple of [creator, annihilator] Sparse Operator Matrices from a given Operator String

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ranges>
 #include "global.h"
 #include "system/parameters.h"
 #include "system/fileoutput.h"
@@ -337,6 +338,20 @@ class System {
     template <typename T, typename T2, typename T3>
     inline T dgl_lindblad( const T &rho, const T2 &op, const T3 &opd ) {
         return 2.0 * op * rho * opd - opd * op * rho - rho * opd * op;
+    }
+
+    inline double getTimeOf(int index, const std::vector<int>& index_vector) {
+        const int total_index = std::accumulate(index_vector.begin(), index_vector.begin() + index, 0);
+        // Edge case, we are at the end of the time vector. here, we just extrapolate the time
+        const int final_index = total_index+index_vector[index];
+        if (final_index >= parameters.grid_values.size())
+            return parameters.grid_values.back() + (final_index - parameters.grid_values.size() + 1) * parameters.grid_steps.back();
+        return parameters.grid_values[total_index+index_vector[index]] - parameters.grid_values[total_index];
+    }
+    inline double getDeltaTimeOf(int index, const std::vector<int>& index_vector) {
+        int total_index = std::accumulate(index_vector.begin(), index_vector.end()-1, 0);
+        total_index = std::max<int>(total_index , parameters.grid_steps.size()-1);
+        return parameters.grid_steps[total_index];
     }
 };
 

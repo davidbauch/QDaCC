@@ -59,9 +59,9 @@ bool QDACC::Numerics::ODESolver::calculate_spectrum( System &s, const std::strin
         if ( not akf_mat.insideTriangular(index_vec) ) 
             continue; 
 
-        double tau = akf_mat.getTimeOf( 1, index_vec, s.parameters.grid_values );
-        double dt = akf_mat.getDeltaTimeOf( 0, index_vec, s.parameters.grid_steps );
-        double dtau = akf_mat.getDeltaTimeOf( 1, index_vec, s.parameters.grid_steps );
+        double tau = s.getTimeOf( 1, index_vec );
+        double dt = s.getDeltaTimeOf( 0, index_vec );
+        double dtau = s.getDeltaTimeOf( 1, index_vec );
         const Scalar current_akf_value = akf_mat.get( i ); 
         for ( int spec_w = 0; spec_w < resolution; spec_w++ ) {
             thread_outputs[thread][spec_w] += std::exp( -1.0i * spectrum_frequency_w.at( spec_w ) * tau ) * current_akf_value * dtau * dt;

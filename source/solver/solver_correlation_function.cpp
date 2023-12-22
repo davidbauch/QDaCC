@@ -1,15 +1,5 @@
 #include "solver/solver_ode.h"
 
-double QDACC::Numerics::get_tdelta( const Dense &gmat_time, size_t fixed_index, size_t var_index ) {
-    return var_index == 0 ? std::real( gmat_time( var_index + 1, fixed_index ) - gmat_time( var_index, fixed_index ) ) : std::real( gmat_time( var_index, fixed_index ) - gmat_time( var_index - 1, fixed_index ) );
-}
-double QDACC::Numerics::get_taudelta( const Dense &gmat_time, size_t fixed_index, size_t var_index ) {
-    return var_index == 0 ? std::imag( gmat_time( fixed_index, var_index + 1 ) - gmat_time( fixed_index, var_index ) ) : std::imag( gmat_time( fixed_index, var_index ) - gmat_time( fixed_index, var_index - 1 ) );
-}
-double QDACC::Numerics::get_tdelta( const std::vector<SaveState> &savedStates, size_t var_index ) {
-    return var_index == 0 ? savedStates[var_index + 1].t - savedStates[var_index].t : savedStates[var_index].t - savedStates[var_index - 1].t;
-}
-
 /**
  * These functions calculate the n-Dimensional G^(n) correlation function.
  *
@@ -43,6 +33,7 @@ double QDACC::Numerics::get_tdelta( const std::vector<SaveState> &savedStates, s
 void QDACC::Numerics::ODESolver::calculate_g1( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &purpose ) {
     if ( cache.contains( purpose ) ) {
         Log::L2( "[CorrelationFunction] G1(tau) for {} already exists.\n", purpose );
+        return;
     }
     calculate_g1( s, std::vector<std::string>{ s_op_i }, s_op_j, { purpose } );
 }
@@ -55,13 +46,15 @@ void QDACC::Numerics::ODESolver::calculate_g1( System &s, const std::vector<std:
 void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose ) {
     if ( cache.contains( purpose ) ) {
         Log::L2( "[CorrelationFunction] G2(tau) for {} already exists.\n", purpose );
+        return;
     }
     calculate_g2( s, s_op_i, std::vector<std::string>{ s_op_j }, { s_op_k }, s_op_l, { purpose } );
 }
 
 void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &s_op_m, const std::string &s_op_n, const std::string &purpose ) {
     if ( cache.contains( purpose ) ) {
-        Log::L2( "[CorrelationFunction] G2(tau) for {} already exists.\n", purpose );
+        Log::L2( "[CorrelationFunction] G3(tau) for {} already exists.\n", purpose );
+        return;
     }
     calculate_g3( s, s_op_i, std::vector<std::string>{ s_op_j }, { s_op_k }, {s_op_l}, {s_op_m}, s_op_n, { purpose } );
 }
@@ -99,14 +92,6 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
         Log::L2( "[CorrelationFunction] Preparing Cache Matrices for {}. Using Eval Operators op_j = {}, op_k = {}\n", purpose, s_op_j[current], s_op_k[current] );
         cache[purpose] = MultidimensionalCacheMatrix( { (int)matdim, (int)matdim }, purpose );
         auto &mat = cache[purpose];
-        // Fill Time Matrix
-#pragma omp parallel for collapse( 2 ) schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
-        for ( size_t i = 0; i < matdim; i++ ) {
-            for ( size_t j = 0; j < matdim; j++ ) {
-                double tau = i + j < matdim ? s.parameters.grid_values[i + j] : s.parameters.grid_values.back() + s.parameters.grid_steps.back() * ( i + j - matdim + 1 );
-                mat.get_time( i, j ) = s.parameters.grid_values[i] + 1.0i * tau;
-            }
-        }
     }
 
     // Return if no Functions need to be evaluated
@@ -221,14 +206,6 @@ void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_o
             cache[purpose] = MultidimensionalCacheMatrix( { (int)matdim, (int)matdim, (int)matdim }, purpose );
             // Preconstruct t,tau time. 
             auto& mat = cache[purpose];
-            // Fill Time Matrix
-#pragma omp parallel for collapse( 2 ) schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
-            for ( size_t i = 0; i < matdim; i++ ) {
-                for ( size_t j = 0; j < matdim; j++ ) {
-                    double tau = i + j < matdim ? s.parameters.grid_values[i + j] : s.parameters.grid_values.back() + s.parameters.grid_steps.back() * ( i + j - matdim + 1 );
-                    mat.get_time( i, j ) = s.parameters.grid_values[i] + 1.0i * tau;
-                }
-            }
         }
         eval_operators.emplace_back( op_j * op_m, inners, inner_purposes );
     }
@@ -285,7 +262,7 @@ void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_o
                 }
             }
         }
-        Timers::outputProgress( timer, progressbar, i, savedStates.size() * eval_operators.size(), super_purpose );
+        Timers::outputProgress( timer, progressbar, i, savedStates.size(), super_purpose );
     }
 
     timer.end();
