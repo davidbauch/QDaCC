@@ -7,7 +7,7 @@
 #include "system/parameter.h"
 
 #ifndef GLOBAL_PROGRAM_VERSION
-#define GLOBAL_PROGRAM_VERSION "4.0.5"
+#define GLOBAL_PROGRAM_VERSION "0.1.5"
 #endif
 #ifndef GLOBAL_PROGRAM_LASTCHANGE
 #define GLOBAL_PROGRAM_LASTCHANGE ""
