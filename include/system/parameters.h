@@ -6,8 +6,12 @@
 #include "misc/timer.h"
 #include "system/parameter.h"
 
-#define GLOBAL_PROGRAM_VERSION "4.0.0"
+#ifndef GLOBAL_PROGRAM_VERSION
+#define GLOBAL_PROGRAM_VERSION "4.0.5"
+#endif
+#ifndef GLOBAL_PROGRAM_LASTCHANGE
 #define GLOBAL_PROGRAM_LASTCHANGE ""
+#endif
 
 namespace QDACC {
 
