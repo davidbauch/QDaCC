@@ -212,7 +212,7 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
     Timer &timer_c = Timers::create( "Concurrence (" + fout + ")" ).start();
 
     // Maximum Time / Dimension of the cache matrices
-    auto T = std::min<size_t>( first_matrix.dim(), savedStates.size() );
+    auto maximum_time = std::min<size_t>( first_matrix.dim(), savedStates.size() );
 
     // Generate DM cache matrices
     using tpdm_t = std::map<std::string, std::vector<Scalar>>;
@@ -220,31 +220,31 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
     tpdm_t rho_g2zero;
     // And fill them with zeros
     for ( const auto &mode : { "1111", "1211", "2111", "2211", "1112", "1212", "2112", "2212", "1121", "1221", "2121", "2221", "1122", "1222", "2122", "2222" } ) {
-        rho[mode] = std::vector<Scalar>( T, 0 );
-        rho_g2zero[mode] = std::vector<Scalar>( T, 0 );
+        rho[mode] = std::vector<Scalar>( maximum_time, 0 );
+        rho_g2zero[mode] = std::vector<Scalar>( maximum_time, 0 );
     }
 
-    // #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
+//#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( const auto &[mode, purpose] : mode_purpose ) {
         const auto &gmat = cache.at( purpose );
-        // Integrate from 0 to t=T. Running index is t = t
-        for ( int t = 0; t < T; t++ ) {
-            // G2(t,tau)
+        // Triangular Integral over G2(t,tau)
+        for ( int upper_limit = 0; upper_limit < maximum_time; upper_limit++ ) {
+            // G2(upper_limit,tau)
             // Lower Triangle Integral -> Move to seperate function!
-            rho[mode][t] = t > 0 ? rho[mode][t - 1] : 0.0;
-            for ( int i = 0; i <= t; i++ ) {
+            rho[mode][upper_limit] = upper_limit > 0 ? rho[mode][upper_limit - 1] : 0.0;
+            for ( int t = 0; t <= upper_limit; t++ ) {
                 // Tau index
-                int tau = t - i;
-                double dt = s.getDeltaTimeOf( 0, { i, tau } );
-                double dtau = s.getDeltaTimeOf( 1, { i, tau } );
-                rho[mode][t] += gmat.get( i, tau ) * dt * dtau;
+                int tau = upper_limit - t;
+                double dt = s.getDeltaTimeOf( 0, { t, tau } );
+                double dtau = s.getDeltaTimeOf( 1, { t, tau } );
+                rho[mode][upper_limit] += gmat.get( t, tau ) * dt * dtau;
             }
-            // G2(t,0) - No Triangular Integral
-            double dt = s.getDeltaTimeOf( 0, { t, 0 } );
-            double t_t = s.getTimeOf( 0, { t, 0 } ); // std::real( gmat_time( t, 0 ) ); // Note: all correlation functions have to have the same times. cache[purpose+"_time"] else.
+            // G2(upper_limit,0) - No Triangular Integral
+            double dt = s.getDeltaTimeOf( 0, { upper_limit, 0 } );
+            double t_t = s.getTimeOf( 0, { upper_limit, 0 } ); // std::real( gmat_time( upper_limit, 0 ) ); // Note: all correlation functions have to have the same times. cache[purpose+"_time"] else.
             const auto time_index = rho_index_map[t_t];
             const auto &current_state = savedStates.at( time_index );
-            rho_g2zero[mode][t] = t > 0 ? rho_g2zero[mode][t - 1] + s.dgl_expectationvalue<Sparse, Scalar>( current_state.mat, mode_matrix[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( savedStates.at( 0 ).mat, mode_matrix[mode], savedStates.at( 0 ).t ) * dt;
+            rho_g2zero[mode][upper_limit] = upper_limit > 0 ? rho_g2zero[mode][upper_limit - 1] + s.dgl_expectationvalue<Sparse, Scalar>( current_state.mat, mode_matrix[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( savedStates.at( 0 ).mat, mode_matrix[mode], savedStates.at( 0 ).t ) * dt;
             if ( mode == "1111" ) {
                 timer_c.iterate();
                 Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + "): " );
@@ -253,17 +253,17 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
     }
 
     // Generate Referenced Shortcuts
-    auto &time = add_to_output( "Conc", "Time", std::vector<Scalar>( T, 0 ), to_output, true /* Overwrite Existing */ );
-    auto &output = add_to_output( "Conc", fout, std::vector<Scalar>( T, 0 ), to_output );
-    auto &output_simple = add_to_output( "Conc_simple", fout, std::vector<Scalar>( T, 0 ), to_output );
-    auto &output_analytical = add_to_output( "Conc_analytical", fout, std::vector<Scalar>( T, 0 ), to_output );
-    auto &output_fidelity = add_to_output( "Conc_fidelity", fout, std::vector<Scalar>( T, 0 ), to_output );
-    auto &output_g2zero = add_to_output( "Conc_g2zero", fout, std::vector<Scalar>( T, 0 ), to_output );
-    auto &output_g2zero_simple = add_to_output( "Conc_g2zero_simple", fout, std::vector<Scalar>( T, 0 ), to_output );
-    auto &output_fidelity_g2zero = add_to_output( "Conc_g2zero_fidelity", fout, std::vector<Scalar>( T, 0 ), to_output );
-    auto &twophotonmatrix = add_to_output( "TwoPMat", fout, std::vector<Dense>( T, Dense::Zero( 4, 4 ) ), to_output_m );
-    auto &twophotonmatrix_g2zero = add_to_output( "TwoPMat", fout + "_g2zero", std::vector<Dense>( T, Dense::Zero( 4, 4 ) ), to_output_m );
-    auto &output_eigenvalues = add_to_output( "ConcEV", fout + "_EV", std::vector<Dense>( T, Vector::Zero( 4 ) ), to_output_m );
+    auto &time = add_to_output( "Conc", "Time", std::vector<Scalar>( maximum_time, 0 ), to_output, true /* Overwrite Existing */ );
+    auto &output = add_to_output( "Conc", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
+    auto &output_simple = add_to_output( "Conc_simple", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
+    auto &output_analytical = add_to_output( "Conc_analytical", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
+    auto &output_fidelity = add_to_output( "Conc_fidelity", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
+    auto &output_g2zero = add_to_output( "Conc_g2zero", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
+    auto &output_g2zero_simple = add_to_output( "Conc_g2zero_simple", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
+    auto &output_fidelity_g2zero = add_to_output( "Conc_g2zero_fidelity", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
+    auto &twophotonmatrix = add_to_output( "TwoPMat", fout, std::vector<Dense>( maximum_time, Dense::Zero( 4, 4 ) ), to_output_m );
+    auto &twophotonmatrix_g2zero = add_to_output( "TwoPMat", fout + "_g2zero", std::vector<Dense>( maximum_time, Dense::Zero( 4, 4 ) ), to_output_m );
+    auto &output_eigenvalues = add_to_output( "ConcEV", fout + "_EV", std::vector<Dense>( maximum_time, Vector::Zero( 4 ) ), to_output_m );
 
     // Generate spinflip matrix
     const Dense spinflip = _generate_spinflip();
@@ -271,7 +271,7 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
     const int fidelity_method = 0; // 0 Wootters, 1 Seidelmann
     // Calculate two-photon densitymatrices and calculate concurrence
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
-    for ( int k = 0; k < T; k++ ) {
+    for ( int k = 0; k < maximum_time; k++ ) {
         // Neumann-Iterated TPDM
         const auto rho_2phot = _rho_to_tpdm( k, rho );
         const auto fidelity_matrix = fidelity_method ? _fidelity_matrix_seidelmann( rho_2phot, spinflip ) : _fidelity_matrix_wootters( rho_2phot, spinflip );
