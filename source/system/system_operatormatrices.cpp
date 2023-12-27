@@ -600,7 +600,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
                 initial_state_vector_ket( base_index_map[current] ) += amp * QDACC::Math::getThermal( alpha, n );
             }
         } else {
-            Log::L2( "[System-OperatorMatrices] Creating superpositioned state {} ({}) with amplitude {}\n", pure_state, base_index_map[pure_state], std::abs( amp ) );
+            Log::L2( "[System-OperatorMatrices] Creating superpositioned state {} ({}) with amplitude {}\n", pure_state, base_index_map.at(pure_state), std::abs( amp ) );
             // Add initial state with amplitudes
             initial_state_vector_ket( base_index_map[pure_state] ) += amp;
         }

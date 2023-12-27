@@ -655,6 +655,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
 
     Log::Logger::wrapInBar( "Initial System Parameters", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     //Log::L1( "Initial state rho0 = [{}]\n\n", initial_state_vector_ket.format( Eigen::IOFormat( 0, 0, ", ", " ", "", "" ) ) );
+    Log::L1( "Matrix Initial State = {}\n", p_initial_state_s );
     Log::L1( "Matrix Groundstate Index = {}\n\n", numerics_groundstate );
 
     Log::Logger::wrapInBar( "Pulse", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );

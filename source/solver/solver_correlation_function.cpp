@@ -106,8 +106,8 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
     Log::L2( "[CorrelationFunction] Calculating G(tau)... purpose: {}, saving to matrix of size {}x{},  iterating over {} saved states...\n", super_purpose, matdim, matdim, std::min<size_t>( matdim, savedStates.size() ) );
     // Main G2 Loop
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
-    for ( size_t i = 0; i < std::min<size_t>( matdim, savedStates.size() ); i++ ) {
-        const auto& current_state = savedStates.at( i );
+    for ( size_t t = 0; t < std::min<size_t>( matdim, savedStates.size() ); t++ ) {
+        const auto& current_state = savedStates.at( t );
         // Create and reserve past rho's vector
         std::vector<QDACC::SaveState> savedRhos; 
         // Get Time from saved State
@@ -124,12 +124,12 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
         savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
         for ( const auto &[eval, purpose] : eval_operators ) {
             auto &gmat = cache[purpose];
-            for ( size_t j = 0; j < savedRhos.size(); j++ ) {
-                const double t_tau = savedRhos.at( j ).t;
-                gmat.get( i, j ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( j ).mat, eval, t_tau );
+            for ( size_t tau = 0; tau < savedRhos.size(); tau++ ) {
+                const double t_tau = savedRhos.at( tau ).t;
+                gmat.get( t, tau ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( tau ).mat, eval, t_tau );
             }
         }
-        Timers::outputProgress( timer, progressbar, i, savedStates.size(), super_purpose );
+        Timers::outputProgress( timer, progressbar, t, savedStates.size(), super_purpose );
     }
 
     timer.end();
