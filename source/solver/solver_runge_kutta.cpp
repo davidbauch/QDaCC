@@ -146,6 +146,8 @@ bool QDACC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double 
             tolerance = std::get<1>( s.parameters.numerics_rk_tol[i] );
             Log::L3( "[Solver-RK45] Set local tolerance to {} at t = {} (threshold is {}).\n", tolerance, t_t, std::get<0>( s.parameters.numerics_rk_tol[i] ) );
         }
+        // if t + dt exceeds t_end, we set dt to t_end - t
+        //t_step = std::min( t_step, t_end - t_t );
         // Runge-Kutta iteration
         auto [rho, error] = iterateRungeKutta45( output.back().mat, s, t_t, t_step, output );
         double dh = std::pow( tolerance / 2. / std::max( error, 1E-15 ), 0.25 );
@@ -180,7 +182,7 @@ bool QDACC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double 
         if ( accept ) {
             t_t += t_step;
             saveState( rho, t_t, output );
-            Log::L3( "[Solver-RK45{}] --> (t = {}) - Accepdet step - Local error: {} - current timestep: {}, dh = {}, accepted after {} tries\n", omp_get_thread_num(), t_t, error, t_step, dh, tries );
+            Log::L3( "[Solver-RK45{}] --> (t = {}) - Accepted step - Local error: {} - current timestep: {}, dh = {}, accepted after {} tries\n", omp_get_thread_num(), t_t, error, t_step, dh, tries );
             // Progress and time output
             rkTimer.iterate();
             if ( do_output ) {

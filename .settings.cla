@@ -111,7 +111,7 @@ CLA_ARGUMENT = {
 		subkey = 'GC'
 		value = ''
 		datatype = 'string'
-		description = 'Concurrence. Syntax: [Mode:Order:[spectral]]. Order can be either outer,outin,full or omitted. When the optional spectral parameters are passed, all G2 functions will be spectrally analysed. Syntax: [Mode[:Center:Range:Res]]'
+		description = 'Concurrence. Syntax: [Mode[:Order[method:[spectral]]]]. Order can be either outer,outin,full or omitted. Method can be either wootters or seidelmann. When the optional spectral parameters are passed, all G2 functions will be spectrally analysed. Syntax: [Mode[:Center:Range:Res]]'
 	}
 	CLA_PARAMETER = {
 		subkey = 'GF'

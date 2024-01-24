@@ -23,7 +23,7 @@ void QDACC::Numerics::ODESolver::initialize_detector_functions( System &s, Multi
         }
     }
     // Calculate Temporal Mask
-    for ( int d = 0; d < config_time.string_v["time_mode"].size(); d++ ) {
+    for ( size_t d = 0; d < config_time.string_v["time_mode"].size(); d++ ) {
         const auto mode = config_time.string_v["time_mode"][d];
         const double t_center = config_time.property_set["time_center"][d];
         const double t_range = config_time.property_set["time_range"][d];
@@ -31,9 +31,9 @@ void QDACC::Numerics::ODESolver::initialize_detector_functions( System &s, Multi
         const double power = config_time.property_set["time_power_amplitude"][d];
         Log::L2( "[PhotonStatistics] Adding Temporal Mask for mode {}: t_0 = {}, delta = {}, amp = {}\n", mode, t_center, t_range, power );
         auto &current_detector_temporal_mask = detector_temporal_mask[mode];
-        for ( int i = 0; i < dim; i++ ) {
+        for ( size_t i = 0; i < dim; i++ ) {
             double time = s.getTimeOf( 0, {i, 0} );
-            for ( int j = 0; j < dim - i; j++ ) {
+            for ( size_t j = 0; j < dim - i; j++ ) {
                 double tau = s.getTimeOf( 1, {i,j} );
                 current_detector_temporal_mask.get( i, j ) += t_amp * std::exp( -std::pow( ( time - t_center ) / t_range, power ) ) * std::exp( -std::pow( ( tau - t_center ) / t_range, power ) );
             }
@@ -148,10 +148,10 @@ void QDACC::Numerics::ODESolver::apply_detector_function( System &s, Multidimens
             // Note, that currently the transformation is only available in 2D.
             Dense mat_transformed = Dense::Zero( dim, current_detector_frequency_mask.size() );
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
-            for ( int i = 0; i < dim; i++ ) {
-                for ( int v = 0; v < current_detector_frequency_mask.size(); v++ ) {
+            for ( size_t i = 0; i < dim; i++ ) {
+                for ( size_t v = 0; v < current_detector_frequency_mask.size(); v++ ) {
                     auto &[frequency_v, frequency_amp, frequency_delta] = current_detector_frequency_mask[v];
-                    for ( int j = 0; j < dim; j++ ) {   // -i because of triangular grid
+                    for ( size_t j = 0; j < dim; j++ ) {   // -i because of triangular grid
                         double tau = s.getTimeOf(1, {i,j}); // std::imag( timemat( i, j ) ) - std::real( timemat( i, j ) );
                         double dtau = s.getDeltaTimeOf(1, {i,j}); // Numerics::get_taudelta( timemat, i, j );
                         mat_transformed( i, v ) += frequency_amp * std::exp( -1.0i * frequency_v * tau ) * mat.get( i, j ) * dtau / 2.0 / 3.1415;
@@ -165,8 +165,8 @@ void QDACC::Numerics::ODESolver::apply_detector_function( System &s, Multidimens
                 Log::L2( "[PhotonStatistics] Outputting FT({})...\n", purpose );
                 auto &f_gfunc = FileOutput::add_file( purpose + "_FTm.txt" );
                 f_gfunc << "Time\tOmega_tau\tAbs\tReal\tImag\n" ;
-                for ( int k = 0; k < dim; k++ ) {
-                    for ( int l = 0; l < current_detector_frequency_mask.size(); l++ ) {
+                for ( size_t k = 0; k < dim; k++ ) {
+                    for ( size_t l = 0; l < current_detector_frequency_mask.size(); l++ ) {
                         const auto &[frequency_w_l, frequency_amp_l, frequency_delta_l] = current_detector_frequency_mask[l];
                         const auto time = s.getTimeOf(0, {k,0});
                         f_gfunc << std::format("{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\t{:.8e}\n", time, frequency_w_l, std::abs( mat_transformed( k, l ) ), std::real( mat_transformed( k, l ) ), std::imag( mat_transformed( k, l ) ) );
@@ -178,11 +178,11 @@ void QDACC::Numerics::ODESolver::apply_detector_function( System &s, Multidimens
             // Transform Back
             Log::L2( "[PhotonStatistics] Calculating iFT({})...\n", purpose );
 #pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
-            for ( int i = 0; i < dim; i++ ) {
-                for ( int j = 0; j < dim; j++ ) {
+            for ( size_t i = 0; i < dim; i++ ) {
+                for ( size_t j = 0; j < dim; j++ ) {
                     const auto tau = s.getTimeOf(1, {i,j});
                     mat.get( i, j ) = 0;
-                    for ( int v = 0; v < current_detector_frequency_mask.size(); v++ ) {
+                    for ( size_t v = 0; v < current_detector_frequency_mask.size(); v++ ) {
                         const auto &[frequency_v, frequency_amp, frequency_delta] = current_detector_frequency_mask[v];
                         mat.get( i, j ) += std::exp( 1.0i * frequency_v * tau ) * mat_transformed( i, v ) * frequency_delta;
                     }

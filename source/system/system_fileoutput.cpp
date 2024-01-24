@@ -2,26 +2,18 @@
 
 using namespace QDACC;
 
-std::ifstream FileOutput::load_file( const std::string &name, const std::string &file_ending ) {
-    return Get().Iload_file( name, file_ending );
-}
-std::fstream &FileOutput::add_file( const std::string &name, const std::string &file_ending, const std::ios_base::openmode mode ) {
-    return Get().Iadd_file( name, file_ending );
-}
-std::fstream &FileOutput::get_file( const std::string &name ) {
-    return Get().Iget_file( name );
-}
-bool FileOutput::close_file( const std::string &name ) {
-    return Get().Iclose_file( name );
-}
-bool FileOutput::close_all() {
-    return Get().Iclose_all();
-}
-void FileOutput::init( Parameters &p, OperatorMatrices &op ) {
-    return Get().Iinit( p, op );
-}
+std::ifstream FileOutput::load_file( const std::string &name, const std::string &file_ending ) { return Get().Iload_file( name, file_ending ); }
+std::fstream &FileOutput::add_file( const std::string &name, const std::string &file_ending, const std::ios_base::openmode mode ) { return Get().Iadd_file( name, file_ending ); }
+std::fstream &FileOutput::get_file( const std::string &name ) { return Get().Iget_file( name ); }
+bool FileOutput::close_file( const std::string &name ) { return Get().Iclose_file( name ); }
+bool FileOutput::close_all() { return Get().Iclose_all(); }
+void FileOutput::init( Parameters &p, OperatorMatrices &op ) { return Get().Iinit( p, op ); }
 
 std::fstream &FileOutput::Iget_file( const std::string &name ) {
+    if ( not files.contains( name ) ) {
+#pragma omp critical
+        files[name] = std::fstream();
+    }
     return files[name];
 }
 
@@ -47,10 +39,8 @@ std::fstream &FileOutput::Iadd_file( const std::string &name, const std::string 
 }
 
 bool FileOutput::Iclose_file( const std::string &name ) {
-    if ( not files.contains( name ) )
-        return false;
-    if ( not files[name].is_open() )
-        return false;
+    if ( not files.contains( name ) ) return false;
+    if ( not files[name].is_open() ) return false;
     Log::L2( "[System-Fileoutput] Closing '{}.txt'\n", name );
     files[name].close();
     return true;
@@ -83,8 +73,7 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
                     fp_densitymatrix << std::format( "Im(|{}><{}|)\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
                 }
         } else {
-            for ( int i = 0; i < op.base.size(); i++ )
-                fp_densitymatrix << std::format( "|{0}><{0}|\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ) );
+            for ( int i = 0; i < op.base.size(); i++ ) fp_densitymatrix << std::format( "|{0}><{0}|\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ) );
         }
         fp_densitymatrix << "\n";
     }
@@ -93,12 +82,10 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
     if ( not p.input_electronic.empty() ) {
         auto &fp_electronic = add_file( "electronic" );
         fp_electronic << "t\t";
-        for ( auto &[name, rem] : p.input_electronic )
-            fp_electronic << std::format( "|{}><{}|\t", name, name );
+        for ( auto &[name, rem] : p.input_electronic ) fp_electronic << std::format( "|{}><{}|\t", name, name );
         if ( p.p_omega_decay > 0.0 )
             for ( auto &[name, rem] : p.input_electronic )
-                if ( rem.property["DecayScaling"] != 0.0 )
-                    fp_electronic << std::format( "EM(|{}><{}|)\t", name, name );
+                if ( rem.property["DecayScaling"] != 0.0 ) fp_electronic << std::format( "EM(|{}><{}|)\t", name, name );
         fp_electronic << "\n";
     }
 
@@ -106,11 +93,9 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
     if ( not p.input_photonic.empty() ) {
         auto &fp_photonic = add_file( "photonic" );
         fp_photonic << "t\t";
-        for ( auto &[name, rem] : p.input_photonic )
-            fp_photonic << std::format( "|{}><{}|\t", name, name );
+        for ( auto &[name, rem] : p.input_photonic ) fp_photonic << std::format( "|{}><{}|\t", name, name );
         if ( p.p_omega_cavity_loss > 0.0 )
-            for ( auto &[name, rem] : p.input_photonic )
-                fp_photonic << std::format( "EM(|{}><{}|)\t", name, name );
+            for ( auto &[name, rem] : p.input_photonic ) fp_photonic << std::format( "EM(|{}><{}|)\t", name, name );
         fp_photonic << "\n";
     }
     // Photon Expv
@@ -118,16 +103,14 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
         for ( auto &[mode, state] : op.ph_states ) {
             add_file( "photons_" + mode ) << "t";
             for ( int i = 0; i < state.self_hilbert.rows(); i++ )
-                for ( int j = 0; j < state.self_hilbert.cols(); j++ )
-                    get_file( "photons_" + mode ) << std::format( "\t|{}><{}|", i, j );
+                for ( int j = 0; j < state.self_hilbert.cols(); j++ ) get_file( "photons_" + mode ) << std::format( "\t|{}><{}|", i, j );
             get_file( "photons_" + mode ) << "\n";
         }
     }
     // Custom Expv
-    if (not p.numerics_custom_expectation_values.empty()) {
+    if ( not p.numerics_custom_expectation_values.empty() ) {
         add_file( "custom_expectation_values" ) << "t";
-        for (auto i = 0;  i < p.numerics_custom_expectation_values.size(); i++)
-            get_file( "custom_expectation_values" ) << std::format( "\tCustom_{}", i );
+        for ( auto i = 0; i < p.numerics_custom_expectation_values.size(); i++ ) get_file( "custom_expectation_values" ) << std::format( "\tCustom_{}", i );
         get_file( "custom_expectation_values" ) << "\n";
     }
 }

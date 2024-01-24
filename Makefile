@@ -7,8 +7,8 @@ BUILD_DIR := ./build
 SRC_DIRS := ./source ./external/ALGLIB
 COMPILER = $(CXX) # -pg -g -no-pie
 
-VERSION ?= 1.0.0
-
+GLOBAL_PROGRAM_VERSION := $(shell awk '/GLOBAL_PROGRAM_VERSION/ {print $$3}' include/system/parameters.h)
+VERSION ?= $(strip $(GLOBAL_PROGRAM_VERSION))
 
 SRCS := $(shell find $(SRC_DIRS) -name "*.cpp")
 
@@ -82,11 +82,3 @@ clean:
 
 build: main #$(TARGET_DIR)/$(TARGET_EXEC)
 all: clean build
-
-#bake_before: 
-#	@echo Generating cla_settings.h...
-#	@xxd -i .\.settings.cla include/cla_settings.h
-#bake_after:
-#	@echo Removing cla_settings.h
-#	@rm include/cla_settings.h
-#bake: bake_before all bake_after

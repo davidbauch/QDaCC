@@ -64,24 +64,24 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
 
     std::vector<Scalar> top( maximum_time, 0 ), bottom( maximum_time, 0 ), top_vis( maximum_time, 0 ), outp( maximum_time, 0 ), outpv( maximum_time, 0 );
     std::vector<Scalar> time;
-    for ( int t = 0; t < maximum_time; t++ ) {
+    for ( size_t t = 0; t < maximum_time; t++ ) {
         double t_t = s.getTimeOf( 0, { t, 0 } );
         time.emplace_back( t_t );
     }
     // Do a Triangular Integral over G2(t,tau) and G1(t,tau)
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
-    for ( int upper_limit = 0; upper_limit < maximum_time; upper_limit++ ) {
-        const int t_tau = s.getTimeOf( 0, { upper_limit, 0 } ); // = t_t + s.getTimeOf( 1, { t, tau } )
+    for ( size_t upper_limit = 0; upper_limit < maximum_time; upper_limit++ ) {
+        const size_t t_tau = s.getTimeOf( 0, { upper_limit, 0 } ); // = t_t + s.getTimeOf( 1, { t, tau } )
         const auto &current_tau_state = savedStates.at( upper_limit ); // = savedStates.at( rho_index_map[t_tau] );
         auto &rho_tau = current_tau_state.mat;
-        for ( int t = 0; t <= upper_limit; t++ ) {
+        for ( size_t t = 0; t <= upper_limit; t++ ) {
             // Current Time and Density Matrix
             double t_t = s.getTimeOf( 0, { t, 0 } );
             const auto t_t_index = rho_index_map[t_t];
             const auto &current_state = savedStates.at( t_t_index );
             auto &rho = current_state.mat;
             // t_tau = t+t' is always equal to upper_limit because of the triangular integral, but the tau index is not.            
-            int tau = upper_limit - t;
+            size_t tau = upper_limit - t;
             //double t_tau = t_t + s.getTimeOf( 1, { t, tau } );
             //const auto t_tau_index = rho_index_map[t_tau];
             //const auto &current_tau_state = savedStates.at( t_tau_index );
@@ -108,7 +108,7 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
 
     Scalar topsum = 0, bottomsum = 0, topsumv = 0, bottomsumv = 0;
 
-    for ( int t = 0; t < top.size(); t++ ) {
+    for ( size_t t = 0; t < top.size(); t++ ) {
         double dt = s.getDeltaTimeOf( 0, { t, 0 } );
         double t_t = s.getTimeOf( 0, { t, 0 } );
         topsum += top[t];

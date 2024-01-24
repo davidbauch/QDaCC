@@ -102,7 +102,12 @@ class ODESolver {
     void calculate_g3( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &s_op_m, const std::string &s_op_n, const std::string &purpose = "unknown" );
     void calculate_g3( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::vector<std::string> &s_op_l, const std::vector<std::string> &s_op_m, const std::string &s_op_n, const std::vector<std::string> &purposes );
 
-    void calculate_timebin_coherence( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose, const double t_start, const double time_bin_length );
+    void calculate_timebin_g2_correlations( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose, double t_start, double time_bin_length );
+    void calculate_timebin_g3_correlations( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &s_op_m, const std::string &s_op_n, const std::string &purpose, double t_start, double time_bin_length );
+    
+    bool calculate_timebin_two_photon_matrix( System &s, const std::string& purpose );
+    bool calculate_timebin_three_photon_matrix( System &s, const std::string& purpose );
+    bool calculate_timebin_generator_expectation_values( System &s, const std::string& purpose );
 
    public:
     ODESolver(){};
@@ -155,7 +160,9 @@ class ODESolver {
      * @brief Calculates the Concurrence for a given operator combination. This function requires the calculation of 6 G2 Functions and will produce 4 values for the concurrence.
      *
      */
-    bool calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const int matrix_priority_evaluation, const double spec_center, const double spec_range, const double spec_res );
+    bool calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const std::string& method );
+
+    bool calculate_static_two_photon_matrix( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const int matrix_priority_evaluation, const double spec_center, const double spec_range, const double spec_res );
 
     /**
      * @brief Calculates the Wigner Function for a given operator combination

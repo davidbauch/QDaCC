@@ -1,28 +1,6 @@
 #include "solver/solver_ode.h"
-#include "solver/solver_analytical_eigenvalues.h"
-// Description: Calculates Concurrence
 
-/**
- * @brief Generating the Pauli matrices sigma_+ * sigma_+^t
- * The Spinmatrix
- * | ..  i |
- * | -i .. |
- * is tensored with itself to
- * | .. .. .. -1 |
- * | .. ..  1 .. |
- * | ..  1 .. .. |
- * | -1 .. .. .. |
- *
- * @return Dense
- */
-static Dense _generate_spinflip() {
-    Dense spinflip = Dense::Zero( 4, 4 );
-    spinflip << 0, 0, 0, -1,
-        0, 0, 1, 0,
-        0, 1, 0, 0,
-        -1, 0, 0, 0;
-    return spinflip;
-}
+// Description: Calculates the Two Photon Density Matrix from a set of static G2 correlation functions
 
 /**
  * @brief Constructs the Density Matrix rho from rho_ij(t) element vectors
@@ -57,58 +35,8 @@ static std::vector<input_type> _get_fourway_permutation( const std::string &inpu
 }
 
 /**
- * @brief Calculates the fidelity matrix F = sqrt(rho) * spinflip * rho.conjugated * spinflip * sqrt(rho)
- * according to https://journals.aps.org/prl/pdf/10.1103/PhysRevLett.80.2245
- * @param rho Input two photon density matrix
- * @param spinflip Spinflip matrix
- * @return Dense
- */
-Dense _fidelity_matrix_wootters( const Dense &rho, const Dense &spinflip ) {
-    const Dense sqrt = rho.sqrt();
-    const Dense R = sqrt * spinflip * rho.conjugate() * spinflip * sqrt;
-    const Dense R5 = R.sqrt();
-    return R5;
-}
-
-/**
- * @brief Calculates the fidelity matrix F = rho * spinflip * rho.conjugated * spinflip
- * according to https://onlinelibrary.wiley.com/doi/full/10.1002/qute.202000108
- * @param rho Input two photon density matrix
- * @param spinflip Spinflip matrix
- * @return Dense
- */
-Dense _fidelity_matrix_seidelmann( const Dense &rho, const Dense &spinflip ) {
-    const Dense M = rho * spinflip * rho.conjugate() * spinflip;
-    return M;
-}
-
-/**
- * @brief Calculates the concurrence eigenvalues from the fidelity matrix
- * @param fidelity_matrix Fidelity matrix
- * @return Dense
- */
-Dense _concurrence_eigenvalues( const Dense &fidelity_matrix ) {
-    // check if fidelity_matrix is approximately real:
-    const double threshold = 1E-14;
-    const bool is_approximately_real = fidelity_matrix.real().isApprox( fidelity_matrix, threshold );
-    Vector eigenvalues;
-    if ( is_approximately_real ) {
-        Log::L2( "[Concurrence] Fidelity matrix is approximately real. Using General EigenSolver class.\n" );
-        dDense fidelity_matrix_real = fidelity_matrix.real();
-        Eigen::EigenSolver<dDense> eigensolver( fidelity_matrix_real );
-        eigenvalues = eigensolver.eigenvalues().eval();
-    } else {
-        Eigen::ComplexEigenSolver<Dense> eigensolver( fidelity_matrix );
-        eigenvalues = eigensolver.eigenvalues().eval();
-    }
-    // The eigenvalues have to be real, positive and sorted. To ensure this, we take the absolute value and sort them in descending order.
-    std::ranges::sort( eigenvalues, []( const auto &a, const auto &b ) { return std::real( a ) > std::real( b ); } ); // std::greater<double>()
-    return eigenvalues;
-}
-
-/**
  * @brief
- * The concurrence can be evaluated in several priority modes:
+ * The Two Photon Matrix can be evaluated in several priority modes:
  *           HH        HV        VH        VV                         HH        HV        VH        VV
  *       ----------------------------------------                  -------------------------------------
  *  HH   |  HHHH      HVHH      VHHH      VVHH  |             HH   |  1         3         3         1  |
@@ -127,8 +55,8 @@ Dense _concurrence_eigenvalues( const Dense &fidelity_matrix ) {
  * @param s_op_creator_2
  * @param s_op_annihilator_2
  */
-bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const int matrix_priority_evaluation, const double spec_center, const double spec_range, const double spec_res ) {
-    Log::L2( "[Concurrence] Conc for modes {} {} and {} {} with priority {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2, matrix_priority_evaluation );
+bool QDACC::Numerics::ODESolver::calculate_static_two_photon_matrix( System &s, const std::string &s_op_creator_1, const std::string &s_op_annihilator_1, const std::string &s_op_creator_2, const std::string &s_op_annihilator_2, const int matrix_priority_evaluation, const double spec_center, const double spec_range, const double spec_res ) {
+    Log::L2( "[TPM] TPM for modes {} {} and {} {} with priority {}\n", s_op_creator_1, s_op_creator_2, s_op_annihilator_1, s_op_annihilator_2, matrix_priority_evaluation );
 
     // Set Number of Phonon cores to 1 because this memberfunction is already using multithreading
     s.parameters.numerics_maximum_secondary_threads = 1;
@@ -179,7 +107,7 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
         auto current_creator_1 = mode[0] == '1' ? s_op_creator_1 : s_op_creator_2;
         auto current_annihilator_2 = mode[3] == '1' ? s_op_annihilator_1 : s_op_annihilator_2;
         // TODO: MPI this.
-        Log::L2( "[Concurrence] Queued calculation of {}\n", std::accumulate( current_purpose.begin(), current_purpose.end(), std::string{}, []( const auto &a, const auto &b ) { return a + b + ", "; } ) );
+        Log::L2( "[TPM] Queued calculation of {}\n", std::accumulate( current_purpose.begin(), current_purpose.end(), std::string{}, []( const auto &a, const auto &b ) { return a + b + ", "; } ) );
         calculate_g2( s, current_creator_1, current_creator_2, current_annihilator_1, current_annihilator_2, current_purpose );
     }
 
@@ -192,7 +120,7 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
     if ( spec_range > 0 ) {
         const auto matrix_dim = first_matrix.dim();
 
-        const std::string combined_name = "concurrence_total_" + fout;
+        const std::string combined_name = "tpm_total_" + fout;
         cache[combined_name] = MultidimensionalCacheMatrix( { matrix_dim, matrix_dim }, combined_name );
         auto &combined = cache[combined_name];
 
@@ -205,11 +133,6 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
             calculate_spectrum( s, "none", "none", spec_center, spec_range, (int)spec_res, 2, false, mode );
         }
     }
-
-    // Cache Progressbar Size
-    int pbsize = 2 * first_matrix.dim();
-
-    Timer &timer_c = Timers::create( "Concurrence (" + fout + ")" ).start();
 
     // Maximum Time / Dimension of the cache matrices
     auto maximum_time = std::min<size_t>( first_matrix.dim(), savedStates.size() );
@@ -224,17 +147,20 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
         rho_g2zero[mode] = std::vector<Scalar>( maximum_time, 0 );
     }
 
+    int pbsize = 2 * maximum_time;
+    Timer &timer_c = Timers::create( "Two Photon Matrix (" + fout + ")" ).start();
+
 //#pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( const auto &[mode, purpose] : mode_purpose ) {
         const auto &gmat = cache.at( purpose );
         // Triangular Integral over G2(t,tau)
-        for ( int upper_limit = 0; upper_limit < maximum_time; upper_limit++ ) {
+        for ( size_t upper_limit = 0; upper_limit < maximum_time; upper_limit++ ) {
             // G2(upper_limit,tau)
             // Lower Triangle Integral -> Move to seperate function!
             rho[mode][upper_limit] = upper_limit > 0 ? rho[mode][upper_limit - 1] : 0.0;
-            for ( int t = 0; t <= upper_limit; t++ ) {
+            for ( size_t t = 0; t <= upper_limit; t++ ) {
                 // Tau index
-                int tau = upper_limit - t;
+                size_t tau = upper_limit - t;
                 double dt = s.getDeltaTimeOf( 0, { t, tau } );
                 double dtau = s.getDeltaTimeOf( 1, { t, tau } );
                 rho[mode][upper_limit] += gmat.get( t, tau ) * dt * dtau;
@@ -247,74 +173,34 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
             rho_g2zero[mode][upper_limit] = upper_limit > 0 ? rho_g2zero[mode][upper_limit - 1] + s.dgl_expectationvalue<Sparse, Scalar>( current_state.mat, mode_matrix[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( savedStates.at( 0 ).mat, mode_matrix[mode], savedStates.at( 0 ).t ) * dt;
             if ( mode == "1111" ) {
                 timer_c.iterate();
-                Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + "): " );
+                Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Two Photon Matrix (" + fout + "): " );
             }
         }
     }
 
     // Generate Referenced Shortcuts
-    auto &time = add_to_output( "Conc", "Time", std::vector<Scalar>( maximum_time, 0 ), to_output, true /* Overwrite Existing */ );
-    auto &output = add_to_output( "Conc", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
-    auto &output_simple = add_to_output( "Conc_simple", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
-    auto &output_analytical = add_to_output( "Conc_analytical", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
-    auto &output_fidelity = add_to_output( "Conc_fidelity", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
-    auto &output_g2zero = add_to_output( "Conc_g2zero", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
-    auto &output_g2zero_simple = add_to_output( "Conc_g2zero_simple", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
-    auto &output_fidelity_g2zero = add_to_output( "Conc_g2zero_fidelity", fout, std::vector<Scalar>( maximum_time, 0 ), to_output );
+    auto &time = add_to_output( "TwoPMat", "Time", std::vector<Scalar>( maximum_time, 0 ), to_output, true /* Overwrite Existing */ );
     auto &twophotonmatrix = add_to_output( "TwoPMat", fout, std::vector<Dense>( maximum_time, Dense::Zero( 4, 4 ) ), to_output_m );
     auto &twophotonmatrix_g2zero = add_to_output( "TwoPMat", fout + "_g2zero", std::vector<Dense>( maximum_time, Dense::Zero( 4, 4 ) ), to_output_m );
-    auto &output_eigenvalues = add_to_output( "ConcEV", fout + "_EV", std::vector<Dense>( maximum_time, Vector::Zero( 4 ) ), to_output_m );
 
-    // Generate spinflip matrix
-    const Dense spinflip = _generate_spinflip();
-
-    const int fidelity_method = 0; // 0 Wootters, 1 Seidelmann
-    // Calculate two-photon densitymatrices and calculate concurrence
+    // Calculate two-photon densitymatrices
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
-    for ( int k = 0; k < maximum_time; k++ ) {
+    for ( size_t k = 0; k < maximum_time; k++ ) {
         // Neumann-Iterated TPDM
         const auto rho_2phot = _rho_to_tpdm( k, rho );
-        const auto fidelity_matrix = fidelity_method ? _fidelity_matrix_seidelmann( rho_2phot, spinflip ) : _fidelity_matrix_wootters( rho_2phot, spinflip );
-        auto eigenvalues = _concurrence_eigenvalues( fidelity_matrix );
-        if ( fidelity_method )
-            eigenvalues = eigenvalues.cwiseSqrt().eval();
-        auto conc = eigenvalues( 0 ) - eigenvalues( 1 ) - eigenvalues( 2 ) - eigenvalues( 3 );
-        double fidelity = std::pow( std::real( fidelity_matrix.trace() ), 2.0 );
 
         // G2(0) TPDM
         const auto rho_2phot_g2zero = _rho_to_tpdm( k, rho_g2zero );
-        const auto fidelity_matrix_g2zero = fidelity_method ? _fidelity_matrix_seidelmann( rho_2phot_g2zero, spinflip ) : _fidelity_matrix_wootters( rho_2phot_g2zero, spinflip );
-        auto eigenvalues_g2zero = _concurrence_eigenvalues( fidelity_matrix_g2zero );
-        if ( fidelity_method )
-            eigenvalues_g2zero = eigenvalues_g2zero.cwiseSqrt().eval();
-        auto conc_g2zero = eigenvalues_g2zero( 0 ) - eigenvalues_g2zero( 1 ) - eigenvalues_g2zero( 2 ) - eigenvalues_g2zero( 3 );
-        double fidelity_g2zero = std::pow( std::real( fidelity_matrix_g2zero.trace() ), 2.0 );
-
-        // Analytical Eigenvalues.
-        auto eigenvalues_analytical = analytical_eigenvalues( rho_2phot );
-        std::ranges::sort( eigenvalues_analytical, []( const auto &a, const auto &b ) { return std::real( a ) > std::real( b ); } );
-        const auto conc_analytical = eigenvalues_analytical( 0 ) - eigenvalues_analytical( 1 ) - eigenvalues_analytical( 2 ) - eigenvalues_analytical( 3 );
 
         // Cache to output arrays
-        output_eigenvalues.at( k ) = eigenvalues;
-        output.at( k ) = conc;
-        output_simple.at( k ) = std::abs( rho_2phot( 0, 3 ) ) + std::abs( rho_2phot( 3, 0 ) );
-        output_fidelity.at( k ) = fidelity;
-        output_g2zero.at( k ) = conc_g2zero;
-        output_g2zero_simple.at( k ) = std::abs( rho_2phot_g2zero( 0, 3 ) ) + std::abs( rho_2phot_g2zero( 3, 0 ) );
-        output_fidelity_g2zero.at( k ) = fidelity_g2zero;
         time.at( k ) = s.getTimeOf( 0, { k, 0 } );
-        output_analytical.at( k ) = conc_analytical;
         twophotonmatrix.at( k ) = rho_2phot;
         twophotonmatrix_g2zero.at( k ) = rho_2phot_g2zero;
         timer_c.iterate();
     }
     // Final output and timer end
     timer_c.end();
-    Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Concurrence (" + fout + ")", Timers::PROGRESS_FORCE_OUTPUT );
-
-    Log::L1( "Final Concurrence: {:.10f} ({:.10f} simple) {}\n", std::real( output.back() ), std::real( output_simple.back() ), fout );
-    Log::L1( "Final Concurrence with g2(0): {:.10f} ({:.10f} simple) {}\n", std::real( output_g2zero.back() ), std::real( output_g2zero_simple.back() ), fout );
+    Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Two Photon Matrix (" + fout + ")", Timers::PROGRESS_FORCE_OUTPUT );
 
     return true;
 }
