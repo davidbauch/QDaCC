@@ -17,10 +17,7 @@ static Dense _rho_to_tpdm( const size_t i, const std::map<std::string, std::vect
         rho.at( "EEEL" )[i], rho.at( "ELEL" )[i], rho.at( "LEEL" )[i], rho.at( "LLEL" )[i],
         rho.at( "EELE" )[i], rho.at( "ELLE" )[i], rho.at( "LELE" )[i], rho.at( "LLLE" )[i],
         rho.at( "EELL" )[i], rho.at( "ELLL" )[i], rho.at( "LELL" )[i], rho.at( "LLLL" )[i];
-    // Add a tiny number that is otherwise out of reach of the TPM elements to avoid real zeros.
-    ret.array() += 1E-200;
-    // Norm by trace.
-    return ret / ret.trace();
+    return ret;
 }
 
 /**
@@ -84,11 +81,6 @@ bool QDACC::Numerics::ODESolver::calculate_timebin_two_photon_matrix( System &s,
                 double dtau = s.getDeltaTimeOf( 1, { t, tau } );
                 rho[mode][upper_limit] += gmat.get( t, tau ) * dt * dtau;
             }
-            // G2(upper_limit,0) - No Triangular Integral
-            double dt = s.getDeltaTimeOf( 0, { upper_limit, 0 } );
-            double t_t = s.getTimeOf( 0, { upper_limit, 0 } ); // std::real( gmat_time( upper_limit, 0 ) ); // Note: all correlation functions have to have the same times. cache[purpose+"_time"] else.
-            const auto time_index = rho_index_map[t_t];
-            const auto &current_state = savedStates.at( time_index );
             if ( mode == "EEEE" ) {
                 timer_c.iterate();
                 Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Two Photon Matrix (" + purpose + "): " );

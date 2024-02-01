@@ -57,10 +57,10 @@ void System::initialize_polaron_frame_functions() {
  * @param rho Current Rho Matrix
  * @param t Current Time
  * @param past_rhos All past Rhos. If the general Markov Approximation is disabled, this vector is used instead of the simple Rho
- * @return Sparse
+ * @return MatrixMain
  */
 
-Sparse System::dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDACC::SaveState> &past_rhos ) {
+MatrixMain System::dgl_phonons_pmeq( const MatrixMain &rho, const double t, const std::vector<QDACC::SaveState> &past_rhos ) {
     track_getcoefficient_calcattempt++;
     if ( parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::LindbladRates ) {
         return dgl_phonons_lindblad_contribution( t, rho );

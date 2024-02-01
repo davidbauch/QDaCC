@@ -2,10 +2,10 @@
 
 using namespace QDACC;
 
-Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
+MatrixMain System::dgl_phonons_rungefunc( const MatrixMain &chi, const double t ) {
     // TODO Maybe? Cache explicit times?
     Scalar chirpcorrection = not chirp.empty() ? ( chirp.back().get( t ) + t * ( chirp.back().get( t ) - chirp.back().derivative( t, 0 ) ) ) : 0;
-    auto explicit_time = Sparse( chi.rows(), chi.cols() );
+    auto explicit_time = operatorMatrices.zero;
 
     // Electronic Transitions
     for ( const auto &[mode, param] : operatorMatrices.el_transitions ) {
@@ -32,6 +32,6 @@ Sparse System::dgl_phonons_rungefunc( const Sparse &chi, const double t ) {
         p++;
     }
 
-    Sparse hamilton = dgl_get_hamilton( t );
-    return -1.0i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( QDACC::Matrix::sparse_projector( chi ) );
+    MatrixMain hamilton = dgl_get_hamilton( t );
+    return -1.0i * dgl_kommutator( hamilton, chi ) + explicit_time.cwiseProduct( QDACC::Matrix::projector( chi ) );
 }

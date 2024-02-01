@@ -37,6 +37,11 @@ class System {
     // ##### Helper Variables #####
     std::map<std::string, double> emission_probabilities;
 
+    // Cache Vectors to avoid expensive recalculations
+    std::vector<MatrixMain> cache_cav_decay_left, cache_cav_decay_right, cache_cav_decay_leftright, cache_cav_decay_rightleft;
+    std::vector<MatrixMain> cache_rad_decay_left, cache_rad_decay_right, cache_rad_decay_leftright, cache_rad_decay_rightleft;
+    std::vector<MatrixMain> cache_dephasing_left, cache_dephasing_right, cache_dephasing_leftright, cache_dephasing_rightleft;
+
     // Coefficient Tracking variables
     int track_getcoefficient_read = 0;              // Read coefficient from vector
     int track_getcoefficient_read_interpolated = 0; // Read interpolated coefficient from vector
@@ -46,7 +51,7 @@ class System {
     int globaltries = 0;
 
     // Time Trafo Matrix Caching
-    Sparse timeTrafoMatrix;
+    MatrixMain timeTrafoMatrix;
 
     /**
      * @brief Constructs System
@@ -58,16 +63,16 @@ class System {
     /**
      * @brief Transforms a Matrix into the interaction picture if enabled.
      *
-     * @return Sparse input matrix in the interaction picture
+     * @return MatrixMain input matrix in the interaction picture
      */
-    Sparse dgl_timetrafo( Sparse ret, const double t );
+    MatrixMain dgl_timetrafo( MatrixMain ret, const double t );
 
     /**
      * @brief Calculates the differential equation for different input times for evaluation with the any-order Runge-Kutta solver
      *
-     * @return Sparse Matrix Runge Function
+     * @return MatrixMain Matrix Runge Function
      */
-    Sparse dgl_runge_function( const Sparse &rho, const Sparse &H, const double t, std::vector<QDACC::SaveState> &past_rhos );
+    MatrixMain dgl_runge_function( const MatrixMain &rho, const MatrixMain &H, const double t, std::vector<QDACC::SaveState> &past_rhos );
 
     /**
      * @brief Initializes all system parameters, cache variables and precalculates all functions that allow for caching
@@ -88,16 +93,16 @@ class System {
     /**
      * @brief Calculates the chirped Hamilton operator
      *
-     * @return Sparse Matrix Chirp Contribution to add onto the Hamilton Operator
+     * @return MatrixMain Matrix Chirp Contribution to add onto the Hamilton Operator
      */
-    Sparse dgl_chirp( const double t );
+    MatrixMain dgl_chirp( const double t );
 
     /**
      * @brief Calculates the pulse Hamilton operator
      *
-     * @return Sparse Matrix Pulse Contribution to add onto the Hamilton Operator
+     * @return MatrixMain Matrix Pulse Contribution to add onto the Hamilton Operator
      */
-    Sparse dgl_pulse( const double t );
+    MatrixMain dgl_pulse( const double t );
 
     /**
      * @brief Calculates and outputs expectation values for all available observables
@@ -108,9 +113,9 @@ class System {
     /**
      * @brief Calculates or returns the cached(if allowed) Hamiltonian for current time t.
      *
-     * @return Sparse Matrix Hamilton Operator
+     * @return MatrixMain Matrix Hamilton Operator
      */
-    Sparse dgl_get_hamilton( const double t );
+    MatrixMain dgl_get_hamilton( const double t );
 
     /**
      * @brief Validates trace is still contained, if not, outputs trace in file and returns false. Can also be forced by setting force = true.
@@ -118,7 +123,7 @@ class System {
      * @return true Trace is valid
      * @return false Trace is not valid
      */
-    bool trace_valid( Sparse &rho, double t_hit, bool force = false );
+    bool trace_valid( MatrixMain &rho, double t_hit, bool force = false );
 
     // ##### Phonon Functions and Helperfunctions #####
 
@@ -128,9 +133,9 @@ class System {
      *
      * @param chi Current Chi(t)
      * @param t Current Time
-     * @return Sparse: Applied Runge function
+     * @return MatrixMain: Applied Runge function
      */
-    Sparse dgl_phonons_rungefunc( const Sparse &chi, const double t );
+    MatrixMain dgl_phonons_rungefunc( const MatrixMain &chi, const double t );
 
     /**
      * @brief Calculates the Polaron Green Function. This function is currently not cached.
@@ -142,11 +147,11 @@ class System {
     Scalar dgl_phonons_greenf( double tau, const char mode = 'u' );
 
     /**
-     * @brief Same but with phonon coupling scaling, returning a Sparse Matrix to do cwiseMultiplication with. This function will cache the matrices to avoid expensive recalculations.
+     * @brief Same but with phonon coupling scaling, returning a MatrixMain Matrix to do cwiseMultiplication with. This function will cache the matrices to avoid expensive recalculations.
      *
-     * @return Sparse& Matrix Reference with Green Function per element.
+     * @return MatrixMain& Matrix Reference with Green Function per element.
      */
-    Sparse &dgl_phonons_greenf_matrix( double tau, const char mode = 'u' );
+    MatrixMain &dgl_phonons_greenf_matrix( double tau, const char mode = 'u' );
 
     /**
      * @brief Calculates the Phonon Correlation Kerbal Phi(tau) = int_0^inf dw J(w) / w^2 * [coth(hbar w/(2 k_b T)) * cos(w t) - i*sin(w t)]
@@ -175,8 +180,8 @@ class System {
      */
     double dgl_phonons_lindblad_coefficients( const double energy, const double coupling, const Scalar pulse, const char mode = 'L', const double scaling = 1.0, const double sign = 1.0 );
 
-    Sparse dgl_phonons_lindblad_contribution( const double t, const Sparse &rho );
-    Sparse dgl_phonons_integrated_contribution( const double t, const Sparse &rho, const std::vector<QDACC::SaveState> &past_rhos );
+    MatrixMain dgl_phonons_lindblad_contribution( const double t, const MatrixMain &rho );
+    MatrixMain dgl_phonons_integrated_contribution( const double t, const MatrixMain &rho, const std::vector<QDACC::SaveState> &past_rhos );
 
     /**
      * @brief Initializes the Polaron Frame Functions by precalculating the Phi(tau) function and the corresponding Green functions
@@ -187,9 +192,9 @@ class System {
     /**
      * @brief Calculates Chi(t,0)
      *
-     * @return Sparse Matrix
+     * @return MatrixMain Matrix
      */
-    Sparse dgl_phonons_chi( const double t );
+    MatrixMain dgl_phonons_chi( const double t );
 
     /**
      * @brief Evaluates the Transformation U(t,tau) Chi(t) U(t,tau)^+ = Chi(t,tau) from tau' = 0 to tau' = tau
@@ -197,17 +202,17 @@ class System {
      * @param chi_tau Current Chi(t)
      * @param t Current Time
      * @param tau Current Delay
-     * @return Sparse: Transformed Chi(t) = Chi(t,tau)
+     * @return MatrixMain: Transformed Chi(t) = Chi(t,tau)
      */
 
-    Sparse dgl_phonons_calculate_transformation( double t, double tau );
+    MatrixMain dgl_phonons_calculate_transformation( double t, double tau );
 
     /**
      * @brief Calculates the Polaron Master Equation Contribution L_phonons(t)
      *
-     * @return Sparse Matrix to add onto the usual von-Neumann equatation / the runge function
+     * @return MatrixMain Matrix to add onto the usual von-Neumann equatation / the runge function
      */
-    Sparse dgl_phonons_pmeq( const Sparse &rho, const double t, const std::vector<QDACC::SaveState> &past_rhos );
+    MatrixMain dgl_phonons_pmeq( const MatrixMain &rho, const double t, const std::vector<QDACC::SaveState> &past_rhos );
 
     /**
      * @brief Initializes the Path Integral Functions by precalculating the Kernel functions
@@ -234,9 +239,10 @@ class System {
      *
      * @return Expectation Value <op>
      */
-    template <typename T, typename R>
-    inline R dgl_expectationvalue( const T &rho, const T &op, const double t ) {
-        return get_trace<R>( ( rho * dgl_timetrafo( op, t ) ).eval() );
+    template <typename T>
+    inline typename T::Scalar dgl_expectationvalue( const T &rho, const T &op, const double t ) {
+        //return get_trace<typename T::Scalar>( ( rho * dgl_timetrafo( op, t ) ).eval() );
+        return get_trace<typename T::Scalar>( ( rho * op ).eval() );
     }
 
     /**
@@ -246,8 +252,8 @@ class System {
      */
     template <typename T>
     inline T dgl_calc_rhotau( const T &rho, const T &op1, const T &op2, const double t ) {
-        // return op1 * rho * op2; // dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
-        return dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
+        return op1 * rho * op2;
+        //return dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
     }
 
     /**
@@ -284,39 +290,28 @@ class System {
      * The base index from a base state vector |i,j,k,l,...> can be one of the i,j,k,l indices to partially trace over.
      * @return Dense
      */
-    Dense partial_trace( const Sparse &mat, int i ) {
+    Dense partial_trace( const MatrixMain &mat, int i ) {
         Dense ret = Dense::Zero( operatorMatrices.base_selfhilbert.at( i ).rows(), operatorMatrices.base_selfhilbert.at( i ).cols() );
         for ( int k = 0; k < mat.outerSize(); ++k ) {
-            for ( Sparse::InnerIterator it( mat, k ); it; ++it ) {
+            for ( MatrixMain::InnerIterator it( mat, k ); it; ++it ) {
                 int l = it.row();
                 int j = it.col();
-                int hi = std::real( operatorMatrices.base_hilbert_index[i]( l, j ) ) - 1;
-                int hj = std::imag( operatorMatrices.base_hilbert_index[i]( l, j ) ) - 1;
+                int hi = std::real( operatorMatrices.base_hilbert_index[i].coeff( l, j ) ) - 1;
+                int hj = std::imag( operatorMatrices.base_hilbert_index[i].coeff( l, j ) ) - 1;
                 if ( hi >= 0 and hj >= 0 )
                     ret( hi, hj ) += it.value();
             }
         }
         return ret;
     }
-
-    /**
-     * @brief Alias for the commutator return type, which is specified explicitely using Eigen's reference objects.
-     *
-     * @tparam T1
-     * @tparam T2
-     */
-    template <typename T1, typename T2>
-    using commutator_return_type = Eigen::CwiseBinaryOp<Eigen::internal::scalar_difference_op<typename T1::Scalar, typename T1::Scalar>, const Eigen::Product<T1, T2, 2>, const Eigen::Product<T2, T1, 2>>;
-    template <typename T1, typename T2>
-    using anticommutator_return_type = Eigen::CwiseBinaryOp<Eigen::internal::scalar_sum_op<typename T1::Scalar, typename T1::Scalar>, const Eigen::Product<T1, T2, 2>, const Eigen::Product<T2, T1, 2>>;
-
+    
     /**
      * @brief Calculates the Kommutator [A,B] of two matrices A and B of identical type
      *
      * @return Eigen Reference for A*B-B*A
      */
     template <typename T1, typename T2>
-    inline commutator_return_type<T1, T2> dgl_kommutator( const T1 &A, const T2 &B ) {
+    inline auto dgl_kommutator( const T1 &A, const T2 &B ) {
         return A * B - B * A;
     }
 
@@ -326,7 +321,7 @@ class System {
      * @return Eigen Reference for A*B+B*A
      */
     template <typename T1, typename T2>
-    inline anticommutator_return_type<T1, T2> dgl_antikommutator( const T1 &A, const T2 &B ) {
+    inline auto dgl_antikommutator( const T1 &A, const T2 &B ) {
         return A * B + B * A;
     }
 

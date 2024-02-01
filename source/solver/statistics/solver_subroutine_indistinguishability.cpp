@@ -43,7 +43,7 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
     std::string s_g1 = get_operators_purpose( { s_op_creator, s_op_annihilator } );
     std::string s_g2 = get_operators_purpose( { s_op_creator, s_op_creator, s_op_annihilator, s_op_annihilator } );
 
-    // Get Sparse Operator Matrices
+    // Get Operator Matrices
     const auto &[op_creator, op_annihilator] = get_operators_matrices( s, s_op_creator, s_op_annihilator );
 
     // Calculate G-Functions if neccessary
@@ -55,7 +55,7 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
 
     int pbsize = akf_mat_g1.dim();
 
-    Sparse M1 = op_creator * op_annihilator;
+    MatrixMain M1 = op_creator * op_annihilator;
 
     std::string fout = s_op_creator + "-" + s_op_annihilator;
     Timer &timer = Timers::create( "Indistinguishability " + fout ).start();
@@ -90,8 +90,8 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
             double dt = s.getDeltaTimeOf( 0, { t, tau } );
             double dtau = s.getDeltaTimeOf( 1, { t, tau } );
             // Population Normalization constants
-            Scalar gpop = s.dgl_expectationvalue<Sparse, Scalar>( rho, M1, t_t ) * s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, M1, t_tau );
-            Scalar gbot = s.dgl_expectationvalue<Sparse, Scalar>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<Sparse, Scalar>( rho, op_creator, t_t );
+            Scalar gpop = s.dgl_expectationvalue<MatrixMain>( rho, M1, t_t ) * s.dgl_expectationvalue<MatrixMain>( rho_tau, M1, t_tau );
+            Scalar gbot = s.dgl_expectationvalue<MatrixMain>( rho_tau, op_annihilator, t_tau ) * s.dgl_expectationvalue<MatrixMain>( rho, op_creator, t_t );
             // Required summands for indistinguishability
             const auto g1 = akf_mat_g1.get( t, tau );
             const auto g2 = akf_mat_g2.get( t, tau );
@@ -116,7 +116,7 @@ bool QDACC::Numerics::ODESolver::calculate_indistinguishability( System &s, cons
         topsumv += top_vis[t];
         const auto t_t_index = rho_index_map[t_t];
         const auto &current_state = savedStates.at( t_t_index );
-        bottomsumv += s.dgl_expectationvalue<Sparse, Scalar>( current_state.mat, M1, t_t ) * dt;
+        bottomsumv += s.dgl_expectationvalue<MatrixMain>( current_state.mat, M1, t_t ) * dt;
         outpv[t] = 2.0 * topsumv / std::pow( bottomsumv, 2.0 );
         outp[t] = 1.0 - std::abs( topsum / bottomsum );
     }

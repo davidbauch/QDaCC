@@ -2,10 +2,10 @@
 
 using namespace QDACC;
 
-Sparse System::dgl_phonons_chi( const double t ) {
+MatrixMain System::dgl_phonons_chi( const double t ) {
     Log::L3( "[System-PME] Generating Chi({})...\n", t );
     // QD-Cavity
-    Sparse ret = operatorMatrices.polaron_factors[0];
+    MatrixMain ret = operatorMatrices.polaron_factors[0];
     // QD-Pulse
     for ( int i = 0; i < pulse.size(); i++ ) {
         auto p = pulse[i].get( t );

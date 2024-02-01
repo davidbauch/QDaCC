@@ -21,13 +21,13 @@ class OperatorMatrices {
      */
     struct matrix_s {
         // Bra and Ket Operators in self-space
-        Dense bra, ket;
+        MatrixMain bra, ket;
         // Matrix representation Ket*Bra in self Hilbert space
-        Dense self_hilbert;
+        MatrixMain self_hilbert;
         // Matrix representation Ket*Bra in total Hilbert space
-        Sparse hilbert;
+        MatrixMain hilbert;
         // Projector Matrix. This is a matrix int the total Hilbert space where every nonzero entry in the original hilbert matrix is 1.
-        Sparse projector;
+        MatrixMain projector;
         // Integer index for base. Used for easy partial tracing.
         int base;
         // "Creator" or "Annihilator" style operator
@@ -43,22 +43,22 @@ class OperatorMatrices {
    public:
     // Operator Matrix Classes
     // Self-Part of the total Hamiltonian
-    Sparse H_0;
+    MatrixMain H_0;
     // Interaction Part of the total Hamiltonian
-    Sparse H_I;
+    MatrixMain H_I;
     // Hamilton Operator Used for numerical calculations. This is what the system's dgl_hamilton method will use.
-    Sparse H_used;
+    MatrixMain H_used;
     // Density Matrix
-    Sparse rho;
+    MatrixMain rho;
     // Identity Matrix in the total Hilbert dimension
-    Sparse identity;
+    MatrixMain identity, zero;
 
     // Base Vector mapping the matrix index onto the corresponding state string in total Hilbert space
     std::vector<std::string> base;
     // Contains the individual self-Hilbert bases
-    std::vector<Dense> base_selfhilbert;
+    std::vector<MatrixMain> base_selfhilbert;
     // Maps the individual self-Hilbert indices onto the corresponding total Hilbert space indices. Used to calculate partial traces. Key is the systems base integer index
-    std::vector<Dense> base_hilbert_index;
+    std::vector<MatrixMain> base_hilbert_index;
     // Maps the Key index string |a|b|...> onto an integer index
     std::map<std::string, int> base_index_map;
     // Maps the total Hilbert space index onto the corresponding phonon group index
@@ -68,23 +68,23 @@ class OperatorMatrices {
     // Maps the phonon group index onto their corresponding coupling value
     std::vector<double> phonon_group_index_to_coupling_value;
     // Phonon coupling Matrix for the PME
-    Sparse polaron_phonon_coupling_matrix;
+    MatrixMain polaron_phonon_coupling_matrix;
     // Cached PME Rates
-    std::map<double, Sparse> pme_greenfunction_matrix_cache_u, pme_greenfunction_matrix_cache_g;
+    std::map<double, MatrixMain> pme_greenfunction_matrix_cache_u, pme_greenfunction_matrix_cache_g;
 
     // QDACC 3.0 New System Matrices. Since Version 3.0, the electronic and optical system is not hardcoded into the program anymore. Instead, the state- and transition matrices get generated on startup and stored in these maps.
     std::map<std::string, matrix_s> el_states, ph_states, el_transitions, ph_transitions, extra_transitions;
     // PME precalculated Chi and partial chi / partial t sumands
-    std::vector<Sparse> polaron_factors, polaron_pulse_factors_explicit_time;
+    std::vector<MatrixMain> polaron_factors, polaron_pulse_factors_explicit_time;
     // Cache matrix for the timetransformation matrix
     Dense timetrafo_cachematrix;
     // Cache matrices for the pulse and chirp
-    std::vector<Sparse> pulse_mat, chirp_mat;
+    std::vector<MatrixMain> pulse_mat, chirp_mat;
     // The initial State vector
-    Dense initial_state_vector_ket;
+    MatrixMain initial_state_vector_ket;
 
     // Custom expectation value operators
-    std::vector<Sparse> numerics_custom_expectation_values_operators;
+    std::vector<MatrixMain> numerics_custom_expectation_values_operators;
 
     // A global output format for Eigen's matrices. Could also be declared to Eigen at compile time.
     Eigen::IOFormat output_format;
@@ -115,6 +115,7 @@ class OperatorMatrices {
      *
      */
     std::string matrixToString(const Dense& mat);
+    std::string matrixToString(const Sparse& mat);
 
     /**
      * @brief Creates a bosonic creation or annihilation operator matrix
@@ -124,14 +125,15 @@ class OperatorMatrices {
      */
     template <class M>
     static M create_photonic_operator( const QDACC::PhotonicOperator &type, const int &maxPhotons ) {
-        M ret = M::Zero( maxPhotons + 1, maxPhotons + 1 );
+        M ret( maxPhotons + 1, maxPhotons + 1 );
+        ret.setZero();
         for ( int i = 0; i < maxPhotons; i++ ) {
             if ( type == QDACC::PhotonicOperator::Create )
-                ret( i + 1, i ) = sqrt( i + 1 );
+                ret.coeffRef( i + 1, i ) = sqrt( i + 1 );
             else if ( type == QDACC::PhotonicOperator::Annihilate )
-                ret( i, i + 1 ) = sqrt( i + 1 );
+                ret.coeffRef( i, i + 1 ) = sqrt( i + 1 );
             else if ( type == QDACC::PhotonicOperator::State )
-                ret( i + 1, i + 1 ) = i + 1;
+                ret.coeffRef( i + 1, i + 1 ) = i + 1;
         }
         return ret;
     }

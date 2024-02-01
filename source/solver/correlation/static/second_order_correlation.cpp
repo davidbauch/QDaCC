@@ -2,7 +2,7 @@
 
 void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::string &s_op_l, const std::vector<std::string> &purposes ) {
     Log::L2( "[CorrelationFunction] Preparing to calculate Correlation function\n" );
-    Log::L2( "[CorrelationFunction] Generating Sparse Operator Matrices from String input...\n" );
+    Log::L2( "[CorrelationFunction] Generating Operator Matrices from String input...\n" );
 
     // Find Operator Matrices
     const auto op_i = get_operators_matrix( s, s_op_i );
@@ -15,7 +15,7 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
     // Generator super-purpose
     std::string super_purpose = std::accumulate( std::next( purposes.begin() ), purposes.end(), purposes.front(), []( const std::string &a, const std::string &b ) { return a + " and " + b; } );
 
-    std::vector<std::pair<Sparse, std::string>> eval_operators;
+    std::vector<std::pair<MatrixMain, std::string>> eval_operators;
 
     // Preconstruct
     for ( auto current = 0; current < s_op_k.size(); current++ ) {
@@ -54,7 +54,7 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
         // Get Time from saved State
         double t_t = current_state.t; 
         // Calculate New Modified Density Matrix
-        Sparse rho_tau = s.dgl_calc_rhotau( current_state.mat, op_l, op_i, t_t );
+        MatrixMain rho_tau = s.dgl_calc_rhotau( current_state.mat, op_l, op_i, t_t );
         // Calculate Runge Kutta or PI
         if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
             calculate_path_integral_correlation( rho_tau, t_t, s.parameters.t_end, timer, s, savedRhos, op_l, op_i, 1 /*ADM Cores*/ );
@@ -67,7 +67,7 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
             auto &gmat = cache[purpose];
             for ( size_t tau = 0; tau < savedRhos.size(); tau++ ) {
                 const double t_tau = savedRhos.at( tau ).t;
-                gmat.get( t, tau ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos.at( tau ).mat, eval, t_tau );
+                gmat.get( t, tau ) = s.dgl_expectationvalue<MatrixMain>( savedRhos.at( tau ).mat, eval, t_tau );
             }
         }
         Timers::outputProgress( timer, progressbar, t, savedStates.size(), super_purpose );

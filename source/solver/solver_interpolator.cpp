@@ -76,7 +76,7 @@ std::vector<QDACC::SaveState> QDACC::Numerics::interpolate_curve( const std::vec
             double first = input[i - 1].t;
             double second = input[i].t;
             double f = ( t_t - first ) / ( second - first );
-            Sparse mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
+            MatrixMain mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
             ret.push_back( { mat, t_t } );
             if ( current_index == t_values.size() - 1 )
                 break;
@@ -163,14 +163,14 @@ std::vector<QDACC::SaveState> QDACC::Numerics::interpolate_curve( const std::vec
             double first = i > 0 ? input[i - 1].t : t_start;
             double second = input[i].t;
             double f = ( t_t - first ) / ( second - first );
-            Sparse mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
+            MatrixMain mat = input[i - 1].mat + f * ( input[i].mat - input[i - 1].mat );
             ret.push_back( { mat, t_t } );
         }
     } /*else if ( order == 1 ) {
         // Quintic Hermite Interpolation
         Log::L2( "[Interpolator] Using Quintic Hermite Interpolation...\n" );
         // Derivatives
-        std::vector<Sparse> first_derivative, second_derivative;
+        std::vector<MatrixMain> first_derivative, second_derivative;
         Log::L2( "[Interpolator] Calculating first derivatives...\n" );
         for ( int i = 0; i < input.size() - 1; i++ ) {
             first_derivative.emplace_back( ( input[i + 1].mat - input[i].mat ) / ( input[i + 1].t - input[i].t ) );
@@ -199,12 +199,12 @@ std::vector<QDACC::SaveState> QDACC::Numerics::interpolate_curve( const std::vec
             double xmx0 = x - input[i].t;
             double x1mx0 = input[i + 1].t - input[i].t;
             double xmx1 = x - input[i + 1].t;
-            const Sparse &fx0 = input[i].mat;
-            const Sparse &fx1 = input[i + 1].mat;
-            const Sparse &fdx0 = first_derivative[i];
-            const Sparse &fdx1 = first_derivative[i + 1];
-            const Sparse &fddx0 = second_derivative[i];
-            const Sparse &fddx1 = second_derivative[i + 1];
+            const MatrixMain &fx0 = input[i].mat;
+            const MatrixMain &fx1 = input[i + 1].mat;
+            const MatrixMain &fdx0 = first_derivative[i];
+            const MatrixMain &fdx1 = first_derivative[i + 1];
+            const MatrixMain &fddx0 = second_derivative[i];
+            const MatrixMain &fddx1 = second_derivative[i + 1];
 
             double xmx0_x1mx0 = xmx0 / x1mx0;
             double xmx1_x1mx0 = xmx1 / x1mx0;
@@ -212,7 +212,7 @@ std::vector<QDACC::SaveState> QDACC::Numerics::interpolate_curve( const std::vec
             auto d1 = ( fx1 - fx0 - fdx0 * x1mx0 - 0.5 * fddx0 * x1mx0 * x1mx0 ) * xmx0_x1mx0 * xmx0_x1mx0 * xmx0_x1mx0;
             auto d2 = ( 3.0 * fx0 - 3.0 * fx1 + ( 2 * fdx0 + fdx1 ) * x1mx0 + 0.5 * fddx0 * x1mx0 * x1mx0 ) * xmx0_x1mx0 * xmx0_x1mx0 * xmx0_x1mx0 * xmx1_x1mx0;
             auto d3 = ( 6.0 * fx1 - 6.0 * fx0 - 3.0 * ( fdx0 + fdx1 ) * x1mx0 + 0.5 * ( fddx1 - fddx0 ) * x1mx0 * x1mx0 ) * xmx0_x1mx0 * xmx0_x1mx0 * xmx0_x1mx0 * xmx1_x1mx0 * xmx1_x1mx0;
-            Sparse mat = fx0 + fdx0 * xmx0 + 0.5 * fddx0 * xmx0 * xmx0 + d1 + d2 + d3;
+            MatrixMain mat = fx0 + fdx0 * xmx0 + 0.5 * fddx0 * xmx0 * xmx0 + d1 + d2 + d3;
             ret.push_back( { mat, t_t } );
         }
     } else {

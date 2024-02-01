@@ -118,7 +118,12 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( size_t k = 0; k < maximum_time; k++ ) {
         // Neumann-Iterated TPDM
-        const auto rho_2phot = twophotonmatrix[k];
+        auto rho_2phot = twophotonmatrix[k];
+        // Add little bit of noise to avoid numerical issues
+        rho_2phot.array() += 1E-200;
+        // Normalize
+        rho_2phot /= rho_2phot.trace();
+
         const auto fidelity_matrix = fidelity_method ? _fidelity_matrix_seidelmann( rho_2phot, spinflip ) : _fidelity_matrix_wootters( rho_2phot, spinflip );
         auto eigenvalues = _concurrence_eigenvalues( fidelity_matrix );
         if ( fidelity_method )
@@ -127,7 +132,12 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
         double fidelity = std::pow( std::real( fidelity_matrix.trace() ), 2.0 );
 
         // G2(0) TPDM
-        const auto rho_2phot_g2zero = twophotonmatrix_g2zero[k];
+        auto rho_2phot_g2zero = twophotonmatrix_g2zero[k];
+        // Add little bit of noise to avoid numerical issues
+        rho_2phot_g2zero.array() += 1E-200;
+        // Normalize
+        rho_2phot_g2zero /= rho_2phot_g2zero.trace();
+
         const auto fidelity_matrix_g2zero = fidelity_method ? _fidelity_matrix_seidelmann( rho_2phot_g2zero, spinflip ) : _fidelity_matrix_wootters( rho_2phot_g2zero, spinflip );
         auto eigenvalues_g2zero = _concurrence_eigenvalues( fidelity_matrix_g2zero );
         if ( fidelity_method )

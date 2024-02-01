@@ -1,5 +1,14 @@
 #include "misc/helperfunctions_matrix.h"
 
+QDACC::Type::MatrixMain QDACC::Matrix::projector( const QDACC::Type::MatrixMain &input ) {
+#ifdef USE_SPARSE_MATRIX
+    return sparse_projector( input );
+#else
+    return dense_projector( input );
+#endif
+}
+
+
 QDACC::Type::Dense QDACC::Matrix::dense_projector( const QDACC::Type::Dense &input ) {
     QDACC::Type::Dense ret = QDACC::Type::Dense::Zero( input.rows(), input.cols() );
     for ( int i = 0; i < ret.rows(); i++ ) {
@@ -27,20 +36,21 @@ QDACC::Type::Sparse QDACC::Matrix::sparse_projector( const QDACC::Type::Sparse &
 // Calculates the tensor product of matrices a and b
 // @param &a,&b: Input matrices
 // @return Returns a x b where x is the tensor product
-QDACC::Type::Dense QDACC::Matrix::tensor( const QDACC::Type::Dense &a, const QDACC::Type::Dense &b ) {
+QDACC::Type::MatrixMain QDACC::Matrix::tensor( const QDACC::Type::MatrixMain &a, const QDACC::Type::MatrixMain &b ) {
     assert( a.rows() == a.cols() && b.rows() == b.cols() && "Only Square matrices accepted" );
-    QDACC::Type::Dense ret = QDACC::Type::Dense::Zero( a.cols() * b.cols(), a.rows() * b.rows() );
+    QDACC::Type::MatrixMain ret( a.cols() * b.cols(), a.rows() * b.rows() );
+    ret.setZero();
     for ( int i = 0; i < a.rows(); i++ )
         for ( int j = 0; j < a.cols(); j++ )
             for ( int k = 0; k < b.rows(); k++ )
                 for ( int l = 0; l < b.cols(); l++ ) {
-                    ret( i * b.rows() + k, j * b.cols() + l ) = a( i, j ) * b( k, l );
+                    ret.coeffRef( i * b.rows() + k, j * b.cols() + l ) = a.coeff( i, j ) * b.coeff( k, l );
                 }
     return ret;
 }
 
 // Chains the tensor products
-QDACC::Type::Dense QDACC::Matrix::tensor( const std::vector<QDACC::Type::Dense> &m ) {
+QDACC::Type::MatrixMain QDACC::Matrix::tensor( const std::vector<QDACC::Type::MatrixMain> &m ) {
     if ( m.size() < 2 )
         return m.front();
     else if ( m.size() == 2 )

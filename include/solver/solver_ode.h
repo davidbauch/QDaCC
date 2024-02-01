@@ -12,7 +12,7 @@ class ODESolver {
    private:
     // Hamilton Cache Tracker
     // TODO: Move to system class OR move phonon tracking variables to solver class.
-    int track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
+    size_t track_gethamilton_read, track_gethamilton_write, track_gethamilton_calc, track_gethamilton_calcattempt;
 
     // Matrix Cache Map
     std::map<std::string, MultidimensionalCacheMatrix> cache;
@@ -28,9 +28,9 @@ class ODESolver {
     // Vector for saved matrix-time tuples for densitymatrix
     std::vector<QDACC::SaveState> savedStates;
     // Vector for saved matrix-time tuples for hamilton operators
-    std::map<double, Sparse> savedHamiltons;
+    std::map<double, MatrixMain> savedHamiltons;
     // Propagators for the path integral. Used for their corresponding correlation functions.
-    std::map<double, std::vector<std::vector<Sparse>>> pathint_propagator;
+    std::map<double, std::vector<std::vector<MatrixMain>>> pathint_propagator;
     // Maps t_t onto i for accessing the savedSate Vector via doubles.
     std::map<double, size_t> rho_index_map;
 
@@ -52,37 +52,37 @@ class ODESolver {
      * @brief Saves a tuple of a complex (density-)matrix and time, ensuring times and matrices don't get mixed up
      *
      */
-    void saveState( const Sparse &mat, const double t, std::vector<QDACC::SaveState> &savedStates );
+    void saveState( const MatrixMain &mat, const double t, std::vector<QDACC::SaveState> &savedStates );
 
     /**
      * @brief Saves a tuple of a complex (Hamilton-)matrix and time, ensuring times and matrices don't get mixed up
      *
      */
-    void save_hamilton( const Sparse &mat, const double t );
+    void save_hamilton( const MatrixMain &mat, const double t );
 
     /**
      * @brief Iterates Runge-Kutta of order 4 at time t onto rho using the systems hamilton operator.
      *
      */
-    Sparse iterateRungeKutta4( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
+    MatrixMain iterateRungeKutta4( const MatrixMain &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
 
     /**
      * @brief Iterates Runge-Kutta of order 5 at time t onto rho using the systems hamilton operator.
      *
      */
-    Sparse iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
+    MatrixMain iterateRungeKutta5( const MatrixMain &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
 
     /**
      * @brief Iterates Runge-Kutta of order 5 at time t onto rho using the systems hamilton operator. Also returns the error.
      *
      */
-    std::pair<Sparse, double> iterateRungeKutta45( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
+    std::pair<MatrixMain, double> iterateRungeKutta45( const MatrixMain &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
 
     /**
      * @brief Gatheres the Hamiltonoperator for time t using a systems get_hamilton() function. This workaround enables the saving of already calculated matrices for dublicate uses.
      *
      */
-    Sparse getHamilton( System &s, const double t );
+    MatrixMain getHamilton( System &s, const double t );
 
     /**
      * @brief Calculates the G1(tau) function. Calculates <b^+(t) * b(t+tau)> via quantum regression theorem. Logs and outputs progress.
@@ -102,8 +102,8 @@ class ODESolver {
     void calculate_g3( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &s_op_m, const std::string &s_op_n, const std::string &purpose = "unknown" );
     void calculate_g3( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::vector<std::string> &s_op_l, const std::vector<std::string> &s_op_m, const std::string &s_op_n, const std::vector<std::string> &purposes );
 
-    void calculate_timebin_g2_correlations( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose, double t_start, double time_bin_length );
-    void calculate_timebin_g3_correlations( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &s_op_m, const std::string &s_op_n, const std::string &purpose, double t_start, double time_bin_length );
+    void calculate_timebin_g2_correlations( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose, double t_start, double time_bin_length, int deph );
+    void calculate_timebin_g3_correlations( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &s_op_m, const std::string &s_op_n, const std::string &purpose, double t_start, double time_bin_length, int deph );
     
     bool calculate_timebin_two_photon_matrix( System &s, const std::string& purpose );
     bool calculate_timebin_three_photon_matrix( System &s, const std::string& purpose );
@@ -117,7 +117,7 @@ class ODESolver {
      * @brief Iterates Runge-Kutta with given order depending on the systems settings.
      *
      */
-    Sparse iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
+    MatrixMain iterate( const MatrixMain &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates );
 
     /**
      * @brief Calculates the normal t-direction via solving the von-Neumann equation for rho. May save some of the density matrices for later uses. Logs the calculation and outputs progress.
@@ -138,11 +138,11 @@ class ODESolver {
     std::string get_operators_purpose( const std::vector<std::string> &operators, const std::string& prefix = "G" );
 
     /**
-     * @brief Returns a tuple of [creator, annihilator] Sparse Operator Matrices from a given Operator String
+     * @brief Returns a tuple of [creator, annihilator] MatrixMain Operator Matrices from a given Operator String
      *
      */
-    Sparse get_operators_matrix( System &s, const std::string &s_op );
-    std::tuple<Sparse, Sparse> get_operators_matrices( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator );
+    MatrixMain get_operators_matrix( System &s, const std::string &s_op );
+    std::tuple<MatrixMain, MatrixMain> get_operators_matrices( System &s, const std::string &s_op_creator, const std::string &s_op_annihilator );
 
     /**
      * @brief Calculates the Spectrum for a given operator combination. This function requires the calculation of 1 G1 Function
@@ -180,49 +180,49 @@ class ODESolver {
      * @brief Calculates a single Path Integral Propagator
      *
      */
-    Sparse calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<QDACC::SaveState> &output, const Sparse &one );
+    MatrixMain calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<QDACC::SaveState> &output, const MatrixMain &one );
 
     /**
      * @brief Calculates the Path Integral Propagator for all index combinations. This function also saves the resuling propagators and returns a reference to the cached object.
      *
      */
-    std::vector<std::vector<Sparse>> &calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<QDACC::SaveState> &output );
+    std::vector<std::vector<MatrixMain>> &calculate_propagator_vector( System &s, size_t tensor_dim, double t0, double t_step, std::vector<QDACC::SaveState> &output );
 
     /**
      * @brief Iterates rho0 from t_start to t_end using RK4, RK5 or RK45. If the order is 45, this function calls calculate_runge_kutta_45.
      *
      */
-    bool calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output = true );
+    bool calculate_runge_kutta( MatrixMain &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output = true );
 
     /**
      * @brief Iterates rho0 from t_start to t_end using RK45. This function does NOT interpolate the result but instead returns all calculated densitymatrices as vector.
      *
      */
-    bool calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output = true );
+    bool calculate_runge_kutta_45( MatrixMain &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output = true );
 
     /**
      * @brief Calculates rho0 from t_start to t_end using the Path Integral Method. If correlation functions are evaluated, this function calls calculate_path_integral_correlation multiple times per iteration.
      *
      */
-    bool calculate_path_integral( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output = true );
+    bool calculate_path_integral( MatrixMain &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output = true );
 
     /**
      * @brief Iterates rho0 from t_start to t_end using the Path Integral Method.
      */
-    Tensor iterate_path_integral( System &s, Tensor &adm_tensor, std::vector<std::vector<Sparse>> &propagator, const int max_index );
-    Tensor iterate_path_integral_gpu( System &s, Tensor &adm_tensor, std::vector<std::vector<Sparse>> &propagator, const int max_index );
+    Tensor iterate_path_integral( System &s, Tensor &adm_tensor, std::vector<std::vector<MatrixMain>> &propagator, const int max_index );
+    Tensor iterate_path_integral_gpu( System &s, Tensor &adm_tensor, std::vector<std::vector<MatrixMain>> &propagator, const int max_index );
 
     /**
      * @brief Calculates rho0 from t_start to t_end incorporating the corresponding correlation modification.
      *
      */
-    bool calculate_path_integral_correlation( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDACC::SaveState> &output, const Sparse &op_l, const Sparse &op_i, int adm_multithreading_cores );
+    bool calculate_path_integral_correlation( MatrixMain &rho0, double t_start, double t_end, Timer &rkTimer, System &s, std::vector<QDACC::SaveState> &output, const MatrixMain &op_l, const MatrixMain &op_i, int adm_multithreading_cores );
 
     /**
      * @brief Creates a table file containing the available propagation paths in the .dot format
      *
      */
-    bool visualize_path( Sparse &rho0, System &s );
+    bool visualize_path( MatrixMain &rho0, System &s );
 
     /**
      * @brief Integrates the Raman photon population. Very runtime costly. TODO: Multithread/Optimize integral.

@@ -46,17 +46,17 @@ const double e7 = 1. / 40.;          //-1. / 40.;
 
 } // namespace RKCoefficients
 
-std::pair<Sparse, double> iterate_definite_integral( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t, const double t_step, const int order );
+std::pair<MatrixMain, double> iterate_definite_integral( const MatrixMain &rho, std::function<MatrixMain( const MatrixMain &, const double )> const &rungefunction, const double t, const double t_step, const int order );
 
 // Description: Integrates rho from t0 to t1 via Rungefunc.
 // Type: Solver public function
 // @return: [vector<QDACC::SaveState>] Vector of save state tuples (matrix, time)
-std::vector<QDACC::SaveState> calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
+std::vector<QDACC::SaveState> calculate_definite_integral_vec( const MatrixMain &rho, std::function<MatrixMain( const MatrixMain &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
 
 // Description: Integrates rho from t0 to t1 via Rungefunc.
 // Type: Solver public function
 // @return: [QDACC::SaveState] Save state tuple (matrix, time)
-QDACC::SaveState calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
+QDACC::SaveState calculate_definite_integral( MatrixMain rho, std::function<MatrixMain( const MatrixMain &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order );
 
 // Description: Uses the interpolation class to monotone-cubic spline interpolate a given vector of saved states, resulting in much smoother output. Should probably not be used
 // Type: Solver public function

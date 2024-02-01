@@ -12,14 +12,16 @@ Scalar System::dgl_phonons_greenf( double tau, const char mode ) {
     return parameters.p_phonon_b * parameters.p_phonon_b * std::sinh( phi );
 }
 
-Sparse &System::dgl_phonons_greenf_matrix( double tau, const char mode ) {
+MatrixMain &System::dgl_phonons_greenf_matrix( double tau, const char mode ) {
     if ( operatorMatrices.pme_greenfunction_matrix_cache_g.contains( tau ) ) {
         if ( mode == 'g' )
             return operatorMatrices.pme_greenfunction_matrix_cache_g[tau];
         return operatorMatrices.pme_greenfunction_matrix_cache_u[tau];
     } else {
-        operatorMatrices.pme_greenfunction_matrix_cache_g[tau] = Sparse( operatorMatrices.polaron_phonon_coupling_matrix.cols(), operatorMatrices.polaron_phonon_coupling_matrix.rows() );
-        operatorMatrices.pme_greenfunction_matrix_cache_u[tau] = Sparse( operatorMatrices.polaron_phonon_coupling_matrix.cols(), operatorMatrices.polaron_phonon_coupling_matrix.rows() );
+        MatrixMain zero( operatorMatrices.polaron_phonon_coupling_matrix.rows(), operatorMatrices.polaron_phonon_coupling_matrix.cols() );
+        zero.setZero();
+        operatorMatrices.pme_greenfunction_matrix_cache_g[tau] = zero;
+        operatorMatrices.pme_greenfunction_matrix_cache_u[tau] = zero;
     }
     if ( not phi_vector.contains( tau ) ) {
         phi_vector[tau] = dgl_phonons_phi( tau ); // std::cout << "Time " << t << " is not in phi vecotr\n";
@@ -27,11 +29,14 @@ Sparse &System::dgl_phonons_greenf_matrix( double tau, const char mode ) {
     auto phi = phi_vector[tau];
     auto &g = operatorMatrices.pme_greenfunction_matrix_cache_g[tau];
     auto &u = operatorMatrices.pme_greenfunction_matrix_cache_u[tau];
-    for ( int k = 0; k < operatorMatrices.polaron_phonon_coupling_matrix.outerSize(); ++k ) {
-        for ( Sparse::InnerIterator it( operatorMatrices.polaron_phonon_coupling_matrix, k ); it; ++it ) {
-            auto row = it.row();
-            auto col = it.col();
-            auto val = it.value();
+    //for ( int k = 0; k < operatorMatrices.polaron_phonon_coupling_matrix.outerSize(); ++k ) {
+    //    for ( Sparse::InnerIterator it( operatorMatrices.polaron_phonon_coupling_matrix, k ); it; ++it ) {
+    //        auto row = it.row();
+    //        auto col = it.col();
+    //        auto val = it.value();
+    for( int row = 0; row < operatorMatrices.polaron_phonon_coupling_matrix.rows(); row++ ) {
+        for( int col = 0; col < operatorMatrices.polaron_phonon_coupling_matrix.cols(); col++ ) {
+            auto val = operatorMatrices.polaron_phonon_coupling_matrix.coeff( row, col );
             g.coeffRef( row, col ) = ( std::cosh( phi * val ) - 1.0 );
             u.coeffRef( row, col ) = std::sinh( phi * val );
         }

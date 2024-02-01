@@ -2,19 +2,23 @@
 
 using namespace QDACC;
 
-Sparse System::dgl_phonons_calculate_transformation( double t, double tau ) {
+MatrixMain System::dgl_phonons_calculate_transformation( double t, double tau ) {
     // Backwards Integral
     if ( parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::BackwardsIntegral ) {
         // TODO
         // return QDACC::Numerics::calculate_definite_integral_vec( chi_tau, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.numerics_subiterator_stepsize, std::get<1>( parameters.numerics_rk_tol.front() ), parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() );
         auto chi = dgl_phonons_chi( t - tau );
-        // auto func = [this](const Sparse &chi, const double t){return this->dgl_phonons_rungefunc(chi,t);};
+        // auto func = [this](const MatrixMain &chi, const double t){return this->dgl_phonons_rungefunc(chi,t);};
         return QDACC::Numerics::calculate_definite_integral( chi, std::bind( &System::dgl_phonons_rungefunc, this, std::placeholders::_1, std::placeholders::_2 ), t, std::max( t - tau, 0.0 ), parameters.numerics_subiterator_stepsize, std::get<1>( parameters.numerics_rk_tol.front() ), parameters.numerics_rk_stepmin, parameters.numerics_rk_stepmax, parameters.numerics_rk_usediscrete_timesteps ? parameters.numerics_rk_stepdelta.get() : 0.0, parameters.numerics_phonon_nork45 ? 4 : parameters.numerics_rk_order.get() ).mat;
     }
     // Matrix Exponential
     else if ( parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::TransformationMatrix ) {
         auto chi_tau = dgl_phonons_chi( t - tau ); // TODO maybe cache these.
-        Sparse U = ( Dense( -1.0i * dgl_get_hamilton( t ) * tau ).exp() ).sparseView();
+        #ifdef USE_SPARSE_MATRIX
+        MatrixMain U = ( Dense( -1.0i * dgl_get_hamilton( t ) * tau ).exp() ).sparseView();
+        #else
+        MatrixMain U = Dense( -1.0i * dgl_get_hamilton( t ) * tau ).exp();
+        #endif
         return ( U * chi_tau * U.adjoint() );
     }
     return dgl_phonons_chi( t - tau );

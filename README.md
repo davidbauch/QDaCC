@@ -10,7 +10,7 @@ Published Work using QDaCC:
 
 [![PRB](https://img.shields.io/badge/Phys.Rev.B-104,085308-ba0c2f.svg)](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308) [![arXiv](https://img.shields.io/badge/arXiv-2105.06783-b31b1b.svg)](https://arxiv.org/abs/2105.06783) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5256236.svg)](https://doi.org/10.5281/zenodo.5256236) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1103/PhysRevB.104.085308)](https://scholar.google.de/scholar?cites=7707864479180431104&as_sdt=2005&sciodt=0,5&hl=de)
 
-["On-demand indistinguishable and entangled photons at telecom frequencies using tailored cavity designs" (arXiv)](https://arxiv.org/abs/2303.13871)
+["On-demand indistinguishable and entangled photons at telecom frequencies using tailored cavity designs"](https://onlinelibrary.wiley.com/doi/10.1002/qute.202300142)
 
 [![AQT](https://img.shields.io/badge/AQT-10.1002/qute.202300142-b31b1b.svg)](https://onlinelibrary.wiley.com/doi/10.1002/qute.202300142) [![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1002/qute.202300142)](https://scholar.google.de/scholar?cites=7707864479180431104&as_sdt=2005&sciodt=0,5&hl=de)
 

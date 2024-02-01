@@ -4,7 +4,7 @@
 // it is not required, because no other function depends on it / needs G3s (yet...).
 void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_op_i, const std::vector<std::string> &s_op_j, const std::vector<std::string> &s_op_k, const std::vector<std::string> &s_op_l, const std::vector<std::string> &s_op_m, const std::string &s_op_n, const std::vector<std::string> &purposes ) {
     Log::L2( "[CorrelationFunction] Preparing to calculate Correlation function\n" );
-    Log::L2( "[CorrelationFunction] Generating Sparse Operator Matrices from String input...\n" );
+    Log::L2( "[CorrelationFunction] Generating Operator Matrices from String input...\n" );
 
     // Find Operator Matrices
     const auto op_i = get_operators_matrix( s, s_op_i );
@@ -17,7 +17,7 @@ void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_o
     // Generator super-purpose
     std::string super_purpose = std::accumulate( std::next( purposes.begin() ), purposes.end(), purposes.front(), []( const std::string &a, const std::string &b ) { return a + " and " + b; } );
 
-    std::vector<std::tuple<Sparse, std::vector<Sparse>, std::vector<std::string>>> eval_operators;
+    std::vector<std::tuple<MatrixMain, std::vector<MatrixMain>, std::vector<std::string>>> eval_operators;
 
     // Preconstruct
     // We dont calculate a time matrix here, because we store the time as a complex number,
@@ -40,7 +40,7 @@ void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_o
     for ( auto outer = 0; outer < s_op_j.size(); outer++ ) {
         const auto &op_j = get_operators_matrix( s, s_op_j[outer] );
         const auto &op_m = get_operators_matrix( s, s_op_m[outer] );
-        std::vector<Sparse> inners;
+        std::vector<MatrixMain> inners;
         std::vector<std::string> inner_purposes;
         for ( auto inner = 0; inner < s_op_k.size(); inner++ ) {
             auto current = outer * s_op_j.size() + inner;
@@ -79,7 +79,7 @@ void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_o
         // Get Time from saved State
         double t_t = current_state.t;
         // Calculate New Modified Density Matrix
-        Sparse rho_tau = s.dgl_calc_rhotau( current_state.mat, op_n, op_i, t_t );
+        MatrixMain rho_tau = s.dgl_calc_rhotau( current_state.mat, op_n, op_i, t_t );
         // Calculate Runge Kutta or PI
         if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
             calculate_path_integral_correlation( rho_tau, t_t, s.parameters.t_end, timer, s, savedRhos_tau1, op_n, op_i, 1 /*ADM Cores*/ );
@@ -93,10 +93,11 @@ void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_o
             auto &op_j_times_op_m = outer;
             for ( size_t tau1 = 0; tau1 < savedRhos_tau1.size(); tau1++ ) {
                 const double t_tau_1 = savedRhos_tau1.at( tau1 ).t;
-                Sparse rho_tau_2 = savedRhos_tau1.at( tau1 ).mat * op_j_times_op_m;
+                MatrixMain rho_tau_2 = savedRhos_tau1.at( tau1 ).mat * op_j_times_op_m;
                 // In a G1 or G2 loop, we would start calculating expectation values. Here, for G3, we instead iterate the resulting matrix again.
                 if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
-                    Sparse unity_matrix = Dense::Identity( matdim, matdim ).sparseView();
+                    MatrixMain unity_matrix( matdim, matdim );
+                    unity_matrix.setIdentity();
                     calculate_path_integral_correlation( rho_tau_2, t_tau_1, s.parameters.t_end, timer, s, savedRhos_tau2, unity_matrix, unity_matrix, 1 /*ADM Cores*/ );
                 } else {
                     calculate_runge_kutta( rho_tau, t_tau_1, s.parameters.t_end, timer, progressbar, super_purpose, s, savedRhos_tau2, false /*Output*/ );
@@ -110,7 +111,7 @@ void QDACC::Numerics::ODESolver::calculate_g3( System &s, const std::string &s_o
                     auto &gmat = cache[inner_purpose];
                     for ( size_t tau2 = 0; tau2 < std::min<int>( matdim, savedRhos_tau2.size() ); tau2++ ) {
                         const double t_tau_2 = savedRhos_tau2.at( tau2 ).t;
-                        gmat.get( { i, tau1, tau2 } ) = s.dgl_expectationvalue<Sparse, Scalar>( savedRhos_tau2.at( tau2 ).mat, op_k_times_op_l, t_tau_2 );
+                        gmat.get( { i, tau1, tau2 } ) = s.dgl_expectationvalue<MatrixMain>( savedRhos_tau2.at( tau2 ).mat, op_k_times_op_l, t_tau_2 );
                     }
                 }
             }

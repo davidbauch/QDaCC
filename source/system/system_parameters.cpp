@@ -69,14 +69,12 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     numerics_maximum_primary_threads = QDACC::CommandlineArguments::get_parameter<int>( "--Threads" );
     if ( numerics_maximum_primary_threads == -1 ) numerics_maximum_primary_threads = omp_get_max_threads();
     output_handlerstrings = QDACC::CommandlineArguments::get_parameter_passed( "-handler" );
-    numerics_order_timetrafo =
-        QDACC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? QDACC::TransformationOrder::MatrixExponential : QDACC::TransformationOrder::Analytical;
+    numerics_order_timetrafo = QDACC::CommandlineArguments::get_parameter_passed( "-timeTrafoMatrixExponential" ) ? QDACC::TransformationOrder::MatrixExponential : QDACC::TransformationOrder::Analytical;
     numerics_use_saved_coefficients = not QDACC::CommandlineArguments::get_parameter_passed( "-disableMatrixCaching" );
     numerics_use_saved_hamiltons = not QDACC::CommandlineArguments::get_parameter_passed( "-disableHamiltonCaching" );
     numerics_use_function_caching = not QDACC::CommandlineArguments::get_parameter_passed( "-disableFunctionCaching" );
     numerics_enable_saving_coefficients = false; // If true, even if any saving was disabled internally (not by the user), the matrices will still be cached.
-    numerics_maximum_secondary_threads =
-        ( !numerics_use_saved_coefficients || !QDACC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_primary_threads : 1;
+    numerics_maximum_secondary_threads = ( !numerics_use_saved_coefficients || !QDACC::CommandlineArguments::get_parameter_passed( "-disableMainProgramThreading" ) ) ? numerics_maximum_primary_threads : 1;
     logfilecounter = QDACC::Misc::convertParam<double>( QDACC::String::splitline( QDACC::CommandlineArguments::get_parameter( "--lfc" ), ',' ) );
     numerics_interpolate_outputs = QDACC::CommandlineArguments::get_parameter_passed( "-interpolate" );
     s_numerics_interpolate = QDACC::CommandlineArguments::get_parameter( "--interpolateOrder" );
@@ -90,8 +88,7 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     p_phonon_T = QDACC::CommandlineArguments::get_parameter<double>( "--phonons", "temperature" );
     numerics_phonon_approximation_order = (QDACC::PhononApproximation)QDACC::CommandlineArguments::get_parameter<int>( "--phonons", "phononorder" );
     numerics_phonon_approximation_markov1 = QDACC::CommandlineArguments::get_parameter_passed( "-noMarkov" ) ? 0 : 1; // First Markov
-    numerics_phonon_nork45 =
-        not QDACC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" ); // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
+    numerics_phonon_nork45 = not QDACC::CommandlineArguments::get_parameter_passed( "-usePhononRK45" );               // Enables. RK45 for phonon backwards integral; use if detunings are low, otherwise expensive.
     p_phonon_adjust_rad = QDACC::CommandlineArguments::get_parameter<double>( "--phononAdjust", "pARad" );
     p_phonon_adjust_dep = QDACC::CommandlineArguments::get_parameter<double>( "--phononAdjust", "pAPure" );
     p_phonon_adjust_b = QDACC::CommandlineArguments::get_parameter<double>( "--phononAdjust", "pARescaling" );
@@ -186,11 +183,14 @@ void Parameters::pre_adjust_input() {
                 }
             }
             if ( mat.string_v["Amplitude"][i].find( "pi" ) != std::string::npos ) {
-                mat.property_set["Amplitude"][i] =
-                    mat.property_set["Amplitude"][i] * QDACC::Math::PI /
-                    ( std::sqrt( 2.0 * QDACC::Math::PI * mat.property_set["Width"][i] *
-                                 std::sqrt( std::pow( mat.property_set["ChirpRate"][i] / mat.property_set["Width"][i], 2.0 ) + std::pow( mat.property_set["Width"][i], 2.0 ) ) ) ) /
-                    2.0; // https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                if ( mat.string_v["Type"][i] == "sech" ) {
+                    mat.property_set["Amplitude"][i] = mat.property_set["Amplitude"][i] / mat.property_set["Width"][i];
+                } else {
+                    mat.property_set["Amplitude"][i] = mat.property_set["Amplitude"][i] * QDACC::Math::PI /
+                                                       ( std::sqrt( 2.0 * QDACC::Math::PI * mat.property_set["Width"][i] *
+                                                                    std::sqrt( std::pow( mat.property_set["ChirpRate"][i] / mat.property_set["Width"][i], 2.0 ) + std::pow( mat.property_set["Width"][i], 2.0 ) ) ) ) /
+                                                       2.0; // https://journals.aps.org/prb/pdf/10.1103/PhysRevB.95.241306
+                }
             }
         }
     }
@@ -229,8 +229,7 @@ void Parameters::pre_adjust_input() {
             else
                 J = w * hbar *
                     std::pow( p_phonon_qd_de * std::exp( -w * w * p_phonon_qd_ae * p_phonon_qd_ae / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ) -
-                                  p_phonon_qd_dh *
-                                      std::exp( -w * w * p_phonon_qd_ae / p_phonon_qd_ratio * p_phonon_qd_ae / p_phonon_qd_ratio / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ),
+                                  p_phonon_qd_dh * std::exp( -w * w * p_phonon_qd_ae / p_phonon_qd_ratio * p_phonon_qd_ae / p_phonon_qd_ratio / ( 4. * p_phonon_qd_cs * p_phonon_qd_cs ) ),
                               2. ) /
                     ( 4. * 3.1415 * 3.1415 * p_phonon_qd_rho * std::pow( p_phonon_qd_cs, 5. ) );
             integral += stepsize * ( J / std::tanh( hbar * w / 2.0 / kb / p_phonon_T ) );
@@ -327,8 +326,7 @@ void Parameters::post_adjust_input() {
     // Grid Resolution
     if ( t_end >= 0 and ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) ) {
         if ( iterations_t_max < 1 ) {
-            iterations_t_max =
-                (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ? t_step_pathint : t_step ) );
+            iterations_t_max = (int)std::ceil( ( t_end - t_start ) / ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ? t_step_pathint : t_step ) );
             Log::L2( "[System] Set iterations_t_max to {}\n", iterations_t_max );
         }
         if ( grid_resolution < 1 and iterations_t_max > 0 ) {
@@ -354,8 +352,7 @@ void Parameters::post_adjust_grids() {
     }
     if ( numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ? ( t_step_pathint > 0 ) : ( t_step > 0 ) ) {
         input_correlation_resolution["Standard"].property_set["Time"] = { t_end };
-        double time_delta =
-            numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ? t_step_pathint : Parameter( ( t_end - t_start ) / ( 1. * grid_resolution ) );
+        double time_delta = numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ? t_step_pathint : Parameter( ( t_end - t_start ) / ( 1. * grid_resolution ) );
         input_correlation_resolution["Standard"].property_set["Delta"] = { time_delta };
         auto &settings = input_correlation_resolution.contains( "Modified" ) ? input_correlation_resolution["Modified"] : input_correlation_resolution["Standard"];
         Log::L2( "[System] Initial Grid Timestep is {}.\n", settings.property_set["Delta"].front() );
@@ -377,8 +374,7 @@ void Parameters::post_adjust_grids() {
             grid_values.emplace_back( t_t );
             grid_value_indices[t_t] = grid_values.size() - 1;
         }
-        Log::L2( "[System] Setting correlation grid resolution to {0}x{0} for a t_end = {1}{2}\n", grid_values.size(), t_end,
-                 input_correlation_resolution.contains( "Modified" ) ? " using a modified grid." : "" );
+        Log::L2( "[System] Setting correlation grid resolution to {0}x{0} for a t_end = {1}{2}\n", grid_values.size(), t_end, input_correlation_resolution.contains( "Modified" ) ? " using a modified grid." : "" );
     } else {
         Log::L2( "[System] Not setting time vector because timestep is negative!\n" );
     }
@@ -445,22 +441,18 @@ void Parameters::parse_system() {
     for ( const std::string &spectrum : QDACC::String::splitline( inputstring_spectrum, ';' ) ) {
         auto conf = QDACC::String::splitline( spectrum, ':' );
         universal_config conf_s;
-        conf_s.string_v["Modes"] = QDACC::String::splitline(
-            conf[0], ',' ); // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
-        conf_s.property_set["Center"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) ); // Center
-        conf_s.property_set["Range"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[2], ',' ) );  // Range
-        conf_s.property_set["resW"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[3], ',' ) );   // Resolution for w
-        conf_s.property_set["Order"] = conf.size() > 4 ? QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[4], ',' ) )
-                                                       : std::vector<Parameter>( conf_s.property_set["Range"].size(), 1 ); // Order (1 or 2)?
-        conf_s.string_v["Normalize"] =
-            conf.size() > 5 ? QDACC::String::splitline( conf[5], ',' ) : std::vector<std::string>( conf_s.property_set["Range"].size(), "False" ); // Normalize?
+        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' ); // Modes to calculate Spectrum for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
+        conf_s.property_set["Center"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) );                                                                                     // Center
+        conf_s.property_set["Range"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[2], ',' ) );                                                                                      // Range
+        conf_s.property_set["resW"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[3], ',' ) );                                                                                       // Resolution for w
+        conf_s.property_set["Order"] = conf.size() > 4 ? QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[4], ',' ) ) : std::vector<Parameter>( conf_s.property_set["Range"].size(), 1 ); // Order (1 or 2)?
+        conf_s.string_v["Normalize"] = conf.size() > 5 ? QDACC::String::splitline( conf[5], ',' ) : std::vector<std::string>( conf_s.property_set["Range"].size(), "False" );                                 // Normalize?
         input_correlation["Spectrum"].emplace_back( conf_s );
     }
     for ( std::string &indist : QDACC::String::splitline( inputstring_indist, ';' ) ) {
         auto conf = QDACC::String::splitline( indist, ':' );
         universal_config conf_s;
-        conf_s.string_v["Modes"] = QDACC::String::splitline(
-            conf[0], ',' ); // Modes to calculate Indistinguishgability for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
+        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' ); // Modes to calculate Indistinguishgability for. Single modes can again be split with "+", meaning a+b;a to calculate for a+b and a seperately
         input_correlation["Indist"].emplace_back( conf_s );
     }
     for ( std::string &conc : QDACC::String::splitline( inputstring_conc, ';' ) ) {
@@ -469,8 +461,7 @@ void Parameters::parse_system() {
         conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' ); // Modes to calculate Concurrence for
         conf_s.string_v["Order"] = conf.size() > 1 ? QDACC::String::splitline( conf[1], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "full" );
         if ( conf.size() > 2 ) {
-            conf_s.string_v["Method"] = conf.size() > 2 ? QDACC::String::splitline( conf[2], ',' )
-                                                        : std::vector<std::string>( conf_s.string_v["Modes"].size(), "wootters" ); // Can be "wooters" or "seidelmann"
+            conf_s.string_v["Method"] = conf.size() > 2 ? QDACC::String::splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "wootters" ); // Can be "wooters" or "seidelmann"
         }
         if ( conf.size() > 3 ) {
             // Experimental: Calculate spectrum for all matrix entries. Also outputs the non-normalized matrices
@@ -484,10 +475,9 @@ void Parameters::parse_system() {
         auto conf = QDACC::String::splitline( g_func, ':' );
         auto n = conf.size();
         universal_config conf_s;
-        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' );                                             // Modes to calculate G1/G2 functions for
-        conf_s.property_set["Order"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) ); // 1 or 2 or 3
-        conf_s.string_v["Integrated"] =
-            n > 2 ? QDACC::String::splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "time" ); // time,matrix,both for false/true/both
+        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' );                                                                                    // Modes to calculate G1/G2 functions for
+        conf_s.property_set["Order"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) );                                        // 1 or 2 or 3
+        conf_s.string_v["Integrated"] = n > 2 ? QDACC::String::splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "time" ); // time,matrix,both for false/true/both
         input_correlation["GFunc"].emplace_back( conf_s );
     }
     for ( std::string &g_func : QDACC::String::splitline( inputstring_timebins, ';' ) ) {
@@ -498,21 +488,19 @@ void Parameters::parse_system() {
         conf_s.property_set["Order"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) ); // 2 or 3
         conf_s.property_set["Start"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[2], ',' ) );
         conf_s.property_set["BinLength"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[3], ',' ) );
-        conf_s.string_v["Integrated"] =
-            n > 2 ? QDACC::String::splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "time" ); // time,matrix,both for false/true/both
+        conf_s.property_set["Deph"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[4], ',' ) );
+        conf_s.string_v["Integrated"] = n > 5 ? QDACC::String::splitline( conf[5], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "time" ); // time,matrix,both for false/true/both
         input_correlation["GFuncTimeBins"].emplace_back( conf_s );
     }
     for ( std::string &wigner : QDACC::String::splitline( inputstring_wigner, ';' ) ) {
         auto conf = QDACC::String::splitline( wigner, ':' );
         auto n = conf.size();
         universal_config conf_s;
-        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' );                                         // Modes to calculate Wigner function for
-        conf_s.property_set["X"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) ); // -X to X
+        conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' );                                                                                            // Modes to calculate Wigner function for
+        conf_s.property_set["X"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) );                                                    // -X to X
         conf_s.property_set["Y"] = QDACC::Misc::convertParam<Parameter>( n > 2 ? QDACC::String::splitline( conf[2], ',' ) : QDACC::String::splitline( conf[1], ',' ) ); // -Y to Y
-        conf_s.property_set["Res"] = QDACC::Misc::convertParam<Parameter>( n > 3 ? QDACC::String::splitline( conf[3], ',' )
-                                                                                 : std::vector<std::string>( conf_s.property_set["X"].size(), "100" ) ); // Resolution
-        conf_s.property_set["Skip"] = QDACC::Misc::convertParam<Parameter>( n > 4 ? QDACC::String::splitline( conf[4], ',' )
-                                                                                  : std::vector<std::string>( conf_s.property_set["X"].size(), "1" ) ); // Skips in t-direction
+        conf_s.property_set["Res"] = QDACC::Misc::convertParam<Parameter>( n > 3 ? QDACC::String::splitline( conf[3], ',' ) : std::vector<std::string>( conf_s.property_set["X"].size(), "100" ) ); // Resolution
+        conf_s.property_set["Skip"] = QDACC::Misc::convertParam<Parameter>( n > 4 ? QDACC::String::splitline( conf[4], ',' ) : std::vector<std::string>( conf_s.property_set["X"].size(), "1" ) );  // Skips in t-direction
         input_correlation["Wigner"].emplace_back( conf_s );
     }
     for ( std::string &raman : QDACC::String::splitline( inputstring_raman, ';' ) ) {
@@ -582,8 +570,7 @@ void Parameters::parse_system() {
                 conf_s.property_set["time_amplitude"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[2] ) );
                 conf_s.property_set["time_power_amplitude"].emplace_back( QDACC::Misc::convertParam<Parameter>( conf[3] ) );
                 conf_s.string_v["time_mode"].emplace_back( conf[4] );
-                Log::L2( "[System-Parameters] Adding Temporal Detector mask using center = {}, range = {}, ampltitude {} and power_amp = {} on mode(s) {}.\n", conf[1], conf[0],
-                         conf[2], conf[3], conf[4] );
+                Log::L2( "[System-Parameters] Adding Temporal Detector mask using center = {}, range = {}, ampltitude {} and power_amp = {} on mode(s) {}.\n", conf[1], conf[0], conf[2], conf[3], conf[4] );
             }
             input_conf["DetectorTime"] = conf_s;
         }
@@ -666,10 +653,8 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                  mat.property["Energy"].getSI( Parameter::UNIT_WAVELENGTH_NM ) );
         for ( auto i = 0; i < mat.string_v["CoupledTo"].size(); i++ ) {
             if ( mat.string_v["CoupledTo"][i].front() == '-' ) break;
-            Log::L1( " - Coupled to {} with transition energy {:.8e} Hz - {:.8e} eV\n", mat.string_v["CoupledTo"][i],
-                     std::abs( mat.property["Energy"] - input_electronic[mat.string_v["CoupledTo"][i]].property["Energy"] ),
-                     std::abs( mat.property["Energy"].getSI( Parameter::UNIT_ENERGY_EV ) -
-                               input_electronic[mat.string_v["CoupledTo"][i]].property["Energy"].getSI( Parameter::UNIT_ENERGY_EV ) ) );
+            Log::L1( " - Coupled to {} with transition energy {:.8e} Hz - {:.8e} eV\n", mat.string_v["CoupledTo"][i], std::abs( mat.property["Energy"] - input_electronic[mat.string_v["CoupledTo"][i]].property["Energy"] ),
+                     std::abs( mat.property["Energy"].getSI( Parameter::UNIT_ENERGY_EV ) - input_electronic[mat.string_v["CoupledTo"][i]].property["Energy"].getSI( Parameter::UNIT_ENERGY_EV ) ) );
         }
         Log::L1( " - Decay Scaling: {}\n", mat.property["DecayScaling"] );
         Log::L1( " - Dephasing Scaling: {}\n", mat.property["DephasingScaling"] );
@@ -682,11 +667,9 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                      mat.property["Energy"].getSI( Parameter::UNIT_WAVELENGTH_NM ) );
             for ( auto i = 0; i < mat.string_v["CoupledTo"].size(); i++ ) {
                 auto [from, to] = QDACC::String::split_pair( mat.string_v["CoupledTo"][i], transition_delimiter );
-                double purcell = ( 2.0 * p_omega_coupling * p_omega_coupling * mat.property_set["CouplingScaling"][i] * mat.property_set["CouplingScaling"][i] /
-                                   p_omega_cavity_loss / p_omega_decay ) *
+                double purcell = ( 2.0 * p_omega_coupling * p_omega_coupling * mat.property_set["CouplingScaling"][i] * mat.property_set["CouplingScaling"][i] / p_omega_cavity_loss / p_omega_decay ) *
                                  ( p_omega_cavity_loss * p_omega_cavity_loss /
-                                   ( std::pow( mat.property["Energy"] - ( input_electronic[to].property["Energy"] - input_electronic[from].property["Energy"] ), 2 ) +
-                                     p_omega_cavity_loss * p_omega_cavity_loss ) );
+                                   ( std::pow( mat.property["Energy"] - ( input_electronic[to].property["Energy"] - input_electronic[from].property["Energy"] ), 2 ) + p_omega_cavity_loss * p_omega_cavity_loss ) );
                 Log::L1( " - Coupled to electronic transition {} (Purcell Enhancement: {}) \n", mat.string_v["CoupledTo"][i], purcell );
                 Log::L1( " - - Coupling Scaling: {}\n", mat.property_set["CouplingScaling"][i] );
             }
@@ -728,8 +711,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                     Log::L1( " - - SUPER Frequency: {} - {} meV\n", mat.property_set["SUPERFreq"][i], mat.property_set["SUPERFreq"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
                 }
                 if ( QDACC::Math::abs2( mat.property_set["Phase"][i] != 0.0 ) ) Log::L1( " - - Phase: {}pi\n", mat.property_set["Phase"][i] / QDACC::Math::PI );
-                Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i],
-                         mat.string_v["Type"][i] == "gauss" ? std::format( " (Gaussian Amplitude: {})", mat.property_set["GaussAmp"][i] ) : "" );
+                Log::L1( " - - Type: {}{}\n", mat.string_v["Type"][i], mat.string_v["Type"][i] == "gauss" ? std::format( " (Gaussian Amplitude: {})", mat.property_set["GaussAmp"][i] ) : "" );
             }
         }
         Log::L1( "\n" );
@@ -796,8 +778,8 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             Log::L1( " - Path Integral Settings:\n" );
             Log::L1( " - Backsteps NC: {}\n", p_phonon_nc );
             Log::L1( " - Iterator Stepsize: {}\n", numerics_subiterator_stepsize );
-            Log::L1( " - Thresholds: Squared({}), SparsePrune({}), CutoffIterations({}), PropagatorMapping({})\n", numerics_pathintegral_squared_threshold,
-                     numerics_pathintegral_sparse_prune_threshold, numerics_pathintegral_dynamiccutoff_iterations_max, numerics_pathintegral_docutoff_propagator );
+            Log::L1( " - Thresholds: Squared({}), SparsePrune({}), CutoffIterations({}), PropagatorMapping({})\n", numerics_pathintegral_squared_threshold, numerics_pathintegral_sparse_prune_threshold,
+                     numerics_pathintegral_dynamiccutoff_iterations_max, numerics_pathintegral_docutoff_propagator );
             Log::L1( " - Used partially summed algorithm?: {}\n", numerics_pathint_partially_summed ? "Yes" : "No" );
             Log::L1( " - Will set the coupling elements to zero for correlation calculations?: {}\n", numerics_pathintegral_set_couplings_zero ? "Yes" : "No" );
             Log::L1( " - Will use QRT for correlation calculations?: {}\n", numerics_pathintegral_use_qrt ? "Yes" : "No" );
@@ -850,10 +832,8 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             Log::L1( "Using {} temporal detection windows with parameters:\n", input_conf["DetectorTime"].property_set["time_center"].size() );
             for ( int i = 0; i < input_conf["DetectorTime"].property_set["time_center"].size(); i++ ) {
                 Log::L1( " - Temporal Detection Window {}:\n", i );
-                Log::L1( " - - Center: {} - {} ps\n", input_conf["DetectorTime"].property_set["time_center"][i],
-                         input_conf["DetectorTime"].property_set["time_center"][i].getSI( Parameter::UNIT_TIME_PS ) );
-                Log::L1( " - - Sigma: {} - {} ps\n", input_conf["DetectorTime"].property_set["time_range"][i],
-                         input_conf["DetectorTime"].property_set["time_range"][i].getSI( Parameter::UNIT_TIME_PS ) );
+                Log::L1( " - - Center: {} - {} ps\n", input_conf["DetectorTime"].property_set["time_center"][i], input_conf["DetectorTime"].property_set["time_center"][i].getSI( Parameter::UNIT_TIME_PS ) );
+                Log::L1( " - - Sigma: {} - {} ps\n", input_conf["DetectorTime"].property_set["time_range"][i], input_conf["DetectorTime"].property_set["time_range"][i].getSI( Parameter::UNIT_TIME_PS ) );
                 Log::L1( " - - Amplitude: {}\n", input_conf["DetectorTime"].property_set["time_amplitude"][i] );
                 Log::L1( " - - Power: {}\n", input_conf["DetectorTime"].property_set["time_power_amplitude"][i] );
                 Log::L1( " - - Mode: {}\n", input_conf["DetectorTime"].string_v["time_mode"][i] );
@@ -863,10 +843,8 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
             Log::L1( "Using {} spectral detection windows with parameters:\n", input_conf["DetectorSpectral"].property_set["spectral_center"].size() );
             for ( int i = 0; i < input_conf["DetectorSpectral"].property_set["spectral_center"].size(); i++ ) {
                 Log::L1( " - Spectral Detection Window {}:\n", i );
-                Log::L1( " - - Center: {} - {} eV\n", input_conf["DetectorSpectral"].property_set["spectral_center"][i],
-                         input_conf["DetectorSpectral"].property_set["spectral_center"][i].getSI( Parameter::UNIT_ENERGY_EV ) );
-                Log::L1( " - - Sigma: {} - {} meV\n", input_conf["DetectorSpectral"].property_set["spectral_range"][i],
-                         input_conf["DetectorSpectral"].property_set["spectral_range"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
+                Log::L1( " - - Center: {} - {} eV\n", input_conf["DetectorSpectral"].property_set["spectral_center"][i], input_conf["DetectorSpectral"].property_set["spectral_center"][i].getSI( Parameter::UNIT_ENERGY_EV ) );
+                Log::L1( " - - Sigma: {} - {} meV\n", input_conf["DetectorSpectral"].property_set["spectral_range"][i], input_conf["DetectorSpectral"].property_set["spectral_range"][i].getSI( Parameter::UNIT_ENERGY_MEV ) );
                 Log::L1( " - - Amplitude: {}\n", input_conf["DetectorSpectral"].property_set["spectral_amplitude"][i] );
                 Log::L1( " - - Power: {}\n", input_conf["DetectorSpectral"].property_set["spectral_power_amplitude"][i] );
                 Log::L1( " - - FT Points: {}\n", input_conf["DetectorSpectral"].property_set["spectral_number_points"][i] );
@@ -880,15 +858,12 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
 
     Log::Logger::wrapInBar( "Settings", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     Log::L1( "Solver used: RK{}{}\n", numerics_rk_order,
-             numerics_rk_order != 45 ? ""
-                                     : std::format( " (Tolerance: {}, Stepdelta: {}, Steplimits: [{},{}])", inputstring_rk45_config, numerics_rk_stepdelta, numerics_rk_stepmin,
-                                                    numerics_rk_stepmax ) );
+             numerics_rk_order != 45 ? "" : std::format( " (Tolerance: {}, Stepdelta: {}, Steplimits: [{},{}])", inputstring_rk45_config, numerics_rk_stepdelta, numerics_rk_stepmin, numerics_rk_stepmax ) );
     if ( numerics_rk_order == 45 and numerics_phonon_nork45 ) Log::L1( "Will NOT use RK45 for the phonon backwards integral!\n" );
     Log::L1( "Use rotating wave approximation (RWA)? - {}\n", ( ( numerics_use_rwa == 1 ) ? "YES" : "NO" ) );
     Log::L1( "Use interaction picture for calculations? - {}\n", ( ( numerics_use_interactionpicture ) ? "YES" : "NO" ) );
     Log::L1( "Time Transformation used? - {}\n", ( ( numerics_order_timetrafo == QDACC::TransformationOrder::Analytical ) ? "Analytic" : "Matrix Exponential" ) );
-    Log::L1( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\nThreads used by Eigen: {}\n", numerics_maximum_secondary_threads,
-             numerics_maximum_primary_threads, Eigen::nbThreads() );
+    Log::L1( "Threads used for primary calculations - {}\nThreads used for Secondary calculations - {}\nThreads used by Eigen: {}\n", numerics_maximum_secondary_threads, numerics_maximum_primary_threads, Eigen::nbThreads() );
     if ( p_phonon_T ) Log::L1( "Cache Phonon Coefficient Matrices? - {}\n", ( numerics_use_saved_coefficients ? "Yes" : "No" ) );
     if ( numerics_interpolate_outputs ) {
         Log::L1( "WARNING: Temporal outputs are interpolated! Interpolator used: {}\n", _get_interpolator_name( numerics_interpolate_method_time ) );

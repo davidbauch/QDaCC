@@ -15,10 +15,7 @@ static Dense _rho_to_tpdm( const size_t i, const std::map<std::string, std::vect
         rho.at( "1112" )[i], rho.at( "1212" )[i], rho.at( "2112" )[i], rho.at( "2212" )[i],
         rho.at( "1121" )[i], rho.at( "1221" )[i], rho.at( "2121" )[i], rho.at( "2221" )[i],
         rho.at( "1122" )[i], rho.at( "1222" )[i], rho.at( "2122" )[i], rho.at( "2222" )[i];
-    // Add a tiny number that is otherwise out of reach of the TPM elements to avoid real zeros.
-    ret.array() += 1E-200;
-    // Norm by trace.
-    return ret / ret.trace();
+    return ret;
 }
 
 /**
@@ -77,11 +74,11 @@ bool QDACC::Numerics::ODESolver::calculate_static_two_photon_matrix( System &s, 
         mode_purpose[mode] = get_operators_purpose( permutation );
     }
 
-    // Get Sparse Operator Matrices
+    // Get MatrixMain Operator Matrices
     const auto &[op_creator_1, op_annihilator_1] = get_operators_matrices( s, s_op_creator_1, s_op_annihilator_1 );
     const auto &[op_creator_2, op_annihilator_2] = get_operators_matrices( s, s_op_creator_2, s_op_annihilator_2 );
     // Generate multiplied operator matrices for G2(0) evaluation
-    std::map<std::string, Sparse> mode_matrix;
+    std::map<std::string, MatrixMain> mode_matrix;
     for ( const auto &mode : modes ) {
         const auto permutation = _get_fourway_permutation( mode, op_creator_1, op_creator_2, op_annihilator_1, op_annihilator_2 );
         mode_matrix[mode] = permutation[0] * permutation[1] * permutation[2] * permutation[3];
@@ -170,7 +167,7 @@ bool QDACC::Numerics::ODESolver::calculate_static_two_photon_matrix( System &s, 
             double t_t = s.getTimeOf( 0, { upper_limit, 0 } ); // std::real( gmat_time( upper_limit, 0 ) ); // Note: all correlation functions have to have the same times. cache[purpose+"_time"] else.
             const auto time_index = rho_index_map[t_t];
             const auto &current_state = savedStates.at( time_index );
-            rho_g2zero[mode][upper_limit] = upper_limit > 0 ? rho_g2zero[mode][upper_limit - 1] + s.dgl_expectationvalue<Sparse, Scalar>( current_state.mat, mode_matrix[mode], t_t ) * dt : s.dgl_expectationvalue<Sparse, Scalar>( savedStates.at( 0 ).mat, mode_matrix[mode], savedStates.at( 0 ).t ) * dt;
+            rho_g2zero[mode][upper_limit] = upper_limit > 0 ? rho_g2zero[mode][upper_limit - 1] + s.dgl_expectationvalue<MatrixMain>( current_state.mat, mode_matrix[mode], t_t ) * dt : s.dgl_expectationvalue<MatrixMain>( savedStates.at( 0 ).mat, mode_matrix[mode], savedStates.at( 0 ).t ) * dt;
             if ( mode == "1111" ) {
                 timer_c.iterate();
                 Timers::outputProgress( timer_c, progressbar, timer_c.getTotalIterationNumber(), pbsize, "Two Photon Matrix (" + fout + "): " );

@@ -57,8 +57,8 @@ double System::dgl_phonons_lindblad_coefficients( const double energy, const dou
     return ret;
 }
 
-Sparse System::dgl_phonons_lindblad_contribution( const double t, const Sparse &rho ) {
-    Sparse ret( rho.rows(), rho.cols() );
+MatrixMain System::dgl_phonons_lindblad_contribution( const double t, const MatrixMain &rho ) {
+    MatrixMain ret = operatorMatrices.zero;
     Log::L3( "[System-PME] Calculating Lindblad-Type Phonon Rates for t = {}\n", t );
     const double chirpcorrection = chirp.empty() ? 0.0 : std::real( chirp.back().get( t ) );
     for ( auto &[name, mat] : parameters.input_pulse ) {

@@ -1,74 +1,74 @@
 #include "solver/solver_ode.h"
 #include "solver/solver.h"
 
-Sparse QDACC::Numerics::ODESolver::iterateRungeKutta4( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
+MatrixMain QDACC::Numerics::ODESolver::iterateRungeKutta4( const MatrixMain &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-4 ausrechnen
-    Sparse H_calc_k1 = getHamilton( s, t );
-    Sparse H_calc_k23 = getHamilton( s, t + t_step * 0.5 );
-    Sparse H_calc_k4 = getHamilton( s, t + t_step );
+    MatrixMain hamilton = getHamilton( s, t );
     // k1-4 ausrechnen
-    Sparse rk1 = s.dgl_runge_function( rho, H_calc_k1, t, savedStates );
-    Sparse rk2 = s.dgl_runge_function( rho + t_step * 0.5 * rk1, H_calc_k23, t + t_step * 0.5, savedStates );
-    Sparse rk3 = s.dgl_runge_function( rho + t_step * 0.5 * rk2, H_calc_k23, t + t_step * 0.5, savedStates );
-    Sparse rk4 = s.dgl_runge_function( rho + t_step * rk3, H_calc_k4, t + t_step, savedStates );
+    MatrixMain rk1 = s.dgl_runge_function( rho, hamilton, t, savedStates );
+    MatrixMain rk2 = s.dgl_runge_function( rho + t_step * 0.5 * rk1, hamilton, t + t_step * 0.5, savedStates );
+    hamilton = getHamilton( s, t + t_step * 0.5 );
+    MatrixMain rk3 = s.dgl_runge_function( rho + t_step * 0.5 * rk2, hamilton, t + t_step * 0.5, savedStates );
+    hamilton = getHamilton( s, t + t_step );
+    MatrixMain rk4 = s.dgl_runge_function( rho + t_step * rk3, hamilton, t + t_step, savedStates );
     // Dichtematrix
     return rho + t_step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
 } 
 
-Sparse QDACC::Numerics::ODESolver::iterateRungeKutta5( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
+MatrixMain QDACC::Numerics::ODESolver::iterateRungeKutta5( const MatrixMain &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
     // Verschiedene H's fuer k1-6 ausrechnen
-    Sparse H_calc_k1 = getHamilton( s, t );
-    Sparse H_calc_k2 = getHamilton( s, t + RKCoefficients::a2 * t_step );
-    Sparse H_calc_k3 = getHamilton( s, t + RKCoefficients::a3 * t_step );
-    Sparse H_calc_k4 = getHamilton( s, t + RKCoefficients::a4 * t_step );
-    Sparse H_calc_k5 = getHamilton( s, t + RKCoefficients::a5 * t_step );
-    Sparse H_calc_k6 = getHamilton( s, t + RKCoefficients::a6 * t_step );
+    MatrixMain hamilton = getHamilton( s, t );
     // k1-6 ausrechnen
-    Sparse k1 = s.dgl_runge_function( rho, H_calc_k1, t, savedStates );
-    Sparse k2 = s.dgl_runge_function( rho + t_step * RKCoefficients::b11 * k1, H_calc_k2, t + RKCoefficients::a2 * t_step, savedStates );
-    Sparse k3 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), H_calc_k3, t + RKCoefficients::a3 * t_step, savedStates );
-    Sparse k4 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), H_calc_k4, t + RKCoefficients::a4 * t_step, savedStates );
-    Sparse k5 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), H_calc_k5, t + RKCoefficients::a5 * t_step, savedStates );
-    Sparse k6 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), H_calc_k6, t + RKCoefficients::a6 * t_step, savedStates );
+    MatrixMain k1 = s.dgl_runge_function( rho, hamilton, t, savedStates );
+    hamilton = getHamilton( s, t + RKCoefficients::a2 * t_step );
+    MatrixMain k2 = s.dgl_runge_function( rho + t_step * RKCoefficients::b11 * k1, hamilton, t + RKCoefficients::a2 * t_step, savedStates );
+    hamilton = getHamilton( s, t + RKCoefficients::a3 * t_step );
+    MatrixMain k3 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), hamilton, t + RKCoefficients::a3 * t_step, savedStates );
+    hamilton = getHamilton( s, t + RKCoefficients::a4 * t_step );
+    MatrixMain k4 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), hamilton, t + RKCoefficients::a4 * t_step, savedStates );
+    hamilton = getHamilton( s, t + RKCoefficients::a5 * t_step );
+    MatrixMain k5 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), hamilton, t + RKCoefficients::a5 * t_step, savedStates );
+    hamilton = getHamilton( s, t + RKCoefficients::a6 * t_step );
+    MatrixMain k6 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), hamilton, t + RKCoefficients::a6 * t_step, savedStates );
     // Dichtematrix
     return rho + t_step * ( RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6 );
 }
 
-std::pair<Sparse, double> QDACC::Numerics::ODESolver::iterateRungeKutta45( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
-    // Verschiedene H's fuer k1-6 ausrechnen
-    Sparse H_calc_k1 = getHamilton( s, t );
-    Sparse H_calc_k2 = getHamilton( s, t + RKCoefficients::a2 * t_step );
-    Sparse H_calc_k3 = getHamilton( s, t + RKCoefficients::a3 * t_step );
-    Sparse H_calc_k4 = getHamilton( s, t + RKCoefficients::a4 * t_step );
-    Sparse H_calc_k5 = getHamilton( s, t + RKCoefficients::a5 * t_step );
-    Sparse H_calc_k6 = getHamilton( s, t + RKCoefficients::a6 * t_step );
-    Sparse H_calc_k7 = getHamilton( s, t + t_step );
-    // k1-6 ausrechnen
-    Sparse k1 = s.dgl_runge_function( rho, H_calc_k1, t, savedStates );
-    Sparse k2 = s.dgl_runge_function( rho + t_step * RKCoefficients::b11 * k1, H_calc_k2, t + RKCoefficients::a2 * t_step, savedStates );
-    Sparse k3 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), H_calc_k3, t + RKCoefficients::a3 * t_step, savedStates );
-    Sparse k4 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), H_calc_k4, t + RKCoefficients::a4 * t_step, savedStates );
-    Sparse k5 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), H_calc_k5, t + RKCoefficients::a5 * t_step, savedStates );
-    Sparse k6 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), H_calc_k6, t + RKCoefficients::a6 * t_step, savedStates );
+std::pair<MatrixMain, double> QDACC::Numerics::ODESolver::iterateRungeKutta45( const MatrixMain &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
+    // k1-6 
+    MatrixMain hamilton = getHamilton( s, t );
+    MatrixMain k1 = s.dgl_runge_function( rho, hamilton, t, savedStates );
+    hamilton = getHamilton( s, t + RKCoefficients::a2 * t_step );
+    MatrixMain k2 = s.dgl_runge_function( rho + t_step * RKCoefficients::b11 * k1, hamilton, t + RKCoefficients::a2 * t_step, savedStates );
+    hamilton = getHamilton( s, t + RKCoefficients::a3 * t_step );
+    MatrixMain k3 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), hamilton, t + RKCoefficients::a3 * t_step, savedStates );
+    hamilton = getHamilton( s, t + RKCoefficients::a4 * t_step );
+    MatrixMain k4 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), hamilton, t + RKCoefficients::a4 * t_step, savedStates );
+    hamilton = getHamilton( s, t + RKCoefficients::a5 * t_step );
+    MatrixMain k5 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), hamilton, t + RKCoefficients::a5 * t_step, savedStates );
+    hamilton = getHamilton( s, t + RKCoefficients::a6 * t_step );
+    MatrixMain k6 = s.dgl_runge_function( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), hamilton, t + RKCoefficients::a6 * t_step, savedStates );
 
-    Sparse drho = RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6;
-    Sparse ret = rho + t_step * drho;
+    MatrixMain drho = RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6;
+    // Overwrite k2 with the return rho to save on new allocations
+    k2 = rho + t_step * drho;
     // Error
-    Sparse k7 = s.dgl_runge_function( ret, H_calc_k7, t + t_step, savedStates );
-    dSparse errmat = ( drho - ( k1 * RKCoefficients::e1 + k3 * RKCoefficients::e3 + k4 * RKCoefficients::e4 + k5 * RKCoefficients::e5 + k6 * RKCoefficients::e6 + k7 * RKCoefficients::e7 ) ).cwiseAbs2();
+    hamilton = getHamilton( s, t + t_step );
+    MatrixMain k7 = s.dgl_runge_function( k2, hamilton, t + t_step, savedStates );
+    dMatrixMain errmat = ( drho - ( k1 * RKCoefficients::e1 + k3 * RKCoefficients::e3 + k4 * RKCoefficients::e4 + k5 * RKCoefficients::e5 + k6 * RKCoefficients::e6 + k7 * RKCoefficients::e7 ) ).cwiseAbs2();
     double err = errmat.sum() / drho.cwiseAbs2().sum();
-
     // Dichtematrix
-    return std::make_pair( ret, err );
+ 
+    return std::make_pair( k2, err );
 }
 
-Sparse QDACC::Numerics::ODESolver::iterate( const Sparse &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
+MatrixMain QDACC::Numerics::ODESolver::iterate( const MatrixMain &rho, System &s, const double t, const double t_step, std::vector<QDACC::SaveState> &savedStates ) {
     if ( s.parameters.numerics_rk_order == 4 )
         return iterateRungeKutta4( rho, s, t, t_step, savedStates );
     return iterateRungeKutta5( rho, s, t, t_step, savedStates );
 }
 
-bool QDACC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output ) {
+bool QDACC::Numerics::ODESolver::calculate_runge_kutta( MatrixMain &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output ) {
     if ( s.parameters.numerics_rk_order == 45 ) {
         return calculate_runge_kutta_45( rho0, t_start, t_end, rkTimer, progressbar, progressbar_name, s, output, do_output );
     }
@@ -81,7 +81,7 @@ bool QDACC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_s
     // Save initial value
     saveState( rho0, t_start, output );
     // Calculate Remaining
-    Sparse rho = rho0;
+    MatrixMain rho = rho0;
     for ( double t_t = t_start; t_t <= t_end; t_t += t_step_initial ) {
         Log::Logger::Bar( Log::BAR_SIZE_FULL, Log::LEVEL_3 );
         Log::L3( "[RKSOLVER] Calculating Iteration for t = {}\n", t_t );
@@ -117,10 +117,10 @@ bool QDACC::Numerics::ODESolver::calculate_runge_kutta( Sparse &rho0, double t_s
     return true;
 }
 
-bool QDACC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output ) {
+bool QDACC::Numerics::ODESolver::calculate_runge_kutta_45( MatrixMain &rho0, double t_start, double t_end, Timer &rkTimer, ProgressBar &progressbar, std::string progressbar_name, System &s, std::vector<QDACC::SaveState> &output, bool do_output ) {
     double t_step = s.parameters.numerics_rk_stepmin;
     auto numerics_output_rkerror = s.parameters.output_dict.contains( "rkerror" );
-    // Find local tolerance
+    // Find local tolerance. Bad code, but the rk_tol array is usually small, so it should be fine.
     double tolerance;
     int i;
     for ( i = 0; i < s.parameters.numerics_rk_tol.size(); i++ ) {
@@ -131,7 +131,6 @@ bool QDACC::Numerics::ODESolver::calculate_runge_kutta_45( Sparse &rho0, double 
             break;
         }
     }
-
     // Reserve Output Vector
     output.reserve( s.parameters.iterations_t_max + 1 );
 

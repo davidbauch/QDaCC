@@ -1,7 +1,7 @@
 #include "solver/solver_ode.h"
 
 bool QDACC::Numerics::ODESolver::calculate_t_direction( System &s ) {
-    Sparse rho = s.operatorMatrices.rho;
+    MatrixMain rho = s.operatorMatrices.rho;
 
     Timer &rkTimer = Timers::create( "RungeKutta-Main-Loop" ).start();
     ProgressBar progressbar = ProgressBar();

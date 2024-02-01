@@ -1,36 +1,36 @@
 #include "solver/solver.h"
 
-std::pair<Sparse, double> QDACC::Numerics::iterate_definite_integral( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t, const double t_step, const int order ) {
+std::pair<MatrixMain, double> QDACC::Numerics::iterate_definite_integral( const MatrixMain &rho, std::function<MatrixMain( const MatrixMain &, const double )> const &rungefunction, const double t, const double t_step, const int order ) {
     if ( order == 4 ) {
-        Sparse rk1 = rungefunction( rho, t );
-        Sparse rk2 = rungefunction( rho + t_step * 0.5 * rk1, t + t_step * 0.5 );
-        Sparse rk3 = rungefunction( rho + t_step * 0.5 * rk2, t + t_step * 0.5 );
-        Sparse rk4 = rungefunction( rho + t_step * rk3, t + t_step );
+        MatrixMain rk1 = rungefunction( rho, t );
+        MatrixMain rk2 = rungefunction( rho + t_step * 0.5 * rk1, t + t_step * 0.5 );
+        MatrixMain rk3 = rungefunction( rho + t_step * 0.5 * rk2, t + t_step * 0.5 );
+        MatrixMain rk4 = rungefunction( rho + t_step * rk3, t + t_step );
         // Dichtematrix
-        Sparse ret = rho + t_step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
+        MatrixMain ret = rho + t_step / 6.0 * ( rk1 + 2. * rk2 + 2. * rk3 + rk4 );
         return std::make_pair( ret, 0 );
     }
     // k1-6 ausrechnen
-    Sparse k1 = rungefunction( rho, t );
-    Sparse k2 = rungefunction( rho + t_step * RKCoefficients::b11 * k1, t + RKCoefficients::a2 * t_step );
-    Sparse k3 = rungefunction( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), t + RKCoefficients::a3 * t_step );
-    Sparse k4 = rungefunction( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), t + RKCoefficients::a4 * t_step );
-    Sparse k5 = rungefunction( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), t + RKCoefficients::a5 * t_step );
-    Sparse k6 = rungefunction( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), t + RKCoefficients::a6 * t_step );
+    MatrixMain k1 = rungefunction( rho, t );
+    MatrixMain k2 = rungefunction( rho + t_step * RKCoefficients::b11 * k1, t + RKCoefficients::a2 * t_step );
+    MatrixMain k3 = rungefunction( rho + t_step * ( RKCoefficients::b21 * k1 + RKCoefficients::b22 * k2 ), t + RKCoefficients::a3 * t_step );
+    MatrixMain k4 = rungefunction( rho + t_step * ( RKCoefficients::b31 * k1 + RKCoefficients::b32 * k2 + RKCoefficients::b33 * k3 ), t + RKCoefficients::a4 * t_step );
+    MatrixMain k5 = rungefunction( rho + t_step * ( RKCoefficients::b41 * k1 + RKCoefficients::b42 * k2 + RKCoefficients::b43 * k3 + RKCoefficients::b44 * k4 ), t + RKCoefficients::a5 * t_step );
+    MatrixMain k6 = rungefunction( rho + t_step * ( RKCoefficients::b51 * k1 + RKCoefficients::b52 * k2 + RKCoefficients::b53 * k3 + RKCoefficients::b54 * k4 + RKCoefficients::b55 * k5 ), t + RKCoefficients::a6 * t_step );
 
-    Sparse drho = RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6;
-    Sparse ret = rho + t_step * drho;
+    MatrixMain drho = RKCoefficients::b61 * k1 + RKCoefficients::b63 * k3 + RKCoefficients::b64 * k4 + RKCoefficients::b65 * k5 + RKCoefficients::b66 * k6;
+    MatrixMain ret = rho + t_step * drho;
     if ( order != 45 )
         return std::make_pair( ret, 0 );
     // Error
-    Sparse k7 = rungefunction( ret, t + t_step );
-    dSparse errmat = ( drho - ( k1 * RKCoefficients::e1 + k3 * RKCoefficients::e3 + k4 * RKCoefficients::e4 + k5 * RKCoefficients::e5 + k6 * RKCoefficients::e6 + k7 * RKCoefficients::e7 ) ).cwiseAbs2();
+    MatrixMain k7 = rungefunction( ret, t + t_step );
+    dMatrixMain errmat = ( drho - ( k1 * RKCoefficients::e1 + k3 * RKCoefficients::e3 + k4 * RKCoefficients::e4 + k5 * RKCoefficients::e5 + k6 * RKCoefficients::e6 + k7 * RKCoefficients::e7 ) ).cwiseAbs2();
     double err = errmat.sum() / drho.cwiseAbs2().sum();
     // Dichtematrix
     return std::make_pair( ret, err );
 }
 
-std::vector<QDACC::SaveState> QDACC::Numerics::calculate_definite_integral_vec( const Sparse &rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
+std::vector<QDACC::SaveState> QDACC::Numerics::calculate_definite_integral_vec( const MatrixMain &rho, std::function<MatrixMain( const MatrixMain &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
     double t_step = step;
     std::vector<QDACC::SaveState> ret;
     ret.emplace_back( QDACC::SaveState( rho, t0 ) );
@@ -76,7 +76,7 @@ std::vector<QDACC::SaveState> QDACC::Numerics::calculate_definite_integral_vec( 
     return ret;
 }
 
-QDACC::SaveState QDACC::Numerics::calculate_definite_integral( Sparse rho, std::function<Sparse( const Sparse &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
+QDACC::SaveState QDACC::Numerics::calculate_definite_integral( MatrixMain rho, std::function<MatrixMain( const MatrixMain &, const double )> const &rungefunction, const double t0, const double t1, const double step, const double tolerance, const double stepmin, const double stepmax, const double stepdelta, const int order ) { // std::function<MatrixXcd( const MatrixXcd &, const double )>
     double t_step = step;
     double t_t = t0;
 

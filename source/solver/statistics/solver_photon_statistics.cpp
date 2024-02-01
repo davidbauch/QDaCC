@@ -57,14 +57,14 @@ void _output_integrated_matrix( QDACC::System &s, auto &savedStates, auto &f_gfu
     }
 
     // Create fixed creator and annihilator chains (because std::pow isnt working for Eigen matrices)
-    Sparse super_creator = creator;
-    Sparse super_annihilator = annihilator;
+    MatrixMain super_creator = creator;
+    MatrixMain super_annihilator = annihilator;
     for ( int i = 1; i < order; i++ ) {
         super_creator = ( super_creator * creator ).eval();
         super_annihilator = ( super_annihilator * annihilator ).eval();
     }
-    Sparse creator_annihilator = creator * annihilator;
-    Sparse super_creator_annihilator = super_creator * super_annihilator;
+    MatrixMain creator_annihilator = creator * annihilator;
+    MatrixMain super_creator_annihilator = super_creator * super_annihilator;
 
     // Output file headers
     f_gfunc << "Time";
@@ -77,8 +77,8 @@ void _output_integrated_matrix( QDACC::System &s, auto &savedStates, auto &f_gfu
         const double t_t = s.parameters.grid_values.at( t );
         const auto &rho = savedStates.at( t ).mat;
         // Gi of zero
-        Scalar g_n_of_order = s.dgl_expectationvalue<Sparse, Scalar>( rho, creator_annihilator, t_t );
-        Scalar g_n_pop = std::pow( s.dgl_expectationvalue<Sparse, Scalar>( rho, creator_annihilator, t_t ), order );
+        Scalar g_n_of_order = s.dgl_expectationvalue<MatrixMain>( rho, creator_annihilator, t_t );
+        Scalar g_n_pop = std::pow( s.dgl_expectationvalue<MatrixMain>( rho, creator_annihilator, t_t ), order );
         f_gfunc << std::format( "{:.8}\t", t_t );
         for ( size_t tau_i = 0; tau_i < result_buffer.size(); tau_i++ ) {
             f_gfunc << std::format( "{:.8}\t{:.8}\t", std::real( result_buffer[tau_i][t] ), std::imag( result_buffer[tau_i][t] ) );
@@ -170,18 +170,19 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
             int order = std::abs( gs_s.property_set["Order"][i] );
             double start = std::abs( gs_s.property_set["Start"][i] );
             double bin_length = std::abs( gs_s.property_set["BinLength"][i] );
+            int deph = gs_s.property_set["Deph"][i];
             const auto &[s_creator, s_annihilator] = get_operator_strings( s, modes );
             const auto [creator, annihilator] = get_operators_matrices( s, s_creator, s_annihilator );
             Log::L2( "[PhotonStatistics] Operators are {} and {}.\n", s_creator, s_annihilator );
             switch ( order ) {
                 case 2:
                     purpose = get_operators_purpose( { s_creator, s_creator, s_annihilator, s_annihilator }, "TimeBin-G" );
-                    calculate_timebin_g2_correlations( s, s_creator, s_creator, s_annihilator, s_annihilator, purpose, start, bin_length );
+                    calculate_timebin_g2_correlations( s, s_creator, s_creator, s_annihilator, s_annihilator, purpose, start, bin_length, deph );
                     break;
                 case 3:
                     purpose = get_operators_purpose( { s_creator, s_creator, s_creator, s_annihilator, s_annihilator, s_annihilator }, "TimeBin-G" );
                     std::cout << "Calculating G3 Time Bin Correlations for " << purpose << std::endl;
-                    calculate_timebin_g3_correlations( s, s_creator, s_creator, s_creator, s_annihilator, s_annihilator, s_annihilator, purpose, start, bin_length );
+                    calculate_timebin_g3_correlations( s, s_creator, s_creator, s_creator, s_annihilator, s_annihilator, s_annihilator, purpose, start, bin_length, deph );
                     break;
                 default:
                     Log::Warning( "[PhotonStatistics] G^({}) function order not implemented!\n", order );
@@ -215,10 +216,12 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                 f_gfunc << "AbsMax\tAbsSum\n";
                 f_gfunc << std::format( "{:.8e}\t{:.8e}\n", std::abs( gmat.maxAbsCoeff() ), std::abs( gmat.sum() ) );
             }
+
             if (order == 2)
                 calculate_timebin_two_photon_matrix(s, purpose);
             else
                 calculate_timebin_three_photon_matrix(s, purpose);
+
             calculate_timebin_generator_expectation_values(s, purpose);
             auto &timebin_exp = FileOutput::add_file( "generator_"+purpose );
             timebin_exp << "Time\tRe(G)\tIm(G)\n";
@@ -345,12 +348,12 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                 modes = {"111", "112", "121", "122", "211", "212", "221", "222"};
             for ( size_t k = 0; k < dim; k++ ) {
                 for ( size_t l = 0; l < dim; l++ ) {
-                    f_twophot << std::format( "Re({}{})\t", modes[k], modes[l] );
+                    f_twophot << std::format( "Re({}{})\t", modes[l], modes[k] );
                 }
             }
             for ( size_t k = 0; k < dim; k++ ) {
                 for ( size_t l = 0; l < dim; l++ ) {
-                    f_twophot << std::format( "Im({}{})\t", modes[k], modes[l] );
+                    f_twophot << std::format( "Im({}{})\t", modes[l], modes[k] );
                 }
             }
             f_twophot << "\n";
@@ -482,7 +485,7 @@ bool QDACC::Numerics::ODESolver::calculate_raman_population( System &s, const st
     ////        double tdd = savedStates.at( i ).t;
     ////        double dtau = get_tdelta( savedStates, i );
     ////        B = std::exp( -1.0i * ( w2 - wc - 0.5i * ( s.parameters.p_omega_cavity_loss + sigma2 ) ) * ( t - tdd ) ) - std::exp( -1.0i * ( w1 - wc - 0.5i * ( s.parameters.p_omega_cavity_loss + sigma1 ) ) * ( t - tdd ) );
-    ////        R = s.dgl_expectationvalue<Sparse, Scalar>( savedStates.at( i ).mat, op, tdd ) * std::conj( s.pulse.at( pulse_index ).get( tdd ) );
+    ////        R = s.dgl_expectationvalue<Sparse>( savedStates.at( i ).mat, op, tdd ) * std::conj( s.pulse.at( pulse_index ).get( tdd ) );
     ////        next += B * R * dtau;
     ////    }
     ////    before = A * before + dt * next;
@@ -511,9 +514,9 @@ bool QDACC::Numerics::ODESolver::calculate_raman_population( System &s, const st
     //            double tdd = savedStates.at( j ).t;
     //            double dtau = get_tdelta( savedStates, j );
     //            Scalar B = std::exp( -1.0i * ( w1 - wc - 0.5i * ( s.parameters.p_omega_cavity_loss + sigma1 ) ) * ( td - tdd ) ) - std::exp( -1.0i * ( w2 - wc - 0.5i * ( s.parameters.p_omega_cavity_loss + sigma2 ) ) * ( td - tdd ) );
-    //            Scalar R = s.dgl_expectationvalue<Sparse, Scalar>( savedStates.at( j ).mat, op, tdd ) * s.pulse.at( pulse_index ).get( tdd );
+    //            Scalar R = s.dgl_expectationvalue<Sparse>( savedStates.at( j ).mat, op, tdd ) * s.pulse.at( pulse_index ).get( tdd );
     //            integral += 2.0i * s.parameters.p_omega_coupling * std::exp( -s.parameters.p_omega_cavity_loss * ( t - td ) ) * B * R * dtau * dt;
-    //            // std::cout << s.dgl_expectationvalue<Sparse, Scalar>( savedStates.at( j ).mat, op, tdd ) << ", " << std::conj( s.pulse.at( pulse_index ).get( tdd ) ) << "," << dt << "," << dtau << "," << B << "," << R << "," << s.parameters.p_omega_coupling << "," << s.parameters.p_omega_cavity_loss << "," << std::exp( -s.parameters.p_omega_cavity_loss * ( T - td ) ) << " - " << integral << std::endl;
+    //            // std::cout << s.dgl_expectationvalue<Sparse>( savedStates.at( j ).mat, op, tdd ) << ", " << std::conj( s.pulse.at( pulse_index ).get( tdd ) ) << "," << dt << "," << dtau << "," << B << "," << R << "," << s.parameters.p_omega_coupling << "," << s.parameters.p_omega_cavity_loss << "," << std::exp( -s.parameters.p_omega_cavity_loss * ( T - td ) ) << " - " << integral << std::endl;
     //        }
     //    }
     //    raman_pop.emplace_back( std::real( integral ) );

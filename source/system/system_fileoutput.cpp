@@ -62,18 +62,18 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
     // Density Matrix
     if ( p.input_conf["DMconfig"].string["output_mode"] != "none" ) {
         auto &fp_densitymatrix = add_file( "densitymatrix" );
-        fp_densitymatrix << "t\t";
+        fp_densitymatrix << "t";
         if ( p.input_conf["DMconfig"].string["output_mode"] == "full" ) {
             for ( int i = 0; i < op.base.size(); i++ )
                 for ( int j = 0; j < op.base.size(); j++ ) {
-                    fp_densitymatrix << std::format( "Re(|{}><{}|)\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
+                    fp_densitymatrix << std::format( "\tRe(|{}><{}|)", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
                 }
             for ( int i = 0; i < op.base.size(); i++ )
                 for ( int j = 0; j < op.base.size(); j++ ) {
-                    fp_densitymatrix << std::format( "Im(|{}><{}|)\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
+                    fp_densitymatrix << std::format( "\tIm(|{}><{}|)", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ), op.base.at( j ).substr( 1, op.base.at( j ).size() - 2 ) );
                 }
         } else {
-            for ( int i = 0; i < op.base.size(); i++ ) fp_densitymatrix << std::format( "|{0}><{0}|\t", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ) );
+            for ( int i = 0; i < op.base.size(); i++ ) fp_densitymatrix << std::format( "\t|{0}><{0}|", op.base.at( i ).substr( 1, op.base.at( i ).size() - 2 ) );
         }
         fp_densitymatrix << "\n";
     }
@@ -81,30 +81,33 @@ void FileOutput::Iinit( Parameters &p, OperatorMatrices &op ) {
     // Electronic
     if ( not p.input_electronic.empty() ) {
         auto &fp_electronic = add_file( "electronic" );
-        fp_electronic << "t\t";
-        for ( auto &[name, rem] : p.input_electronic ) fp_electronic << std::format( "|{}><{}|\t", name, name );
+        fp_electronic << "t";
+        for ( auto &[name, rem] : p.input_electronic ) fp_electronic << std::format( "\t|{}><{}|", name, name );
         if ( p.p_omega_decay > 0.0 )
             for ( auto &[name, rem] : p.input_electronic )
-                if ( rem.property["DecayScaling"] != 0.0 ) fp_electronic << std::format( "EM(|{}><{}|)\t", name, name );
+                if ( rem.property["DecayScaling"] != 0.0 ) fp_electronic << std::format( "\tEM(|{}><{}|)\t", name, name );
         fp_electronic << "\n";
     }
 
     // Photonic
     if ( not p.input_photonic.empty() ) {
         auto &fp_photonic = add_file( "photonic" );
-        fp_photonic << "t\t";
-        for ( auto &[name, rem] : p.input_photonic ) fp_photonic << std::format( "|{}><{}|\t", name, name );
+        fp_photonic << "t";
+        for ( auto &[name, rem] : p.input_photonic ) fp_photonic << std::format( "\t|{}><{}|", name, name );
         if ( p.p_omega_cavity_loss > 0.0 )
-            for ( auto &[name, rem] : p.input_photonic ) fp_photonic << std::format( "EM(|{}><{}|)\t", name, name );
+            for ( auto &[name, rem] : p.input_photonic ) fp_photonic << std::format( "\tEM(|{}><{}|)", name, name );
         fp_photonic << "\n";
     }
     // Photon Expv
     if ( p.output_dict.contains( "photons" ) ) {
         for ( auto &[mode, state] : op.ph_states ) {
-            add_file( "photons_" + mode ) << "t";
+            auto& fp_photons = add_file( "photons_" + mode );
+            fp_photons << "t";
             for ( int i = 0; i < state.self_hilbert.rows(); i++ )
-                for ( int j = 0; j < state.self_hilbert.cols(); j++ ) get_file( "photons_" + mode ) << std::format( "\t|{}><{}|", i, j );
-            get_file( "photons_" + mode ) << "\n";
+                for ( int j = 0; j < state.self_hilbert.cols(); j++ ) fp_photons << std::format( "\t|{}><{}|", i, j );
+            if ( p.p_omega_cavity_loss > 0.0 )
+                for ( int i = 1; i < state.self_hilbert.rows(); i++ ) fp_photons << std::format( "\tEM(|{}><{}|)", i, i ); // Start at 1 because 0 is the vacuum state and can never decay
+            fp_photons << "\n";
         }
     }
     // Custom Expv

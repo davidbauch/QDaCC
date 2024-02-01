@@ -81,7 +81,11 @@ class MultidimensionalCacheMatrix {
     }
     Scalar get( const std::vector<size_t>& current_vector_index ) const {
         const auto index = reduceIndex( current_vector_index );
-        return m_matrix.at(index);
+        return m_matrix.at( index );
+    }
+
+    size_t get_index( const std::vector<size_t>& current_vector_index ) const { 
+        return reduceIndex( current_vector_index ); 
     }
 
     Scalar at( const std::vector<size_t>& current_vector_index ) {

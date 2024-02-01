@@ -19,6 +19,16 @@ using dTriplet = Eigen::Triplet<double>;
 using Triplet = Eigen::Triplet<Scalar>;
 using Index = uint64_t;
 
+//#define USE_SPARSE_MATRIX
+
+#ifdef USE_SPARSE_MATRIX
+using MatrixMain = Sparse;
+using dMatrixMain = dSparse;
+#else
+using MatrixMain = Dense;
+using dMatrixMain = dDense;
+#endif
+
 template <typename T>
 using NestedVector = std::vector<std::vector<T>>;
 } // namespace QDACC::Type

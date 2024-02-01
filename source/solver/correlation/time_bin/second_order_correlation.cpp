@@ -33,16 +33,18 @@
  */
 
 void QDACC::Numerics::ODESolver::calculate_timebin_g2_correlations( System &s, const std::string &s_op_i, const std::string &s_op_j, const std::string &s_op_k, const std::string &s_op_l, const std::string &purpose, double t_start,
-                                                                    double time_bin_length ) {
+                                                                    double time_bin_length, int deph ) {
     Log::L2( "[TimeBinCorrelation] Preparing to calculate Correlation function for time bin coherence\n" );
-    Log::L2( "[TimeBinCorrelation] Generating Sparse Operator Matrices from String input...\n" );
+    Log::L2( "[TimeBinCorrelation] Generating Operator Matrices from String input...\n" );
+
+    omp_set_nested( true );
 
     // Find Operator Matrices
     const auto op_i = get_operators_matrix( s, s_op_i );
     const auto op_j = get_operators_matrix( s, s_op_j );
     const auto op_k = get_operators_matrix( s, s_op_k );
     const auto op_l = get_operators_matrix( s, s_op_l );
-    const Sparse identity_matrix = Dense::Identity( op_i.rows(), op_i.cols() ).sparseView();
+
     Log::L2( "[TimeBinCorrelation] Iterated Operators are op_i = {}, op_j = {}, op_k = {} and op_l = {}\n", s_op_i, s_op_j, s_op_k, s_op_l );
 
     // We always evaluate the full matrix.
@@ -55,6 +57,11 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g2_correlations( System &s, c
     // Create Timer and Progresbar
     Timer &timer = Timers::create( "TimeBin TPM-Loop (" + purpose + ")" ).start();
     auto progressbar = ProgressBar();
+
+    auto dt = s.parameters.grid_values[1] - s.parameters.grid_values[0];
+    // Correct t_start and the time bin length so they are on the grid
+    t_start = s.parameters.grid_values[std::max<size_t>( 0, std::min<size_t>( s.parameters.grid_values.size() - 1, std::round( t_start / dt ) ) )] - s.parameters.grid_values[0];
+    time_bin_length = s.parameters.grid_values[std::max<size_t>( 0, std::min<size_t>( s.parameters.grid_values.size() - 1, std::round( time_bin_length / dt ) ) )] - s.parameters.grid_values[0];
 
     // 4 Time bin configuration
     auto end_of_first_bin = t_start + time_bin_length;
@@ -70,15 +77,15 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g2_correlations( System &s, c
     auto index_t_start_of_fourth_bin = index_t_end_of_third_bin;
     auto index_t_end_of_fourth_bin = rho_index_map.upper_bound( end_of_fourth_bin )->second;
 
-    size_t index_range = index_t_end_of_first_bin - index_t_start_of_first_bin;
+    size_t index_range = index_t_end_of_first_bin - index_t_start_of_first_bin - 1;
 
     std::map<std::string, std::string> mode_lookup;
 
-    Log::L2( "[TimeBinCorrelation] Reserving memory for {} matrices of size {}x{}.\n", modes.size(), index_range, index_range );
+    Log::L2( "[TimeBinCorrelation] Reserving memory for {} matrices of size {}x{}.\n", modes.size(), index_range + 1, index_range + 1 );
     for ( const auto &mode : modes ) {
         const auto name = purpose + "_" + mode;
         mode_lookup[mode] = name;
-        cache[name] = MultidimensionalCacheMatrix( { index_range, index_range }, name );
+        cache[name] = MultidimensionalCacheMatrix( { index_range + 1, index_range + 1 }, name );
     }
 
     auto &LLLE_cache = cache[mode_lookup["LLLE"]];
@@ -122,119 +129,134 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g2_correlations( System &s, c
         double t1_p_T = current_state_shifted.t;
 
         // Calculate New Modified Density Matrices
-        Sparse a_rho_t1 = s.dgl_calc_rhotau( current_state.mat, op_l, identity_matrix, t1 );
-        Sparse rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, identity_matrix, op_i, t1 );
-        Sparse a_rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, op_l, op_i, t1 );
-        Sparse a_rho_t1pT_ad = s.dgl_calc_rhotau( current_state_shifted.mat, op_l, op_i, t1_p_T );
+        MatrixMain a_rho_t1 = s.dgl_calc_rhotau( current_state.mat, op_l, s.operatorMatrices.identity, t1 );
+        MatrixMain rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, s.operatorMatrices.identity, op_i, t1 );
+        MatrixMain a_rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, op_l, op_i, t1 );
+        MatrixMain a_rho_t1pT_ad = s.dgl_calc_rhotau( current_state_shifted.mat, op_l, op_i, t1_p_T );
 
         // Calculate Runge Kutta. For simplicity, we dont even offer the option to use the PI here.
 
-        // LLLE,LLEE,LEEEE,LELE
+        MatrixMain eval = op_j * op_k;
+
+        // Define temporary variables outside of the loops. Preallocate a maximum size for matrices
+        MatrixMain temp(op_i.rows(), op_i.cols());
+
+        // Reserve memory for the past rho vectors
+        saved_rho.reserve( 2 * index_range );
+        saved_rho_inner.reserve( 2 * index_range );
+
+        // Precalculate the t_index,t2 dense index of the cache matrix
+        std::vector<size_t> cache_index( index_range + 1 );
+        for ( size_t t2 = 0; t2 < index_range; t2++ ) {
+            cache_index[t2] = LLLE_cache.get_index( { mat_t_index, t2 } );
+        }
+
+        // LLLE,LLEE,LEEE,LELE
         // =============================================================================================
-        calculate_runge_kutta( a_rho_t1, t1, t1 + time_bin_length, timer, progressbar, purpose, s, saved_rho,
-                               false ); // L..E. We only need the last matrix here
-        Sparse a_rho_t1_ad_t1pT = saved_rho.back().mat * op_i;
+        calculate_runge_kutta( a_rho_t1, t1, t1_p_T, timer, progressbar, purpose, s, saved_rho, false ); // L..E. We only need the last matrix here
+        MatrixMain a_rho_t1_ad_t1pT = saved_rho.back().mat * op_i;
         saved_rho.clear();
         // LEEE and LLLE
-        calculate_runge_kutta( a_rho_t1_ad_t1pT, t1 + time_bin_length, end_of_fourth_bin, timer, progressbar, purpose, s, saved_rho, false );
-        saved_rho = Numerics::interpolate_curve( saved_rho, t1 + time_bin_length, end_of_fourth_bin, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
+        calculate_runge_kutta( a_rho_t1_ad_t1pT, t1_p_T, end_of_fourth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
+        saved_rho = Numerics::interpolate_curve( saved_rho, end_of_second_bin, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
                                                  s.parameters.numerics_interpolate_method_tau );
-        auto rho_size = saved_rho.size() - 1;
-        Sparse eval = op_j * op_k;
-        for ( size_t tau = 0; tau < index_range; tau++ ) {
-            auto t2 = rho_size - index_range - tau;
-            auto t2pT = rho_size - tau;
-            LLLE_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
-            LEEE_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
+        for ( size_t t2 = 0; t2 < index_range; t2++ ) {
+            auto t2pT = t2 + index_range;
+            LEEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
+            LLLE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
+            if ( deph <= 1 ) continue;
             // LLEE and LELE; Iterate further
-            Sparse a_a_rho_t1_t1pT_ad_t2 = op_k * saved_rho.at( t2 ).mat;
-            Sparse a_rho_t1_t1pT_ad_t2_ad = saved_rho.at( t2 ).mat * op_j;
+            temp = op_k * saved_rho.at( t2 ).mat;
             // Advance further to t2+T
-            calculate_runge_kutta( a_a_rho_t1_t1pT_ad_t2, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            LLEE_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
-            calculate_runge_kutta( a_rho_t1_t1pT_ad_t2_ad, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            LELE_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
+            calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
+            LLEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
+            temp = saved_rho.at( t2 ).mat * op_j;
+            calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
+            LELE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
             saved_rho_inner.clear();
         }
         saved_rho.clear();
+        Timers::outputProgress( timer, progressbar, 4 * mat_t_index, 4 * index_range, purpose );
 
         // EELL ELLL EEEL ELEL
         // =============================================================================================
-        calculate_runge_kutta( rho_t1_ad, t1, t1 + time_bin_length, timer, progressbar, purpose, s, saved_rho,
-                               false ); // E..L. We only need the last matrix here
+        calculate_runge_kutta( rho_t1_ad, t1, t1_p_T, timer, progressbar, purpose, s, saved_rho, false ); // E..L. We only need the last matrix here
         a_rho_t1_ad_t1pT = op_l * saved_rho.back().mat;
         saved_rho.clear();
         // ELLL and EEEL
-        calculate_runge_kutta( a_rho_t1_ad_t1pT, t1 + time_bin_length, end_of_fourth_bin, timer, progressbar, purpose, s, saved_rho, false );
-        saved_rho = Numerics::interpolate_curve( saved_rho, t1 + time_bin_length, end_of_fourth_bin, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
+        calculate_runge_kutta( a_rho_t1_ad_t1pT, t1_p_T, end_of_fourth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
+        saved_rho = Numerics::interpolate_curve( saved_rho, end_of_second_bin, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
                                                  s.parameters.numerics_interpolate_method_tau );
-        rho_size = saved_rho.size() - 1;
-        for ( size_t tau = 0; tau < index_range; tau++ ) {
-            auto t2 = rho_size - index_range - tau;
-            auto t2pT = rho_size - tau;
-            ELLL_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
-            EEEL_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
+        for ( size_t t2 = 0; t2 < index_range; t2++ ) {
+            auto t2pT = t2 + index_range;
+            EEEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
+            ELLL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
+            if ( deph <= 1 ) continue;
             // EELL and ELEL; iterate further
-            Sparse a_rho_t1_t1pT_ad_t2_ad = saved_rho.at( t2 ).mat * op_j;
-            Sparse a_a_rho_t1_t1pT_ad_t2 = op_k * saved_rho.at( t2 ).mat;
+            temp = saved_rho.at( t2 ).mat * op_j;
             // Advance further to t2+T
-            calculate_runge_kutta( a_rho_t1_t1pT_ad_t2_ad, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            EELL_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
+            calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
+            EELL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
             saved_rho_inner.clear();
-            calculate_runge_kutta( a_a_rho_t1_t1pT_ad_t2, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            ELEL_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
+            temp = op_k * saved_rho.at( t2 ).mat;
+            calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
+            ELEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
             saved_rho_inner.clear();
         }
         saved_rho.clear();
+        Timers::outputProgress( timer, progressbar, 4 * mat_t_index + 1, 4 * index_range, purpose );
 
         // EEEE ELEE EELE ELLE
         // =============================================================================================
-        calculate_runge_kutta( a_rho_t1_ad, t1, end_of_fourth_bin, timer, progressbar, purpose, s, saved_rho, false );
-        saved_rho = Numerics::interpolate_curve( saved_rho, t1, end_of_fourth_bin, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
-        rho_size = saved_rho.size() - 1;
-        for ( size_t tau = 0; tau < index_range; tau++ ) {
-            auto t2 = rho_size - index_range - tau;
-            auto t2pT = rho_size - tau;
-            EEEE_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
-            ELLE_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
-            // ELLE and EELE require additional time transformation
-            Sparse a_a_rhot1_ad_t2 = op_k * saved_rho.at( t2 ).mat;
-            Sparse a_rho_t1_ad_t2_ad = saved_rho.at( t2 ).mat * op_j;
+        calculate_runge_kutta( a_rho_t1_ad, t1, end_of_fourth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
+        saved_rho = Numerics::interpolate_curve( saved_rho, end_of_second_bin, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
+                                                 s.parameters.numerics_interpolate_method_tau );
+        for ( size_t t2 = 0; t2 < index_range; t2++ ) {
+            auto t2pT = t2 + index_range;
+            EEEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
+            ELLE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
+            if ( deph <= 1 ) continue;
+            // ELEE and EELE require additional time transformation
+            temp = op_k * saved_rho.at( t2 ).mat;
             // Advance further to t2+T
-            calculate_runge_kutta( a_a_rhot1_ad_t2, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            EELE_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
+            calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
+            ELEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
             saved_rho_inner.clear();
-            calculate_runge_kutta( a_rho_t1_ad_t2_ad, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            ELLE_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
+            temp = saved_rho.at( t2 ).mat * op_j;
+            calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
+            EELE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
+
             saved_rho_inner.clear();
         }
         saved_rho.clear();
+        Timers::outputProgress( timer, progressbar, 4 * mat_t_index + 2, 4 * index_range, purpose );
 
         // LLLL LELL LLEL LEEL
         // =============================================================================================
-        calculate_runge_kutta( a_rho_t1pT_ad, t1_p_T, end_of_fourth_bin, timer, progressbar, purpose, s, saved_rho, false );
-        saved_rho = Numerics::interpolate_curve( saved_rho, t1_p_T, end_of_fourth_bin, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
-        rho_size = saved_rho.size() - 1;
-        for ( size_t tau = 0; tau < index_range; tau++ ) {
-            auto t2 = rho_size - index_range - tau;
-            auto t2pT = rho_size - tau;
-            LLLL_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
-            LLEL_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
+        calculate_runge_kutta( a_rho_t1pT_ad, t1_p_T, end_of_fourth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
+        saved_rho = Numerics::interpolate_curve( saved_rho, end_of_second_bin, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
+                                                 s.parameters.numerics_interpolate_method_tau );
+        for ( size_t t2 = 0; t2 < index_range; t2++ ) {
+            auto t2pT = t2 + index_range;
+            LEEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
+            LLLL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
+            if ( deph <= 1 ) continue;
             // LLEL and LEEL require additional time transformation
-            Sparse a_rho_t1pT_ad_t2_ad = saved_rho.at( t2 ).mat * op_j;
-            Sparse a_a_rhot_ad_t1pT_t2 = op_k * saved_rho.at( t2 ).mat;
+            temp = saved_rho.at( t2 ).mat * op_j;
             // Advance further to t2+T
-            calculate_runge_kutta( a_rho_t1pT_ad_t2_ad, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            LLEL_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
+            calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
+            LELL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
             saved_rho_inner.clear();
-            calculate_runge_kutta( a_a_rhot_ad_t1pT_t2, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            LEEL_cache.get( mat_t_index, index_range - 1 - tau ) = s.dgl_expectationvalue<Sparse, Scalar>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
+            temp = op_k * saved_rho.at( t2 ).mat;
+            calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
+            LLEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
             saved_rho_inner.clear();
         }
         saved_rho.clear();
 
-        Timers::outputProgress( timer, progressbar, index_t1 - index_t_start_of_first_bin, index_range, purpose );
+        Timers::outputProgress( timer, progressbar, 4 * mat_t_index + 3, 4 * index_range, purpose );
     }
+
     timer.end();
     Timers::outputProgress( timer, progressbar, index_range, index_range, purpose, Timers::PROGRESS_FORCE_OUTPUT );
     Log::L2( "[TimeBinCorrelation] G ({}) Hamilton Statistics: Attempts w/r: {}, Write: {}, Read: {}, Calc: {}.\n", purpose, track_gethamilton_calcattempt, track_gethamilton_write, track_gethamilton_read, track_gethamilton_calc );
