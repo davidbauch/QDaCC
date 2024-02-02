@@ -77,7 +77,6 @@ bool System::init_system() {
             const auto factor = 0.5 * parameters.p_omega_cavity_loss * params.property["DecayScaling"];
             cache_cav_decay_left.emplace_back( factor * operatorMatrices.ph_transitions[mode + "b"].hilbert );
             cache_cav_decay_right.emplace_back( operatorMatrices.ph_transitions[mode + "bd"].hilbert );
-            cache_cav_decay_leftright.emplace_back( cache_cav_decay_left.back() * cache_cav_decay_right.back() );
             cache_cav_decay_rightleft.emplace_back( cache_cav_decay_right.back() * cache_cav_decay_left.back() );
         }
     }
@@ -91,7 +90,6 @@ bool System::init_system() {
             const std::string &trans_transposed = data.name_transposed;
             cache_rad_decay_left.emplace_back( 0.5 * parameters.p_omega_decay * params.property["DecayScaling"] * operatorMatrices.el_transitions[transition].hilbert );
             cache_rad_decay_right.emplace_back( operatorMatrices.el_transitions[trans_transposed].hilbert );
-            cache_rad_decay_leftright.emplace_back( cache_rad_decay_left.back() * cache_rad_decay_right.back() );
             cache_rad_decay_rightleft.emplace_back( cache_rad_decay_right.back() * cache_rad_decay_left.back() );
         }
     }
@@ -115,6 +113,7 @@ bool System::init_system() {
 }
 
 MatrixMain System::dgl_runge_function( const MatrixMain &rho, const MatrixMain &H, const double t, std::vector<QDACC::SaveState> &past_rhos ) {
+
     MatrixMain ret = -1.0i * dgl_kommutator( H, rho );
 
     // Photon Loss
@@ -140,35 +139,34 @@ MatrixMain System::dgl_runge_function( const MatrixMain &rho, const MatrixMain &
     if ( parameters.numerics_phonon_approximation_order != QDACC::PhononApproximation::PathIntegral && parameters.p_phonon_T >= 0.0 ) {
         ret += dgl_phonons_pmeq( rho, t, past_rhos );
     }
-
     return ret;
 }
 
+
 MatrixMain System::dgl_timetrafo( MatrixMain ret, const double t ) {
-    if ( parameters.numerics_use_interactionpicture ) {
-        // QDACC::TransformationOrder::Analytical
-        if ( parameters.numerics_order_timetrafo == QDACC::TransformationOrder::Analytical ) {
+    if ( not parameters.numerics_use_interactionpicture ) return ret;
+    // QDACC::TransformationOrder::Analytical
+    if ( parameters.numerics_order_timetrafo == QDACC::TransformationOrder::Analytical ) {
 #ifdef USE_SPARSE_MATRIX
-            for ( int k = 0; k < ret.outerSize(); ++k ) {
-                for ( Sparse::InnerIterator it( ret, k ); it; ++it ) {
-                    // Convert row/col into respective photon numbers / atomic state
-                    auto i = it.row();
-                    auto j = it.col();
-                    it.valueRef() *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) );
-                }
+        for ( int k = 0; k < ret.outerSize(); ++k ) {
+            for ( Sparse::InnerIterator it( ret, k ); it; ++it ) {
+                // Convert row/col into respective photon numbers / atomic state
+                auto i = it.row();
+                auto j = it.col();
+                it.valueRef() *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) );
             }
+        }
 #else
-            for ( int i = 0; i < ret.rows(); i++ )
-                for ( int j = 0; j < ret.cols(); j++ ) {
-                    ret.coeffRef( i, j ) *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) );
-                }
+        for ( int i = 0; i < ret.rows(); i++ )
+            for ( int j = 0; j < ret.cols(); j++ ) {
+                ret.coeffRef( i, j ) *= std::exp( t * operatorMatrices.timetrafo_cachematrix( i, j ) );
+            }
 #endif
-        }
-        // QDACC::TransformationOrder::MatrixExponential
-        else if ( parameters.numerics_order_timetrafo == QDACC::TransformationOrder::MatrixExponential ) {
-            MatrixMain U = MatrixMain( ( Dense( 1.i * operatorMatrices.H_0 * t ).exp() ).sparseView() );
-            ret = ( U * ret * U.adjoint() ).eval(); // aliasing?
-        }
+    }
+    // QDACC::TransformationOrder::MatrixExponential
+    else if ( parameters.numerics_order_timetrafo == QDACC::TransformationOrder::MatrixExponential ) {
+        MatrixMain U = MatrixMain( ( Dense( 1.i * operatorMatrices.H_0 * t ).exp() ).sparseView() );
+        ret = ( U * ret * U.adjoint() ).eval(); // aliasing?
     }
     return ret;
 }
@@ -191,10 +189,10 @@ MatrixMain System::dgl_pulse( const double t ) {
     return ret;
 }
 
-MatrixMain System::dgl_get_hamilton( const double t ) { 
-    //return operatorMatrices.H_used + dgl_timetrafo( dgl_pulse( t ), t) + dgl_chirp( t ); 
-    return dgl_timetrafo( operatorMatrices.H_used + dgl_pulse( t ) + dgl_chirp( t ), t); 
-    }
+MatrixMain System::dgl_get_hamilton( const double t ) {
+    //return operatorMatrices.H_used + dgl_timetrafo( dgl_pulse( t ), t) + dgl_chirp( t );
+    return dgl_timetrafo( operatorMatrices.H_used + dgl_pulse( t ) + dgl_chirp( t ), t );
+}
 
 void System::calculate_expectation_values( const std::vector<QDACC::SaveState> &rhos, Timer &evalTimer ) {
     // Output expectation Values

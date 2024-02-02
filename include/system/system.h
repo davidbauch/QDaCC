@@ -38,9 +38,9 @@ class System {
     std::map<std::string, double> emission_probabilities;
 
     // Cache Vectors to avoid expensive recalculations
-    std::vector<MatrixMain> cache_cav_decay_left, cache_cav_decay_right, cache_cav_decay_leftright, cache_cav_decay_rightleft;
-    std::vector<MatrixMain> cache_rad_decay_left, cache_rad_decay_right, cache_rad_decay_leftright, cache_rad_decay_rightleft;
-    std::vector<MatrixMain> cache_dephasing_left, cache_dephasing_right, cache_dephasing_leftright, cache_dephasing_rightleft;
+    std::vector<MatrixMain> cache_cav_decay_left, cache_cav_decay_right, cache_cav_decay_rightleft;
+    std::vector<MatrixMain> cache_rad_decay_left, cache_rad_decay_right, cache_rad_decay_rightleft;
+    std::vector<MatrixMain> cache_dephasing_left, cache_dephasing_right, cache_dephasing_rightleft;
 
     // Coefficient Tracking variables
     int track_getcoefficient_read = 0;              // Read coefficient from vector
@@ -252,8 +252,8 @@ class System {
      */
     template <typename T>
     inline T dgl_calc_rhotau( const T &rho, const T &op1, const T &op2, const double t ) {
-        return op1 * rho * op2;
         //return dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
+        return op1 * rho * op2;
     }
 
     /**

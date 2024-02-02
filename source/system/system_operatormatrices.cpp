@@ -638,6 +638,48 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         H_used = H_I;
     else
         H_used = H_0 + H_I;
+    
+    // Prune all of the Sparse Matrices. Because we build the Sparse Matrices from A.A^T operations, there are a lot of zero entries in the to-be Sparse Matrices.
+    #ifdef USE_SPARSE_MATRIX
+    H_0.prune(Scalar(1E-50));
+    H_I.prune(Scalar(1E-50));
+    H_used.prune(Scalar(1E-50));
+    rho.prune(Scalar(1E-50));
+    identity.prune(Scalar(1E-50));
+    zero.prune(Scalar(1E-50));
+    for ( auto &[name, data] : el_states ) {
+        data.hilbert.prune(Scalar(1E-50));
+        data.projector.prune(Scalar(1E-50));
+    }
+    for ( auto &[name, data] : el_transitions ) {
+        data.hilbert.prune(Scalar(1E-50));
+        data.projector.prune(Scalar(1E-50));
+    }
+    for ( auto &[name, data] : ph_states ) {
+        data.hilbert.prune(Scalar(1E-50));
+        data.projector.prune(Scalar(1E-50));
+    }
+    for ( auto &[name, data] : ph_transitions ) {
+        data.hilbert.prune(Scalar(1E-50));
+        data.projector.prune(Scalar(1E-50));
+    }
+    for (auto& mat : pulse_mat) {
+        mat.prune(Scalar(1E-50));
+    }
+    for (auto& mat : chirp_mat) {
+        mat.prune(Scalar(1E-50));
+    }
+    for (auto& mat : polaron_factors) {
+        mat.prune(Scalar(1E-50));
+    }
+    for (auto& mat : polaron_pulse_factors_explicit_time) {
+        mat.prune(Scalar(1E-50));
+    }
+    for (auto& mat : numerics_custom_expectation_values_operators) {
+        mat.prune(Scalar(1E-50));
+    }
+    #endif
+
     if ( output_operators )
         Log::L2( "[System-OperatorMatrices] H_used:\n{}\n", matrixToString( H_used ) );
 
