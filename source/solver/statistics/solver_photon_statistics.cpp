@@ -211,10 +211,6 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                     auto &f_gfunc = FileOutput::add_file( inner_purpose );
                     _output_integrated_matrix( s, savedStates, f_gfunc, gmat, creator, annihilator, order, inner_purpose );
                 }
-                // Temporary: Output Maximum and Sum of Time Bin Matrix
-                auto &f_gfunc = FileOutput::add_file( inner_purpose + "_final" );
-                f_gfunc << "AbsMax\tAbsSum\n";
-                f_gfunc << std::format( "{:.8e}\t{:.8e}\n", std::abs( gmat.maxAbsCoeff() ), std::abs( gmat.sum() ) );
             }
 
             if (order == 2)
