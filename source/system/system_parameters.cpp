@@ -813,6 +813,9 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         Log::L1( "Calculating:\n" );
         for ( auto &[name, all_correlations] : input_correlation )
             for ( auto &mat : all_correlations ) {
+                Log::L1( " - {}:\n", name );
+                Log::L1( mat.toString( " = " ) );
+                /*
                 Log::L1( " - {} on mode(s):\n", name );
                 for ( auto i = 0; i < mat.string_v["Modes"].size(); i++ ) {
                     const auto &mode = mat.string_v["Modes"][i];
@@ -825,6 +828,7 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
                         Log::L1( " - - {}\n", mode );
                     }
                 }
+                */
             }
         Log::L1( "\n" );
         // Detector Stuff

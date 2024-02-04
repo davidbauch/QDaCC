@@ -7,10 +7,10 @@
 #include "system/parameter.h"
 
 #ifndef GLOBAL_PROGRAM_VERSION
-#define GLOBAL_PROGRAM_VERSION "0.1.6"
+#    define GLOBAL_PROGRAM_VERSION "0.1.6"
 #endif
 #ifndef GLOBAL_PROGRAM_LASTCHANGE
-#define GLOBAL_PROGRAM_LASTCHANGE ""
+#    define GLOBAL_PROGRAM_LASTCHANGE ""
 #endif
 
 namespace QDACC {
@@ -187,73 +187,60 @@ class Parameters {
         // String -> String Vector
         std::map<std::string, std::vector<std::string>> string_v;
         // Output Helper
+        std::string toString( const std::string &prefix = "" ) const {
+            std::stringstream os;
+            if ( not property.empty() ) {
+                os << prefix << "Property Values:\n";
+                for ( const auto &p : property ) os << prefix << "  " << p.first << " = " << p.second << "\n";
+                os << std::endl;
+            }
+            if ( not string.empty() ) {
+                os << prefix << "String Values:\n";
+                for ( const auto &p : string ) os << prefix << "  " << p.first << " = " << p.second << "\n";
+                os << std::endl;
+            }
+            if ( property_set.size() > 0 ) {
+                os << prefix << "Property Vector Values:\n";
+                for ( const auto &p : property_set ) {
+                    os << prefix << p.first << " = ";
+                    for ( const auto &u : p.second ) os << u << " ";
+                    os << std::endl;
+                }
+            }
+            if ( string_v.size() > 0 ) {
+                os << prefix << "String Vector Values:\n";
+                for ( const auto &p : string_v ) {
+                    os << prefix << p.first << " = ";
+                    for ( const auto &u : p.second ) os << u << " ";
+                    os << std::endl;
+                }
+            }
+            return os.str();
+        }
         friend std::ostream &operator<<( std::ostream &os, const universal_config &is ) {
-            os << "property Values:\n";
-            for ( auto &p : is.property )
-                os << p.first << " = " << p.second << "\n";
-            os << std::endl;
-            os << "String Values:\n";
-            for ( auto &p : is.string )
-                os << p.first << " = " << p.second << "\n";
-            os << std::endl;
-            if ( is.property_set.size() > 0 ) {
-                os << "property Vector Values:\n";
-                for ( auto &p : is.property_set ) {
-                    os << p.first << " = ";
-                    for ( auto &u : p.second )
-                        os << u << " ";
-                    os << std::endl;
-                }
-            }
-            if ( is.string_v.size() > 0 ) {
-                os << "String Vector Values:\n";
-                for ( auto &p : is.string_v ) {
-                    os << p.first << " = ";
-                    for ( auto &u : p.second )
-                        os << u << " ";
-                    os << std::endl;
-                }
-            }
+            os << is.toString();
             return os;
         }
 
-        const Parameter &get_value( const std::string &key ) const {
-            return property.at( key );
-        }
-        const std::string &get_string( const std::string &key ) const {
-            return string.at( key );
-        }
-        const std::vector<Parameter> &get_value_v( const std::string &key ) const {
-            return property_set.at( key );
-        }
-        const std::vector<std::string> &get_string_v( const std::string &key ) const {
-            return string_v.at( key );
-        }
-        Parameter &get_value( const std::string &key ) {
-            return property.at( key );
-        }
-        std::string &get_string( const std::string &key ) {
-            return string.at( key );
-        }
-        std::vector<Parameter> &get_value_v( const std::string &key ) {
-            return property_set.at( key );
-        }
-        std::vector<std::string> &get_string_v( const std::string &key ) {
-            return string_v.at( key );
-        }
+        const Parameter &get_value( const std::string &key ) const { return property.at( key ); }
+        const std::string &get_string( const std::string &key ) const { return string.at( key ); }
+        const std::vector<Parameter> &get_value_v( const std::string &key ) const { return property_set.at( key ); }
+        const std::vector<std::string> &get_string_v( const std::string &key ) const { return string_v.at( key ); }
+        Parameter &get_value( const std::string &key ) { return property.at( key ); }
+        std::string &get_string( const std::string &key ) { return string.at( key ); }
+        std::vector<Parameter> &get_value_v( const std::string &key ) { return property_set.at( key ); }
+        std::vector<std::string> &get_string_v( const std::string &key ) { return string_v.at( key ); }
         /**
          * @brief Universal Get Method, when no index is provided, the property map is used, if index is provided, the property vector is used.
          *
          */
         static constexpr size_t no_index = 133713371337;
         Parameter &get( const std::string &key, const size_t &index = no_index ) {
-            if ( index != no_index )
-                return property_set.at( key ).at( index );
+            if ( index != no_index ) return property_set.at( key ).at( index );
             return property.at( key );
         }
         const Parameter &get( const std::string &key, const size_t &index = no_index ) const {
-            if ( index != no_index )
-                return property_set.at( key ).at( index );
+            if ( index != no_index ) return property_set.at( key ).at( index );
             return property.at( key );
         }
     };
@@ -263,7 +250,7 @@ class Parameters {
     std::string inputstring_pulse;
     std::string inputstring_chirp;
     std::string inputstring_spectrum, inputstring_indist, inputstring_conc, inputstring_gfunc, inputstring_wigner, inputstring_raman, inputstring_correlation_resolution, inputstring_SPconf, inputstring_timebins;
-    std::string inputstring_detector_time,inputstring_detector_spectral;
+    std::string inputstring_detector_time, inputstring_detector_spectral;
     std::string inputstring_densitymatrix_config;
     std::string inputstring_rk45_config;
     // Input Maps. The Temporary Inputstrings will get verwurstet into these maps, such that their parameters are available via their corresponding string key.
