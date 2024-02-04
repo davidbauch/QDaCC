@@ -646,6 +646,11 @@ void Parameters::log( const Dense &initial_state_vector_ket ) {
         "                                                                    \n" );
     Log::Logger::wrapInBar( "System Parameters" );
     Log::L1( "Version: {} ({})\n\n", GLOBAL_PROGRAM_VERSION, GLOBAL_PROGRAM_LASTCHANGE );
+    #ifdef USE_SPARSE_MATRIX
+    Log::L1("Matrix Type: Sparse\n");
+    #else
+    Log::L1("Matrix Type: Dense\n");
+    #endif
 
     Log::Logger::wrapInBar( "Electronic Configuration", Log::BAR_SIZE_HALF, Log::LEVEL_1, Log::BAR_1 );
     for ( auto &[name, mat] : input_electronic ) {
