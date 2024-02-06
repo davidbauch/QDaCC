@@ -13,13 +13,13 @@
  */
 static Dense _rho_to_tpdm( const size_t i, const std::map<std::string, std::vector<Scalar>> &rho ) {
     Dense ret = Dense::Zero( 8, 8 );
-    ret << rho.at( "EEEEEE" )[i], rho.at( "EEEEEL" )[i], rho.at( "EEEELE" )[i], rho.at( "EEEELL" )[i], rho.at( "EEELLE" )[i], rho.at( "EEELEE" )[i], rho.at( "EEELEL" )[i], rho.at( "EEELLL" )[i], rho.at( "EELEEE" )[i],
-        rho.at( "EELEEL" )[i], rho.at( "EELELE" )[i], rho.at( "EELELL" )[i], rho.at( "EELLLE" )[i], rho.at( "EELLEE" )[i], rho.at( "EELLEL" )[i], rho.at( "EELLLL" )[i], rho.at( "ELEEEE" )[i], rho.at( "ELEEEL" )[i],
-        rho.at( "ELEELE" )[i], rho.at( "ELEELL" )[i], rho.at( "ELELLE" )[i], rho.at( "ELELEE" )[i], rho.at( "ELELEL" )[i], rho.at( "ELELLL" )[i], rho.at( "ELLEEE" )[i], rho.at( "ELLEEL" )[i], rho.at( "ELLELE" )[i],
-        rho.at( "ELLELL" )[i], rho.at( "ELLLLE" )[i], rho.at( "ELLLEE" )[i], rho.at( "ELLLEL" )[i], rho.at( "ELLLLL" )[i], rho.at( "LLEEEE" )[i], rho.at( "LLEEEL" )[i], rho.at( "LLEELE" )[i], rho.at( "LLEELL" )[i],
-        rho.at( "LLELLE" )[i], rho.at( "LLELEE" )[i], rho.at( "LLELEL" )[i], rho.at( "LLELLL" )[i], rho.at( "LEEEEE" )[i], rho.at( "LEEEEL" )[i], rho.at( "LEEELE" )[i], rho.at( "LEEELL" )[i], rho.at( "LEELLE" )[i],
-        rho.at( "LEELEE" )[i], rho.at( "LEELEL" )[i], rho.at( "LEELLL" )[i], rho.at( "LELEEE" )[i], rho.at( "LELEEL" )[i], rho.at( "LELELE" )[i], rho.at( "LELELL" )[i], rho.at( "LELLLE" )[i], rho.at( "LELLEE" )[i],
-        rho.at( "LELLEL" )[i], rho.at( "LELLLL" )[i], rho.at( "LLLEEE" )[i], rho.at( "LLLEEL" )[i], rho.at( "LLLELE" )[i], rho.at( "LLLELL" )[i], rho.at( "LLLLLE" )[i], rho.at( "LLLLEE" )[i], rho.at( "LLLLEL" )[i],
+    ret << rho.at( "EEEEEE" )[i], rho.at( "EEEEEL" )[i], rho.at( "EEEELE" )[i], rho.at( "EEELEE" )[i], rho.at( "EEEELL" )[i], rho.at( "EEELEL" )[i], rho.at( "EEELLE" )[i], rho.at( "EEELLL" )[i], rho.at( "EELEEE" )[i],
+        rho.at( "EELEEL" )[i], rho.at( "EELELE" )[i], rho.at( "EELLEE" )[i], rho.at( "EELELL" )[i], rho.at( "EELLEL" )[i], rho.at( "EELLLE" )[i], rho.at( "EELLLL" )[i], rho.at( "ELEEEE" )[i], rho.at( "ELEEEL" )[i],
+        rho.at( "ELEELE" )[i], rho.at( "ELELEE" )[i], rho.at( "ELEELL" )[i], rho.at( "ELELEL" )[i], rho.at( "ELELLE" )[i], rho.at( "ELELLL" )[i], rho.at( "LEEEEE" )[i], rho.at( "LEEEEL" )[i], rho.at( "LEEELE" )[i],
+        rho.at( "LEELEE" )[i], rho.at( "LEEELL" )[i], rho.at( "LEELEL" )[i], rho.at( "LEELLE" )[i], rho.at( "LEELLL" )[i], rho.at( "ELLEEE" )[i], rho.at( "ELLEEL" )[i], rho.at( "ELLELE" )[i], rho.at( "ELLLEE" )[i],
+        rho.at( "ELLELL" )[i], rho.at( "ELLLEL" )[i], rho.at( "ELLLLE" )[i], rho.at( "ELLLLL" )[i], rho.at( "LELEEE" )[i], rho.at( "LELEEL" )[i], rho.at( "LELELE" )[i], rho.at( "LELLEE" )[i], rho.at( "LELELL" )[i],
+        rho.at( "LELLEL" )[i], rho.at( "LELLLE" )[i], rho.at( "LELLLL" )[i], rho.at( "LLEEEE" )[i], rho.at( "LLEEEL" )[i], rho.at( "LLEELE" )[i], rho.at( "LLELEE" )[i], rho.at( "LLEELL" )[i], rho.at( "LLELEL" )[i],
+        rho.at( "LLELLE" )[i], rho.at( "LLELLL" )[i], rho.at( "LLLEEE" )[i], rho.at( "LLLEEL" )[i], rho.at( "LLLELE" )[i], rho.at( "LLLLEE" )[i], rho.at( "LLLELL" )[i], rho.at( "LLLLEL" )[i], rho.at( "LLLLLE" )[i],
         rho.at( "LLLLLL" )[i];
 
     // Add a tiny number that is otherwise out of reach of the TPM elements to avoid real zeros.
@@ -97,7 +97,7 @@ bool QDACC::Numerics::ODESolver::calculate_timebin_three_photon_matrix( System &
                     size_t tau2 = tau1 - t2;
                     double dt = s.getDeltaTimeOf( 0, { t, tau1, tau2 } );
                     double dtau = s.getDeltaTimeOf( 1, { t, tau1, tau2 } ) * s.getDeltaTimeOf( 2, { t, tau1, tau2 } );
-                    rho[mode][upper_limit] += gmat.get( {t, tau1, tau2} ) * dt * dtau;
+                    rho[mode][upper_limit] += gmat.get( { t, tau1, tau2 } ) * dt * dtau;
                 }
             }
             // G2(upper_limit,0) - No Triangular Integral
