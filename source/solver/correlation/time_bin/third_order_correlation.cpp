@@ -239,7 +239,6 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
         calculate_runge_kutta( a_rho_t1_ad, t1, end_of_fourth_bin + dt, timer, progressbar, purpose, s, saved_rho_inner, false );
         saved_rho_inner = Numerics::interpolate_curve( saved_rho_inner, end_of_second_bin, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
                                                        s.parameters.numerics_interpolate_method_tau );
-        auto rho_size = saved_rho_inner.size() - 1;
         for ( size_t t2 = 0; t2 < index_range; t2++ ) {
             // Calculate a __ a^+ for t2
             MatrixMain outer = op_m * saved_rho_inner.at( t2 ).mat * op_j;
@@ -270,7 +269,7 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
             saved_rho.clear();
 
             // Calculate a __ a^+ for t2+T
-            auto t2pT = rho_size - t2;
+            auto t2pT = t2 + index_range;
             outer = op_m * saved_rho_inner.at( t2pT ).mat * op_j;
             calculate_runge_kutta( outer, saved_rho_inner.at( t2pT ).t, end_of_sixth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
             saved_rho = Numerics::interpolate_curve( saved_rho, end_of_fourth_bin, end_of_sixth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
@@ -362,8 +361,7 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
         // ===================================================================================================================
         calculate_runge_kutta( a_rho_t1pT_ad, t1_p_T, end_of_fourth_bin + dt, timer, progressbar, purpose, s, saved_rho_inner, false );
         saved_rho_inner =
-            Numerics::interpolate_curve( saved_rho_inner, t1_p_T, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
-        rho_size = saved_rho_inner.size() - 1;
+            Numerics::interpolate_curve( saved_rho_inner, end_of_second_bin, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
         for ( size_t t2 = 0; t2 < index_range; t2++ ) {
             // Calculate a __ a^+ for t2
             MatrixMain outer = op_m * saved_rho_inner.at( t2 ).mat * op_j;
@@ -393,7 +391,7 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
             }
             saved_rho.clear();
             // Calculate a __ a^+ for t2+T
-            auto t2pT = rho_size - t2;
+            auto t2pT = t2 + index_range;
             outer = op_m * saved_rho_inner.at( t2pT ).mat * op_j;
             calculate_runge_kutta( outer, saved_rho_inner.at( t2pT ).t, end_of_sixth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
             saved_rho = Numerics::interpolate_curve( saved_rho, end_of_fourth_bin, end_of_sixth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
@@ -486,9 +484,8 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
         calculate_runge_kutta( rho_t1_ad, t1, t1_p_T, timer, progressbar, purpose, s, saved_rho_inner, false );
         MatrixMain inner = op_n * saved_rho_inner.back().mat;
         calculate_runge_kutta( inner, saved_rho_inner.back().t, end_of_fourth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
-        saved_rho_inner = Numerics::interpolate_curve( saved_rho, saved_rho_inner.back().t, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
+        saved_rho_inner = Numerics::interpolate_curve( saved_rho, end_of_second_bin, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
                                                        s.parameters.numerics_interpolate_method_tau );
-        rho_size = saved_rho_inner.size() - 1;
         for ( size_t t2 = 0; t2 < index_range; t2++ ) {
             // Calculate a __ a^+ for t2
             MatrixMain outer = op_m * saved_rho_inner.at( t2 ).mat * op_j;
@@ -517,7 +514,7 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
             }
             saved_rho.clear();
             // Calculate a __ a^+ for t2+T
-            auto t2pT = rho_size - t2;
+            auto t2pT = t2 + index_range;
             outer = op_m * saved_rho_inner.at( t2pT ).mat * op_j;
             calculate_runge_kutta( outer, saved_rho_inner.at( t2pT ).t, end_of_sixth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
             saved_rho = Numerics::interpolate_curve( saved_rho, end_of_fourth_bin, end_of_sixth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
@@ -610,12 +607,11 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
 
         // LLEELE LLELLE LLLELE LLLLLE LEELEE LELLEE LELEEE LEEEEE LLELEE LLEEEE LLLEEE LEEELE LEELLE LELELE LELLLE LLLLEE
         // ===================================================================================================================
-        calculate_runge_kutta( rho_t1_ad, t1, t1_p_T, timer, progressbar, purpose, s, saved_rho_inner, false );
-        inner = op_n * saved_rho_inner.back().mat;
+        calculate_runge_kutta( a_rho_t1, t1, t1_p_T, timer, progressbar, purpose, s, saved_rho_inner, false );
+        inner = saved_rho_inner.back().mat * op_i;
         calculate_runge_kutta( inner, saved_rho_inner.back().t, end_of_fourth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
-        saved_rho_inner = Numerics::interpolate_curve( saved_rho, saved_rho_inner.back().t, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
+        saved_rho_inner = Numerics::interpolate_curve( saved_rho, end_of_second_bin, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
                                                        s.parameters.numerics_interpolate_method_tau );
-        rho_size = saved_rho_inner.size() - 1;
         for ( size_t t2 = 0; t2 < index_range; t2++ ) {
             // Calculate a __ a^+ for t2
             MatrixMain outer = op_m * saved_rho_inner.at( t2 ).mat * op_j;
@@ -645,7 +641,7 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
             saved_rho.clear();
 
             // Calculate a __ a^+ for t2+T
-            auto t2pT = rho_size - t2;
+            auto t2pT = t2 + index_range;
             outer = op_m * saved_rho_inner.at( t2pT ).mat * op_j;
             calculate_runge_kutta( outer, saved_rho_inner.at( t2pT ).t, end_of_sixth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
             saved_rho = Numerics::interpolate_curve( saved_rho, end_of_fourth_bin, end_of_sixth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
