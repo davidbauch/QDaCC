@@ -486,7 +486,7 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
         Timers::outputProgress( timer, progressbar, 4 * mat_t_index + 1, 4 * index_range, purpose );
 
         // For the generator expressions, we don't need to calculate the remaining correlations
-        if ( deph > 0 ) continue;
+        if ( deph == 0 ) continue;
 
         // ELLLLL EEEEEL EELEEL EEELEL EEELLL ELELLL ELLELL EELLEL EEEELL ELEELL & ELEEEL ELELEL ELLLEL ELLEEL & EELLLL EELELL
         // ===================================================================================================================
