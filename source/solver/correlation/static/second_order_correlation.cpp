@@ -54,7 +54,7 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
         // Get Time from saved State
         double t_t = current_state.t; 
         // Calculate New Modified Density Matrix
-        MatrixMain rho_tau = s.dgl_calc_rhotau( current_state.mat, op_l, op_i, t_t );
+        MatrixMain rho_tau = s.dgl_calc_rhotau(current_state.mat,op_l ,op_i, t_t);
         // Calculate Runge Kutta or PI
         if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
             calculate_path_integral_correlation( rho_tau, t_t, s.parameters.t_end, timer, s, savedRhos, op_l, op_i, 1 /*ADM Cores*/ );

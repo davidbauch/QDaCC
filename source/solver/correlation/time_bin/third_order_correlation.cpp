@@ -206,10 +206,10 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
         double t1_p_T = current_state_shifted.t;
 
         // Calculate New Modified Density Matrices
-        MatrixMain a_rho_t1 = s.dgl_calc_rhotau( current_state.mat, op_n, s.operatorMatrices.identity, t1 );
-        MatrixMain rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, s.operatorMatrices.identity, op_i, t1 );
-        MatrixMain a_rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, op_n, op_i, t1 );
-        MatrixMain a_rho_t1pT_ad = s.dgl_calc_rhotau( current_state_shifted.mat, op_n, op_i, t1_p_T );
+        MatrixMain a_rho_t1 = s.dgl_calc_rhotau( current_state.mat, op_n, s.operatorMatrices.identity );
+        MatrixMain rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, s.operatorMatrices.identity, op_i );
+        MatrixMain a_rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, op_n, op_i );
+        MatrixMain a_rho_t1pT_ad = s.dgl_calc_rhotau( current_state_shifted.mat, op_n, op_i );
 
         // Calculate Runge Kutta. For simplicity, we dont even offer the option to use the PI here.
 
@@ -250,19 +250,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // EEEEEE -> Calculate Exp. Value for eval
-                EEEEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                EEEEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // EELLEE -> Calculate Exp. Value for eval
-                EELLEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                EELLEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // EELEEE -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                EELEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                EELEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // EEELEE -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                EEELEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                EEELEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
 
@@ -279,19 +279,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // ELEELE -> Calculate Exp. Value for eval
-                ELEELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                ELEELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // ELLLLE -> Calculate Exp. Value for eval
-                ELLLLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                ELLLLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // ELLELE -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                ELLELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                ELLELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // ELELLE -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                ELELLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                ELELLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -308,19 +308,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // ELEEEE
-                ELEEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                ELEEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // ELLLEE
-                ELLLEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                ELLLEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // ELLEEE
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                ELLEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                ELLEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // ELELEE
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                ELELEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                ELELEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -337,19 +337,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // EEEELE
-                EEEELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                EEEELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // EELLLE
-                EELLLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                EELLLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // EEELLE
                 MatrixMain temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                EEELLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                EEELLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
                 // EELELE
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                EELELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                EELELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -374,19 +374,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3pT = saved_rho.at( t3pT );
 
                 // LEEEEL -> Calculate Exp. Value for eval
-                LEEEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                LEEEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // LELLEL -> Calculate Exp. Value for eval
-                LELLEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                LELLEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // LELEEL -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LELEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                LELEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // LEELEL -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LEELEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                LEELEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -401,19 +401,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // LLEELL -> Calculate Exp. Value for eval
-                LLEELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                LLEELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // LLLLLL -> Calculate Exp. Value for eval
-                LLLLLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                LLLLLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // LLLELL -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LLLELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                LLLELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // LLELLL -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LLELLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                LLELLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -430,19 +430,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // LLEEEL
-                LLEEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                LLEEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // LLLLEL
-                LLLLEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                LLLLEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // LLLEEL
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LLLEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                LLLEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // LLELEL
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LLELEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                LLELEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -459,19 +459,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // LEEELL
-                LEEELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                LEEELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // LELLLL
-                LELLLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                LELLLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // LEELLL
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LEELLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                LEELLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
                 // LELELL
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LELELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                LELELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -497,19 +497,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // EEEEEEL -> Calculate Exp. Value for eval
-                EEEEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                EEEEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // EELLEL
-                EELLEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                EELLEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // EELEEL -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                EELEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                EELEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // EEELEL -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                EEELEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                EEELEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -525,19 +525,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3pT = saved_rho.at( t3pT );
 
                 // ELEELL -> Calculate Exp. Value for eval
-                ELEELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                ELEELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // ELLLLL
-                ELLLLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                ELLLLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // ELLELL -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                ELLELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                ELLELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // ELELLL -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                ELELLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                ELELLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -555,19 +555,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // ELEEEL -> Calculate Exp. Value for eval
-                ELEEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                ELEEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // ELLLEL
-                ELLLEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                ELLLEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // ELLEEL -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                ELLEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                ELLEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // ELELEL -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                ELELEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                ELELEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -585,19 +585,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // EEEELL -> Calculate Exp. Value for eval
-                EEEELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                EEEELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // EELLLL
-                EELLLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                EELLLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // EELELL -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                EELELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                EELELL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // EEELLL -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                EEELLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                EEELLL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -623,19 +623,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // LEEEEE -> Calculate Exp. Value for eval
-                LEEEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                LEEEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // LELLEE
-                LELLEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                LELLEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // LELEEE -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LELEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                LELEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // LEELEE -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LEELEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                LEELEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -652,19 +652,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3pT = saved_rho.at( t3pT );
 
                 // LLEELE -> Calculate Exp. Value for eval
-                LLEELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                LLEELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // LLLLLE
-                LLLLLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                LLLLLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // LLLELE -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LLLELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                LLLELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // LLELLE -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LLELLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                LLELLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -682,19 +682,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // LEEELE -> Calculate Exp. Value for eval
-                LEEELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                LEEELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // LELLLE
-                LELLLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                LELLLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // LELELE -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LELELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                LELELE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // LEELLE -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LEELLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                LEELLE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
@@ -711,19 +711,19 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 auto &state_at_t3 = saved_rho.at( t3 );
                 auto &state_at_t3pT = saved_rho.at( t3pT );
                 // LLEEEE -> Calculate Exp. Value for eval
-                LLEEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval, state_at_t3.t );
+                LLEEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
                 // LLLLEE
-                LLLLEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval, state_at_t3pT.t );
+                LLLLEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
                 if ( deph <= 1 ) continue;
                 // LLLEEE -> Iterate a*rho to t3+T, then calculate Exp Value for a^+
                 temp = op_l * state_at_t3.mat;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LLLEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k, saved_rho_temp.back().t );
+                LLLEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
                 saved_rho_temp.clear();
                 // LLELEE -> Iterate rho*a^+ to t3+T, then calculate Exp Value for a
                 temp = state_at_t3.mat * op_k;
                 calculate_runge_kutta( temp, state_at_t3.t, state_at_t3.t + time_bin_length, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LLELEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l, saved_rho_temp.back().t );
+                LLELEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
                 saved_rho_temp.clear();
             }
             saved_rho.clear();

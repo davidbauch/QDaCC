@@ -129,10 +129,10 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g2_correlations( System &s, c
         double t1_p_T = current_state_shifted.t;
 
         // Calculate New Modified Density Matrices
-        MatrixMain a_rho_t1 = s.dgl_calc_rhotau( current_state.mat, op_l, s.operatorMatrices.identity, t1 );
-        MatrixMain rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, s.operatorMatrices.identity, op_i, t1 );
-        MatrixMain a_rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, op_l, op_i, t1 );
-        MatrixMain a_rho_t1pT_ad = s.dgl_calc_rhotau( current_state_shifted.mat, op_l, op_i, t1_p_T );
+        MatrixMain a_rho_t1 = s.dgl_calc_rhotau( current_state.mat, op_l, s.operatorMatrices.identity );
+        MatrixMain rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, s.operatorMatrices.identity, op_i );
+        MatrixMain a_rho_t1_ad = s.dgl_calc_rhotau( current_state.mat, op_l, op_i );
+        MatrixMain a_rho_t1pT_ad = s.dgl_calc_rhotau( current_state_shifted.mat, op_l, op_i );
 
         // Calculate Runge Kutta. For simplicity, we dont even offer the option to use the PI here.
 
@@ -162,17 +162,17 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g2_correlations( System &s, c
                                                  s.parameters.numerics_interpolate_method_tau );
         for ( size_t t2 = 0; t2 < index_range; t2++ ) {
             auto t2pT = t2 + index_range;
-            LEEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
-            LLLE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
+            LEEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval);
+            LLLE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval );
             if ( deph <= 1 ) continue;
             // LLEE and LELE; Iterate further
             temp = op_k * saved_rho.at( t2 ).mat;
             // Advance further to t2+T
             calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            LLEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
+            LLEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j );
             temp = saved_rho.at( t2 ).mat * op_j;
             calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            LELE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
+            LELE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k );
             saved_rho_inner.clear();
         }
         saved_rho.clear();
@@ -189,18 +189,18 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g2_correlations( System &s, c
                                                  s.parameters.numerics_interpolate_method_tau );
         for ( size_t t2 = 0; t2 < index_range; t2++ ) {
             auto t2pT = t2 + index_range;
-            EEEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
-            ELLL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
+            EEEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval);
+            ELLL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval );
             if ( deph <= 1 ) continue;
             // EELL and ELEL; iterate further
             temp = saved_rho.at( t2 ).mat * op_j;
             // Advance further to t2+T
             calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            EELL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
+            EELL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k );
             saved_rho_inner.clear();
             temp = op_k * saved_rho.at( t2 ).mat;
             calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            ELEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
+            ELEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j );
             saved_rho_inner.clear();
         }
         saved_rho.clear();
@@ -213,18 +213,18 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g2_correlations( System &s, c
                                                  s.parameters.numerics_interpolate_method_tau );
         for ( size_t t2 = 0; t2 < index_range; t2++ ) {
             auto t2pT = t2 + index_range;
-            EEEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
-            ELLE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
+            EEEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval);
+            ELLE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval );
             if ( deph <= 1 ) continue;
             // ELEE and EELE require additional time transformation
             temp = op_k * saved_rho.at( t2 ).mat;
             // Advance further to t2+T
             calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            ELEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
+            ELEE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j );
             saved_rho_inner.clear();
             temp = saved_rho.at( t2 ).mat * op_j;
             calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            EELE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
+            EELE_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k );
 
             saved_rho_inner.clear();
         }
@@ -238,18 +238,18 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g2_correlations( System &s, c
                                                  s.parameters.numerics_interpolate_method_tau );
         for ( size_t t2 = 0; t2 < index_range; t2++ ) {
             auto t2pT = t2 + index_range;
-            LEEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval, saved_rho.at( t2 ).t );
-            LLLL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval, saved_rho.at( t2pT ).t );
+            LEEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2 ).mat, eval);
+            LLLL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho.at( t2pT ).mat, eval );
             if ( deph <= 1 ) continue;
             // LLEL and LEEL require additional time transformation
             temp = saved_rho.at( t2 ).mat * op_j;
             // Advance further to t2+T
             calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            LELL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k, saved_rho_inner.back().t );
+            LELL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_k );
             saved_rho_inner.clear();
             temp = op_k * saved_rho.at( t2 ).mat;
             calculate_runge_kutta( temp, saved_rho.at( t2 ).t, saved_rho.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho_inner, false );
-            LLEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j, saved_rho_inner.back().t );
+            LLEL_cache.get( cache_index[t2] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_inner.back().mat, op_j );
             saved_rho_inner.clear();
         }
         saved_rho.clear();

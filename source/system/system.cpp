@@ -190,7 +190,6 @@ MatrixMain System::dgl_pulse( const double t ) {
 }
 
 MatrixMain System::dgl_get_hamilton( const double t ) {
-    //return operatorMatrices.H_used + dgl_timetrafo( dgl_pulse( t ), t) + dgl_chirp( t );
     return dgl_timetrafo( operatorMatrices.H_used + dgl_pulse( t ) + dgl_chirp( t ), t );
 }
 

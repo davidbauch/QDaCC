@@ -181,7 +181,6 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                     break;
                 case 3:
                     purpose = get_operators_purpose( { s_creator, s_creator, s_creator, s_annihilator, s_annihilator, s_annihilator }, "TimeBin-G" );
-                    std::cout << "Calculating G3 Time Bin Correlations for " << purpose << std::endl;
                     calculate_timebin_g3_correlations( s, s_creator, s_creator, s_creator, s_annihilator, s_annihilator, s_annihilator, purpose, start, bin_length, deph );
                     break;
                 default:

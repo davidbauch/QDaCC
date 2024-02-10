@@ -118,6 +118,7 @@ class Logger {
         return s;
     }
     void Iinit( const std::string &filepath, int max_log_level ) {
+        file = std::fstream();
         file.open( filepath, std::ios::out );
         if (not file.is_open()){
             std::cout << "Could not open file '" << filepath << "' for logging!\n";

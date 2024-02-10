@@ -240,9 +240,12 @@ class System {
      * @return Expectation Value <op>
      */
     template <typename T>
-    inline typename T::Scalar dgl_expectationvalue( const T &rho, const T &op, const double t ) {
-        //return get_trace<typename T::Scalar>( ( rho * dgl_timetrafo( op, t ) ).eval() );
+    inline typename T::Scalar dgl_expectationvalue( const T &rho, const T &op ) {
         return get_trace<typename T::Scalar>( ( rho * op ).eval() );
+    }
+    template <typename T>
+    inline typename T::Scalar dgl_expectationvalue( const T &rho, const T &op, const double t ) {
+        return get_trace<typename T::Scalar>( ( rho * dgl_timetrafo( op, t ) ).eval() );
     }
 
     /**
@@ -251,9 +254,12 @@ class System {
      * @return op1*rho*op2
      */
     template <typename T>
-    inline T dgl_calc_rhotau( const T &rho, const T &op1, const T &op2, const double t ) {
-        //return dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
+    inline T dgl_calc_rhotau( const T &rho, const T &op1, const T &op2 ) {
         return op1 * rho * op2;
+    }
+    template <typename T>
+    inline T dgl_calc_rhotau( const T &rho, const T &op1, const T &op2, const double t ) {
+        return dgl_timetrafo( op1, t ) * rho * dgl_timetrafo( op2, t );
     }
 
     /**
