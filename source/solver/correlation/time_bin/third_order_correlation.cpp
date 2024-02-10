@@ -295,35 +295,38 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
-            // Calculate a __ for t2+T
-            outer = op_m * saved_rho_inner.at( t2 ).mat;
-            calculate_runge_kutta( outer, saved_rho_inner.at( t2 ).t, saved_rho_inner.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho, false );
-            outer = saved_rho_inner.back().mat * op_j;
-            saved_rho.clear();
-            calculate_runge_kutta( outer, saved_rho_inner.at( t2pT ).t, end_of_sixth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
-            saved_rho = Numerics::interpolate_curve( saved_rho, end_of_fourth_bin, end_of_sixth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
-                                                     s.parameters.numerics_interpolate_method_tau );
-            for ( size_t t3 = 0; t3 < index_range; t3++ ) {
-                auto t3pT = t3 + index_range;
-                auto &state_at_t3 = saved_rho.at( t3 );
-                auto &state_at_t3pT = saved_rho.at( t3pT );
-                // ELEEEE
-                ELEEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
-                // ELLLEE
-                ELLLEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
-                if ( deph <= 1 ) continue;
-                // ELLEEE
-                temp = op_l * state_at_t3.mat;
-                calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                ELLEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
-                saved_rho_temp.clear();
-                // ELELEE
-                temp = state_at_t3.mat * op_k;
-                calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                ELELEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
-                saved_rho_temp.clear();
+            // We don't need this if we only calculate the generator expressions (deph == 0)
+            if ( deph > 0 ) {
+                // Calculate a __ for t2+T
+                outer = op_m * saved_rho_inner.at( t2 ).mat;
+                calculate_runge_kutta( outer, saved_rho_inner.at( t2 ).t, saved_rho_inner.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho, false );
+                outer = saved_rho_inner.back().mat * op_j;
+                saved_rho.clear();
+                calculate_runge_kutta( outer, saved_rho_inner.at( t2pT ).t, end_of_sixth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
+                saved_rho = Numerics::interpolate_curve( saved_rho, end_of_fourth_bin, end_of_sixth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
+                                                         s.parameters.numerics_interpolate_method_tau );
+                for ( size_t t3 = 0; t3 < index_range; t3++ ) {
+                    auto t3pT = t3 + index_range;
+                    auto &state_at_t3 = saved_rho.at( t3 );
+                    auto &state_at_t3pT = saved_rho.at( t3pT );
+                    // ELEEEE
+                    ELEEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
+                    // ELLLEE
+                    ELLLEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
+                    if ( deph <= 1 ) continue;
+                    // ELLEEE
+                    temp = op_l * state_at_t3.mat;
+                    calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
+                    ELLEEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
+                    saved_rho_temp.clear();
+                    // ELELEE
+                    temp = state_at_t3.mat * op_k;
+                    calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
+                    ELELEE_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
+                    saved_rho_temp.clear();
+                }
+                saved_rho.clear();
             }
-            saved_rho.clear();
             // Calculate __ a^+ for t2+T
             outer = saved_rho_inner.at( t2 ).mat * op_j;
             calculate_runge_kutta( outer, saved_rho_inner.at( t2 ).t, saved_rho_inner.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho, false );
@@ -360,8 +363,8 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
         // LLEELL LLELLL LLLLLL LLLELL LELEEL LEEEEL LEELEL LELLEL & LLEEEL LLELEL LLLLEL LLLEEL & LEEELL LELLLL LELELL LEELLL
         // ===================================================================================================================
         calculate_runge_kutta( a_rho_t1pT_ad, t1_p_T, end_of_fourth_bin + dt, timer, progressbar, purpose, s, saved_rho_inner, false );
-        saved_rho_inner =
-            Numerics::interpolate_curve( saved_rho_inner, end_of_second_bin, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
+        saved_rho_inner = Numerics::interpolate_curve( saved_rho_inner, end_of_second_bin, end_of_fourth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
+                                                       s.parameters.numerics_interpolate_method_tau );
         for ( size_t t2 = 0; t2 < index_range; t2++ ) {
             // Calculate a __ a^+ for t2
             MatrixMain outer = op_m * saved_rho_inner.at( t2 ).mat * op_j;
@@ -417,35 +420,38 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
                 saved_rho_temp.clear();
             }
             saved_rho.clear();
-            // Calculate a __ for t2+T
-            outer = op_m * saved_rho_inner.at( t2 ).mat;
-            calculate_runge_kutta( outer, saved_rho_inner.at( t2 ).t, saved_rho_inner.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho, false );
-            outer = saved_rho_inner.back().mat * op_j;
-            saved_rho.clear();
-            calculate_runge_kutta( outer, saved_rho_inner.at( t2pT ).t, end_of_sixth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
-            saved_rho = Numerics::interpolate_curve( saved_rho, end_of_fourth_bin, end_of_sixth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
-                                                     s.parameters.numerics_interpolate_method_tau );
-            for ( size_t t3 = 0; t3 < index_range; t3++ ) {
-                auto t3pT = t3 + index_range;
-                auto &state_at_t3 = saved_rho.at( t3 );
-                auto &state_at_t3pT = saved_rho.at( t3pT );
-                // LLEEEL
-                LLEEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
-                // LLLLEL
-                LLLLEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
-                if ( deph <= 1 ) continue;
-                // LLLEEL
-                temp = op_l * state_at_t3.mat;
-                calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LLLEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
-                saved_rho_temp.clear();
-                // LLELEL
-                temp = state_at_t3.mat * op_k;
-                calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
-                LLELEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
-                saved_rho_temp.clear();
+            // We don't need this if we only calculate the generator expressions (deph == 0)
+            if ( deph > 0 ) {
+                // Calculate a __ for t2+T
+                outer = op_m * saved_rho_inner.at( t2 ).mat;
+                calculate_runge_kutta( outer, saved_rho_inner.at( t2 ).t, saved_rho_inner.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho, false );
+                outer = saved_rho_inner.back().mat * op_j;
+                saved_rho.clear();
+                calculate_runge_kutta( outer, saved_rho_inner.at( t2pT ).t, end_of_sixth_bin + dt, timer, progressbar, purpose, s, saved_rho, false );
+                saved_rho = Numerics::interpolate_curve( saved_rho, end_of_fourth_bin, end_of_sixth_bin + dt, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false,
+                                                         s.parameters.numerics_interpolate_method_tau );
+                for ( size_t t3 = 0; t3 < index_range; t3++ ) {
+                    auto t3pT = t3 + index_range;
+                    auto &state_at_t3 = saved_rho.at( t3 );
+                    auto &state_at_t3pT = saved_rho.at( t3pT );
+                    // LLEEEL
+                    LLEEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3.mat, eval );
+                    // LLLLEL
+                    LLLLEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( state_at_t3pT.mat, eval );
+                    if ( deph <= 1 ) continue;
+                    // LLLEEL
+                    temp = op_l * state_at_t3.mat;
+                    calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
+                    LLLEEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_k );
+                    saved_rho_temp.clear();
+                    // LLELEL
+                    temp = state_at_t3.mat * op_k;
+                    calculate_runge_kutta( temp, state_at_t3.t, end_of_sixth_bin, timer, progressbar, purpose, s, saved_rho_temp, false );
+                    LLELEL_cache.get( cache_index[t2][t3] ) = s.dgl_expectationvalue<MatrixMain>( saved_rho_temp.back().mat, op_l );
+                    saved_rho_temp.clear();
+                }
+                saved_rho.clear();
             }
-            saved_rho.clear();
             // Calculate __ a^+ for t2+T
             outer = saved_rho_inner.at( t2 ).mat * op_j;
             calculate_runge_kutta( outer, saved_rho_inner.at( t2 ).t, saved_rho_inner.at( t2pT ).t, timer, progressbar, purpose, s, saved_rho, false );
@@ -478,6 +484,9 @@ void QDACC::Numerics::ODESolver::calculate_timebin_g3_correlations( System &s, c
         }
         saved_rho_inner.clear();
         Timers::outputProgress( timer, progressbar, 4 * mat_t_index + 1, 4 * index_range, purpose );
+
+        // For the generator expressions, we don't need to calculate the remaining correlations
+        if ( deph > 0 ) continue;
 
         // ELLLLL EEEEEL EELEEL EEELEL EEELLL ELELLL ELLELL EELLEL EEEELL ELEELL & ELEEEL ELELEL ELLLEL ELLEEL & EELLLL EELELL
         // ===================================================================================================================
