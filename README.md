@@ -248,19 +248,19 @@ where `INITIALSTATE` can be multiple of the following, chained by using the chai
 
 Examples:
 
-    --R '|B|0h|0v>'
+    --R ':B:0h:0v;'
 
 Initial state is a fully occupied Biexciton with no phonons in either resonator.
 
-    --R '0.5|X>-0.5i|G>'
+    --R ':0.5:X;-0.5i:G;'
 
 Initial state is a superposition of the Exciton and Groundstate. The result will be a pure state.
 
-    --R |G|coherent(2)h>
+    --R :G:coherent(2)h;
 
 Initial state is the electronic groundstate with a coherent state in resonator h with `alpha = 2`.
 
-    --R |G|squeezed(0.1,0.5)h>
+    --R :G:squeezed(0.1,0.5)h;
 
 Initial state is the electronic groundstate with a squeezed state in resonator h with `r = 0.1` and `Phi = 0.5`.
 
@@ -306,7 +306,7 @@ and supports the Units of Time. If `END` is set to `-1`, the temporal dynamics a
 
     --groundstate [DM_INDEX]
 
-where the default value for `DM_INDEX` is `0`.
+where the default value for `DM_INDEX` is `0`. The ground state index can be passed using the same syntax as for the initial state.
 
 If only a single parameter is to be changed, the following parameters can be used:
 
