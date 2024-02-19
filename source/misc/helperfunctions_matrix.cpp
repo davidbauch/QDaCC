@@ -13,7 +13,8 @@ QDACC::Type::Dense QDACC::Matrix::dense_projector( const QDACC::Type::Dense &inp
     QDACC::Type::Dense ret = QDACC::Type::Dense::Zero( input.rows(), input.cols() );
     for ( int i = 0; i < ret.rows(); i++ ) {
         for ( int j = 0; j < ret.cols(); j++ ) {
-            ret( i, j ) = 1.0;
+            if (input.coeff(i, j) != 0.0)
+                ret( i, j ) = 1.0;
         }
     }
     // Generate new Matrix from triplet list

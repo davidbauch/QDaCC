@@ -180,7 +180,7 @@ class ODESolver {
      * @brief Calculates a single Path Integral Propagator
      *
      */
-    MatrixMain calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<QDACC::SaveState> &output, const MatrixMain &one );
+    MatrixMain calculate_propagator_single( System &s, size_t tensor_dim, double t0, double t_step, int i, int j, std::vector<QDACC::SaveState> &output );
 
     /**
      * @brief Calculates the Path Integral Propagator for all index combinations. This function also saves the resuling propagators and returns a reference to the cached object.
@@ -267,8 +267,14 @@ class ODESolver {
     template <typename T>
     std::vector<T> &add_to_output( const std::string &name, std::string key, const std::vector<T> &value, t_output_type<T> &where, bool overwrite = false ) {
         int count;
-        if ( not overwrite and where.contains( name ) and ( count = where[name].count( key ) ) > 0 ) {
-            key += "_" + std::to_string( count );
+        if ( not overwrite and where.contains( name ) ) {
+            auto new_key = key;
+            while ( where[name].contains( new_key ) ) {
+                new_key += "_" + std::to_string( count );
+                count++;
+            }
+            key = new_key;
+            Log::L2( "[Solver] Key {} already exists in output. Appending with count {}.\n", key, count );
         }
         where[name][key] = value;
         return where[name][key];

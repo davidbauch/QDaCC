@@ -18,10 +18,8 @@ MatrixMain &System::dgl_phonons_greenf_matrix( double tau, const char mode ) {
             return operatorMatrices.pme_greenfunction_matrix_cache_g[tau];
         return operatorMatrices.pme_greenfunction_matrix_cache_u[tau];
     } else {
-        MatrixMain zero( operatorMatrices.polaron_phonon_coupling_matrix.rows(), operatorMatrices.polaron_phonon_coupling_matrix.cols() );
-        zero.setZero();
-        operatorMatrices.pme_greenfunction_matrix_cache_g[tau] = zero;
-        operatorMatrices.pme_greenfunction_matrix_cache_u[tau] = zero;
+        operatorMatrices.pme_greenfunction_matrix_cache_g[tau] = operatorMatrices.zero;
+        operatorMatrices.pme_greenfunction_matrix_cache_u[tau] = operatorMatrices.zero;
     }
     if ( not phi_vector.contains( tau ) ) {
         phi_vector[tau] = dgl_phonons_phi( tau ); // std::cout << "Time " << t << " is not in phi vecotr\n";

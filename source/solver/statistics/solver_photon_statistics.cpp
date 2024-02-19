@@ -163,6 +163,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
     // Calculate Time Bin Coherences
     auto &all_timbinfuncs = s.parameters.input_correlation["GFuncTimeBins"];
     Log::L2( "[PhotonStatistics] Calculating G2/3 Time Bin coherences...\n" );
+    std::map<std::string, int> mode_output;
     for ( auto &gs_s : all_timbinfuncs ) {
         for ( size_t i = 0; i < gs_s.string_v["Modes"].size(); i++ ) {
             std::string purpose;
@@ -187,6 +188,14 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                     Log::Warning( "[PhotonStatistics] G^({}) function order not implemented!\n", order );
                     continue;
             }
+
+            // We count the number of times a specific purpose has been output. TODO: move this into a function so 
+            // The other correlation functions can use it too.
+            //if (not mode_output.contains(purpose))
+            //    mode_output[purpose] = 0;
+            //else
+            //    mode_output[purpose]++;
+            
             std::vector<std::string> output_modes = { "EEEE", "EEEL", "EELE", "EELL", "ELEE", "ELEL", "ELLE", "ELLL", "LEEE", "LEEL", "LELE", "LELL", "LLEE", "LLEL", "LLLE", "LLLL" };
             if ( order == 3 )
                 output_modes = {
@@ -195,7 +204,7 @@ bool QDACC::Numerics::ODESolver::calculate_advanced_photon_statistics( System &s
                     "LLEEEE", "LLEEEL", "LLEELE", "LLEELL", "LLELLE", "LLELEE", "LLELEL", "LLELLL", "LEEEEE", "LEEEEL", "LEEELE", "LEEELL", "LEELLE", "LEELEE", "LEELEL", "LEELLL",
                     "LELEEE", "LELEEL", "LELELE", "LELELL", "LELLLE", "LELLEE", "LELLEL", "LELLLL", "LLLEEE", "LLLEEL", "LLLELE", "LLLELL", "LLLLLE", "LLLLEE", "LLLLEL", "LLLLLL",
                 };
-#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
+//#pragma omp parallel for schedule( dynamic ) num_threads( s.parameters.numerics_maximum_primary_threads )
             for ( const auto &mode : output_modes ) {
                 const auto inner_purpose = purpose + "_" + mode;
                 auto &gmat = cache[inner_purpose];

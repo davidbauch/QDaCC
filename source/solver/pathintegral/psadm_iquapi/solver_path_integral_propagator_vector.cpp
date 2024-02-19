@@ -5,17 +5,15 @@ std::vector<std::vector<MatrixMain>> &QDACC::Numerics::ODESolver::calculate_prop
     if ( pathint_propagator.contains( t0 ) ) {
         return pathint_propagator[t0];
     }
-    MatrixMain one( tensor_dim, tensor_dim );
-    one.setIdentity();
-    std::vector<std::vector<MatrixMain>> ret( tensor_dim, { tensor_dim, MatrixMain( tensor_dim, tensor_dim ) } );
+    std::vector<std::vector<MatrixMain>> ret( tensor_dim, { tensor_dim, s.operatorMatrices.zero } );
     // Calculate first by hand to ensure the Hamilton gets calculated correclty
-    ret[0][0] = calculate_propagator_single( s, tensor_dim, t0, t_step, 0, 0, output, one ); // pathint_propagator[-1][0][0] );
+    ret[0][0] = calculate_propagator_single( s, tensor_dim, t0, t_step, 0, 0, output ); // pathint_propagator[-1][0][0] );
 // Calculate the remaining propagators
 #pragma omp parallel for collapse( 2 ) num_threads( s.parameters.numerics_maximum_secondary_threads )
     for ( int i = 0; i < tensor_dim; i++ ) {
         for ( int j = 0; j < tensor_dim; j++ ) { // <= i
             if ( i == 0 && j == 0 ) continue;
-            ret[i][j] = calculate_propagator_single( s, tensor_dim, t0, t_step, i, j, output, one ); // pathint_propagator[-1][i][j] );
+            ret[i][j] = calculate_propagator_single( s, tensor_dim, t0, t_step, i, j, output ); // pathint_propagator[-1][i][j] );
         }
     }
     // Only save propagator vector if correlation functions are calculated.
