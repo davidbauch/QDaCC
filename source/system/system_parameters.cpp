@@ -146,7 +146,7 @@ void Parameters::pre_adjust_input() {
         mat.property_set["Amplitude"] = QDACC::Misc::convertParam<Parameter>( mat.string_v["Amplitude"] );
         // Set all optional parameters to default
         mat.property_set["ChirpRate"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
-        mat.property_set["GaussAmp"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 2.0 );
+        mat.property_set["GaussAmp"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 1.0 );
         mat.property_set["SUPERDelta"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
         mat.property_set["SUPERFreq"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );
         mat.property_set["CutoffDelta"] = std::vector<Parameter>( mat.string_v["Amplitude"].size(), 0.0 );

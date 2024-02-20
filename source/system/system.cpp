@@ -94,19 +94,17 @@ bool System::init_system() {
         }
     }
     if ( parameters.p_omega_pure_dephasing != 0.0 ) {
-        //for ( const auto &[name_a, data_a] : operatorMatrices.el_states ) {
-        //    for ( const auto &[name_b, data_b] : operatorMatrices.el_states ) { // TODO: dephasing über el transitions machen.
-        //        if ( name_a == name_b ) continue;                               // Not the right operator
-        //        if ( parameters.input_electronic[name_b].property["DephasingScaling"] * parameters.input_electronic[name_a].property["DephasingScaling"] == 0.0 ) continue;
-        for ( const auto &[transition, data] : operatorMatrices.el_transitions ) {
-            if ( data.direction == 1 ) continue; // Not the right operator
-            const std::string &name_a = data.to;
-            const std::string &name_b = data.from;
-            Log::L2( "[System] Precalculating pure dephasing for states {} and {}\n", name_a, name_b );
-            cache_dephasing_left.emplace_back( -0.5 * parameters.input_electronic[name_b].property["DephasingScaling"] * parameters.input_electronic[name_a].property["DephasingScaling"] * parameters.p_omega_pure_dephasing *
-                                                operatorMatrices.el_states[name_a].hilbert );
-            cache_dephasing_right.emplace_back( operatorMatrices.el_states[name_b].hilbert );
-            //-= 0.5 * parameters.input_electronic[name_b].property["DephasingScaling"] * parameters.input_electronic[name_a].property["DephasingScaling"] * parameters.p_omega_pure_dephasing * data_a.hilbert * rho * data_b.hilbert;
+        for ( const auto &[name_a, data_a] : operatorMatrices.el_states ) {
+            cache_dephasing_left.emplace_back( -0.5 * parameters.input_electronic[name_a].property["DephasingScaling"] * parameters.p_omega_pure_dephasing * operatorMatrices.el_states[name_a].hilbert );
+            MatrixMain right_side = operatorMatrices.zero;
+            for ( const auto &[name_b, data_b] : operatorMatrices.el_states ) { // TODO: dephasing über el transitions machen.
+                if ( name_a == name_b ) continue;                               // Not the right operator
+                if ( parameters.input_electronic[name_b].property["DephasingScaling"] * parameters.input_electronic[name_a].property["DephasingScaling"] == 0.0 ) continue;
+                Log::L2( "[System] Precalculating pure dephasing for states {} and {}\n", name_a, name_b );
+                right_side += parameters.input_electronic[name_b].property["DephasingScaling"] * operatorMatrices.el_states[name_b].hilbert;
+                //-= 0.5 * parameters.input_electronic[name_b].property["DephasingScaling"] * parameters.input_electronic[name_a].property["DephasingScaling"] * parameters.p_omega_pure_dephasing * data_a.hilbert * rho * data_b.hilbert;
+            }
+            cache_dephasing_right.emplace_back( right_side );
         }
     }
     Log::L2( "[System] Added {} matrices to the cavity decay Lindbladian\n", cache_cav_decay_left.size() );
@@ -116,7 +114,6 @@ bool System::init_system() {
 }
 
 MatrixMain System::dgl_runge_function( const MatrixMain &rho, const MatrixMain &H, const double t, std::vector<QDACC::SaveState> &past_rhos ) {
-
     MatrixMain ret = -1.0i * dgl_kommutator( H, rho );
 
     // Photon Loss
@@ -144,7 +141,6 @@ MatrixMain System::dgl_runge_function( const MatrixMain &rho, const MatrixMain &
     }
     return ret;
 }
-
 
 MatrixMain System::dgl_timetrafo( MatrixMain ret, const double t ) {
     if ( not parameters.numerics_use_interactionpicture ) return ret;
@@ -192,9 +188,7 @@ MatrixMain System::dgl_pulse( const double t ) {
     return ret;
 }
 
-MatrixMain System::dgl_get_hamilton( const double t ) {
-    return dgl_timetrafo( operatorMatrices.H_used + dgl_pulse( t ) + dgl_chirp( t ), t );
-}
+MatrixMain System::dgl_get_hamilton( const double t ) { return dgl_timetrafo( operatorMatrices.H_used + dgl_pulse( t ) + dgl_chirp( t ), t ); }
 
 void System::calculate_expectation_values( const std::vector<QDACC::SaveState> &rhos, Timer &evalTimer ) {
     // Output expectation Values
