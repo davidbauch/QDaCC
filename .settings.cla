@@ -135,7 +135,7 @@ CLA_ARGUMENT = {
 		subkey = 'GR'
 		value = ''
 		datatype = 'string'
-		description = 'Raman Population. Syntax: [ElectronicMode1:ElectronicMode2:OpticalMode:PulseMode]'
+		description = '[NOT IMPLEMENTED] Raman Population. Syntax: [ElectronicMode1:ElectronicMode2:OpticalMode:PulseMode]'
 	}
 	CLA_PARAMETER = {
 		subkey = 'grid'
@@ -148,6 +148,24 @@ CLA_ARGUMENT = {
 		value = '-1'
 		datatype = 'int'
 		description = 'Positive Integer. Resolution for tau-calculation. If set to -1, the full grid will be used instead. Can be overwritten by --grid.'
+	}
+}
+CLA_ARGUMENT = {
+	type = '2hyphen'
+	key = 'gridoffset'
+	description = 'Time Offset for the correlation grids. Grids are calculated from start:end, usually 0 and t_max.'
+	group = 'Systemparameter'
+	CLA_PARAMETER = {
+		subkey = 'gridstart'
+		value = '0'
+		datatype = 'double'
+		description = 'Start of time grids in timeunits.'
+	}
+	CLA_PARAMETER = {
+		subkey = 'gridend'
+		value = '1'
+		datatype = 'double'
+		description = 'End of time grids in timeunits.'
 	}
 }
 CLA_ARGUMENT = {

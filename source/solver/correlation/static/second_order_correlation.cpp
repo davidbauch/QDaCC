@@ -10,7 +10,11 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
     Log::L2( "[CorrelationFunction] Iterated Operators are op_i = {} and op_l = {}\n", s_op_i, s_op_l );
 
     // Matrix Dimension
-    const size_t matdim = s.parameters.grid_values.size(); // int( savedStates.size() / s.parameters.iterations_t_skip );
+    const size_t grid_start = std::lower_bound(savedStates.begin(), savedStates.end(), s.parameters.correlation_t_start, [](const SaveState &a, double b) { return a.t < b; }) - savedStates.begin();
+    const size_t grid_end = std::min<size_t>(savedStates.size()-1, std::lower_bound(savedStates.begin(), savedStates.end(), s.parameters.correlation_t_end, [](const SaveState &a, double b) { return a.t < b; }) - savedStates.begin());
+    Log::L2( "[CorrelationFunction] Calculating G2 Function from t_index = {} to {}.\n", grid_start, grid_end );
+    const size_t matdim = std::min<size_t>(s.parameters.grid_values.size(), grid_end-grid_start);
+    const double grid_t_end = savedStates.at(grid_end).t;
 
     // Generator super-purpose
     std::string super_purpose = std::accumulate( std::next( purposes.begin() ), purposes.end(), purposes.front(), []( const std::string &a, const std::string &b ) { return a + " and " + b; } );
@@ -47,7 +51,7 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
     Log::L2( "[CorrelationFunction] Calculating G(tau)... purpose: {}, saving to matrix of size {}x{},  iterating over {} saved states...\n", super_purpose, matdim, matdim, std::min<size_t>( matdim, savedStates.size() ) );
     // Main G2 Loop
 #pragma omp parallel for schedule( dynamic ) shared( timer ) num_threads( s.parameters.numerics_maximum_primary_threads )
-    for ( size_t t = 0; t < std::min<size_t>( matdim, savedStates.size() ); t++ ) {
+    for ( size_t t = grid_start; t < std::min<size_t>( matdim, savedStates.size() ); t++ ) {
         const auto& current_state = savedStates.at( t );
         // Create and reserve past rho's vector
         std::vector<QDACC::SaveState> savedRhos; 
@@ -57,12 +61,12 @@ void QDACC::Numerics::ODESolver::calculate_g2( System &s, const std::string &s_o
         MatrixMain rho_tau = s.dgl_calc_rhotau(current_state.mat,op_l ,op_i, t_t);
         // Calculate Runge Kutta or PI
         if ( s.parameters.numerics_phonon_approximation_order == QDACC::PhononApproximation::PathIntegral ) {
-            calculate_path_integral_correlation( rho_tau, t_t, s.parameters.t_end, timer, s, savedRhos, op_l, op_i, 1 /*ADM Cores*/ );
+            calculate_path_integral_correlation( rho_tau, t_t, grid_t_end, timer, s, savedRhos, op_l, op_i, 1 /*ADM Cores*/ );
         } else {
-            calculate_runge_kutta( rho_tau, t_t, s.parameters.t_end, timer, progressbar, super_purpose, s, savedRhos, false /*Output*/ );
+            calculate_runge_kutta( rho_tau, t_t, grid_t_end, timer, progressbar, super_purpose, s, savedRhos, false /*Output*/ );
         }
         // Interpolate saved states to equidistant timestep
-        savedRhos = Numerics::interpolate_curve( savedRhos, t_t, s.parameters.t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
+        savedRhos = Numerics::interpolate_curve( savedRhos, t_t, grid_t_end, s.parameters.grid_values, s.parameters.grid_steps, s.parameters.grid_value_indices, false, s.parameters.numerics_interpolate_method_tau );
         for ( const auto &[eval, purpose] : eval_operators ) {
             auto &gmat = cache[purpose];
             for ( size_t tau = 0; tau < savedRhos.size(); tau++ ) {

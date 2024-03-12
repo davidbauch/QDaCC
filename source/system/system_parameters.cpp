@@ -64,6 +64,8 @@ void Parameters::parse_input( const std::vector<std::string> &arguments ) {
     p_initial_state_s = QDACC::CommandlineArguments::get_parameter( "--R" );
 
     grid_resolution = QDACC::CommandlineArguments::get_parameter<int>( "--G", "gridres" );
+    correlation_t_start = QDACC::CommandlineArguments::get_parameter<double>( "--gridoffset", "gridstart" );
+    correlation_t_end = QDACC::CommandlineArguments::get_parameter<double>( "--gridoffset", "gridend" );
     numerics_use_interactionpicture = not QDACC::CommandlineArguments::get_parameter_passed( "-noInteractionpic" );
     numerics_use_rwa = not QDACC::CommandlineArguments::get_parameter_passed( "-noRWA" );
     numerics_maximum_primary_threads = QDACC::CommandlineArguments::get_parameter<int>( "--Threads" );

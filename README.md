@@ -17,6 +17,19 @@ Published Work using QDaCC:
 
 There is a GUI available at [gitub/QDaCC-GUI](https://github.com/davidbauch/QDaCC-Tools/)
 
+# Building QDaCC
+QDaCC is build using a simple makefile.
+
+Build using `Dense` matrices
+
+    make clean
+    make -j10 UFLAG="-DLOG_DISABLE_L3 VERSION=dense"
+
+Build using `Sparse` matrices
+
+    make clean
+    make -j10 UFLAG="-DLOG_DISABLE_L3 VERSION=sparse -DUSE_SPARSE_MATRIX"
+
 # What does it do?
 
 This program solves the von-Neumann Equation

@@ -135,6 +135,7 @@ class Parameters {
 
     // Time variables
     Parameter t_start, t_end, t_step, t_step_pathint;
+    Parameter correlation_t_start, correlation_t_end;
     double numerics_subiterator_stepsize; // = 1E-12;
 
     // System Dimensions
