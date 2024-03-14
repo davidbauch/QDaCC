@@ -35,7 +35,7 @@ Build using `Sparse` matrices
     make clean
     make -j10 UFLAG="-DLOG_DISABLE_L3 VERSION=sparse -DUSE_SPARSE_MATRIX"
 
-Note: The `LOG_DISABLE_L3` flag is subject to change and will most likely be the default value in the code. L3 log will then require to be enabled instead of disable.
+Note: The `LOG_DISABLE_L3` flag is subject to change and will most likely be the default value in the code. L3 log will then require to be enabled instead of disabled.
 
 # What does it do?
 
