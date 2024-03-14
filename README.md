@@ -14,6 +14,11 @@ Published Work using QDaCC:
 
 [![AQT](https://img.shields.io/badge/AQT-10.1002/qute.202300142-b31b1b.svg)](https://onlinelibrary.wiley.com/doi/10.1002/qute.202300142) [![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1002/qute.202300142)](https://scholar.google.de/scholar?cites=7707864479180431104&as_sdt=2005&sciodt=0,5&hl=de)
 
+["Time-bin entanglement in the deterministic generation of linear photonic cluster states"](https://arxiv.org/abs/2403.08527)
+
+[![arXiv](https://img.shields.io/badge/arXiv-2403.08527-b31b1b.svg)](https://arxiv.org/abs/2403.08527) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10809129.svg)](https://doi.org/10.5281/zenodo.10809129) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.48550/arXiv.2403.08527)](tbd)
+
+
 
 There is a GUI available at [gitub/QDaCC-GUI](https://github.com/davidbauch/QDaCC-Tools/)
 
@@ -29,6 +34,8 @@ Build using `Sparse` matrices
 
     make clean
     make -j10 UFLAG="-DLOG_DISABLE_L3 VERSION=sparse -DUSE_SPARSE_MATRIX"
+
+Note: The `LOG_DISABLE_L3` flag is subject to change and will most likely be the default value in the code. L3 log will then require to be enabled instead of disable.
 
 # What does it do?
 
