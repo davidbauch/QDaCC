@@ -245,10 +245,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     // Create a cache Vector for the cavity pulses to allow for the phonon scaling to still apply, meaning the cavity pulse matrices will be added after the phonon scaling was applied:
     std::vector<QDACC::Type::MatrixMain> pulse_mat_cavity_cache;
     for ( auto &pulse : p.input_pulse ) {
-        MatrixMain pulsemat = MatrixMain( base.size(), base.size() );
-        MatrixMain pulsemat_star = MatrixMain( base.size(), base.size() );
-        pulsemat.setZero();
-        pulsemat_star.setZero();
+        MatrixMain pulsemat = zero;
+        MatrixMain pulsemat_star = zero;
         pulse_mat_cavity_cache.emplace_back( pulsemat );
         pulse_mat_cavity_cache.emplace_back( pulsemat_star );
         for ( int i = 0; i < pulse.second.string_v["CoupledTo"].size(); i++ ) {
@@ -320,10 +318,8 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     Log::L2( "[System-OperatorMatrices] Creating Chirp Cache Matrices...\n" );
     // 1 matrix is generated per chirp
     for ( auto &chirp : p.input_chirp ) {
-        auto chirpmat = MatrixMain( base.size(), base.size() );
-        auto chirpmat_star = MatrixMain( base.size(), base.size() );
-        chirpmat.setZero();
-        chirpmat_star.setZero();
+        auto chirpmat = zero;
+        auto chirpmat_star = zero;
         for ( int i = 0; i < chirp.second.string_v["CoupledTo"].size(); i++ ) {
             std::string state = chirp.second.string_v["CoupledTo"][i];
             chirpmat += chirp.second.get( "AmpFactor", i ) * el_states[state].hilbert; // TODO: chirp cavity similar to pulse
@@ -344,12 +340,10 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         Log::L2( "[System-OperatorMatrices] Setting Groundstate index to {}\n", p.numerics_groundstate );
     }
 
-    H_0 = MatrixMain( p.maxStates, p.maxStates );
-    H_I = MatrixMain( p.maxStates, p.maxStates );
-    H_used = MatrixMain( p.maxStates, p.maxStates );
-    H_used.setZero();
-    rho = MatrixMain( p.maxStates, p.maxStates );
-    rho.setZero();
+    H_0 = zero;
+    H_I = zero;
+    H_used = zero;
+    rho = zero;
 
     // Analytical Time Trafo Matrix
     // TODO: Puls mit in trafo? Trafohamilton dann H_el + H_phot + H_pulse
@@ -394,7 +388,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
 
     Log::L2( "[System-OperatorMatrices] Creating Polaron Cache Matrices...\n" );
     // Precalculate Polaron Matrices.
-    polaron_factors.emplace_back( base.size(), base.size() );
+    polaron_factors.emplace_back( zero );
     // Transition is always |0><1| (annihilator), hence reversed is |1><0| (creator)
     for ( auto &[mode, param] : p.input_photonic ) { // TODO: das hier auf input matritzen ändern kekw.
         int i = 0;
@@ -417,7 +411,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     Log::L2( "[System-OperatorMatrices] Creating Custom Exp Value Operators...\n" );
     for ( auto &str_mat : p.numerics_custom_expectation_values ) {
         auto elements = QDACC::String::split( str_mat, ":" );
-        numerics_custom_expectation_values_operators.emplace_back( base.size(), base.size() );
+        numerics_custom_expectation_values_operators.emplace_back( zero );
         for ( auto &element : elements ) {
             auto element_split = QDACC::String::split( element, "," );
             const auto i = std::stoi( element_split[0] );
@@ -429,8 +423,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
 
     Log::L2( "[System-OperatorMatrices] Creating Hamiltonoperator...\n" );
     // Generate Self Action Hamilton H_0:
-    H_0 = MatrixMain( base.size(), base.size() );
-    H_0.setZero();
+    H_0 = zero;
     for ( const auto &[name, data] : el_states ) {
         double energy = p.input_electronic[name].get( "Energy" );
         H_0 += energy * data.hilbert;
@@ -440,8 +433,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
         H_0 += energy * data.hilbert;
     }
     // Generate Interaction Hamilton H_I:
-    H_I = MatrixMain( base.size(), base.size() );
-    H_I.setZero();
+    H_I = zero;
     MatrixMain H_I_a = H_I; // RWA Part
     MatrixMain H_I_b = H_I; // Non RWA Part
     for ( auto &[name, data] : p.input_photonic ) {
@@ -512,8 +504,7 @@ bool OperatorMatrices::generate_operators( Parameters &p ) {
     Log::L2( "[System-OperatorMatrices] Phonon Coupling Value Vector: {}\n", phonon_group_index_to_coupling_value );
 
     // Creating Phonon Coupling Matrix
-    polaron_phonon_coupling_matrix = MatrixMain( base.size(), base.size() );
-    polaron_phonon_coupling_matrix.setZero();
+    polaron_phonon_coupling_matrix = zero;
     for ( auto i = 0; i < polaron_phonon_coupling_matrix.rows(); i++ )
         for ( auto j = 0; j < polaron_phonon_coupling_matrix.cols(); j++ ) {
             Scalar coupling = phonon_group_index_to_coupling_value[phonon_hilbert_index_to_group_index[i]] * phonon_group_index_to_coupling_value[phonon_hilbert_index_to_group_index[j]];

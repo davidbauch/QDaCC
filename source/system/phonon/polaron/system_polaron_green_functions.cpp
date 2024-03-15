@@ -13,25 +13,27 @@ Scalar System::dgl_phonons_greenf( double tau, const char mode ) {
 }
 
 MatrixMain &System::dgl_phonons_greenf_matrix( double tau, const char mode ) {
+    // If the Greenfunction Matrix is already cached, return it.
     if ( operatorMatrices.pme_greenfunction_matrix_cache_g.contains( tau ) ) {
         if ( mode == 'g' )
             return operatorMatrices.pme_greenfunction_matrix_cache_g[tau];
         return operatorMatrices.pme_greenfunction_matrix_cache_u[tau];
     } else {
+        // Else, Initialize the cache with zero
         operatorMatrices.pme_greenfunction_matrix_cache_g[tau] = operatorMatrices.zero;
         operatorMatrices.pme_greenfunction_matrix_cache_u[tau] = operatorMatrices.zero;
     }
+    // If phi(tau) is not yet calculated, calculate it.
     if ( not phi_vector.contains( tau ) ) {
-        phi_vector[tau] = dgl_phonons_phi( tau ); // std::cout << "Time " << t << " is not in phi vecotr\n";
+        phi_vector[tau] = dgl_phonons_phi( tau );
     }
+
+    // Alias phi and the cache matrices.
     auto phi = phi_vector[tau];
     auto &g = operatorMatrices.pme_greenfunction_matrix_cache_g[tau];
     auto &u = operatorMatrices.pme_greenfunction_matrix_cache_u[tau];
-    //for ( int k = 0; k < operatorMatrices.polaron_phonon_coupling_matrix.outerSize(); ++k ) {
-    //    for ( Sparse::InnerIterator it( operatorMatrices.polaron_phonon_coupling_matrix, k ); it; ++it ) {
-    //        auto row = it.row();
-    //        auto col = it.col();
-    //        auto val = it.value();
+
+    // Calculate the Greenfunction Matrix
     for( int row = 0; row < operatorMatrices.polaron_phonon_coupling_matrix.rows(); row++ ) {
         for( int col = 0; col < operatorMatrices.polaron_phonon_coupling_matrix.cols(); col++ ) {
             auto val = operatorMatrices.polaron_phonon_coupling_matrix.coeff( row, col );
