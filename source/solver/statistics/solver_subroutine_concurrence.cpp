@@ -15,7 +15,7 @@
  *
  * @return Dense
  */
-static Dense _generate_spinflip() {
+Dense _generate_spinflip() {
     Dense spinflip = Dense::Zero( 4, 4 );
     spinflip << 0, 0, 0, -1,
         0, 0, 1, 0,
@@ -108,12 +108,12 @@ bool QDACC::Numerics::ODESolver::calculate_concurrence( System &s, const std::st
     // Get the TPM References
     auto &twophotonmatrix = to_output_m["TwoPMat"][fout];
     auto &twophotonmatrix_g2zero = to_output_m["TwoPMat"][fout + "_g2zero"];
-
     // Generate spinflip matrix
     const Dense spinflip = _generate_spinflip();
 
     const int fidelity_method = method == "wootters" ? 0 : 1; // 0 Wootters, 1 Seidelmann
     Log::L2( "[Concurrence] Using {} method.\n", fidelity_method == 0 ? "Wootters" : "Seidelmann" );
+
     // Calculate two-photon densitymatrices and calculate concurrence
 #pragma omp parallel for schedule( dynamic ) shared( timer_c ) num_threads( s.parameters.numerics_maximum_primary_threads )
     for ( size_t k = 0; k < maximum_time; k++ ) {

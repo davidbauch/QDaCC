@@ -462,9 +462,8 @@ void Parameters::parse_system() {
         universal_config conf_s;
         conf_s.string_v["Modes"] = QDACC::String::splitline( conf[0], ',' ); // Modes to calculate Concurrence for
         conf_s.string_v["Order"] = conf.size() > 1 ? QDACC::String::splitline( conf[1], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "full" );
-        if ( conf.size() > 2 ) {
-            conf_s.string_v["Method"] = conf.size() > 2 ? QDACC::String::splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "wootters" ); // Can be "wooters" or "seidelmann"
-        }
+        conf_s.string_v["Method"] = conf.size() > 2 ? QDACC::String::splitline( conf[2], ',' ) : std::vector<std::string>( conf_s.string_v["Modes"].size(), "wootters" ); // Can be "wooters" or "seidelmann"
+        
         if ( conf.size() > 3 ) {
             // Experimental: Calculate spectrum for all matrix entries. Also outputs the non-normalized matrices
             conf_s.property_set["Center"] = QDACC::Misc::convertParam<Parameter>( QDACC::String::splitline( conf[1], ',' ) ); // Center
