@@ -2,7 +2,7 @@
 
 I created this program throughout my Bachelor's, Master's and my time as an ongoing PHD Student at the University of Paderborn.
 
-[![DOI](https://zenodo.org/badge/190289483.svg)](https://zenodo.org/badge/latestdoi/190289483) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/davidbauch)
+[![DOI](https://zenodo.org/badge/190289483.svg)](https://zenodo.org/badge/latestdoi/190289483) [![Maintenance](https://img.shields.io/badge/Maintained%3F-no-red.svg)](https://github.com/davidbauch)
 
 Published Work using QDaCC:
 
