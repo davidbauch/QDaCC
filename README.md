@@ -2,7 +2,7 @@
 
 I created this program throughout my Bachelor's, Master's and my time as an ongoing PHD Student at the University of Paderborn.
 
-[![DOI](https://zenodo.org/badge/190289483.svg)](https://zenodo.org/badge/latestdoi/190289483) [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/davidbauch)
+[![DOI](https://zenodo.org/badge/190289483.svg)](https://zenodo.org/badge/latestdoi/190289483) [![Maintenance](https://img.shields.io/badge/Maintained%3F-no-red.svg)](https://github.com/davidbauch)
 
 Published Work using QDaCC:
 
@@ -41,20 +41,32 @@ Note: The `LOG_DISABLE_L3` flag is subject to change and will most likely be the
 
 This program solves the von-Neumann Equation
 
-<img src="doc/von_neumann_equation.svg"  height="60px">
+$$
+\begin{align}
+\frac{d}{dt}\rho(t) = -\frac{i}{\hbar}[\mathcal{H}(t),\rho(t)]
+\end{align}
+$$
 
 for a given fermionic (electronic) system coupled to a (or multiple) bosonic optical resonator including multiple sources of Loss and Electron-Phonon coupling.
 
 The Hamilton Operator for the electronic and optical states reads
 
-<img src="doc/hamilton_operator.svg"  height="77px">
+$$
+\begin{align}
+\mathcal{H}_0 = \sum_{i\in\text{States}}E_i|i\rangle\langle i| + \sum_{c\in\text{Cavities}}E_c\hat{b}^\dagger\hat{b}
+\end{align}
+$$
 
 and is treated by an Interaction picture Transformation.
 The Interaction Hamilton is given by
 
-<img src="doc/hamilton_interaction.svg"  height="77px">
+$$
+\begin{align}
+\mathcal{H}_1 = \sum_{i\neq j, c} |i\rangle\langle j| \left[g_{ij,c}(\hat{b}^\dagger + \hat{b}) + \Omega_{ij}(t) \right] + \text{H.c.}
+\end{align}
+$$
 
-where the transitions `|i><j|` are either coupled to the optical resonator `c` and/or to an external driving field `p`.
+where the transitions $|i\rangle\langle j|$ are either coupled to the optical resonator $c$ with rate $g_{ij,c}$ and/or to an external driving field $\Omega_{ij}$.
 
 # Features
 
@@ -81,15 +93,15 @@ Units of Energy:
 
 - `Hz` - Hertz, may be omitted, meaning the default unit for energy is `Hz`
 - `eV` - Electron Volt
-- `meV` - Milli Electron Volt `= 1E-3eV`
-- `mueV` - Micro Electron Volt `= 1E-6eV`
+- `meV` - Milli Electron Volt $= 1e^{-3}$ eV
+- `mueV` - Micro Electron Volt $= 1e^{-6}$ eV
 
 Units of Time:
 
 - `s` - Seconds, may be omitted, meaning the default value for time is `s`
-- `ns` - Nanoseconds `= 1E-9s`
-- `ps` - Picoseconds `= 1E-12s`
-- `fs` - Femtoseconds `= 1E-15s`
+- `ns` - Nanoseconds $= 1e^{-9}$ s
+- `ps` - Picoseconds $= 1e^{-12}$ s
+- `fs` - Femtoseconds $= 1e^{-15}$ s
 
 Misc Units:
 
@@ -360,7 +372,11 @@ Where `TEMP` is any value greater than or equal to zero. For values smaller than
 
 The spectral properties of the phonons are defined by
 
-<img src="doc/phonon_spectral_density.svg"  height="83px">.
+$$
+\begin{align}
+\mathcal{J}(\omega)=\frac{\omega^N}{4\pi^2\rho_\text{Material}\hbar c_s^5}\left(D_ee^{-\frac{\omega^2a_e^2}{4c_s^2}} - D_he^{-\frac{\omega^2a_h^2}{4c_s^2}}\right) \approx \alpha_p\omega^Ne^{-\frac{\omega^2}{2\omega_b^2}}
+\end{align}
+$$
 
 While the specific spectral shape varies slightly for electrons (`e`) and holes (`h`), the algorithm used in this program assumes a unified distribution combining both electron and hole parameters into two settings:
 
@@ -382,11 +398,12 @@ The Markov Approximation (`rho(t)=rho(t+tau)`) used by the Polaron Approach can 
 
     -noMarkov
 
-When a temperature greater or qual than zero is provided, the Radiative Decay and Pure Dephasing are scaled by the temperature to <img src="doc/phonon_gamma_rad_dep.svg"  height="30px"> and
-<img src="doc/phonon_gamma_pure_dep.svg"  height="30px">.
-Note that while the Radiative Decay only gets scaled by the averaged Phonon Contributions `<B>`, the Pure Dephasing becomes a per-Kelvin unit. This scaling can be disabled entirely by providing the flag
+When a temperature greater or qual than zero is provided, the Radiative Decay and Pure Dephasing are scaled by the temperature to $\gamma_\text{Rad}(T)=\langle\mathcal{B}\rangle^2(T)\cdot\gamma_\text{Rad}(0)$ and $\gamma_\text{Pure}(T)=T\cdot 1\mu\text{eV}$.
+Note that while the Radiative Decay only gets scaled by the averaged Phonon Contributions $\langle\mathcal{B}\rangle(T)$, the Pure Dephasing becomes a per-Kelvin unit. This scaling can be disabled entirely by providing
 
-    -noPhononAdjust
+    --phononAdjust 0 0 1
+
+where the arguments scale the radiative decay rate, the pure dephasing and any other scaling with $\langle\mathcal{B}\rangle(T)$, respectively. If any of these values is non-zero, the corresponding rate is scaled accordingly.
 
 ### Phonon Order
 
@@ -428,11 +445,19 @@ Two different types of correlation functions can be evaluated: `G1(t,tau)` and `
 
 The G1 function is calculated via
 
-<img src="doc/g1_corr_func.svg"  height="46px">.
+$$
+\begin{align}
+\mathcal{G}_{i,j}^{(1)}(t,\tau) = Tr\{\tilde{\rho}(t,\tau)\hat{b}^\dagger_j\} \text{~~~with~~~} \tilde{\rho}(t,0) = \hat{b}_i\rho(t) ~.
+\end{align}
+$$
 
 The G2 function is calculated via
 
-<img src="doc/g2_corr_func.svg"  height="46px">.
+$$
+\begin{align}
+\mathcal{G}_{i,j,k,l}^{(2)}(t,\tau) = Tr\{\tilde{\rho}(t,\tau)\hat{b}_j\hat{b}^\dagger_k\} \text{~~~with~~~} \tilde{\rho}(t,0) = \hat{b}^\dagger_l\rho(t)\hat{b}_i ~.
+\end{align}
+$$
 
 The general Syntax for both functions reads:
 
@@ -462,7 +487,11 @@ Calculating the G1 and G2 functions for the resonator mode `h`.
 
 The emission characteristics of any transition can be calculated by using the [Eberly-Wodkiewicz](https://www.osapublishing.org/josa/abstract.cfm?uri=josa-67-9-1252) Spectrum and is calculated via
 
-<img src="doc/ew_spectrum.svg"  height="86px">.
+$$
+\begin{align}
+\mathcal{S}_i(t_\text{max},\omega) = \Re\int_0^{t_\text{max}}\int_0^{t-t_\text{max}}\mathcal{G}^{(1)}_{i,i}(t,\tau)\text{d}\tau\text{dt}
+\end{align}
+$$
 
 If the neccessary `G1` function is not yet available, it will be calculated automatically. The fourier transformation is brute-forced for a set number of points. The general syntax for spectrum calculation reads:
 
@@ -491,16 +520,35 @@ Calculating the emission spectra for the resonator mode `h`, the radiative trans
 
 The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%E2%80%93Ou%E2%80%93Mandel_effect) is a figure of merit for the consistentcy and quality of a single photon source. The indistinguishability is calculated [via](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.98.045309)
 
-<img src="doc/indist_small.svg" height="35px">
-with
-<img src="doc/indist_full.svg" height="105px">
+$$
+\begin{align}
+\mathcal{J}_i(t_\text{max})=1-p_i
+\end{align}
+$$
+
+with the count of coincidences
+
+$$
+\begin{align}
+p_i =\frac{\int_0^{t_\text{max}}\int_0^{t-t_\text{max}} \mathcal{G}_\text{pop}(t,\tau) + \mathcal{G}^{(2)}_{i,i,i,i}(t,\tau)-|\mathcal{G}_{i,i}^{(1)}(t,\tau)|\text{d}\tau\text{dt}}{ \int_0^{t_\text{max}}\int_0^{t-t_\text{max}}2\mathcal{G}_\text{pop}(t,\tau) - |\langle\hat{b}_i(t+\tau)\rangle\langle\hat{b^\dagger_i(t)}\rangle|\text{d}\tau\text{dt} }
+\end{align}
+$$
+
 and 
 
-<img src="doc/indist_g_pop.svg" height="56px">.
+$$
+\begin{align}
+\mathcal{G}_\text{pop}(t,\tau) = \langle \hat{b}^\dagger_i\hat{b}_i \rangle(t)\langle \hat{b}^\dagger_i\hat{b}_i \rangle(t+\tau) ~.
+\end{align}
+$$
 
 The single photon visibility is a more simple figure of merit for the photon quality and is calculated [via](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.125.233605)
 
-<img src="doc/indist_vis.svg" height="110px">.
+$$
+\begin{align}
+p_i =\frac{2\int_0^{t_\text{max}}\int_0^{t-t_\text{max}} |\mathcal{G}_{i,i}^{(1)}(t,\tau)|\text{d}\tau\text{dt}}{\left( \int_0^{t_\text{max}}|\langle\hat{b}_i(t)\hat{b^\dagger_i(t)}\rangle|\text{dt}\right)^2 } ~.s
+\end{align}
+$$
 
 If any of the neccessary `G1` or `G2` correlation functions is not yet available, it will be automatically calculated. The general syntax reads:
 
@@ -526,23 +574,39 @@ Calculate both properties for the resonator mode `h`, the radiative transition `
 
 ## Two-Photon Concurrence - Measurement for the entanglement of two transitions
 
-The [Two-Photon Concurrence](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.80.2245) is calculated by reducing the densitymatrix from its total Hilbert Space onto a two photon densitymatrix. The elements of this densitymatrix are calculated using the `G2` correlation function. A single element is calculated by integrating `G2_ijkl`, where `i`,`j`,`k` and `l` are one of the two modes that the concurrence is evaluated for.
+The [Two-Photon Concurrence](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.80.2245) is calculated by reducing the densitymatrix from its total Hilbert Space onto a two photon densitymatrix. The elements of this densitymatrix are calculated using the `G2` correlation function. A single element is calculated by integrating $\mathcal{G}^{(2)}_{i,j,k,l}$, where `i`,`j`,`k` and `l` are one of the two modes `H,V` that the concurrence is evaluated for.
 
 The Two-Photon Matrix results in
 
-<img src="doc/two_photon_matrix.svg" height="156px">
+$$
+\begin{align} 
+    \rho_\text{TPM} = \left[\begin{array}{cccc} \textcolor{blue}{HHHH}&0&0&\textcolor{blue}{HH}\textcolor{green}{VV}\\ 0&\textcolor{red}{HVHV}&\textcolor{orange}{VH}\textcolor{red}{HV}&0\\ 0&\textcolor{red}{HV}\textcolor{orange}{VH}&\textcolor{orange}{VHVH}&0\\ \textcolor{green}{VV}\textcolor{blue}{HH}&0&0&\textcolor{green}{VVVV}\ \end{array}\right] ~.
+\end{align} 
+$$
 
 with matrix elements
 
-<img src="doc/two_photon_matrix_element.svg" height="90px">
+$$
+\begin{align}
+\rho_\text{TPM} =\int_0^{t_\text{max}}\int_0^{t-t_\text{max}} \mathcal{G}^{(2)}_{i,j,k,l}(t,\tau)\text{d}\tau\text{dt}
+\end{align}
+$$
 
-Because of symmetry of the operators, only 6 of the 8 `G2` functions have to be calculated. The concurrence is then evaluated by calculating the Eigenvalues of
+Because of symmetry of the operators, only 6 of the 8 `G2` functions have to be calculated. The concurrence is then evaluated by calculating the Eigenvalues $\lambda_i$ of
 
-<img src="doc/concurrence_R.svg" height="64px">
+$$
+\begin{align}
+R = \sqrt{ \sqrt{\rho_\text{TPM}} (\sigma_y\otimes\sigma_y)\rho_\text{TPM}^*(\sigma_y\otimes\sigma_y)\sqrt{\rho_\text{TPM}} } ~.
+\end{align}
+$$
 
-where
+The concurrence is defined by subtracting the sorted Eigenvalues such that
 
-<img src="doc/concurrence_eigs.svg" height="36px">
+$$
+\begin{align}
+\mathcal{C} = \text{max}(\lambda_3 - \lambda_2 - \lambda_1 - \lambda_0) ~.
+\end{align}
+$$
 
 If any of the neccessary `G2` correlation functions is not yet available, it will be automatically calculated. Note that if the Hilbert space of the system does not allow `G2` to be non-zero (e.g only a single photon allowed in a resonator mode), the concurrence will be undefined. The general syntax reads:
 
