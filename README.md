@@ -8,15 +8,15 @@ Published Work using QDaCC:
 
 ["Ultrafast electric control of cavity mediated single-photon and photon-pair generation with semiconductor quantum dots"](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308)
 
-[![PRB](https://img.shields.io/badge/Phys.Rev.B-104,085308-ba0c2f.svg)](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308) [![arXiv](https://img.shields.io/badge/arXiv-2105.06783-b31b1b.svg)](https://arxiv.org/abs/2105.06783) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5256236.svg)](https://doi.org/10.5281/zenodo.5256236) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1103/PhysRevB.104.085308)](https://scholar.google.de/scholar?cites=7707864479180431104)
+[![PRB](https://img.shields.io/badge/PRB-104,085308-ba0c2f.svg)](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.104.085308) [![arXiv](https://img.shields.io/badge/arXiv-2105.06783-b31b1b.svg)](https://arxiv.org/abs/2105.06783) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5256236.svg)](https://doi.org/10.5281/zenodo.5256236) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1103/PhysRevB.104.085308)](https://scholar.google.de/scholar?cites=7707864479180431104)
 
 ["On-demand indistinguishable and entangled photons at telecom frequencies using tailored cavity designs"](https://onlinelibrary.wiley.com/doi/10.1002/qute.202300142)
 
-[![AQT](https://img.shields.io/badge/AQT-10.1002/qute.202300142-b31b1b.svg)](https://onlinelibrary.wiley.com/doi/10.1002/qute.202300142) [![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1002/qute.202300142)](https://scholar.google.de/scholar?cites=10626129393868650359)
+[![AQT](https://img.shields.io/badge/AQT-10.1002/qute.202300142-123d80.svg)](https://onlinelibrary.wiley.com/doi/10.1002/qute.202300142) [![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1002/qute.202300142)](https://scholar.google.de/scholar?cites=10626129393868650359)
 
-["Time-bin entanglement in the deterministic generation of linear photonic cluster states"](https://arxiv.org/abs/2403.08527)
+["Time-bin entanglement in the deterministic generation of linear photonic cluster states"]([https://arxiv.org/abs/2403.08527](https://pubs.aip.org/aip/apq/article/1/3/036110/3303477/Time-bin-entanglement-in-the-deterministic))
 
-[![arXiv](https://img.shields.io/badge/arXiv-2403.08527-b31b1b.svg)](https://arxiv.org/abs/2403.08527) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10809129.svg)](https://doi.org/10.5281/zenodo.10809129) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.48550/arXiv.2403.08527)](tbd)
+[![APL Quantum](https://img.shields.io/badge/APLQ-2403.08527-2914bd.svg)]([10.1063/5.0214197](https://pubs.aip.org/aip/apq/article/1/3/036110/3303477/Time-bin-entanglement-in-the-deterministic)) [![arXiv](https://img.shields.io/badge/arXiv-2403.08527-b31b1b.svg)](https://arxiv.org/abs/2403.08527) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10809129.svg)](https://doi.org/10.5281/zenodo.10809129) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1063/5.0214197)](tbd)
 
 
 
