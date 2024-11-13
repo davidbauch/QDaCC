@@ -14,7 +14,7 @@ Published Work using QDaCC:
 
 [![AQT](https://img.shields.io/badge/AQT-10.1002/qute.202300142-123d80.svg)](https://onlinelibrary.wiley.com/doi/10.1002/qute.202300142) [![arXiv](https://img.shields.io/badge/arXiv-2303.13871-b31b1b.svg)](https://arxiv.org/abs/2303.13871) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7789734.svg)](https://doi.org/10.5281/zenodo.7789734) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1002/qute.202300142)](https://scholar.google.de/scholar?cites=10626129393868650359)
 
-["Time-bin entanglement in the deterministic generation of linear photonic cluster states"]([https://arxiv.org/abs/2403.08527](https://pubs.aip.org/aip/apq/article/1/3/036110/3303477/Time-bin-entanglement-in-the-deterministic))
+["Time-bin entanglement in the deterministic generation of linear photonic cluster states"](https://pubs.aip.org/aip/apq/article/1/3/036110/3303477/Time-bin-entanglement-in-the-deterministic)
 
 [![APL Quantum](https://img.shields.io/badge/APLQ-2403.08527-2914bd.svg)]([10.1063/5.0214197](https://pubs.aip.org/aip/apq/article/1/3/036110/3303477/Time-bin-entanglement-in-the-deterministic)) [![arXiv](https://img.shields.io/badge/arXiv-2403.08527-b31b1b.svg)](https://arxiv.org/abs/2403.08527) [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10809129.svg)](https://doi.org/10.5281/zenodo.10809129) [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.1063/5.0214197)](tbd)
 
