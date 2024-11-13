@@ -53,7 +53,7 @@ The Hamilton Operator for the electronic and optical states reads
 
 $$
 \begin{align}
-\mathcal{H}_0 = \sum_{i\in\text{States}}E_i|i\rangle\langle i| + \sum_{c\in\text{Cavities}}E_c\hat{b}^\dagger\hat{b}
+H_0 = \sum_{i\in\text{States}}E_i|i\rangle\langle i| + \sum_{c\in\text{Cavities}}E_c\hat{b}^\dagger\hat{b}
 \end{align}
 $$
 
@@ -62,7 +62,7 @@ The Interaction Hamilton is given by
 
 $$
 \begin{align}
-\mathcal{H}_1 = \sum_{i\neq j, c} |i\rangle\langle j| \left[g_{ij,c}(\hat{b}^\dagger + \hat{b}) + \Omega_{ij}(t) \right] + \text{H.c.}
+H_1 = \sum_{i\neq j, c} |i\rangle\langle j| \left[g_{ij,c}(\hat{b}^\dagger + \hat{b}) + \Omega_{ij}(t) \right] + \text{H.c.}
 \end{align}
 $$
 
@@ -489,7 +489,7 @@ The emission characteristics of any transition can be calculated by using the [E
 
 $$
 \begin{align}
-\mathcal{S}_i(t_\text{max},\omega) = \Re\int_0^{t_\text{max}}\int_0^{t-t_\text{max}}\mathcal{G}^{(1)}_{i,i}(t,\tau)\text{d}\tau\text{dt}
+S_i(t_\text{max},\omega) = \Re\int_0^{t_\text{max}}\int_0^{t-t_\text{max}}\mathcal{G}^{(1)}_{i,i}(t,\tau)\text{d}\tau\text{dt}
 \end{align}
 $$
 
@@ -522,7 +522,7 @@ The single photon [HOM indistinguishability](https://en.wikipedia.org/wiki/Hong%
 
 $$
 \begin{align}
-\mathcal{J}_i(t_\text{max})=1-p_i
+J_i(t_\text{max})=1-p_i
 \end{align}
 $$
 
@@ -530,7 +530,7 @@ with the count of coincidences
 
 $$
 \begin{align}
-p_i =\frac{\int_0^{t_\text{max}}\int_0^{t-t_\text{max}} \mathcal{G}_\text{pop}(t,\tau) + \mathcal{G}^{(2)}_{i,i,i,i}(t,\tau)-|\mathcal{G}_{i,i}^{(1)}(t,\tau)|\text{d}\tau\text{dt}}{ \int_0^{t_\text{max}}\int_0^{t-t_\text{max}}2\mathcal{G}_\text{pop}(t,\tau) - |\langle\hat{b}_i(t+\tau)\rangle\langle\hat{b^\dagger_i(t)}\rangle|\text{d}\tau\text{dt} }
+p_i =\frac{\int_0^{t_\text{max}}\int_0^{t-t_\text{max}} G_\text{pop}(t,\tau) + G^{(2)}_{i,i,i,i}(t,\tau)-|G_{i,i}^{(1)}(t,\tau)|\text{d}\tau\text{dt}}{ \int_0^{t_\text{max}}\int_0^{t-t_\text{max}}2G_\text{pop}(t,\tau) - |\langle\hat{b}_i(t+\tau)\rangle\langle\hat{b^\dagger_i(t)}\rangle|\text{d}\tau\text{dt} }
 \end{align}
 $$
 
@@ -538,7 +538,7 @@ and
 
 $$
 \begin{align}
-\mathcal{G}_\text{pop}(t,\tau) = \langle \hat{b}^\dagger_i\hat{b}_i \rangle(t)\langle \hat{b}^\dagger_i\hat{b}_i \rangle(t+\tau) ~.
+G_\text{pop}(t,\tau) = \langle \hat{b}^\dagger_i\hat{b}_i \rangle(t)\langle \hat{b}^\dagger_i\hat{b}_i \rangle(t+\tau) ~.
 \end{align}
 $$
 
@@ -546,7 +546,7 @@ The single photon visibility is a more simple figure of merit for the photon qua
 
 $$
 \begin{align}
-p_i =\frac{2\int_0^{t_\text{max}}\int_0^{t-t_\text{max}} |\mathcal{G}_{i,i}^{(1)}(t,\tau)|\text{d}\tau\text{dt}}{\left( \int_0^{t_\text{max}}|\langle\hat{b}_i(t)\hat{b^\dagger_i(t)}\rangle|\text{dt}\right)^2 } ~.s
+p_i =\frac{2\int_0^{t_\text{max}}\int_0^{t-t_\text{max}} |G_{i,i}^{(1)}(t,\tau)|\text{d}\tau\text{dt}}{\left( \int_0^{t_\text{max}}|\langle\hat{b}_i(t)\hat{b^\dagger_i(t)}\rangle|\text{dt}\right)^2 } ~.s
 \end{align}
 $$
 
@@ -580,7 +580,10 @@ The Two-Photon Matrix results in
 
 $$
 \begin{align} 
-    \rho_\text{TPM} = \left[\begin{array}{cccc} \textcolor{blue}{HHHH}&0&0&\textcolor{blue}{HH}\textcolor{green}{VV}\\ 0&\textcolor{red}{HVHV}&\textcolor{orange}{VH}\textcolor{red}{HV}&0\\ 0&\textcolor{red}{HV}\textcolor{orange}{VH}&\textcolor{orange}{VHVH}&0\\ \textcolor{green}{VV}\textcolor{blue}{HH}&0&0&\textcolor{green}{VVVV}\ \end{array}\right] ~.
+    \rho_\text{TPM} = \left[\begin{array}{cccc} \textcolor{blue}{HHHH}&0&0&\textcolor{blue}{HH}\textcolor{green}{VV}\\
+    0&\textcolor{red}{HVHV}&\textcolor{orange}{VH}\textcolor{red}{HV}&0\\
+    0&\textcolor{red}{HV}\textcolor{orange}{VH}&\textcolor{orange}{VHVH}&0\\
+    \textcolor{green}{VV}\textcolor{blue}{HH}&0&0&\textcolor{green}{VVVV}\ \end{array}\right] ~.
 \end{align} 
 $$
 
@@ -588,7 +591,7 @@ with matrix elements
 
 $$
 \begin{align}
-\rho_\text{TPM} =\int_0^{t_\text{max}}\int_0^{t-t_\text{max}} \mathcal{G}^{(2)}_{i,j,k,l}(t,\tau)\text{d}\tau\text{dt}
+\rho_\text{TPM} =\int_0^{t_\text{max}}\int_0^{t-t_\text{max}} G^{(2)}_{i,j,k,l}(t,\tau)\text{d}\tau\text{dt}
 \end{align}
 $$
 
